@@ -1,0 +1,604 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus } from '@/types/form';
+import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
+import { initialForms, initialSubmissions } from '@/lib/mock-data';
+import { generateTrackingCode } from '@/lib/persian';
+
+export const initialTeamMembers: TeamMember[] = [
+  {
+    id: 'user-admin',
+    name: 'امیرحسین رضایی',
+    email: 'a.rezaei@paya.ir',
+    mobile: '09121112233',
+    jobTitle: 'مدیر ارشد سامانه',
+    role: 'super_admin',
+    status: 'active',
+    invitedAt: '2026-01-10T08:00:00Z',
+    lastActive: 'هم‌اکنون آنلاین',
+    accessibleFormIds: ['all'],
+    permissions: {
+      canCreateForms: true,
+      canEditForms: true,
+      canDeleteForms: true,
+      canPublishForms: true,
+      canViewSubmissions: true,
+      canEditSubmissions: true,
+      canDeleteSubmissions: true,
+      canChangeStatus: true,
+      canExportData: true,
+      canAddComments: true,
+      canManageBookings: true,
+      canRescheduleBookings: true,
+      canManualBook: true,
+      canViewFinances: true,
+      canManageSms: true,
+      canManageIntegrations: true,
+      canManageTeam: true,
+    },
+  },
+  {
+    id: 'user-booking-op',
+    name: 'مریم نوری',
+    email: 'm.nouri@psy-belhagh.com',
+    mobile: '09358889900',
+    jobTitle: 'مسئول پذیرش و نوبت‌دهی تلفنی',
+    role: 'booking_operator',
+    status: 'active',
+    invitedAt: '2026-03-01T10:30:00Z',
+    lastActive: '۲ ساعت پیش',
+    accessibleFormIds: ['form-belhagh-booking', 'form-belhagh-registration'],
+    permissions: {
+      canCreateForms: false,
+      canEditForms: false,
+      canDeleteForms: false,
+      canPublishForms: false,
+      canViewSubmissions: true,
+      canEditSubmissions: true,
+      canDeleteSubmissions: false,
+      canChangeStatus: true,
+      canExportData: true,
+      canAddComments: true,
+      canManageBookings: true,
+      canRescheduleBookings: true,
+      canManualBook: true,
+      canViewFinances: false,
+      canManageSms: false,
+      canManageIntegrations: false,
+      canManageTeam: false,
+    },
+  },
+  {
+    id: 'user-reviewer',
+    name: 'سارا سعادت',
+    email: 'sara@paya.ir',
+    mobile: '09193334455',
+    jobTitle: 'کارشناس بررسی پرونده‌های روانشناسی',
+    role: 'reviewer',
+    status: 'active',
+    invitedAt: '2026-02-15T12:00:00Z',
+    lastActive: 'دیروز',
+    accessibleFormIds: ['all'],
+    permissions: {
+      canCreateForms: false,
+      canEditForms: false,
+      canDeleteForms: false,
+      canPublishForms: false,
+      canViewSubmissions: true,
+      canEditSubmissions: true,
+      canDeleteSubmissions: false,
+      canChangeStatus: true,
+      canExportData: true,
+      canAddComments: true,
+      canManageBookings: false,
+      canRescheduleBookings: false,
+      canManualBook: false,
+      canViewFinances: false,
+      canManageSms: false,
+      canManageIntegrations: false,
+      canManageTeam: false,
+    },
+  },
+];
+
+interface FormContextType {
+  forms: Form[];
+  submissions: FormSubmission[];
+  chatMessages: ChatMessage[];
+  webhookLogs: WebhookLog[];
+  teamMembers: TeamMember[];
+  activeForm: Form | null;
+  setActiveForm: (form: Form | null) => void;
+  getFormById: (id: string) => Form | undefined;
+  getFormBySlug: (slug: string) => Form | undefined;
+  createForm: (newForm: Partial<Form>) => Form;
+  updateForm: (id: string, updated: Partial<Form>) => void;
+  deleteForm: (id: string) => void;
+  addFieldToForm: (formId: string, field: FormField) => void;
+  updateFieldInForm: (formId: string, fieldId: string, updated: Partial<FormField>) => void;
+  removeFieldFromForm: (formId: string, fieldId: string) => void;
+  reorderFieldsInForm: (formId: string, newFields: FormField[]) => void;
+  addRuleToForm: (formId: string, rule: ConditionalRule) => void;
+  removeRuleFromForm: (formId: string, ruleId: string) => void;
+  submitFormResponse: (formId: string, data: Record<string, any>, paymentInfo?: any, quizResult?: any) => FormSubmission;
+  updateSubmissionStatus: (submissionId: string, newStatus: SubmissionStatus) => void;
+  addSubmissionComment: (submissionId: string, authorName: string, authorRole: string, content: string) => void;
+  getSubmissionsByFormId: (formId: string) => FormSubmission[];
+  sendChatMessage: (formId: string, sender: 'respondent' | 'admin', senderName: string, text: string) => void;
+  getChatMessagesByFormId: (formId: string) => ChatMessage[];
+  addWebhookLog: (log: Omit<WebhookLog, 'id' | 'createdAt'>) => void;
+  inviteTeamMember: (member: Omit<TeamMember, 'id' | 'invitedAt'>) => TeamMember;
+  updateTeamMember: (id: string, updated: Partial<TeamMember>) => void;
+  deleteTeamMember: (id: string) => void;
+  toggleTeamMemberStatus: (id: string) => void;
+}
+
+const initialChatMessages: ChatMessage[] = [
+  {
+    id: 'msg-1',
+    formId: 'form-recruitment-01',
+    sender: 'respondent',
+    senderName: 'سهراب مرادی',
+    text: 'سلام، آیا امکان ویرایش رزومه بارگذاری‌شده پس از ثبت نهایی وجود دارد؟',
+    createdAt: '2026-04-18T10:10:00Z',
+    read: true,
+  },
+  {
+    id: 'msg-2',
+    formId: 'form-recruitment-01',
+    sender: 'admin',
+    senderName: 'پشتیبانی کارگزینی',
+    text: 'درود بر شما، بله از طریق کد پیگیری می‌توانید تا ۴۸ ساعت به صفحه ویرایش دسترسی داشته باشید.',
+    createdAt: '2026-04-18T10:12:00Z',
+    read: true,
+  },
+  {
+    id: 'msg-3',
+    formId: 'form-order-03',
+    sender: 'respondent',
+    senderName: 'خریدار محترم',
+    text: 'سلام، آیا فاکتور رسمی همراه با کد اقتصادی صادر می‌گردد؟',
+    createdAt: '2026-04-19T14:30:00Z',
+    read: false,
+  },
+];
+
+const initialWebhookLogs: WebhookLog[] = [
+  {
+    id: 'wh-1',
+    formId: 'form-order-03',
+    event: 'payment.verified',
+    url: 'https://api.paya.ir/webhooks/orders',
+    payload: { trackingCode: 'FA-1403-339811', amount: 12500000, status: 'paid' },
+    statusCode: 200,
+    status: 'success',
+    createdAt: '2026-04-18T17:41:00Z',
+  },
+  {
+    id: 'wh-2',
+    formId: 'form-recruitment-01',
+    event: 'submission.created',
+    url: 'https://crm.paya.ir/leads',
+    payload: { trackingCode: 'FA-1403-882319', jobRole: 'fullstack_dev' },
+    statusCode: 200,
+    status: 'success',
+    createdAt: '2026-04-18T10:15:00Z',
+  },
+];
+
+const FormContext = createContext<FormContextType | undefined>(undefined);
+
+export function FormProvider({ children }: { children: React.ReactNode }) {
+  const [forms, setForms] = useState<Form[]>(initialForms);
+  const [submissions, setSubmissions] = useState<FormSubmission[]>(initialSubmissions);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChatMessages);
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>(initialWebhookLogs);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const [activeForm, setActiveForm] = useState<Form | null>(initialForms[0]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    try {
+      const storedForms = localStorage.getItem('formafzar_forms');
+      const storedSubmissions = localStorage.getItem('formafzar_submissions');
+      const storedChat = localStorage.getItem('formafzar_chat');
+      const storedLogs = localStorage.getItem('formafzar_webhooks');
+      const storedTeam = localStorage.getItem('formafzar_team_members');
+      if (storedForms) {
+        const parsed: Form[] = JSON.parse(storedForms);
+        const initialFormMap = new Map(initialForms.map((f) => [f.id, f]));
+        // تضمین به‌روزرسانی فرم‌های پایه به آخرین نسخه (جهت اعمال فوری حالت چندمرحله‌ای و استپ‌ها)
+        const updated = parsed.map((f) => initialFormMap.get(f.id) || f);
+        initialForms.forEach((f) => {
+          if (!updated.some((u) => u.id === f.id)) {
+            updated.unshift(f);
+          }
+        });
+        setForms(updated);
+        if (updated.length > 0) setActiveForm(updated[0]);
+      }
+      if (storedSubmissions) setSubmissions(JSON.parse(storedSubmissions));
+      if (storedChat) setChatMessages(JSON.parse(storedChat));
+      if (storedLogs) setWebhookLogs(JSON.parse(storedLogs));
+      if (storedTeam) {
+        setTeamMembers(JSON.parse(storedTeam));
+      } else {
+        setTeamMembers(initialTeamMembers);
+      }
+    } catch {
+      // استفاده از مقادیر اولیه
+    }
+    setIsInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    try {
+      localStorage.setItem('formafzar_forms', JSON.stringify(forms));
+      localStorage.setItem('formafzar_submissions', JSON.stringify(submissions));
+      localStorage.setItem('formafzar_chat', JSON.stringify(chatMessages));
+      localStorage.setItem('formafzar_webhooks', JSON.stringify(webhookLogs));
+      localStorage.setItem('formafzar_team_members', JSON.stringify(teamMembers));
+    } catch {
+      // ignore
+    }
+  }, [forms, submissions, chatMessages, webhookLogs, teamMembers, isInitialized]);
+
+  const getFormById = (id: string) => forms.find((f) => f.id === id);
+  const getFormBySlug = (slug: string) => forms.find((f) => f.slug === slug || f.id === slug);
+
+  const createForm = (newForm: Partial<Form>): Form => {
+    const created: Form = {
+      id: `form-${Date.now()}`,
+      title: newForm.title || 'فرم بدون نام',
+      slug: (newForm.title || 'form').toLowerCase().replace(/\s+/g, '-') + `-${Date.now().toString().slice(-4)}`,
+      description: newForm.description || '',
+      category: newForm.category || 'عمومی و سازمانی',
+      mode: newForm.mode || 'classic',
+      status: 'draft',
+      fields: newForm.fields || [],
+      steps: newForm.steps || [],
+      rules: newForm.rules || [],
+      payment: newForm.payment || {
+        enabled: false,
+        type: 'fixed',
+        gateway: 'shaparak_mellat',
+        currency: 'IRT',
+      },
+      quiz: newForm.quiz || {
+        enabled: false,
+        durationMinutes: 0,
+        passingScore: 70,
+        negativeMarking: false,
+        shuffleQuestions: false,
+        showImmediateResult: false,
+        certificateEnabled: false,
+      },
+      security: newForm.security || {
+        authRequired: false,
+        otpLogin: false,
+        onePerNationalCode: false,
+        onePerMobile: false,
+        limitByIp: false,
+        allowEditAfterSubmit: false,
+      },
+      printTemplate: newForm.printTemplate || {
+        headerTitle: newForm.title || 'رسید رسمی ثبت فرم',
+        showQrCode: true,
+        showTrackingCode: true,
+        showDate: true,
+        borderStyle: 'formal',
+      },
+      notifications: newForm.notifications || {
+        smsAdminEnabled: false,
+        smsUserEnabled: false,
+        emailAdminEnabled: false,
+      },
+      behavior: newForm.behavior || {
+        redirectAfterSubmit: false,
+        redirectUrl: '',
+        customSuccessMessage: 'اطلاعات شما با موفقیت در سامانه ثبت گردید.',
+        showSummaryAfterSubmit: true,
+        allowDownloadPdfReceipt: true,
+      },
+      theme: newForm.theme || {
+        themeColor: '#1e3a8a',
+        fontFamily: 'vazirmatn',
+        borderRadius: 'md',
+        backgroundStyle: 'clean',
+      },
+      submissionCount: 0,
+      viewCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setForms((prev) => [created, ...prev]);
+    setActiveForm(created);
+    return created;
+  };
+
+  const updateForm = (id: string, updated: Partial<Form>) => {
+    setForms((prev) =>
+      prev.map((f) => {
+        if (f.id === id) {
+          const updatedForm = { ...f, ...updated, updatedAt: new Date().toISOString() };
+          if (activeForm?.id === id) setActiveForm(updatedForm);
+          return updatedForm;
+        }
+        return f;
+      })
+    );
+  };
+
+  const deleteForm = (id: string) => {
+    setForms((prev) => prev.filter((f) => f.id !== id));
+    if (activeForm?.id === id) {
+      setActiveForm(forms.find((f) => f.id !== id) || null);
+    }
+  };
+
+  const addFieldToForm = (formId: string, field: FormField) => {
+    setForms((prev) =>
+      prev.map((f) => {
+        if (f.id === formId) {
+          return {
+            ...f,
+            fields: [...f.fields, field],
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return f;
+      })
+    );
+  };
+
+  const updateFieldInForm = (formId: string, fieldId: string, updated: Partial<FormField>) => {
+    setForms((prev) =>
+      prev.map((f) => {
+        if (f.id === formId) {
+          return {
+            ...f,
+            fields: f.fields.map((fld) => (fld.id === fieldId ? { ...fld, ...updated } : fld)),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return f;
+      })
+    );
+  };
+
+  const removeFieldFromForm = (formId: string, fieldId: string) => {
+    setForms((prev) =>
+      prev.map((f) => {
+        if (f.id === formId) {
+          return {
+            ...f,
+            fields: f.fields.filter((fld) => fld.id !== fieldId),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return f;
+      })
+    );
+  };
+
+  const reorderFieldsInForm = (formId: string, newFields: FormField[]) => {
+    setForms((prev) =>
+      prev.map((f) => {
+        if (f.id === formId) {
+          return { ...f, fields: newFields, updatedAt: new Date().toISOString() };
+        }
+        return f;
+      })
+    );
+  };
+
+  const addRuleToForm = (formId: string, rule: ConditionalRule) => {
+    setForms((prev) =>
+      prev.map((f) => {
+        if (f.id === formId) {
+          return { ...f, rules: [...f.rules, rule], updatedAt: new Date().toISOString() };
+        }
+        return f;
+      })
+    );
+  };
+
+  const removeRuleFromForm = (formId: string, ruleId: string) => {
+    setForms((prev) =>
+      prev.map((f) => {
+        if (f.id === formId) {
+          return { ...f, rules: f.rules.filter((r) => r.id !== ruleId), updatedAt: new Date().toISOString() };
+        }
+        return f;
+      })
+    );
+  };
+
+  const submitFormResponse = (
+    formId: string,
+    data: Record<string, any>,
+    paymentInfo?: any,
+    quizResult?: any
+  ): FormSubmission => {
+    const trackingCode = generateTrackingCode('FA');
+    const newSubmission: FormSubmission = {
+      id: `sub-${Date.now()}`,
+      formId,
+      trackingCode,
+      data,
+      status: 'new',
+      paymentStatus: paymentInfo?.status || 'none',
+      paymentAmount: paymentInfo?.amount,
+      paymentRefId: paymentInfo?.refId,
+      paymentDate: paymentInfo?.date,
+      quizResult,
+      userIp: '185.143.232.19',
+      createdAt: new Date().toISOString(),
+      comments: [],
+    };
+
+    setSubmissions((prev) => [newSubmission, ...prev]);
+
+    setForms((prev) =>
+      prev.map((f) => (f.id === formId ? { ...f, submissionCount: f.submissionCount + 1 } : f))
+    );
+
+    // ثبت اتوماتیک وب‌هوک لاگ در صورت داشتن وب‌هوک
+    const targetForm = forms.find((f) => f.id === formId);
+    if (targetForm?.notifications.webhookUrl) {
+      addWebhookLog({
+        formId,
+        event: 'submission.created',
+        url: targetForm.notifications.webhookUrl,
+        payload: { trackingCode, data },
+        statusCode: 200,
+        status: 'success',
+      });
+    }
+
+    return newSubmission;
+  };
+
+  const updateSubmissionStatus = (submissionId: string, newStatus: SubmissionStatus) => {
+    setSubmissions((prev) =>
+      prev.map((s) => (s.id === submissionId ? { ...s, status: newStatus, updatedAt: new Date().toISOString() } : s))
+    );
+  };
+
+  const addSubmissionComment = (
+    submissionId: string,
+    authorName: string,
+    authorRole: string,
+    content: string
+  ) => {
+    setSubmissions((prev) =>
+      prev.map((s) => {
+        if (s.id === submissionId) {
+          return {
+            ...s,
+            comments: [
+              ...s.comments,
+              {
+                id: `c-${Date.now()}`,
+                authorName,
+                authorRole,
+                content,
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          };
+        }
+        return s;
+      })
+    );
+  };
+
+  const getSubmissionsByFormId = (formId: string) => submissions.filter((s) => s.formId === formId);
+
+  const sendChatMessage = (
+    formId: string,
+    sender: 'respondent' | 'admin',
+    senderName: string,
+    text: string
+  ) => {
+    const newMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      formId,
+      sender,
+      senderName,
+      text,
+      createdAt: new Date().toISOString(),
+      read: sender === 'admin',
+    };
+    setChatMessages((prev) => [...prev, newMsg]);
+  };
+
+  const getChatMessagesByFormId = (formId: string) => chatMessages.filter((m) => m.formId === formId);
+
+  const addWebhookLog = (log: Omit<WebhookLog, 'id' | 'createdAt'>) => {
+    const newLog: WebhookLog = {
+      ...log,
+      id: `wh-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setWebhookLogs((prev) => [newLog, ...prev]);
+  };
+
+  const inviteTeamMember = (member: Omit<TeamMember, 'id' | 'invitedAt'>): TeamMember => {
+    const newMember: TeamMember = {
+      ...member,
+      id: `user-${Date.now()}`,
+      invitedAt: new Date().toISOString(),
+      lastActive: 'به‌تازگی دعوت شده',
+    };
+    setTeamMembers((prev) => [newMember, ...prev]);
+    return newMember;
+  };
+
+  const updateTeamMember = (id: string, updated: Partial<TeamMember>) => {
+    setTeamMembers((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updated } : m))
+    );
+  };
+
+  const deleteTeamMember = (id: string) => {
+    setTeamMembers((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const toggleTeamMemberStatus = (id: string) => {
+    setTeamMembers((prev) =>
+      prev.map((m) =>
+        m.id === id
+          ? { ...m, status: m.status === 'active' ? 'suspended' : 'active' }
+          : m
+      )
+    );
+  };
+
+  return (
+    <FormContext.Provider
+      value={{
+        forms,
+        submissions,
+        chatMessages,
+        webhookLogs,
+        teamMembers,
+        activeForm,
+        setActiveForm,
+        getFormById,
+        getFormBySlug,
+        createForm,
+        updateForm,
+        deleteForm,
+        addFieldToForm,
+        updateFieldInForm,
+        removeFieldFromForm,
+        reorderFieldsInForm,
+        addRuleToForm,
+        removeRuleFromForm,
+        submitFormResponse,
+        updateSubmissionStatus,
+        addSubmissionComment,
+        getSubmissionsByFormId,
+        sendChatMessage,
+        getChatMessagesByFormId,
+        addWebhookLog,
+        inviteTeamMember,
+        updateTeamMember,
+        deleteTeamMember,
+        toggleTeamMemberStatus,
+      }}
+    >
+      {children}
+    </FormContext.Provider>
+  );
+}
+
+export function useForm() {
+  const context = useContext(FormContext);
+  if (!context) throw new Error('useForm must be used within a FormProvider');
+  return context;
+}
