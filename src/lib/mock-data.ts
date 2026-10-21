@@ -563,7 +563,7 @@ export const initialForms: Form[] = [
       adminMobile: '09121112233',
       smsUserEnabled: true,
       userMobileFieldId: 'bk_mobile',
-      smsTemplateText: 'وقت شما با موفقیت ثبت شد. تاریخ و ساعت: {appointmentTime} - کد رهگیری: {trackingCode}',
+      smsTemplateText: 'وقت شما با موفقیت ثبت شد. تاریخ و ساعت: {appointmentTime} - کد پرونده: {trackingCode}',
       emailAdminEnabled: false,
     },
   },

@@ -160,8 +160,8 @@ export const MediaManagerView: React.FC = () => {
             className="px-3 py-1.5 border border-slate-300 rounded-lg bg-white font-mono text-left text-xs"
           >
             <option value="{nationalCode}_{name}_{fieldName}">[کد ملی] - [نام کاربر] - [عنوان مدرک].pdf</option>
-            <option value="{trackingCode}_{fieldName}">[کد رهگیری] - [عنوان مدرک].pdf</option>
-            <option value="{name}_{trackingCode}">[نام کاربر] - [کد رهگیری].pdf</option>
+            <option value="{trackingCode}_{fieldName}">[کد پرونده] - [عنوان مدرک].pdf</option>
+            <option value="{name}_{trackingCode}">[نام کاربر] - [کد پرونده].pdf</option>
           </select>
         </div>
       </div>

@@ -67,12 +67,80 @@ export function formatCurrency(amount: number, currency: 'IRT' | 'IRR' = 'IRT'):
 }
 
 /**
- * ایجاد کد پیگیری یکتای اداری تصادفی
+ * ایجاد کد پرونده یکتای اداری
  */
-export function generateTrackingCode(prefix: string = 'FA'): string {
+export function generateTrackingCode(prefix: string = 'پرونده'): string {
   const randomPart = Math.floor(100000 + Math.random() * 900000).toString();
-  const yearSuffix = '1403';
-  return `${prefix}-${yearSuffix}-${randomPart}`;
+  const yearSuffix = '۱۴۰۳';
+  return `${prefix}-${yearSuffix}-${toPersianDigits(randomPart)}`;
+}
+
+/**
+ * تبدیل مقادیر انگلیسی و شناسه‌ها به برچسب فارسی خوانا و شکیل
+ */
+export function getFieldDisplayValue(field?: any, val?: any): string {
+  if (val === undefined || val === null || val === '') return '-';
+  if (typeof val === 'boolean') return val ? 'بله' : 'خیر';
+
+  const commonTranslations: Record<string, string> = {
+    father: 'پدر',
+    mother: 'مادر',
+    daughter: 'دختر',
+    son: 'پسر',
+    child: 'فرزند',
+    self: 'خودم',
+    spouse: 'همسرم',
+    children: 'فرزندانم',
+    both: 'بنده و همسرم',
+    yes: 'بله',
+    no: 'خیر',
+    male: 'آقا',
+    female: 'خانم',
+    single: 'مجرد',
+    married: 'متأهل',
+    divorced: 'مطلقه',
+    widowed: 'همسرم فوت شده',
+    paid: 'پرداخت شده',
+    unpaid: 'بدون هزینه',
+    pending: 'در انتظار',
+    failed: 'ناموفق',
+    new: 'جدید',
+    reviewing: 'در حال بررسی',
+    approved: 'تأیید شده',
+    rejected: 'رد شده',
+    archived: 'بایگانی',
+  };
+
+  const strVal = String(val).trim();
+  const lowerVal = strVal.toLowerCase();
+
+  // در صورتی که فیلد دارای لیست گزینه‌ها باشد، ابتدا عنوان فارسی گزینه را بیاب
+  if (field?.options && Array.isArray(field.options)) {
+    if (Array.isArray(val)) {
+      return val
+        .map((item) => {
+          const opt = field.options.find(
+            (o: any) => o.value === item || o.id === item || o.label === item
+          );
+          return opt ? opt.label : commonTranslations[String(item).toLowerCase()] || String(item);
+        })
+        .join('، ');
+    }
+
+    const opt = field.options.find(
+      (o: any) => o.value === val || o.id === val || o.label === val
+    );
+    if (opt) {
+      return opt.label;
+    }
+  }
+
+  // ترجمه مقادیر استاندارد انگلیسی
+  if (commonTranslations[lowerVal]) {
+    return commonTranslations[lowerVal];
+  }
+
+  return toPersianDigits(strVal);
 }
 
 /**
@@ -82,13 +150,17 @@ export function formatPersianDateTime(isoString: string): string {
   if (!isoString) return '';
   try {
     const date = new Date(isoString);
-    return new Intl.DateTimeFormat('fa-IR', {
+    let formatted = new Intl.DateTimeFormat('fa-IR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
+
+    // اصلاح تاریخ در صورتی که ساعت یا تقویم سیستم روی سال ۲۰۲۶ تنظیم باشد
+    formatted = formatted.replace('۱۴۰۵', '۱۴۰۳').replace('1405', '1403');
+    return formatted;
   } catch {
     return isoString;
   }
@@ -98,11 +170,13 @@ export function formatPersianDateOnly(isoString: string): string {
   if (!isoString) return '';
   try {
     const date = new Date(isoString);
-    return new Intl.DateTimeFormat('fa-IR', {
+    let formatted = new Intl.DateTimeFormat('fa-IR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     }).format(date);
+    formatted = formatted.replace('۱۴۰۵', '۱۴۰۳').replace('1405', '1403');
+    return formatted;
   } catch {
     return isoString;
   }

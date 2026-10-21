@@ -519,11 +519,28 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
       const checkValMatch = (val: any, expected: any) => {
         if (val === undefined || val === null) return false;
-        if (String(val).trim() === String(expected).trim()) return true;
+        const sVal = String(val).trim();
+        const sExp = String(expected).trim();
+        if (sVal === sExp) return true;
+
+        const aliases: Record<string, string[]> = {
+          'بله': ['yes', 'بله'],
+          'yes': ['yes', 'بله'],
+          'خیر': ['no', 'خیر'],
+          'no': ['no', 'خیر'],
+          'پدر': ['father', 'پدر', 'پدر خانواده'],
+          'مادر': ['mother', 'مادر', 'مادر خانواده'],
+          'دختر': ['daughter', 'دختر', 'دختر خانواده'],
+          'پسر': ['son', 'پسر', 'پسر خانواده'],
+        };
+
+        if (aliases[sVal] && aliases[sVal].includes(sExp)) return true;
+        if (aliases[sExp] && aliases[sExp].includes(sVal)) return true;
+
         if (
           selectedOption &&
-          (String(selectedOption.label).trim() === String(expected).trim() ||
-            String(selectedOption.value).trim() === String(expected).trim())
+          (String(selectedOption.label).trim() === sExp ||
+            String(selectedOption.value).trim() === sExp)
         ) {
           return true;
         }
@@ -567,13 +584,15 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     // فرم ۱ (ثبت نام): در مرحله اول اگر کاربر صریحاً «خیر» را انتخاب کند، بقیه مراحل کلاً مخفی می‌شود
     if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
       if (currentStepIndex === 0) {
-        if (formData['f_ebadollah_member'] === 'no') return false;
+        const val = formData['f_ebadollah_member'];
+        if (val === 'no' || val === 'خیر') return false;
       }
     }
     // فرم ۲ (نوبت دهی): در مرحله سابقه مشاوره اگر عضو نباشد («خیر»)، دکمه مرحله بعد کلاً مخفی می‌شود
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
       if (currentStepIndex === 2) {
-        if (formData['f_khankaram_member'] === 'no') return false;
+        const val = formData['f_khankaram_member'];
+        if (val === 'no' || val === 'خیر') return false;
       }
     }
     return true;
@@ -952,9 +971,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           <p className="text-xs text-slate-500 mt-1">اطلاعات شما در پایگاه امن سامانه فرم‌افزار ذخیره شد.</p>
         </div>
 
-        {/* کادر کد رهگیری اختصاصی */}
+        {/* کادر کد پرونده اختصاصی */}
         <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 inline-block w-full max-w-sm">
-          <span className="text-[11px] text-slate-500 block mb-1">کد پیگیری رسمی:</span>
+          <span className="text-[11px] text-slate-500 block mb-1">کد پرونده رسمی:</span>
           <span className="text-xl font-extrabold text-blue-700 tracking-wider font-mono">
             {submittedResult.trackingCode}
           </span>
@@ -1708,6 +1727,114 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                       </div>
                     ))}
                   </div>
+                ) : field.type === 'jalaliDate' ? (
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* روز */}
+                      <div>
+                        <select
+                          value={(() => {
+                            const parts = String(formData[field.id] || '').split('/');
+                            return parts.length === 3 ? parts[2] : '';
+                          })()}
+                          onChange={(e) => {
+                            const current = String(formData[field.id] || '');
+                            const parts = current.split('/');
+                            const y = parts[0] || '1380';
+                            const m = parts[1] || '01';
+                            const d = e.target.value.padStart(2, '0');
+                            handleFieldChange(field.id, `${y}/${m}/${d}`);
+                          }}
+                          className={`w-full px-2 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white text-slate-800 ${
+                            hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
+                          }`}
+                        >
+                          <option value="">روز</option>
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                            <option key={d} value={String(d).padStart(2, '0')}>
+                              {toPersianDigits(d)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* ماه */}
+                      <div>
+                        <select
+                          value={(() => {
+                            const parts = String(formData[field.id] || '').split('/');
+                            return parts.length === 3 ? parts[1] : '';
+                          })()}
+                          onChange={(e) => {
+                            const current = String(formData[field.id] || '');
+                            const parts = current.split('/');
+                            const y = parts[0] || '1380';
+                            const m = e.target.value.padStart(2, '0');
+                            const d = parts[2] || '01';
+                            handleFieldChange(field.id, `${y}/${m}/${d}`);
+                          }}
+                          className={`w-full px-2 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white text-slate-800 ${
+                            hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
+                          }`}
+                        >
+                          <option value="">ماه</option>
+                          {[
+                            { val: '01', name: 'فروردین' },
+                            { val: '02', name: 'اردیبهشت' },
+                            { val: '03', name: 'خرداد' },
+                            { val: '04', name: 'تیر' },
+                            { val: '05', name: 'مرداد' },
+                            { val: '06', name: 'شهریور' },
+                            { val: '07', name: 'مهر' },
+                            { val: '08', name: 'آبان' },
+                            { val: '09', name: 'آذر' },
+                            { val: '10', name: 'دی' },
+                            { val: '11', name: 'بهمن' },
+                            { val: '12', name: 'اسفند' },
+                          ].map((m) => (
+                            <option key={m.val} value={m.val}>
+                              {m.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* سال */}
+                      <div>
+                        <select
+                          value={(() => {
+                            const parts = String(formData[field.id] || '').split('/');
+                            return parts.length === 3 ? parts[0] : '';
+                          })()}
+                          onChange={(e) => {
+                            const current = String(formData[field.id] || '');
+                            const parts = current.split('/');
+                            const y = e.target.value;
+                            const m = parts[1] || '01';
+                            const d = parts[2] || '01';
+                            handleFieldChange(field.id, `${y}/${m}/${d}`);
+                          }}
+                          className={`w-full px-2 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white text-slate-800 ${
+                            hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
+                          }`}
+                        >
+                          <option value="">سال</option>
+                          {Array.from({ length: 85 }, (_, i) => 1403 - i).map((y) => (
+                            <option key={y} value={String(y)}>
+                              {toPersianDigits(y)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {formData[field.id] && (
+                      <div className="text-[11px] text-blue-700 font-semibold bg-blue-50/70 py-1 px-2.5 rounded border border-blue-200/60 inline-flex items-center gap-1.5">
+                        <Calendar className="w-3 h-3 text-blue-600" />
+                        <span>تاریخ انتخاب شده: {toPersianDigits(formData[field.id])}</span>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <input
                     type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'}
@@ -1750,7 +1877,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         )}
 
         {/* هشدار شرطی در صورتی که کاربر عضو سایت نباشد و اجازه رفتن به مرحله بعد نداشته باشد */}
-        {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 0 && formData['f_ebadollah_member'] === 'no' && (
+        {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 0 && (formData['f_ebadollah_member'] === 'no' || formData['f_ebadollah_member'] === 'خیر') && (
           <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs leading-relaxed flex items-start gap-2.5 my-3 animate-in fade-in">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
@@ -1760,7 +1887,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
-        {(form.id === 'form-belhagh-booking' || form.slug === '3uu4z') && currentStepIndex === 2 && formData['f_khankaram_member'] === 'no' && (
+        {(form.id === 'form-belhagh-booking' || form.slug === '3uu4z') && currentStepIndex === 2 && (formData['f_khankaram_member'] === 'no' || formData['f_khankaram_member'] === 'خیر') && (
           <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs leading-relaxed flex items-start gap-2.5 my-3 animate-in fade-in">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>

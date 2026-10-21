@@ -23,7 +23,7 @@ import {
   Kanban,
   Table as TableIcon
 } from 'lucide-react';
-import { formatPersianDateTime, formatCurrency, toPersianDigits } from '@/lib/persian';
+import { formatPersianDateTime, formatCurrency, toPersianDigits, getFieldDisplayValue } from '@/lib/persian';
 
 export const SubmissionsHub: React.FC = () => {
   const { forms, activeForm, submissions, updateSubmissionStatus, addSubmissionComment } = useForm();
@@ -64,14 +64,14 @@ export const SubmissionsHub: React.FC = () => {
   const handleExportCSV = () => {
     if (!currentForm || filteredSubmissions.length === 0) return;
 
-    const headers = ['کد پیگیری', 'تاریخ ثبت', 'وضعیت', 'وضعیت پرداخت', ...currentForm.fields.map((f) => f.label)];
+    const headers = ['کد پرونده', 'تاریخ ثبت', 'وضعیت', 'وضعیت پرداخت', ...currentForm.fields.map((f) => f.label)];
     
     const rows = filteredSubmissions.map((s) => {
       const fieldValues = currentForm.fields.map((f) => {
         const val = s.data[f.id];
         if (val === undefined || val === null) return '';
         if (typeof val === 'object') return JSON.stringify(val);
-        return String(val).replace(/"/g, '""');
+        return getFieldDisplayValue(f, val).replace(/"/g, '""');
       });
 
       return [
@@ -179,7 +179,7 @@ export const SubmissionsHub: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="جستجو در کد پیگیری یا اطلاعات ثبت شده..."
+              placeholder="جستجو در کد پرونده یا اطلاعات ثبت شده..."
               className="w-full pl-3 pr-8 py-1.5 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
             />
             <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5" />
@@ -220,7 +220,7 @@ export const SubmissionsHub: React.FC = () => {
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold">
                   <th className="p-3.5 w-12 text-center">#</th>
-                  <th className="p-3.5">کد رهگیری</th>
+                  <th className="p-3.5">کد پرونده</th>
                   <th className="p-3.5">وضعیت گردش کار</th>
                   <th className="p-3.5">وضعیت مالی</th>
                   {currentForm?.fields.slice(0, 4).map((f) => (
@@ -268,7 +268,7 @@ export const SubmissionsHub: React.FC = () => {
                         </td>
                         {currentForm?.fields.slice(0, 4).map((f) => {
                           const val = sub.data[f.id];
-                          const displayVal = val === undefined || val === null ? '-' : String(val);
+                          const displayVal = getFieldDisplayValue(f, val);
                           return (
                             <td key={f.id} className="p-3.5 truncate max-w-[150px] text-slate-800">
                               {f.type === 'signature' && val ? (
@@ -380,7 +380,7 @@ export const SubmissionsHub: React.FC = () => {
             {/* سربرگ مودال */}
             <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-slate-500">جزئیات ثبت فرم شماره:</div>
+                <div className="text-[10px] text-slate-500">کد پرونده:</div>
                 <div className="text-sm font-extrabold text-blue-800 font-mono">
                   {activeSubmission.trackingCode}
                 </div>
@@ -427,7 +427,7 @@ export const SubmissionsHub: React.FC = () => {
                         {f.type === 'signature' && val ? (
                           <img src={val} alt="امضا" className="h-14 border border-slate-200 bg-white rounded mt-1 p-1" />
                         ) : (
-                          <span className="font-semibold text-slate-900">{val || '-'}</span>
+                          <span className="font-semibold text-slate-900">{getFieldDisplayValue(f, val)}</span>
                         )}
                       </div>
                     );

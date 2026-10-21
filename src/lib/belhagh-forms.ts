@@ -55,8 +55,8 @@ export const belhaghRegistrationForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'yes', label: 'بله', value: 'yes' },
-        { id: 'no', label: 'خیر', value: 'no' },
+        { id: 'yes', label: 'بله', value: 'بله' },
+        { id: 'no', label: 'خیر', value: 'خیر' },
       ],
     },
     // مرحله ۲: مشخصات فردی
@@ -86,10 +86,10 @@ export const belhaghRegistrationForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'father', label: 'پدر خانواده', value: 'father' },
-        { id: 'mother', label: 'مادر خانواده', value: 'mother' },
-        { id: 'daughter', label: 'دختر خانواده', value: 'daughter' },
-        { id: 'son', label: 'پسر خانواده', value: 'son' },
+        { id: 'father', label: 'پدر خانواده', value: 'پدر' },
+        { id: 'mother', label: 'مادر خانواده', value: 'مادر' },
+        { id: 'daughter', label: 'دختر خانواده', value: 'دختر' },
+        { id: 'son', label: 'پسر خانواده', value: 'پسر' },
       ],
     },
     {
@@ -100,13 +100,13 @@ export const belhaghRegistrationForm: Form = {
       gridCols: 12,
       validations: { required: false },
       options: [
-        { id: '2', label: 'دو نفر', value: '2' },
-        { id: '3', label: 'سه نفر', value: '3' },
-        { id: '4', label: 'چهار نفر', value: '4' },
-        { id: '5', label: 'پنج نفر', value: '5' },
-        { id: '6', label: 'شش نفر', value: '6' },
-        { id: '7', label: 'هفت نفر', value: '7' },
-        { id: '8', label: 'هشت نفر و بیشتر', value: '8' },
+        { id: '2', label: 'دو نفر', value: '۲ نفر' },
+        { id: '3', label: 'سه نفر', value: '۳ نفر' },
+        { id: '4', label: 'چهار نفر', value: '۴ نفر' },
+        { id: '5', label: 'پنج نفر', value: '۵ نفر' },
+        { id: '6', label: 'شش نفر', value: '۶ نفر' },
+        { id: '7', label: 'هفت نفر', value: '۷ نفر' },
+        { id: '8', label: 'هشت نفر و بیشتر', value: '۸ نفر و بیشتر' },
       ],
     },
     {
@@ -117,10 +117,10 @@ export const belhaghRegistrationForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'single', label: 'مجرد', value: 'single' },
-        { id: 'married', label: 'متاهل', value: 'married' },
-        { id: 'divorced', label: 'مطلقه', value: 'divorced' },
-        { id: 'widowed', label: 'همسرم فوت شده', value: 'widowed' },
+        { id: 'single', label: 'مجرد', value: 'مجرد' },
+        { id: 'married', label: 'متاهل', value: 'متأهل' },
+        { id: 'divorced', label: 'مطلقه', value: 'مطلقه' },
+        { id: 'widowed', label: 'همسرم فوت شده', value: 'همسرم فوت شده' },
       ],
     },
     {
@@ -409,10 +409,10 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'self', label: 'خودم', value: 'self' },
-        { id: 'spouse', label: 'همسرم', value: 'spouse' },
-        { id: 'children', label: 'فرزندانم', value: 'children' },
-        { id: 'both', label: 'بنده و همسرم', value: 'both' },
+        { id: 'self', label: 'خودم', value: 'خودم' },
+        { id: 'spouse', label: 'همسرم', value: 'همسرم' },
+        { id: 'children', label: 'فرزندانم', value: 'فرزندانم' },
+        { id: 'both', label: 'بنده و همسرم', value: 'بنده و همسرم' },
       ],
     },
     {
@@ -423,8 +423,8 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'yes', label: 'بله', value: 'yes' },
-        { id: 'no', label: 'خیر', value: 'no' },
+        { id: 'yes', label: 'بله', value: 'بله' },
+        { id: 'no', label: 'خیر', value: 'خیر' },
       ],
     },
     {
@@ -444,8 +444,8 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'yes', label: 'بله', value: 'yes' },
-        { id: 'no', label: 'خیر', value: 'no' },
+        { id: 'yes', label: 'بله', value: 'بله' },
+        { id: 'no', label: 'خیر', value: 'خیر' },
       ],
     },
 
