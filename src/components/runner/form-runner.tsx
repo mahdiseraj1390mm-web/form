@@ -596,6 +596,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
   // استیت‌های پورتال ورودی پرونده (ورود / ثبت نام / بازیابی کد)
   const [authGateMode, setAuthGateMode] = useState<'portal' | 'filling' | 'viewCase'>('portal');
+  const [isLoginBoxOpen, setIsLoginBoxOpen] = useState(false);
   const [caseCodeInput, setCaseCodeInput] = useState('');
   const [caseCodeError, setCaseCodeError] = useState<string | null>(null);
   const [activeCaseSubmission, setActiveCaseSubmission] = useState<FormSubmission | null>(null);
@@ -656,14 +657,25 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     if (found) {
       setActiveCaseSubmission(found);
-      setAuthGateMode('viewCase');
+      setIsLoginBoxOpen(false);
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem('belhagh_current_case_code', found.trackingCode);
         } catch (err) {}
       }
+      setFormData((prev) => ({
+        ...prev,
+        ...found.data,
+        f_name: found.data?.f_name || found.data?.f_applicant_name || prev.f_name || '',
+        f_family: found.data?.f_family || prev.f_family || '',
+        f_mobile: found.data?.f_mobile || found.data?.mobile || prev.f_mobile || '',
+        f_province_city: found.data?.f_province_city || prev.f_province_city || '',
+        f_role_in_family: found.data?.f_role_in_family || prev.f_role_in_family || '',
+        f_case_code: found.trackingCode,
+      }));
+      setAuthGateMode('viewCase');
     } else {
-      setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید یا در صورت عدم ثبت‌نام، ثبت‌نام جدید را انتخاب نمایید.');
+      setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید.');
     }
   };
 
@@ -717,6 +729,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     setErrors({});
     setOtpVerified(false);
     setOtpSent(false);
+    setIsLoginBoxOpen(false);
+    setCaseCodeError(null);
 
     const defaults: Record<string, any> = {};
     form.fields.forEach((f) => {
@@ -1515,120 +1529,105 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
   // نمای پورتال ورودی: ورود به پرونده قبلی یا ثبت‌نام جدید
   if (authGateMode === 'portal') {
+    const portalTitle =
+      form.id === 'form-belhagh-registration' ||
+      form.id === 'form-belhagh-booking' ||
+      form.slug === 'zexuz' ||
+      form.slug === '3uu4z'
+        ? 'سامانه پرونده و نوبت‌دهی مشاوره بالحق'
+        : form.title;
+
     return (
-      <div className="max-w-xl mx-auto my-8 sm:my-14 p-5 sm:p-8 bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/90 shadow-2xl space-y-6 text-right animate-in fade-in duration-300">
-        
-        {/* سربرگ پورتال */}
-        <div className="text-center space-y-2 pb-5 border-b border-slate-100">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-blue-500/25">
-            <KeyRound className="w-7 h-7" />
-          </div>
-          <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-            سامانه پرونده و نوبت‌دهی مشاوره بالحق
-          </h1>
-          <p className="text-xs text-slate-500 font-medium">
-            لطفاً جهت استفاده از خدمات، وضعیت پرونده خود را مشخص فرمایید:
-          </p>
-        </div>
-
-        {/* کارت‌های دوگانه: ثبت نام یا ورود */}
-        <div className="space-y-4">
+      <div className="max-w-md mx-auto my-12 sm:my-20 px-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6 text-center">
           
-          {/* کارت ۱: ثبت نام جدید (تشکیل پرونده) */}
-          <div className="p-5 rounded-2xl border-2 border-emerald-400 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/40 shadow-sm hover:shadow-md transition-all space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                <UserPlus className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md inline-block mb-1">
-                  مُراجع جدید
-                </span>
-                <h3 className="text-sm font-extrabold text-slate-900">
-                  ثبت‌نام جدید (تشکیل پرونده اولیه)
-                </h3>
-                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                  اگر تاکنون در این سامانه پرونده‌ای تشکیل نداده‌اید، جهت ثبت مشخصات و دریافت کد اختصاصی پرونده، کلیک نمایید.
-                </p>
-              </div>
-            </div>
+          {/* عنوان کادر */}
+          <h1 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
+            {portalTitle}
+          </h1>
 
-            <button
-              type="button"
-              onClick={handleStartRegistration}
-              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>شروع ثبت‌نام و تشکیل پرونده</span>
-              <ArrowLeft className="w-4 h-4 mr-auto" />
-            </button>
-          </div>
-
-          {/* کارت ۲: قبلاً ثبت‌نام کرده‌اید (ورود به پرونده) */}
-          <div className="p-5 rounded-2xl border-2 border-blue-400 bg-gradient-to-br from-blue-50/70 via-white to-blue-50/40 shadow-sm hover:shadow-md transition-all space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                <FolderLock className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <span className="text-[10px] font-bold text-blue-800 bg-blue-100/80 px-2 py-0.5 rounded-md inline-block mb-1">
-                  دارای پرونده قبلی
-                </span>
-                <h3 className="text-sm font-extrabold text-slate-900">
-                  ورود به پرونده تشکیل‌شده
-                </h3>
-                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                  اگر قبلاً ثبت‌نام نموده‌اید، با وارد کردن کد پرونده اختصاصی خود وارد پرونده شوید:
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleCaseLogin} className="space-y-2.5 pt-1">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={caseCodeInput}
-                  onChange={(e) => {
-                    setCaseCodeInput(e.target.value);
-                    setCaseCodeError(null);
-                  }}
-                  placeholder="کد پرونده (مثلاً BH-M749218)"
-                  className="w-full px-3.5 py-2.5 text-xs border border-slate-300 rounded-xl text-center font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  dir="ltr"
-                />
-              </div>
-
-              {caseCodeError && (
-                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-center gap-1.5 font-medium animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{caseCodeError}</span>
-                </div>
-              )}
-
+          {!isLoginBoxOpen ? (
+            /* حالت اولیه: فقط دکمه ثبت‌نام و دکمه ورود */
+            <div className="space-y-3 pt-1">
               <button
-                type="submit"
-                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                type="button"
+                onClick={handleStartRegistration}
+                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-sm cursor-pointer"
               >
-                <LogIn className="w-4 h-4" />
-                <span>ورود به پرونده</span>
-                <ArrowLeft className="w-4 h-4 mr-auto" />
+                ثبت‌نام جدید و تشکیل پرونده
               </button>
 
-              <div className="text-center pt-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForgotModal(true);
-                    setForgotResult(null);
-                    setForgotMobileInput('');
-                  }}
-                  className="text-[11px] text-blue-700 hover:text-blue-900 hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>کد پرونده خود را فراموش کرده‌اید؟ (بازیابی با شماره همراه)</span>
-                </button>
-              </div>
-            </form>
-          </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLoginBoxOpen(true);
+                  setCaseCodeError(null);
+                }}
+                className="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 active:scale-[0.99] text-slate-700 font-bold text-sm rounded-xl transition-all border border-slate-200 cursor-pointer"
+              >
+                ورود به پرونده
+              </button>
+            </div>
+          ) : (
+            /* باز شدن باکس ورود با کد پرونده */
+            <div className="pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+              <form onSubmit={handleCaseLogin} className="space-y-3 text-right">
+                <div>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={caseCodeInput}
+                    onChange={(e) => {
+                      setCaseCodeInput(e.target.value);
+                      setCaseCodeError(null);
+                    }}
+                    placeholder="کد پرونده اختصاصی (مثال: BH-M749218)"
+                    className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl text-center font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-colors"
+                    dir="ltr"
+                  />
+                </div>
+
+                {caseCodeError && (
+                  <p className="text-xs text-rose-600 text-center font-medium animate-in fade-in">
+                    {caseCodeError}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+                  >
+                    تأیید و ورود
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLoginBoxOpen(false);
+                      setCaseCodeError(null);
+                    }}
+                    className="py-2.5 px-4 text-slate-600 hover:bg-slate-100 font-semibold text-xs rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    بازگشت
+                  </button>
+                </div>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotModal(true);
+                      setForgotResult(null);
+                      setForgotMobileInput('');
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                  >
+                    فراموشی کد پرونده؟ (بازیابی با شماره همراه)
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
         </div>
 
