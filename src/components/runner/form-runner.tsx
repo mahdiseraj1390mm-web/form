@@ -339,6 +339,216 @@ const RealFileUploadField: React.FC<{
   );
 };
 
+// کامپوننت ورود و انتخاب تاریخ شمسی با امکان ورود دستی و بدون اجبار مقادیر پیش‌فرض
+const JalaliDateFieldInput: React.FC<{
+  field: FormField;
+  value: any;
+  onChange: (val: string) => void;
+  hasError?: boolean;
+}> = ({ field, value, onChange, hasError }) => {
+  const parseValue = (val: any) => {
+    if (!val || typeof val !== 'string') return { y: '', m: '', d: '' };
+    const clean = toEnglishDigits(val).trim();
+    const parts = clean.split('/');
+    if (parts.length === 3) {
+      return { y: parts[0] || '', m: parts[1] || '', d: parts[2] || '' };
+    }
+    return { y: '', m: '', d: '' };
+  };
+
+  const [isManualInput, setIsManualInput] = useState(false);
+  const [manualText, setManualText] = useState(String(value || ''));
+
+  const currentParts = parseValue(value);
+  const [day, setDay] = useState(currentParts.d);
+  const [month, setMonth] = useState(currentParts.m);
+  const [year, setYear] = useState(currentParts.y);
+
+  useEffect(() => {
+    const p = parseValue(value);
+    setDay(p.d);
+    setMonth(p.m);
+    setYear(p.y);
+    setManualText(String(value || ''));
+  }, [value]);
+
+  const handleUpdate = (newY: string, newM: string, newD: string) => {
+    setYear(newY);
+    setMonth(newM);
+    setDay(newD);
+    if (newY && newM && newD) {
+      const cleanY = toEnglishDigits(newY.trim());
+      const cleanM = toEnglishDigits(newM.trim()).padStart(2, '0');
+      const cleanD = toEnglishDigits(newD.trim()).padStart(2, '0');
+      const combined = `${cleanY}/${cleanM}/${cleanD}`;
+      onChange(combined);
+      setManualText(combined);
+    } else {
+      const cleanY = newY ? toEnglishDigits(newY.trim()) : '';
+      const cleanM = newM ? toEnglishDigits(newM.trim()).padStart(2, '0') : '';
+      const cleanD = newD ? toEnglishDigits(newD.trim()).padStart(2, '0') : '';
+      if (cleanY || cleanM || cleanD) {
+        onChange(`${cleanY}/${cleanM}/${cleanD}`);
+      } else {
+        onChange('');
+      }
+    }
+  };
+
+  const handleDirectManualText = (txt: string) => {
+    setManualText(txt);
+    const clean = toEnglishDigits(txt.trim());
+    onChange(clean);
+    const p = parseValue(clean);
+    if (p.y && p.m && p.d) {
+      setYear(p.y);
+      setMonth(p.m);
+      setDay(p.d);
+    }
+  };
+
+  const isCompleteDate = Boolean(year && month && day && year.length === 4);
+
+  return (
+    <div className="space-y-2">
+      {/* سوییچ بین ورود دستی مستقیم و انتخابگر منویی */}
+      <div className="flex items-center justify-between text-[11px] pb-0.5">
+        <span className="text-slate-500 font-medium">
+          {isManualInput ? 'حالت: تایپ مستقیم و دستی تاریخ' : 'حالت: انتخاب ۳ بخشی (روز / ماه / سال)'}
+        </span>
+        <button
+          type="button"
+          onClick={() => setIsManualInput(!isManualInput)}
+          className="text-blue-600 hover:text-blue-800 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+        >
+          {isManualInput ? (
+            <>
+              <Calendar className="w-3.5 h-3.5" />
+              <span>انتخاب از منوی کشویی</span>
+            </>
+          ) : (
+            <>
+              <FileEdit className="w-3.5 h-3.5" />
+              <span>تایپ مستقیم و دستی تاریخ</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {isManualInput ? (
+        /* حالت تایپ دستی مستقیم */
+        <div>
+          <input
+            type="text"
+            value={manualText}
+            onChange={(e) => handleDirectManualText(e.target.value)}
+            placeholder="مثال: ۱۳۷۸/۰۵/۲۴ یا 1378/05/24"
+            dir="ltr"
+            className={`w-full px-3 py-2 text-xs border rounded-md font-mono text-center focus:outline-none focus:ring-1 bg-white ${
+              hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
+            }`}
+          />
+          <p className="text-[10px] text-slate-400 mt-1">
+            می‌توانید تاریخ تولد را با ارقام فارسی یا انگلیسی به همراه خط مورب (/) مستقیماً تایپ فرمایید.
+          </p>
+        </div>
+      ) : (
+        /* حالت انتخاب ۳ بخشی (بدون تحمیل پیش‌فرض خودکار) */
+        <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-2">
+            {/* ستون راست (RTL): روز */}
+            <div>
+              <select
+                value={day}
+                onChange={(e) => handleUpdate(year, month, e.target.value)}
+                className={`w-full px-2 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white text-slate-800 ${
+                  hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
+                }`}
+              >
+                <option value="">روز</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={String(d).padStart(2, '0')}>
+                    {toPersianDigits(d)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* ستون وسط: ماه */}
+            <div>
+              <select
+                value={month}
+                onChange={(e) => handleUpdate(year, e.target.value, day)}
+                className={`w-full px-2 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white text-slate-800 ${
+                  hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
+                }`}
+              >
+                <option value="">ماه</option>
+                {[
+                  { val: '01', name: 'فروردین' },
+                  { val: '02', name: 'اردیبهشت' },
+                  { val: '03', name: 'خرداد' },
+                  { val: '04', name: 'تیر' },
+                  { val: '05', name: 'مرداد' },
+                  { val: '06', name: 'شهریور' },
+                  { val: '07', name: 'مهر' },
+                  { val: '08', name: 'آبان' },
+                  { val: '09', name: 'آذر' },
+                  { val: '10', name: 'دی' },
+                  { val: '11', name: 'بهمن' },
+                  { val: '12', name: 'اسفند' },
+                ].map((m) => (
+                  <option key={m.val} value={m.val}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* ستون چپ: سال با امکان تایپ دستی مستقیم عدد سال و منوی کشویی */}
+            <div>
+              <input
+                type="text"
+                list={`years_${field.id}`}
+                value={year}
+                onChange={(e) => {
+                  const clean = toEnglishDigits(e.target.value).replace(/\D/g, '').slice(0, 4);
+                  handleUpdate(clean, month, day);
+                }}
+                placeholder="سال (تایپ یا انتخاب)"
+                maxLength={4}
+                dir="ltr"
+                className={`w-full px-2 py-2 text-xs border rounded-md text-center font-mono focus:outline-none focus:ring-1 bg-white text-slate-800 ${
+                  hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
+                }`}
+              />
+              <datalist id={`years_${field.id}`}>
+                {Array.from({ length: 85 }, (_, i) => 1403 - i).map((y) => (
+                  <option key={y} value={String(y)}>
+                    {toPersianDigits(y)}
+                  </option>
+                ))}
+              </datalist>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-slate-400 flex items-center justify-between">
+            <span>نکته: سال تولد را می‌توانید مستقیماً با کیبورد در کادر سال تایپ فرمایید.</span>
+          </div>
+        </div>
+      )}
+
+      {/* برچسب تأییدیه تاریخ انتخاب شده فقط در صورت کامل بودن هر سه بخش */}
+      {isCompleteDate && (
+        <div className="text-[11px] text-blue-700 font-semibold bg-blue-50/70 py-1 px-2.5 rounded border border-blue-200/60 inline-flex items-center gap-1.5 animate-in fade-in">
+          <Calendar className="w-3 h-3 text-blue-600" />
+          <span>تاریخ انتخاب شده: {toPersianDigits(`${year}/${month.padStart(2, '0')}/${day.padStart(2, '0')}`)}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const FormRunner: React.FC<FormRunnerProps> = ({ 
   form, 
   onBackToStudio,
@@ -2369,113 +2579,12 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     ))}
                   </div>
                 ) : field.type === 'jalaliDate' ? (
-                  <div className="space-y-1.5">
-                    <div className="grid grid-cols-3 gap-2">
-                      {/* روز */}
-                      <div>
-                        <select
-                          value={(() => {
-                            const parts = String(formData[field.id] || '').split('/');
-                            return parts.length === 3 ? parts[2] : '';
-                          })()}
-                          onChange={(e) => {
-                            const current = String(formData[field.id] || '');
-                            const parts = current.split('/');
-                            const y = parts[0] || '1380';
-                            const m = parts[1] || '01';
-                            const d = e.target.value.padStart(2, '0');
-                            handleFieldChange(field.id, `${y}/${m}/${d}`);
-                          }}
-                          className={`w-full px-2 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white text-slate-800 ${
-                            hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
-                          }`}
-                        >
-                          <option value="">روز</option>
-                          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                            <option key={d} value={String(d).padStart(2, '0')}>
-                              {toPersianDigits(d)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* ماه */}
-                      <div>
-                        <select
-                          value={(() => {
-                            const parts = String(formData[field.id] || '').split('/');
-                            return parts.length === 3 ? parts[1] : '';
-                          })()}
-                          onChange={(e) => {
-                            const current = String(formData[field.id] || '');
-                            const parts = current.split('/');
-                            const y = parts[0] || '1380';
-                            const m = e.target.value.padStart(2, '0');
-                            const d = parts[2] || '01';
-                            handleFieldChange(field.id, `${y}/${m}/${d}`);
-                          }}
-                          className={`w-full px-2 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white text-slate-800 ${
-                            hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
-                          }`}
-                        >
-                          <option value="">ماه</option>
-                          {[
-                            { val: '01', name: 'فروردین' },
-                            { val: '02', name: 'اردیبهشت' },
-                            { val: '03', name: 'خرداد' },
-                            { val: '04', name: 'تیر' },
-                            { val: '05', name: 'مرداد' },
-                            { val: '06', name: 'شهریور' },
-                            { val: '07', name: 'مهر' },
-                            { val: '08', name: 'آبان' },
-                            { val: '09', name: 'آذر' },
-                            { val: '10', name: 'دی' },
-                            { val: '11', name: 'بهمن' },
-                            { val: '12', name: 'اسفند' },
-                          ].map((m) => (
-                            <option key={m.val} value={m.val}>
-                              {m.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* سال */}
-                      <div>
-                        <select
-                          value={(() => {
-                            const parts = String(formData[field.id] || '').split('/');
-                            return parts.length === 3 ? parts[0] : '';
-                          })()}
-                          onChange={(e) => {
-                            const current = String(formData[field.id] || '');
-                            const parts = current.split('/');
-                            const y = e.target.value;
-                            const m = parts[1] || '01';
-                            const d = parts[2] || '01';
-                            handleFieldChange(field.id, `${y}/${m}/${d}`);
-                          }}
-                          className={`w-full px-2 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white text-slate-800 ${
-                            hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
-                          }`}
-                        >
-                          <option value="">سال</option>
-                          {Array.from({ length: 85 }, (_, i) => 1403 - i).map((y) => (
-                            <option key={y} value={String(y)}>
-                              {toPersianDigits(y)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {formData[field.id] && (
-                      <div className="text-[11px] text-blue-700 font-semibold bg-blue-50/70 py-1 px-2.5 rounded border border-blue-200/60 inline-flex items-center gap-1.5">
-                        <Calendar className="w-3 h-3 text-blue-600" />
-                        <span>تاریخ انتخاب شده: {toPersianDigits(formData[field.id])}</span>
-                      </div>
-                    )}
-                  </div>
+                  <JalaliDateFieldInput
+                    field={field}
+                    value={formData[field.id]}
+                    onChange={(val) => handleFieldChange(field.id, val)}
+                    hasError={Boolean(hasError)}
+                  />
                 ) : (
                   <input
                     type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'}
