@@ -47,7 +47,8 @@ import {
   LogOut,
   FileEdit,
   ChevronLeft,
-  Search
+  Search,
+  Sparkles
 } from 'lucide-react';
 import { 
   isValidIranianNationalCode, 
@@ -958,24 +959,10 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     return true;
   };
 
-  // بررسی شرط مجاز بودن دکمه «مرحله بعد»
+  // بررسی شرط مجاز بودن دکمه «مرحله بعد» - دسترسی به تمام مراحل از جمله مرحله ۴ همواره مجاز است
   const canProceedToNextStep = useMemo(() => {
-    // فرم ۱ (ثبت نام): در مرحله اول اگر کاربر صریحاً «خیر» را انتخاب کند، بقیه مراحل کلاً مخفی می‌شود
-    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
-      if (currentStepIndex === 0) {
-        const val = formData['f_ebadollah_member'];
-        if (val === 'no' || val === 'خیر') return false;
-      }
-    }
-    // فرم ۲ (نوبت دهی): در مرحله سابقه مشاوره اگر عضو نباشد («خیر»)، دکمه مرحله بعد کلاً مخفی می‌شود
-    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-      if (currentStepIndex === 2) {
-        const val = formData['f_khankaram_member'];
-        if (val === 'no' || val === 'خیر') return false;
-      }
-    }
     return true;
-  }, [form.id, form.slug, currentStepIndex, formData]);
+  }, []);
 
   const handleFieldChange = (fieldId: string, val: any) => {
     setFormData((prev) => ({ ...prev, [fieldId]: val }));
@@ -2091,14 +2078,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   <div key={step.id} className="relative z-10 flex flex-col items-center">
                     <button
                       type="button"
-                      disabled={!isPassed && !isActive}
                       onClick={() => {
-                        if (isPassed) {
-                          setCurrentStepIndex(idx);
-                          setInternalPageIndex(0);
-                        }
+                        setCurrentStepIndex(idx);
+                        setInternalPageIndex(0);
                       }}
-                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-200"
+                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-200 cursor-pointer shadow-xs"
                       style={{
                         backgroundColor: isActive
                           ? themeCol
@@ -2108,18 +2092,21 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         color: isActive || isPassed ? '#ffffff' : themeCol,
                         boxShadow: isActive ? `0 0 0 4px ${themeCol}30` : undefined,
                         transform: isActive ? 'scale(1.15)' : undefined,
-                        cursor: isPassed ? 'pointer' : 'default',
                       }}
                     >
                       {toPersianDigits(idx + 1)}
                     </button>
                     <span 
-                      className={`mt-2 text-[11px] font-bold text-center transition-colors max-w-[120px] ${
+                      onClick={() => {
+                        setCurrentStepIndex(idx);
+                        setInternalPageIndex(0);
+                      }}
+                      className={`mt-2 text-[11px] font-bold text-center transition-colors max-w-[120px] cursor-pointer ${
                         isActive
-                          ? 'text-slate-900'
+                          ? 'text-slate-900 font-extrabold'
                           : isPassed
                           ? 'text-slate-600'
-                          : 'text-slate-400'
+                          : 'text-slate-400 hover:text-slate-700'
                       }`}
                     >
                       {step.title}
@@ -2163,6 +2150,20 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         )}
 
         <div className="grid grid-cols-12 gap-5">
+          {form.slug === '3uu4z' && currentStep?.id === 'step-4' && (
+            <div className="col-span-12 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 text-xs flex items-center gap-2.5 mb-1">
+              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="leading-relaxed">
+                <span className="font-extrabold block text-emerald-900">مرحله چهارم: موضوع مراجعه، انتخاب مشاور و تعیین نوبت</span>
+                <span className="text-[11px] text-emerald-800">
+                  {formData['f_topic']
+                    ? 'موضوع مراجعه انتخاب شد. اکنون مشاور مورد نظر و سانس تقویم را رزرو فرمایید.'
+                    : 'لطفاً ابتدا موضوع مراجعه را انتخاب فرمایید تا لیست مشاوران و تقویم نوبت‌دهی فعال گردد.'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {activePageFields.map((field) => {
             if (!isFieldVisible(field.id)) return null;
 
@@ -2791,7 +2792,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   {form.payment.enabled && calculatedAmount > 0
                     ? 'رفتن به درگاه پرداخت و ثبت'
                     : (form.id === 'form-belhagh-registration' || form.slug === 'zexuz')
-                    ? 'ثبت مشخصات و تشکیل پرونده'
+                    ? 'ثبت فرم'
                     : 'ثبت و تکمیل پرونده نوبت‌دهی'}
                 </span>
                 <CheckCircle2 className="w-4 h-4" />
