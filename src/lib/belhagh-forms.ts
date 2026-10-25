@@ -190,12 +190,44 @@ export const belhaghRegistrationForm: Form = {
       id: 'rule_mentor_daughter',
       sourceFieldId: 'f_role_in_family',
       operator: 'equals',
+      value: 'دختر',
+      action: 'show',
+      targetFieldId: 'f_mentor_name',
+    },
+    {
+      id: 'rule_mentor_daughter_fam',
+      sourceFieldId: 'f_role_in_family',
+      operator: 'equals',
+      value: 'دختر خانواده',
+      action: 'show',
+      targetFieldId: 'f_mentor_name',
+    },
+    {
+      id: 'rule_mentor_daughter_en',
+      sourceFieldId: 'f_role_in_family',
+      operator: 'equals',
       value: 'daughter',
       action: 'show',
       targetFieldId: 'f_mentor_name',
     },
     {
       id: 'rule_mentor_son',
+      sourceFieldId: 'f_role_in_family',
+      operator: 'equals',
+      value: 'پسر',
+      action: 'show',
+      targetFieldId: 'f_mentor_name',
+    },
+    {
+      id: 'rule_mentor_son_fam',
+      sourceFieldId: 'f_role_in_family',
+      operator: 'equals',
+      value: 'پسر خانواده',
+      action: 'show',
+      targetFieldId: 'f_mentor_name',
+    },
+    {
+      id: 'rule_mentor_son_en',
       sourceFieldId: 'f_role_in_family',
       operator: 'equals',
       value: 'son',
@@ -286,15 +318,15 @@ export const belhaghBookingForm: Form = {
   steps: [
     {
       id: 'step-1',
-      title: 'شهر محل سکونت',
-      description: 'تعیین موقعیت استانی و شهری',
-      fieldIds: ['f_province_city'],
-    },
-    {
-      id: 'step-2',
       title: 'مشخصات مُراجع',
       description: 'اطلاعات هویتی و شماره تماس جهت مشاوره',
       fieldIds: ['f_name', 'f_family', 'f_mobile'],
+    },
+    {
+      id: 'step-2',
+      title: 'شهر محل سکونت',
+      description: 'تعیین موقعیت استانی و شهری',
+      fieldIds: ['f_province_city'],
     },
     {
       id: 'step-3',
@@ -360,23 +392,13 @@ export const belhaghBookingForm: Form = {
     },
   ],
   fields: [
-    // مرحله ۱: شهر محل سکونت
-    {
-      id: 'f_province_city',
-      type: 'cascadingProvinceCity',
-      label: 'لیست استان و شهرستان',
-      stepId: 'step-1',
-      gridCols: 12,
-      validations: { required: true },
-    },
-
-    // مرحله ۲: مشخصات مُراجع
+    // مرحله ۱: مشخصات مُراجع
     {
       id: 'f_name',
       type: 'text',
       label: 'نام:',
       placeholder: 'نام خود را وارد کنید...',
-      stepId: 'step-2',
+      stepId: 'step-1',
       gridCols: 6,
       validations: { required: true },
     },
@@ -385,7 +407,7 @@ export const belhaghBookingForm: Form = {
       type: 'text',
       label: 'نام خانوادگی:',
       placeholder: 'نام خانوادگی خود را وارد کنید...',
-      stepId: 'step-2',
+      stepId: 'step-1',
       gridCols: 6,
       validations: { required: true },
     },
@@ -395,6 +417,16 @@ export const belhaghBookingForm: Form = {
       label: 'شماره تلفن همراه:',
       placeholder: '۰۹۱۲۳۴۵۶۷۸۹',
       helpText: 'تماس تلفنی مشاور با این شماره برقرار خواهد شد',
+      stepId: 'step-1',
+      gridCols: 12,
+      validations: { required: true },
+    },
+
+    // مرحله ۲: شهر محل سکونت
+    {
+      id: 'f_province_city',
+      type: 'cascadingProvinceCity',
+      label: 'لیست استان و شهرستان',
       stepId: 'step-2',
       gridCols: 12,
       validations: { required: true },

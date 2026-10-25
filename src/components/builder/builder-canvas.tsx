@@ -237,6 +237,47 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
     setDragOverPanelId(null);
   };
 
+  // مدیریت درگ اند دراپ مراحل (Steps Reordering)
+  const [draggingStepIndex, setDraggingStepIndex] = useState<number | null>(null);
+  const [dragOverStepIndex, setDragOverStepIndex] = useState<number | null>(null);
+
+  const handleStepDragStart = (e: React.DragEvent, idx: number) => {
+    setDraggingStepIndex(idx);
+    e.dataTransfer.setData('text/plain', `step_${idx}`);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleStepDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverStepIndex !== idx) {
+      setDragOverStepIndex(idx);
+    }
+  };
+
+  const handleStepDrop = (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    if (draggingStepIndex === null || draggingStepIndex === targetIdx) {
+      setDraggingStepIndex(null);
+      setDragOverStepIndex(null);
+      return;
+    }
+
+    const currentSteps = [...(form.steps || [])];
+    const [movedStep] = currentSteps.splice(draggingStepIndex, 1);
+    currentSteps.splice(targetIdx, 0, movedStep);
+
+    onUpdateForm({ steps: currentSteps });
+    setActiveStepIndex(targetIdx);
+    setDraggingStepIndex(null);
+    setDragOverStepIndex(null);
+  };
+
+  const handleStepDragEnd = () => {
+    setDraggingStepIndex(null);
+    setDragOverStepIndex(null);
+  };
+
   // افزودن مرحله جدید در حالت Wizard
   const handleAddStep = () => {
     const newStepIndex = (form.steps?.length || 0) + 1;
@@ -409,22 +450,40 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
             {(form.steps || []).map((step, idx) => (
               <div
                 key={step.id}
-                className={`flex items-center rounded-lg border text-xs font-medium transition-all shrink-0 ${
+                draggable
+                onDragStart={(e) => handleStepDragStart(e, idx)}
+                onDragOver={(e) => handleStepDragOver(e, idx)}
+                onDrop={(e) => handleStepDrop(e, idx)}
+                onDragEnd={handleStepDragEnd}
+                className={`flex items-center rounded-lg border text-xs font-medium transition-all shrink-0 cursor-grab active:cursor-grabbing select-none ${
+                  dragOverStepIndex === idx ? 'border-dashed border-blue-500 ring-2 ring-blue-300 scale-105 shadow-md' : ''
+                } ${
+                  draggingStepIndex === idx ? 'opacity-40' : ''
+                } ${
                   activeStepIndex === idx
                     ? 'bg-slate-900 text-white border-slate-900 shadow-xs font-bold'
                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                 }`}
+                title="برای جابجایی این مرحله، آن را بگیرید و بکشید (Drag & Drop)"
               >
+                <div className="pr-2 pl-0.5 text-slate-400 hover:text-slate-600 flex items-center">
+                  <GripVertical className="w-3.5 h-3.5" />
+                </div>
                 <button
+                  type="button"
                   onClick={() => setActiveStepIndex(idx)}
-                  className="px-3.5 py-2"
+                  className="pr-1 pl-3.5 py-2"
                 >
                   {step.title}
                 </button>
                 {form.steps.length > 1 && (
                   <button
-                    onClick={() => handleDeleteStep(idx)}
-                    className="p-1.5 hover:text-rose-400 border-r border-slate-700/50"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteStep(idx);
+                    }}
+                    className="p-1.5 hover:text-rose-400 border-r border-slate-200/50"
                     title="حذف مرحله"
                   >
                     ✕
@@ -434,7 +493,7 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
             ))}
             <button
               onClick={handleAddStep}
-              className="px-3 py-2 rounded-lg text-xs font-medium border border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400 bg-white/50 shrink-0 transition-colors flex items-center gap-1"
+              className="px-3 py-2 rounded-lg text-xs font-medium border border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400 bg-white/50 shrink-0 transition-colors flex items-center gap-1 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>مرحله جدید</span>
