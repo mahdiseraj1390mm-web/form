@@ -2241,7 +2241,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
                     className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
                   >
-                    <option value="">-- لطفاً انتخاب کنید --</option>
+                    <option value="">انتخاب کنید</option>
                     {(field.options || []).map((o) => (
                       <option key={o.id} value={o.value || o.id}>
                         {o.label} {o.price ? `(${formatCurrency(o.price)})` : ''}

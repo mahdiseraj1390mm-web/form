@@ -508,10 +508,10 @@ export const belhaghBookingForm: Form = {
       validations: { required: true },
       options: [
         { id: 'opt_child_1', label: 'آقای فرهمندی', value: 'آقای فرهمندی' },
-        { id: 'opt_child_2', label: 'خانم زینلی', value: 'خانم زینلی' },
+        { id: 'opt_child_2', label: 'خانم تیموریان', value: 'خانم تیموریان' },
         { id: 'opt_child_3', label: 'خانم شوندی', value: 'خانم شوندی' },
         { id: 'opt_child_4', label: 'خانم انصاری', value: 'خانم انصاری' },
-        { id: 'opt_child_5', label: 'خانم تیموریان', value: 'خانم تیموریان' },
+        { id: 'opt_child_5', label: 'خانم زینلی', value: 'خانم زینلی' },
       ],
     },
     {
@@ -522,10 +522,10 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'opt_teen_shavandi', label: 'خانم شوندی', value: 'خانم شوندی' },
-        { id: 'opt_teen_rastgoo', label: 'خانم راستگو', value: 'خانم راستگو' },
-        { id: 'opt_teen_borhani', label: 'آقای برهانی', value: 'آقای برهانی' },
-        { id: 'opt_teen_ansari', label: 'خانم انصاری', value: 'خانم انصاری' },
+        { id: 'opt_teen_1', label: 'آقای برهانی', value: 'آقای برهانی' },
+        { id: 'opt_teen_2', label: 'خانم شوندی', value: 'خانم شوندی' },
+        { id: 'opt_teen_3', label: 'خانم راستگو', value: 'خانم راستگو' },
+        { id: 'opt_teen_4', label: 'خانم انصاری', value: 'خانم انصاری' },
       ],
     },
     {

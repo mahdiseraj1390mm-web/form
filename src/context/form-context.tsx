@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus } from '@/types/form';
 import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
+import { belhaghRegistrationForm, belhaghBookingForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 
 export const initialTeamMembers: TeamMember[] = [
@@ -207,11 +208,15 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       const storedTeam = localStorage.getItem('formafzar_team_members');
       if (storedForms) {
         const parsed: Form[] = JSON.parse(storedForms);
-        const initialFormMap = new Map(initialForms.map((f) => [f.id, f]));
-        // تضمین به‌روزرسانی فرم‌های پایه به آخرین نسخه (جهت اعمال فوری حالت چندمرحله‌ای و استپ‌ها)
-        const updated = parsed.map((f) => initialFormMap.get(f.id) || f);
+        const initialFormMap = new Map<string, Form>();
         initialForms.forEach((f) => {
-          if (!updated.some((u) => u.id === f.id)) {
+          initialFormMap.set(f.id, f);
+          initialFormMap.set(f.slug, f);
+        });
+        // تضمین به‌روزرسانی فرم‌های پایه به آخرین نسخه (جهت اعمال فوری هر ۴ مرحله و استپ‌ها)
+        const updated = parsed.map((f) => initialFormMap.get(f.id) || initialFormMap.get(f.slug) || f);
+        initialForms.forEach((f) => {
+          if (!updated.some((u) => u.id === f.id || u.slug === f.slug)) {
             updated.unshift(f);
           }
         });
@@ -245,8 +250,16 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     }
   }, [forms, submissions, chatMessages, webhookLogs, teamMembers, isInitialized]);
 
-  const getFormById = (id: string) => forms.find((f) => f.id === id);
-  const getFormBySlug = (slug: string) => forms.find((f) => f.slug === slug || f.id === slug);
+  const getFormById = (id: string) => {
+    if (id === 'form-belhagh-booking' || id === '3uu4z') return belhaghBookingForm;
+    if (id === 'form-belhagh-registration' || id === 'zexuz') return belhaghRegistrationForm;
+    return forms.find((f) => f.id === id);
+  };
+  const getFormBySlug = (slug: string) => {
+    if (slug === '3uu4z' || slug === 'form-belhagh-booking') return belhaghBookingForm;
+    if (slug === 'zexuz' || slug === 'form-belhagh-registration') return belhaghRegistrationForm;
+    return forms.find((f) => f.slug === slug || f.id === slug);
+  };
 
   const createForm = (newForm: Partial<Form>): Form => {
     const created: Form = {
