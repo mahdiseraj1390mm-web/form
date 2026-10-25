@@ -598,7 +598,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   const [submittedResult, setSubmittedResult] = useState<FormSubmission | null>(null);
 
   const isCasePortalForm =
-    form.generalSettings?.showPortalGate !== false &&
+    form.generalSettings?.showPortalGate === true
+      ? true
+      : form.generalSettings?.showPortalGate === false
+      ? false
+      :
     (form.id === 'form-belhagh-registration' ||
       form.id === 'form-belhagh-booking' ||
       form.slug === 'zexuz' ||

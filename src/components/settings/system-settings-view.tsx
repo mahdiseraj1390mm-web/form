@@ -24,16 +24,18 @@ import {
   CheckCircle2,
   XCircle,
   Phone,
-  Mail
+  Mail,
+  LogIn
 } from 'lucide-react';
 import { WebhookTester } from './webhook-tester';
+import { PortalSettingsTab } from './portal-settings-tab';
 import { useForm } from '@/context/form-context';
 import { TeamMember, TeamRole } from '@/types/advanced';
 import { InviteMemberModal } from '@/components/team/invite-member-modal';
 
 export const SystemSettingsView: React.FC = () => {
   const { forms, teamMembers, inviteTeamMember, updateTeamMember, deleteTeamMember, toggleTeamMemberStatus } = useForm();
-  const [activeTab, setActiveTab] = useState<'general' | 'sms' | 'payment' | 'api' | 'team'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'portal' | 'sms' | 'payment' | 'api' | 'team'>('general');
   const [copiedKey, setCopiedKey] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -107,6 +109,7 @@ export const SystemSettingsView: React.FC = () => {
         <div className="flex items-center gap-2 mt-6 border-b border-slate-100 pb-0 text-xs font-semibold overflow-x-auto">
           {[
             { id: 'general', label: 'اطلاعات سازمان', icon: Building2 },
+            { id: 'portal', label: 'صفحه ورود (پورتال پرونده)', icon: LogIn },
             { id: 'sms', label: 'سامانه پیامک', icon: Smartphone },
             { id: 'payment', label: 'درگاه‌های شاپرک', icon: CreditCard },
             { id: 'api', label: 'وب‌هوک و API', icon: Webhook },
@@ -163,6 +166,10 @@ export const SystemSettingsView: React.FC = () => {
               </button>
             </div>
           </div>
+        )}
+
+        {activeTab === 'portal' && (
+          <PortalSettingsTab />
         )}
 
         {activeTab === 'sms' && (

@@ -12,28 +12,22 @@ import {
 import { 
   Settings, 
   MessageSquare, 
-  Mail, 
-  MessageCircle, 
-  Send, 
   Lock, 
   CreditCard, 
+  MessageCircle, 
+  Mail, 
+  Send, 
   Link as LinkIcon, 
   ShieldCheck, 
   Users, 
   Check, 
   AlertCircle,
   HelpCircle,
-  FolderLock,
   Globe,
   Smartphone,
   Calendar,
   FileCheck2,
   Download,
-  Image as ImageIcon,
-  Type,
-  Trash2,
-  UploadCloud,
-  RefreshCw,
   Sparkles,
   LogIn
 } from 'lucide-react';
@@ -48,7 +42,7 @@ interface SettingsTabProps {
 export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, initialSubTab }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     | 'general'
-    | 'login_page'
+
     | 'redirect'
     | 'email'
     | 'sms'
@@ -130,41 +124,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
     });
   };
 
-  const bgFileInputRef = useRef<HTMLInputElement | null>(null);
-  const heroFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const updateThemeBg = (bgImage: string) => {
-    onUpdateForm({
-      theme: {
-        ...(form.theme || { themeColor: '#0284c7', fontFamily: 'vazirmatn', borderRadius: 'md' }),
-        backgroundImage: bgImage,
-        backgroundSize: form.theme?.backgroundSize || 'cover',
-        backgroundPosition: form.theme?.backgroundPosition || 'center',
-      },
-    });
-  };
 
-  const handleBgFileUpload = (file: File) => {
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        updateThemeBg(e.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleHeroFileUpload = (file: File) => {
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        updateGeneral({ portalHeroImage: e.target.result as string, showPortalHeroImage: true });
-      }
-    };
-    reader.readAsDataURL(file);
-  };
 
   const updateSec = (props: Partial<SecuritySettings>) => {
     onUpdateForm({
@@ -209,7 +170,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
 
   const subNavItems = [
     { id: 'general', label: 'تنظیمات عمومی فرم', icon: Settings },
-    { id: 'login_page', label: 'صفحه ورود (پورتال پرونده)', icon: LogIn },
+
     { id: 'redirect', label: 'پیغام ثبت و تغییر مسیر', icon: MessageSquare },
     { id: 'limits', label: 'محدودیت ثبت و ظرفیت', icon: Lock },
     { id: 'auth', label: 'احراز هویت و دسترسی', icon: ShieldCheck },
@@ -236,30 +197,25 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                 <p className="text-xs text-slate-500 mt-0.5">پیکربندی هویت، نحوه نمایش اولیه و کدهای پیگیری</p>
               </div>
 
-              {/* بنر ارجاع سریع به تب صفحه ورود */}
-              <div
-                onClick={() => setActiveSubTab('login_page')}
-                className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-50 transition-all flex items-center justify-between cursor-pointer group shadow-2xs"
-              >
+              {/* پیام اطلاع‌رسانی انتقال تنظیمات صفحه ورود به تنظیمات و وب‌هوک‌ها */}
+              <div className="p-4 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 flex items-center justify-between shadow-2xs">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#084d3e] text-white flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
-                    <LogIn className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-[#084d3e] text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                    <LogIn className="w-5 h-5 text-emerald-200" />
                   </div>
                   <div>
                     <span className="text-sm font-extrabold text-slate-800 block">
                       تنظیمات صفحه ورود و پورتال پرونده
                     </span>
                     <span className="text-xs text-slate-600 block mt-0.5">
-                      تنظیمات اختصاصی عنوان‌گونه، بنر سربرگ و دروازه ورودی مراجعین به تب «صفحه ورود» منتقل شد.
+                      پیکربندی دروازه ورودی مراجعین، عنوان‌گونه و بنرها به منوی اصلی «تنظیمات و وب‌هوک‌ها» منتقل شد.
                     </span>
                   </div>
                 </div>
-                <span className="text-xs font-bold text-[#084d3e] bg-white px-3.5 py-1.5 rounded-xl border border-emerald-300 group-hover:border-emerald-500 shadow-2xs transition-all flex items-center gap-1">
-                  <span>مشاهده صفحه ورود</span>
-                  <span>&larr;</span>
+                <span className="text-[11px] font-bold text-[#084d3e] bg-white px-3 py-1.5 rounded-xl border border-emerald-300 shadow-2xs shrink-0">
+                  منوی تنظیمات و وب‌هوک‌ها
                 </span>
               </div>
-
               {/* رنگ شناسایی فرم */}
               <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100">
                 <div>
@@ -364,228 +320,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                 </div>
               </div>
 
-            </div>
-          )}
-
-          {/* تب اختصاصی: صفحه ورود (پورتال پرونده) */}
-          {activeSubTab === 'login_page' && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-extrabold text-slate-800">تنظیمات صفحه ورود (پورتال پرونده)</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">پیکربندی دروازه ورودی مراجعین، امکان ورود با کد پرونده، عنوان‌گونه و بنر اختصاصی</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#084d3e] flex items-center justify-center font-bold">
-                  <LogIn className="w-4 h-4" />
-                </div>
-              </div>
-
-              {/* فعال‌سازی صفحه پورتال پرونده (دروازه ورود با کد پرونده) */}
-              <label className="flex items-start justify-between p-4 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition-colors cursor-pointer">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <FolderLock className="w-4 h-4 text-sky-600" />
-                    <span className="text-sm font-bold text-slate-800">نمایش دروازه پورتال پرونده پیش از ورود به فرم</span>
-                  </div>
-                  <span className="text-xs text-slate-500 block mt-1 leading-relaxed">
-                    در صورت فعال بودن، مراجع ابتدا کادر «ورود به پرونده با کد پرونده / ثبت‌نام جدید» را می‌بیند. در صورت غیرفعال بودن، فرم بلافاصله با فیلدها باز خواهد شد.
-                  </span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={generalSettings.showPortalGate ?? (form.id === 'form-belhagh-registration' || form.slug === 'zexuz')}
-                  onChange={(e) => updateGeneral({ showPortalGate: e.target.checked })}
-                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500 mt-1"
-                />
-              </label>
-
-              {/* نوشته عنوان‌گونه صفحه و پورتال (قابل تغییر) */}
-              <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Type className="w-4 h-4 text-emerald-600" />
-                    <span className="text-sm font-bold text-slate-800">نوشته عنوان‌گونه (عنوان صفحه و سربرگ پورتال)</span>
-                  </div>
-                  <span className="text-xs text-slate-500 block mt-1 leading-relaxed">
-                    این عبارت در نوار هدر بالای صفحه و سربرگ کادر پورتال نمایش داده می‌شود (مثال: «مرکز خدمات روانشناسی بالحق» یا نام کلینیک/سامانه شما).
-                  </span>
-                </div>
-                <div>
-                  <input
-                    type="text"
-                    value={generalSettings.portalTitle ?? ''}
-                    placeholder="مرکز خدمات روانشناسی بالحق"
-                    onChange={(e) => updateGeneral({ portalTitle: e.target.value })}
-                    className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 focus:bg-white font-bold text-slate-800 transition-colors"
-                  />
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1.5">
-                    <span>پیش‌فرض: مرکز خدمات روانشناسی بالحق</span>
-                    <button
-                      type="button"
-                      onClick={() => updateGeneral({ portalTitle: 'مرکز خدمات روانشناسی بالحق' })}
-                      className="text-emerald-600 hover:underline font-bold cursor-pointer"
-                    >
-                      بازنشانی به پیش‌فرض
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* زیرعنوان یا توضیح کوتاه پورتال */}
-              <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
-                <div>
-                  <span className="text-sm font-bold text-slate-800 block">زیرعنوان یا توضیح کوتاه پورتال</span>
-                  <span className="text-xs text-slate-500 block mt-1 leading-relaxed">
-                    متن مکمل که زیر عنوان اصلی در کادر ورودی پورتال قرار می‌گیرد (مثال: «سامانه مشاوره تلفنی و پرونده مراجعین»).
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={generalSettings.portalSubtitle ?? ''}
-                  placeholder="سامانه مشاوره تلفنی و پرونده مراجعین"
-                  onChange={(e) => updateGeneral({ portalSubtitle: e.target.value })}
-                  className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 focus:bg-white text-slate-700 transition-colors"
-                />
-              </div>
-
-              {/* تصویر سربرگ اختصاصی پورتال (Hero Banner) */}
-              <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-emerald-600" />
-                    <span className="text-sm font-bold text-slate-800">تصویر سربرگ پورتال (بنر بالای کادر)</span>
-                  </div>
-                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={generalSettings.showPortalHeroImage !== false}
-                      onChange={(e) => updateGeneral({ showPortalHeroImage: e.target.checked })}
-                      className="w-3.5 h-3.5 text-emerald-600 rounded border-slate-300"
-                    />
-                    <span>نمایش بنر</span>
-                  </label>
-                </div>
-                <span className="text-xs text-slate-500 block leading-relaxed">
-                  تصویر تصویرسازی بالای کارت پورتال؛ می‌توانید عکس دلخواه خود را بارگذاری کرده یا از تصویر پیش‌فرض بالحق استفاده کنید.
-                </span>
-
-                <input
-                  ref={heroFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      handleHeroFileUpload(e.target.files[0]);
-                    }
-                  }}
-                />
-
-                <div className="flex items-center gap-3">
-                  <div className="w-28 h-16 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={generalSettings.portalHeroImage || form.theme?.portalHeroImage || '/images/belhagh-hero.png'}
-                      alt="Portal Hero"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => heroFileInputRef.current?.click()}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    >
-                      <UploadCloud className="w-3.5 h-3.5" />
-                      <span>بارگذاری تصویر جدید</span>
-                    </button>
-                    {(generalSettings.portalHeroImage || form.theme?.portalHeroImage) && (
-                      <button
-                        type="button"
-                        onClick={() => updateGeneral({ portalHeroImage: '/images/belhagh-hero.png' })}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer border border-slate-200"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>بازنشانی به بنر پیش‌فرض</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* تصویر پس‌زمینه کلی صفحه فرم */}
-              <div className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-bold text-slate-800">تصویر پس‌زمینه سراسری صفحه فرم</span>
-                  </div>
-                  {form.theme?.backgroundImage && (
-                    <button
-                      type="button"
-                      onClick={() => updateThemeBg('')}
-                      className="text-xs text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>حذف عکس پس‌زمینه</span>
-                    </button>
-                  )}
-                </div>
-                <span className="text-xs text-slate-500 block leading-relaxed">
-                  تصویر پس‌زمینه که در کل صفحه عمومی فرم و پشت دروازه پورتال قرار می‌گیرد (قابل تنظیم در تب قالب نیز هست).
-                </span>
-
-                <input
-                  ref={bgFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      handleBgFileUpload(e.target.files[0]);
-                    }
-                  }}
-                />
-
-                <div className="flex items-center gap-3">
-                  <div className="w-28 h-16 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0">
-                    {form.theme?.backgroundImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={form.theme.backgroundImage}
-                        alt="Background"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-[10px] text-slate-400 font-bold">بدون عکس</span>
-                    )}
-                  </div>
-                  <div className="flex-1 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => bgFileInputRef.current?.click()}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    >
-                      <UploadCloud className="w-3.5 h-3.5" />
-                      <span>بارگذاری عکس پس‌زمینه</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateThemeBg('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=80')}
-                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors cursor-pointer"
-                    >
-                      طبیعت آرام
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateThemeBg('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80')}
-                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors cursor-pointer"
-                    >
-                      دفتر کار مدرن
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
