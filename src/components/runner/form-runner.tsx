@@ -1534,20 +1534,57 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       form.slug === '3uu4z' ||
       form.category?.includes('روانشناسی');
 
+    const portalTitle =
+      form.generalSettings?.portalTitle ||
+      form.printTemplate?.headerTitle ||
+      (isBelhaghFamily ? 'سامانه مشاوره تلفنی روانشناسی بالحق' : form.title);
+
+    const portalSubtitle =
+      form.generalSettings?.portalSubtitle ||
+      (isBelhaghFamily ? 'ورود به پرونده یا ثبت‌نام جدید' : form.description || '');
+
+    const heroImage =
+      form.generalSettings?.portalHeroImage ||
+      form.theme?.portalHeroImage ||
+      '/images/belhagh-hero.png';
+
+    const showHeroImage =
+      form.generalSettings?.showPortalHeroImage !== false;
+
     return (
-      <>
+      <div 
+        className="w-full flex-1 flex flex-col items-center justify-center py-4 sm:py-8 px-2 sm:px-4 relative z-10"
+        style={{
+          // در صورت پیش‌نمایش مستقیم یا نبود کانتینر والد
+          backgroundColor: !form.theme?.backgroundImage ? (form.theme?.backgroundColor || 'transparent') : 'transparent',
+        }}
+      >
         {isBelhaghFamily ? (
-          <div className="max-w-[440px] w-full mx-auto my-6 sm:my-10 px-3 animate-in fade-in zoom-in-95 duration-300">
+          <div className="max-w-[440px] w-full mx-auto my-2 sm:my-6 px-3 animate-in fade-in zoom-in-95 duration-300">
             <div className="overflow-hidden rounded-3xl border border-stone-300/80 shadow-2xl shadow-stone-900/15 bg-[#dfbe9b] text-center">
               
-              {/* تصویر سربرگ اختصاصی بالحق */}
-              <div className="relative w-full overflow-hidden bg-slate-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/images/belhagh-hero.png"
-                  alt="سامانه مشاوره تلفنی روانشناسی بالحق"
-                  className="w-full h-auto block select-none pointer-events-none"
-                />
+              {/* تصویر سربرگ اختصاصی (قابل تغییر) */}
+              {showHeroImage && heroImage && (
+                <div className="relative w-full overflow-hidden bg-slate-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={heroImage}
+                    alt={portalTitle}
+                    className="w-full h-auto block select-none pointer-events-none"
+                  />
+                </div>
+              )}
+
+              {/* عنوان‌گونه اختصاصی بالای دکمه‌ها / پورتال (قابل تغییر) */}
+              <div className="px-5 pt-3.5 pb-1 text-center">
+                <h1 className="text-base sm:text-lg font-black text-[#084d3e] tracking-tight">
+                  {portalTitle}
+                </h1>
+                {portalSubtitle && (
+                  <p className="text-xs text-stone-700 font-semibold mt-1">
+                    {portalSubtitle}
+                  </p>
+                )}
               </div>
 
               {/* بخش دکمه‌ها و باکس ورود هماهنگ با تصاویر ۱ و ۲ و ۳ */}
@@ -1674,8 +1711,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           <div className="max-w-md mx-auto my-12 sm:my-20 px-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6 text-center">
               <h1 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
-                {form.title}
+                {portalTitle}
               </h1>
+              {portalSubtitle && (
+                <p className="text-xs text-slate-500 font-medium -mt-3">
+                  {portalSubtitle}
+                </p>
+              )}
 
               {!isLoginBoxOpen ? (
                 <div className="space-y-3 pt-1">
@@ -1878,7 +1920,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             </div>
           </div>
         )}
-      </>
+      </div>
     );
   }
 

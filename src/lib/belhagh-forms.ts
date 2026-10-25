@@ -288,6 +288,15 @@ export const belhaghRegistrationForm: Form = {
       },
     },
   },
+  generalSettings: {
+    identifierColor: '#084d3e',
+    showPortalGate: true,
+    portalTitle: 'مرکز خدمات روانشناسی بالحق',
+    portalSubtitle: 'سامانه مشاوره تلفنی و پرونده مراجعین',
+    portalHeroImage: '/images/belhagh-hero.png',
+    showPortalHeroImage: true,
+    liveChatEnabled: true,
+  },
   theme: {
     themeId: 'belhagh_official',
     themeColor: '#0284c7',
@@ -1557,6 +1566,15 @@ export const belhaghBookingForm: Form = {
     customSuccessMessage: 'نوبت مشاوره تلفنی شما با موفقیت رزرو شد.',
     showSummaryAfterSubmit: true,
     allowDownloadPdfReceipt: true,
+  },
+  generalSettings: {
+    identifierColor: '#084d3e',
+    showPortalGate: true,
+    portalTitle: 'مرکز خدمات روانشناسی بالحق',
+    portalSubtitle: 'سامانه مشاوره تلفنی و پرونده مراجعین',
+    portalHeroImage: '/images/belhagh-hero.png',
+    showPortalHeroImage: true,
+    liveChatEnabled: true,
   },
   theme: {
     themeId: 'belhagh_official',

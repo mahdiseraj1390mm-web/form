@@ -213,8 +213,26 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
           initialFormMap.set(f.id, f);
           initialFormMap.set(f.slug, f);
         });
-        // تضمین به‌روزرسانی فرم‌های پایه به آخرین نسخه (جهت اعمال فوری هر ۴ مرحله و استپ‌ها)
-        const updated = parsed.map((f) => initialFormMap.get(f.id) || initialFormMap.get(f.slug) || f);
+        // تضمین به‌روزرسانی فرم‌های پایه به آخرین نسخه همراه با حفظ تغییرات کاربر در تنظیمات و قالب
+        const updated = parsed.map((f) => {
+          const base = initialFormMap.get(f.id) || initialFormMap.get(f.slug);
+          if (!base) return f;
+          return {
+            ...base,
+            ...f,
+            generalSettings: {
+              ...base.generalSettings,
+              ...f.generalSettings,
+            },
+            theme: {
+              ...(base.theme || { themeColor: '#0284c7', fontFamily: 'vazirmatn', borderRadius: 'md' }),
+              ...(f.theme || {}),
+              themeColor: f.theme?.themeColor || base.theme?.themeColor || '#0284c7',
+            },
+            steps: base.steps || f.steps,
+            fields: base.fields || f.fields,
+          };
+        });
         initialForms.forEach((f) => {
           if (!updated.some((u) => u.id === f.id || u.slug === f.slug)) {
             updated.unshift(f);

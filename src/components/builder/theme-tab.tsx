@@ -73,6 +73,7 @@ export const ThemeTab: React.FC<ThemeTabProps> = ({ form, onUpdateForm, onPrevie
   const bgFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const curatedBgPresets = [
+    { id: 'nature_tree', label: 'طبیعت بالحق', url: '/images/nature-tree.jpg' },
     { id: 'office', label: 'دفتر کار مدرن', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80' },
     { id: 'nature', label: 'طبیعت کوهستان', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80' },
     { id: 'minimal', label: 'معماری مینیمال', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80' },

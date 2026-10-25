@@ -35,30 +35,60 @@ function PublicFormContent() {
     );
   }
 
+  const headerTitle =
+    form.generalSettings?.portalTitle ||
+    form.printTemplate?.headerTitle ||
+    (form.id.includes('belhagh') || form.slug === 'zexuz' || form.slug === '3uu4z'
+      ? 'مرکز خدمات روانشناسی بالحق'
+      : form.title || 'فرم‌افزار سازمانی');
+
+  const hasBgImage = Boolean(form.theme?.backgroundImage);
+  const pageBgStyle: React.CSSProperties = {
+    backgroundColor: form.theme?.backgroundColor || '#f8fafc',
+    backgroundImage: form.theme?.backgroundImage
+      ? `url(${form.theme.backgroundImage})`
+      : (form.theme?.backgroundGradient || undefined),
+    backgroundSize: form.theme?.backgroundSize === 'repeat' ? 'auto' : (form.theme?.backgroundSize || 'cover'),
+    backgroundRepeat: form.theme?.backgroundSize === 'repeat' ? 'repeat' : 'no-repeat',
+    backgroundPosition: form.theme?.backgroundPosition || 'center center',
+    backgroundAttachment: 'fixed',
+  };
+
   return (
-    <div className="min-h-screen bg-slate-100/60 flex flex-col justify-between">
-      {/* هدر ساده فرم عمومی */}
-      <header className="py-4 border-b border-slate-200/80 bg-white shadow-sm">
+    <div 
+      className="min-h-screen flex flex-col justify-between transition-all duration-300 relative"
+      style={pageBgStyle}
+    >
+      {/* لایه پوشش تیره اختیاری روی عکس پس‌زمینه */}
+      {hasBgImage && (form.theme?.backgroundOverlayOpacity || 0) > 0 && (
+        <div 
+          className="fixed inset-0 pointer-events-none transition-opacity z-0"
+          style={{ backgroundColor: `rgba(0, 0, 0, ${form.theme?.backgroundOverlayOpacity})` }}
+        />
+      )}
+
+      {/* هدر فرم عمومی */}
+      <header className={`py-4 border-b border-slate-200/80 shadow-sm relative z-10 transition-colors ${
+        hasBgImage ? 'backdrop-blur-md bg-white/85' : 'bg-white'
+      }`}>
         <div className="max-w-3xl mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
               <Layers className="w-4 h-4 text-blue-400" />
             </div>
             <span className="font-extrabold text-sm text-slate-900 tracking-tight block">
-              {form.id.includes('belhagh') || form.slug === 'zexuz' || form.slug === '3uu4z'
-                ? 'مرکز خدمات روانشناسی بالحق'
-                : 'فرم‌افزار سازمانی'}
+              {headerTitle}
             </span>
           </div>
 
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 font-medium">
             سامانه امن ثبت و دریافت داده‌ها
           </div>
         </div>
       </header>
 
       {/* بوم رانر فرم */}
-      <main className="flex-1 flex flex-col justify-start py-2 sm:py-6">
+      <main className="flex-1 flex flex-col justify-start py-2 sm:py-6 relative z-10">
         <FormRunner 
           key={form.id}
           form={form} 
@@ -71,7 +101,9 @@ function PublicFormContent() {
       </main>
 
       {/* پاورقی رسمی فرم عمومی */}
-      <footer className="py-6 text-center text-xs text-slate-400 border-t border-slate-200/60 bg-white">
+      <footer className={`py-6 text-center text-xs text-slate-500 border-t border-slate-200/60 relative z-10 transition-colors ${
+        hasBgImage ? 'backdrop-blur-md bg-white/85' : 'bg-white'
+      }`}>
         <div className="max-w-3xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>قدرت گرفته از سامانه فرم‌افزار سازمانی</span>
           <span className="text-[11px]">رمزنگاری اطلاعات و اعتبارسنجی شبکه شاپرک</span>

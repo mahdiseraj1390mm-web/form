@@ -252,6 +252,10 @@ export interface FormBehaviorSettings {
 export interface FormGeneralSettings {
   identifierColor?: string; // رنگ شناسایی فرم (مطابق فرم‌افزار)
   showPortalGate?: boolean; // نمایش صفحه پورتال پرونده پیش از ورود به فرم
+  portalTitle?: string; // نوشته عنوان‌گونه بالای صفحه یا پورتال (مثال: «مرکز خدمات روانشناسی بالحق»)
+  portalSubtitle?: string; // زیرعنوان یا متن توضیحی پورتال
+  portalHeroImage?: string; // تصویر سربرگ / بنر پورتال
+  showPortalHeroImage?: boolean; // فعال/غیرفعال‌سازی تصویر سربرگ
   requestLocation?: boolean; // درخواست دریافت موقعیت مکانی
   showSecurityCode?: boolean; // نمایش کد امنیتی
   customIdPrefix?: string; // پیشوند
@@ -273,6 +277,7 @@ export interface FormThemeSettings {
   backgroundColor?: string; // رنگ پس‌زمینه کلی
   backgroundGradient?: string; // گرادیانت یا استایل پس‌زمینه
   backgroundImage?: string; // عکس پس‌زمینه
+  portalHeroImage?: string; // عکس بنر / سربرگ پورتال
   backgroundSize?: 'cover' | 'contain' | 'repeat' | 'auto'; // اندازه عکس
   backgroundPosition?: 'center' | 'top' | 'bottom' | 'right' | 'left'; // موقعیت قرارگیری
   backgroundOverlayOpacity?: number; // شفافیت پس‌زمینه
