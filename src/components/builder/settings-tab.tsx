@@ -34,18 +34,21 @@ import {
   Trash2,
   UploadCloud,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  LogIn
 } from 'lucide-react';
 import { toPersianDigits, formatCurrency } from '@/lib/persian';
 
 interface SettingsTabProps {
   form: Form;
   onUpdateForm: (updated: Partial<Form>) => void;
+  initialSubTab?: string;
 }
 
-export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm }) => {
+export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, initialSubTab }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     | 'general'
+    | 'login_page'
     | 'redirect'
     | 'email'
     | 'sms'
@@ -55,7 +58,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm }) 
     | 'link_params'
     | 'auth'
     | 'access'
-  >('general');
+  >((initialSubTab as any) || 'general');
 
   const [savedToast, setSavedToast] = useState(false);
 
@@ -205,7 +208,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm }) 
   };
 
   const subNavItems = [
-    { id: 'general', label: 'تنظیمات عمومی و پرتال', icon: Settings },
+    { id: 'general', label: 'تنظیمات عمومی فرم', icon: Settings },
+    { id: 'login_page', label: 'صفحه ورود (پورتال پرونده)', icon: LogIn },
     { id: 'redirect', label: 'پیغام ثبت و تغییر مسیر', icon: MessageSquare },
     { id: 'limits', label: 'محدودیت ثبت و ظرفیت', icon: Lock },
     { id: 'auth', label: 'احراز هویت و دسترسی', icon: ShieldCheck },
@@ -230,6 +234,150 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm }) 
               <div className="border-b border-slate-100 pb-3">
                 <h3 className="text-base font-extrabold text-slate-800">تنظیمات عمومی فرم</h3>
                 <p className="text-xs text-slate-500 mt-0.5">پیکربندی هویت، نحوه نمایش اولیه و کدهای پیگیری</p>
+              </div>
+
+              {/* بنر ارجاع سریع به تب صفحه ورود */}
+              <div
+                onClick={() => setActiveSubTab('login_page')}
+                className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-50 transition-all flex items-center justify-between cursor-pointer group shadow-2xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#084d3e] text-white flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
+                    <LogIn className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-extrabold text-slate-800 block">
+                      تنظیمات صفحه ورود و پورتال پرونده
+                    </span>
+                    <span className="text-xs text-slate-600 block mt-0.5">
+                      تنظیمات اختصاصی عنوان‌گونه، بنر سربرگ و دروازه ورودی مراجعین به تب «صفحه ورود» منتقل شد.
+                    </span>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-[#084d3e] bg-white px-3.5 py-1.5 rounded-xl border border-emerald-300 group-hover:border-emerald-500 shadow-2xs transition-all flex items-center gap-1">
+                  <span>مشاهده صفحه ورود</span>
+                  <span>&larr;</span>
+                </span>
+              </div>
+
+              {/* رنگ شناسایی فرم */}
+              <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100">
+                <div>
+                  <span className="text-sm font-bold text-slate-800 block">رنگ شناسایی فرم</span>
+                  <span className="text-xs text-slate-500 block mt-0.5">جهت دسته‌بندی بصری در لیست فرم‌ها</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="color"
+                    value={generalSettings.identifierColor || '#0284c7'}
+                    onChange={(e) => updateGeneral({ identifierColor: e.target.value })}
+                    className="w-10 h-10 p-0.5 rounded-xl border border-slate-300 cursor-pointer bg-white"
+                  />
+                  <div
+                    className="w-8 h-8 rounded-xl shadow-2xs border border-slate-300"
+                    style={{ backgroundColor: generalSettings.identifierColor || '#0284c7' }}
+                  />
+                </div>
+              </div>
+
+              {/* چت آنلاین */}
+              <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer">
+                <div>
+                  <span className="text-sm font-bold text-slate-800 block">فعال‌سازی گفتگوی آنلاین (پشتیبانی زنده)</span>
+                  <span className="text-xs text-slate-500 block mt-0.5">نمایش دکمه چت در گوشه فرم برای سوالات مراجعین حین ثبت‌نام</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={generalSettings.liveChatEnabled !== false}
+                  onChange={(e) => updateGeneral({ liveChatEnabled: e.target.checked })}
+                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
+                />
+              </label>
+
+              {/* درخواست موقعیت مکانی */}
+              <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer">
+                <div>
+                  <span className="text-sm font-bold text-slate-800 block">درخواست دریافت موقعیت مکانی (GPS)</span>
+                  <span className="text-xs text-slate-500 block mt-0.5">ثبت مختصات جغرافیایی مراجع هنگام ارسال اطلاعات</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={generalSettings.requestLocation || false}
+                  onChange={(e) => updateGeneral({ requestLocation: e.target.checked })}
+                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
+                />
+              </label>
+
+              {/* کد امنیتی */}
+              <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer">
+                <div>
+                  <span className="text-sm font-bold text-slate-800 block">نمایش کد امنیتی ضداسپم (Captcha)</span>
+                  <span className="text-xs text-slate-500 block mt-0.5">جلوگیری از ارسال‌های خودکار و ربات‌ها</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={generalSettings.showSecurityCode || false}
+                  onChange={(e) => updateGeneral({ showSecurityCode: e.target.checked })}
+                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
+                />
+              </label>
+
+              {/* شناسه اختصاصی و کد پیگیری */}
+              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-slate-800">الگوی شناسه اختصاصی و کد پرونده</span>
+                  <HelpCircle className="w-4 h-4 text-slate-400" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">پیشوند</label>
+                    <input
+                      type="text"
+                      placeholder="مثال: BH-"
+                      value={generalSettings.customIdPrefix || ''}
+                      onChange={(e) => updateGeneral({ customIdPrefix: e.target.value })}
+                      className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">شروع شماره‌گذاری از</label>
+                    <input
+                      type="number"
+                      value={generalSettings.customIdStartNumber || 1000}
+                      onChange={(e) => updateGeneral({ customIdStartNumber: Number(e.target.value) })}
+                      className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-1 flex items-center justify-between">
+                  <span className="text-xs text-sky-700 font-bold font-mono">
+                    نمونه کد پرونده:{' '}
+                    {(generalSettings.customIdPrefix || '') +
+                      String(generalSettings.customIdStartNumber || 1000).padStart(
+                        generalSettings.customIdMinDigits || 6,
+                        '0'
+                      ) +
+                      (generalSettings.customIdSuffix || '')}
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* تب اختصاصی: صفحه ورود (پورتال پرونده) */}
+          {activeSubTab === 'login_page' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-800">تنظیمات صفحه ورود (پورتال پرونده)</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">پیکربندی دروازه ورودی مراجعین، امکان ورود با کد پرونده، عنوان‌گونه و بنر اختصاصی</p>
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#084d3e] flex items-center justify-center font-bold">
+                  <LogIn className="w-4 h-4" />
+                </div>
               </div>
 
               {/* فعال‌سازی صفحه پورتال پرونده (دروازه ورود با کد پرونده) */}
@@ -438,115 +586,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm }) 
                   </div>
                 </div>
               </div>
-
-              {/* رنگ شناسایی فرم */}
-              <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100">
-                <div>
-                  <span className="text-sm font-bold text-slate-800 block">رنگ شناسایی فرم</span>
-                  <span className="text-xs text-slate-500 block mt-0.5">جهت دسته‌بندی بصری در لیست فرم‌ها</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <input
-                    type="color"
-                    value={generalSettings.identifierColor || '#0284c7'}
-                    onChange={(e) => updateGeneral({ identifierColor: e.target.value })}
-                    className="w-10 h-10 p-0.5 rounded-xl border border-slate-300 cursor-pointer bg-white"
-                  />
-                  <div
-                    className="w-8 h-8 rounded-xl shadow-2xs border border-slate-300"
-                    style={{ backgroundColor: generalSettings.identifierColor || '#0284c7' }}
-                  />
-                </div>
-              </div>
-
-              {/* چت آنلاین */}
-              <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer">
-                <div>
-                  <span className="text-sm font-bold text-slate-800 block">فعال‌سازی گفتگوی آنلاین (پشتیبانی زنده)</span>
-                  <span className="text-xs text-slate-500 block mt-0.5">نمایش دکمه چت در گوشه فرم برای سوالات مراجعین حین ثبت‌نام</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={generalSettings.liveChatEnabled !== false}
-                  onChange={(e) => updateGeneral({ liveChatEnabled: e.target.checked })}
-                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
-                />
-              </label>
-
-              {/* درخواست موقعیت مکانی */}
-              <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer">
-                <div>
-                  <span className="text-sm font-bold text-slate-800 block">درخواست دریافت موقعیت مکانی (GPS)</span>
-                  <span className="text-xs text-slate-500 block mt-0.5">ثبت مختصات جغرافیایی مراجع هنگام ارسال اطلاعات</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={generalSettings.requestLocation || false}
-                  onChange={(e) => updateGeneral({ requestLocation: e.target.checked })}
-                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
-                />
-              </label>
-
-              {/* کد امنیتی */}
-              <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50/70 transition-colors cursor-pointer">
-                <div>
-                  <span className="text-sm font-bold text-slate-800 block">نمایش کد امنیتی ضداسپم (Captcha)</span>
-                  <span className="text-xs text-slate-500 block mt-0.5">جلوگیری از ارسال‌های خودکار و ربات‌ها</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={generalSettings.showSecurityCode || false}
-                  onChange={(e) => updateGeneral({ showSecurityCode: e.target.checked })}
-                  className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
-                />
-              </label>
-
-              {/* شناسه اختصاصی و کد پیگیری */}
-              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-slate-800">الگوی شناسه اختصاصی و کد پرونده</span>
-                  <HelpCircle className="w-4 h-4 text-slate-400" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">پیشوند</label>
-                    <input
-                      type="text"
-                      placeholder="مثال: BH-"
-                      value={generalSettings.customIdPrefix || ''}
-                      onChange={(e) => updateGeneral({ customIdPrefix: e.target.value })}
-                      className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">شروع شماره‌گذاری از</label>
-                    <input
-                      type="number"
-                      value={generalSettings.customIdStartNumber || 1000}
-                      onChange={(e) => updateGeneral({ customIdStartNumber: Number(e.target.value) })}
-                      className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-1 flex items-center justify-between">
-                  <span className="text-xs text-sky-700 font-bold font-mono">
-                    نمونه کد پرونده:{' '}
-                    {(generalSettings.customIdPrefix || '') +
-                      String(generalSettings.customIdStartNumber || 1000).padStart(
-                        generalSettings.customIdMinDigits || 6,
-                        '0'
-                      ) +
-                      (generalSettings.customIdSuffix || '')}
-                  </span>
-                </div>
-              </div>
-
             </div>
           )}
 
-          {/* تب ۲: پیغام ثبت و تغییر مسیر */}
           {activeSubTab === 'redirect' && (
             <div className="space-y-6">
               <div className="border-b border-slate-100 pb-3">
