@@ -401,6 +401,23 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     sub?: FormSubmission;
   } | null>(null);
 
+  // انتقال به فرم ثبت نام یا ورود به مراحل ثبت نام
+  const handleStartRegistration = () => {
+    const isReg = form.id === 'form-belhagh-registration' || form.slug === 'zexuz';
+    if (isReg) {
+      setAuthGateMode('filling');
+      setCurrentStepIndex(0);
+      setInternalPageIndex(0);
+    } else {
+      // هدایت خودکار به فرم ثبت نام در صورتی که مراجع در فرم دیگری است
+      if (onNavigateToForm) {
+        onNavigateToForm('zexuz');
+      } else if (typeof window !== 'undefined') {
+        window.location.href = '/form/zexuz';
+      }
+    }
+  };
+
   // ورود به پرونده با کد پرونده
   const handleCaseLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -533,12 +550,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   }, [form.id, form.slug, form.fields, initialFormData]);
 
   const handleGoToNextChainedForm = () => {
-    if (!form.behavior?.nextChainedForm) return;
-    const targetSlug = form.behavior.nextChainedForm.formSlug;
-    const targetId = form.behavior.nextChainedForm.formId;
+    const targetSlug = form.behavior?.nextChainedForm?.formSlug || '3uu4z';
+    const targetId = form.behavior?.nextChainedForm?.formId || 'form-belhagh-booking';
 
     const prefilledData: Record<string, any> = {};
-    if (form.behavior.nextChainedForm.prefillMapping) {
+    if (form.behavior?.nextChainedForm?.prefillMapping) {
       Object.entries(form.behavior.nextChainedForm.prefillMapping).forEach(([sourceKey, targetKey]) => {
         if (formData[sourceKey] !== undefined) {
           prefilledData[targetKey] = formData[sourceKey];
@@ -552,10 +568,24 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       });
     }
 
+    if (formData['f_name'] && !prefilledData['f_name']) prefilledData['f_name'] = formData['f_name'];
+    if (formData['f_family'] && !prefilledData['f_family']) prefilledData['f_family'] = formData['f_family'];
+    if (formData['f_mobile'] && !prefilledData['f_mobile']) prefilledData['f_mobile'] = formData['f_mobile'];
+    if (formData['f_province_city'] && !prefilledData['f_province_city']) prefilledData['f_province_city'] = formData['f_province_city'];
+    if (formData['f_role_in_family'] && !prefilledData['f_role_in_family']) prefilledData['f_role_in_family'] = formData['f_role_in_family'];
+
+    const activeCode = submittedResult?.trackingCode || activeCaseSubmission?.trackingCode;
+    if (activeCode) {
+      prefilledData['f_case_code'] = activeCode;
+    }
+
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem('prefill_' + targetSlug, JSON.stringify(prefilledData));
         sessionStorage.setItem('prefill_' + targetId, JSON.stringify(prefilledData));
+        if (activeCode) {
+          localStorage.setItem('belhagh_current_case_code', activeCode);
+        }
       } catch (e) {}
     }
 
@@ -1200,7 +1230,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         )}
 
         {/* گزینه انتقال به فرم دوم (تشکیل پرونده مشاور و نوبت دهی مشاوره تلفنی) */}
-        {form.behavior?.nextChainedForm && (
+        {(form.behavior?.nextChainedForm || form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && (
           <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50/70 to-purple-50 rounded-2xl border-2 border-blue-400 text-right space-y-4 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
@@ -1211,13 +1241,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   مرحله بعدی
                 </span>
                 <h3 className="text-base font-extrabold text-slate-900">
-                  {form.behavior.nextChainedForm.title}
+                  {form.behavior?.nextChainedForm?.title || 'تشکیل پرونده مشاور و نوبت‌دهی مشاوره تلفنی'}
                 </h3>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              {form.behavior.nextChainedForm.description ||
+              {form.behavior?.nextChainedForm?.description ||
                 'ثبت نام اولیه شما با موفقیت تکمیل شد. اکنون جهت تشکیل پرونده مشاور و رزرو زمان مشاوره تلفنی، بر روی دکمه زیر کلیک فرمایید:'}
             </p>
 
@@ -1227,7 +1257,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               className="w-full py-3.5 px-5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <PhoneCall className="w-4 h-4" />
-              <span>{form.behavior.nextChainedForm.buttonText || 'تشکیل پرونده مشاور و دریافت نوبت مشاوره تلفنی'}</span>
+              <span>{form.behavior?.nextChainedForm?.buttonText || 'تشکیل پرونده مشاور و دریافت نوبت مشاوره تلفنی'}</span>
               <ArrowLeft className="w-4 h-4 mr-auto" />
             </button>
           </div>
@@ -1315,11 +1345,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
             <button
               type="button"
-              onClick={() => {
-                setAuthGateMode('filling');
-                setCurrentStepIndex(0);
-                setInternalPageIndex(0);
-              }}
+              onClick={handleStartRegistration}
               className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>شروع ثبت‌نام و تشکیل پرونده</span>
@@ -1478,15 +1504,30 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                           type="button"
                           onClick={() => {
                             setShowForgotModal(false);
-                            setAuthGateMode('filling');
-                            setCurrentStepIndex(0);
-                            if (forgotMobileInput) {
-                              handleFieldChange('f_mobile', forgotMobileInput);
+                            const isReg = form.id === 'form-belhagh-registration' || form.slug === 'zexuz';
+                            if (isReg) {
+                              setAuthGateMode('filling');
+                              setCurrentStepIndex(0);
+                              if (forgotMobileInput) {
+                                handleFieldChange('f_mobile', forgotMobileInput);
+                              }
+                            } else {
+                              if (typeof window !== 'undefined') {
+                                try {
+                                  sessionStorage.setItem('prefill_zexuz', JSON.stringify({ f_mobile: forgotMobileInput }));
+                                  sessionStorage.setItem('prefill_form-belhagh-registration', JSON.stringify({ f_mobile: forgotMobileInput }));
+                                } catch (e) {}
+                              }
+                              if (onNavigateToForm) {
+                                onNavigateToForm('zexuz', { f_mobile: forgotMobileInput });
+                              } else if (typeof window !== 'undefined') {
+                                window.location.href = '/form/zexuz';
+                              }
                             }
                           }}
-                          className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
+                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
                         >
-                          شروع ثبت‌نام جدید با این شماره
+                          انتقال به فرم ثبت‌نام و تشکیل پرونده با این شماره
                         </button>
                       </div>
                     )}
@@ -1615,7 +1656,29 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* دکمه‌های عملیات */}
         <div className="space-y-2.5 pt-2">
-          {form.behavior?.nextChainedForm && (
+          {form.id === 'form-belhagh-booking' || form.slug === '3uu4z' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setFormData((prev) => ({
+                  ...prev,
+                  f_name: sub.data?.f_name || sub.data?.f_applicant_name || prev.f_name || '',
+                  f_family: sub.data?.f_family || prev.f_family || '',
+                  f_mobile: sub.data?.f_mobile || sub.data?.mobile || prev.f_mobile || '',
+                  f_province_city: sub.data?.f_province_city || prev.f_province_city || '',
+                  f_role_in_family: sub.data?.f_role_in_family || prev.f_role_in_family || '',
+                  f_case_code: sub.trackingCode,
+                }));
+                setAuthGateMode('filling');
+                setCurrentStepIndex(0);
+              }}
+              className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>دریافت نوبت مشاوره تلفنی با این پرونده</span>
+              <ArrowLeft className="w-4 h-4 mr-auto" />
+            </button>
+          ) : (
             <button
               type="button"
               onClick={handleGoToNextChainedForm}
@@ -1729,12 +1792,27 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           )}
 
           <div className="border-b border-slate-100 pb-5">
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl font-extrabold" style={{ color: theme?.titleColor || '#0f172a' }}>{form.title}</h1>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthGateMode('portal');
+                    setCurrentStepIndex(0);
+                    setInternalPageIndex(0);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  title="بازگشت به صفحه اول / ورود به پرونده"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>بازگشت به صفحه ورود</span>
+                </button>
+                <h1 className="text-base sm:text-xl font-extrabold" style={{ color: theme?.titleColor || '#0f172a' }}>{form.title}</h1>
+              </div>
               {onBackToStudio && (
                 <button
                   onClick={onBackToStudio}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                  className="text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
                 >
                   بازگشت به ویرایشگر فرم
                 </button>
@@ -2462,24 +2540,72 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* دکمه‌های ناوبری مرحله‌ای و ثبت فرم مطابق تصویر فرم‌افزار */}
         <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-2">
             {form.mode === 'wizard' && currentStepIndex > 0 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>مرحله قبل</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthGateMode('portal');
+                    setCurrentStepIndex(0);
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <span>بازگشت به صفحه اول</span>
+                </button>
+              </>
+            ) : form.mode === 'wizard' && currentStepIndex === 0 ? (
               <button
                 type="button"
-                onClick={handlePrevStep}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                onClick={() => {
+                  setAuthGateMode('portal');
+                  setCurrentStepIndex(0);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
               >
-                <span>مرحله قبل</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+                <span>بازگشت به صفحه اول</span>
               </button>
             ) : activePageIndex > 0 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrevPage}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>مرحله قبل</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthGateMode('portal');
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <span>بازگشت به صفحه اول</span>
+                </button>
+              </>
+            ) : (
               <button
                 type="button"
-                onClick={handlePrevPage}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                onClick={() => {
+                  setAuthGateMode('portal');
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
               >
-                <span>مرحله قبل</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+                <span>بازگشت به صفحه اول</span>
               </button>
-            ) : null}
+            )}
           </div>
 
           <div>
@@ -2494,6 +2620,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 }}
               >
                 <span>{activePageFields[activePageFields.length - 1]?.nextButtonText || 'مرحله بعد'}</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
               </button>
             ) : form.mode === 'wizard' && currentStepIndex < (form.steps?.length || 1) - 1 ? (
               canProceedToNextStep ? (
@@ -2507,6 +2634,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   }}
                 >
                   <span>مرحله بعد</span>
+                  <ArrowLeft className="w-3.5 h-3.5" />
                 </button>
               ) : null
             ) : (
@@ -2518,7 +2646,14 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   color: theme?.buttonTextColor || '#ffffff',
                 }}
               >
-                <span>{form.payment.enabled && calculatedAmount > 0 ? 'رفتن به درگاه پرداخت و ثبت' : 'ثبت فرم'}</span>
+                <span>
+                  {form.payment.enabled && calculatedAmount > 0
+                    ? 'رفتن به درگاه پرداخت و ثبت'
+                    : (form.id === 'form-belhagh-registration' || form.slug === 'zexuz')
+                    ? 'ثبت مشخصات و تشکیل پرونده'
+                    : 'ثبت و تکمیل پرونده نوبت‌دهی'}
+                </span>
+                <CheckCircle2 className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
