@@ -44,6 +44,7 @@ import {
   Copy,
   ExternalLink,
   HelpCircle,
+  Home,
   LogIn,
   LogOut,
   FileEdit,
@@ -1451,70 +1452,84 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
-        {/* گزینه انتقال به فرم دوم (تشکیل پرونده مشاور و نوبت دهی مشاوره تلفنی) */}
+        {/* کارت راهنمای بازگشت به صفحه اصلی جهت ورود به سامانه نوبت‌دهی */}
         {(form.behavior?.nextChainedForm || form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && (
-          <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50/70 to-purple-50 rounded-2xl border-2 border-blue-400 text-right space-y-4 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50/70 to-purple-50 rounded-2xl border-2 border-blue-400 text-right space-y-4 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300 print:hidden">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                <PhoneCall className="w-6 h-6" />
+                <Home className="w-6 h-6" />
               </div>
               <div>
                 <span className="text-[11px] font-extrabold text-blue-700 bg-blue-100/90 px-2 py-0.5 rounded-md inline-block mb-1">
-                  مرحله بعدی
+                  مرحله بعدی: دریافت نوبت مشاوره
                 </span>
                 <h3 className="text-base font-extrabold text-slate-900">
-                  {form.behavior?.nextChainedForm?.title || 'تشکیل پرونده مشاور و نوبت‌دهی مشاوره تلفنی'}
+                  سامانه نوبت دهی مشاوره تلفنی
                 </h3>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              {form.behavior?.nextChainedForm?.description ||
-                'ثبت نام اولیه شما با موفقیت تکمیل شد. اکنون جهت تشکیل پرونده مشاور و رزرو زمان مشاوره تلفنی، بر روی دکمه زیر کلیک فرمایید:'}
+              ثبت نام شما با موفقیت تکمیل شد. اکنون برای اخذ نوبت، بر روی کلید «بازگشت به صفحه اصلی» کلیک فرمایید تا با درج کد پرونده در قسمت ورود، نوبت مشاوره خود را رزرو نمایید:
             </p>
 
             <button
               type="button"
-              onClick={handleGoToNextChainedForm}
+              onClick={() => {
+                const code = submittedResult?.trackingCode || '';
+                setSubmittedResult(null);
+                setAuthGateMode('portal');
+                setIsLoginBoxOpen(false);
+                if (code) {
+                  setCaseCodeInput(code);
+                }
+              }}
               className="w-full py-3.5 px-5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <PhoneCall className="w-4 h-4" />
-              <span>{form.behavior?.nextChainedForm?.buttonText || 'تشکیل پرونده مشاور و دریافت نوبت مشاوره تلفنی'}</span>
+              <Home className="w-4 h-4" />
+              <span>بازگشت به صفحه اصلی (ورود به سامانه نوبت‌دهی)</span>
               <ArrowLeft className="w-4 h-4 mr-auto" />
             </button>
           </div>
         )}
 
         {/* دکمه‌های بازگشت و عملیات نهایی */}
-        <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+        <div className="pt-4 flex flex-wrap items-center justify-center gap-3 print:hidden">
           <button
             type="button"
             onClick={() => {
+              const code = submittedResult?.trackingCode || '';
               setSubmittedResult(null);
               setAuthGateMode('portal');
+              setIsLoginBoxOpen(false);
+              if (code) {
+                setCaseCodeInput(code);
+              }
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition-all cursor-pointer"
           >
-            <FolderLock className="w-4 h-4" />
-            <span>بازگشت به صفحه پرونده / ورود</span>
+            <Home className="w-4 h-4" />
+            <span>بازگشت به صفحه اصلی</span>
           </button>
 
           <button
+            type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-slate-800 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 active:scale-[0.99] transition-all cursor-pointer"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>چاپ برگه رسید رسمی</span>
+            <Printer className="w-4 h-4" />
+            <span>ذخیره و چاپ کد پرونده</span>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               setSubmittedResult(null);
               setFormData({});
               setCurrentStepIndex(0);
               setAuthGateMode('filling');
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>ثبت فرم جدید</span>
@@ -2050,8 +2065,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               onClick={handleGoToNextChainedForm}
               className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <PhoneCall className="w-4 h-4" />
-              <span>تشکیل پرونده مشاور و دریافت نوبت مشاوره تلفنی</span>
+              <Calendar className="w-4 h-4" />
+              <span>ورود به سامانه نوبت‌دهی مشاوره و اخذ نوبت</span>
               <ArrowLeft className="w-4 h-4 mr-auto" />
             </button>
           )}

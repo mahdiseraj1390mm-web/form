@@ -280,8 +280,8 @@ export const belhaghRegistrationForm: Form = {
       formId: 'form-belhagh-booking',
       formSlug: '3uu4z',
       title: 'سامانه نوبت دهی مشاوره تلفنی',
-      buttonText: 'تشکیل پرونده مشاور و دریافت نوبت مشاوره تلفنی',
-      description: 'ثبت نام شما با موفقیت تکمیل شد. اکنون برای تشکیل پرونده مشاور و رزرو زمان مشاوره تلفنی، بر روی دکمه زیر کلیک فرمایید:',
+      buttonText: 'بازگشت به صفحه اصلی و ورود به سامانه نوبت‌دهی',
+      description: 'ثبت نام شما با موفقیت تکمیل شد. اکنون برای اخذ نوبت، بر روی کلید «بازگشت به صفحه اصلی» کلیک فرمایید تا با درج کد پرونده در قسمت ورود، نوبت مشاوره خود را رزرو نمایید:',
       prefillMapping: {
         f_mobile: 'f_mobile',
         f_province_city: 'f_province_city',
