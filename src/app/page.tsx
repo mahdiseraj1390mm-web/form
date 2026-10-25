@@ -45,7 +45,7 @@ export default function AppHome() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 select-none">
+    <div className="h-screen h-[100dvh] flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
       
       {/* سربرگ ناوبری سراسری */}
       <Header
@@ -60,7 +60,7 @@ export default function AppHome() {
       />
 
       {/* بوم اصلی نرم‌افزار */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         
         {/* منوی کناری ثابت و کشویی موبایل */}
         <Sidebar 
@@ -74,7 +74,7 @@ export default function AppHome() {
         />
 
         {/* محتوای تب فعال */}
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {currentTab === 'dashboard' && (
             <DashboardView
               onOpenNewFormModal={() => setIsNewFormModalOpen(true)}

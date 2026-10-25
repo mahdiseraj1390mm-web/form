@@ -69,7 +69,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 bg-slate-50 select-none">
+    <div className="flex-1 overflow-y-auto p-6 sm:p-8 pb-20 sm:pb-12 space-y-8 bg-slate-50 overscroll-contain">
       
       {/* سربرگ داشبورد */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">

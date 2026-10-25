@@ -223,7 +223,25 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         setForms(updated);
         if (updated.length > 0) setActiveForm(updated[0]);
       }
-      if (storedSubmissions) setSubmissions(JSON.parse(storedSubmissions));
+      if (storedSubmissions) {
+        try {
+          const parsed = JSON.parse(storedSubmissions);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const existingIds = new Set(parsed.map((s: any) => s.id));
+            const merged = [...parsed];
+            initialSubmissions.forEach((s) => {
+              if (!existingIds.has(s.id)) merged.push(s);
+            });
+            setSubmissions(merged);
+          } else {
+            setSubmissions(initialSubmissions);
+          }
+        } catch {
+          setSubmissions(initialSubmissions);
+        }
+      } else {
+        setSubmissions(initialSubmissions);
+      }
       if (storedChat) setChatMessages(JSON.parse(storedChat));
       if (storedLogs) setWebhookLogs(JSON.parse(storedLogs));
       if (storedTeam) {
@@ -251,11 +269,15 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   }, [forms, submissions, chatMessages, webhookLogs, teamMembers, isInitialized]);
 
   const getFormById = (id: string) => {
+    const found = forms.find((f) => f.id === id || f.slug === id);
+    if (found) return found;
     if (id === 'form-belhagh-booking' || id === '3uu4z') return belhaghBookingForm;
     if (id === 'form-belhagh-registration' || id === 'zexuz') return belhaghRegistrationForm;
     return forms.find((f) => f.id === id);
   };
   const getFormBySlug = (slug: string) => {
+    const found = forms.find((f) => f.slug === slug || f.id === slug);
+    if (found) return found;
     if (slug === '3uu4z' || slug === 'form-belhagh-booking') return belhaghBookingForm;
     if (slug === 'zexuz' || slug === 'form-belhagh-registration') return belhaghRegistrationForm;
     return forms.find((f) => f.slug === slug || f.id === slug);

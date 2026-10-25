@@ -49,6 +49,7 @@ interface PresetTheme {
 }
 
 const presetThemes: PresetTheme[] = [
+  { id: 'belhagh_official', name: 'قالب رسمی بالحق (مدرن)', bgGradient: 'from-sky-50 via-blue-50/60 to-indigo-50/40', cssGradient: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f8fafc 100%)', cardBg: '#ffffff', textColor: '#1e293b', titleColor: '#0369a1', labelColor: '#0f172a', primaryColor: '#0284c7', borderRadius: 'xl', fontFamily: 'vazirmatn' },
   { id: 'formafzar', name: 'قالب فرم افزار', bgGradient: 'from-pink-500 via-purple-600 to-indigo-700', cssGradient: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #4338ca 100%)', cardBg: '#ffffff', textColor: '#334155', titleColor: '#4c1d95', labelColor: '#1e293b', primaryColor: '#8b5cf6', borderRadius: 'md', fontFamily: 'vazirmatn' },
   { id: 'transparent', name: 'قالب شفاف', bgGradient: 'from-teal-200 via-cyan-300 to-sky-400', cssGradient: 'linear-gradient(135deg, #99f6e4 0%, #38bdf8 50%, #818cf8 100%)', cardBg: 'rgba(255, 255, 255, 0.90)', textColor: '#0f172a', titleColor: '#0369a1', labelColor: '#0f172a', primaryColor: '#0284c7', borderRadius: 'lg', fontFamily: 'iranyekan' },
   { id: 'garden', name: 'قالب گاردن', bgGradient: 'from-slate-200 to-slate-400', cssGradient: 'linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 50%, #94a3b8 100%)', cardBg: '#ffffff', textColor: '#334155', titleColor: '#1e293b', labelColor: '#334155', primaryColor: '#475569', borderRadius: 'sm', fontFamily: 'system' },

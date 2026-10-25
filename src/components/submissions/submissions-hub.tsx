@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useForm } from '@/context/form-context';
-import { FormSubmission, SubmissionStatus } from '@/types/form';
+import { FormSubmission, SubmissionStatus, Form } from '@/types/form';
 import { 
   Inbox, 
   Search, 
@@ -21,187 +21,276 @@ import {
   Eye, 
   Send,
   Kanban,
-  Table as TableIcon
+  Table as TableIcon,
+  FolderOpen,
+  Calendar,
+  Phone,
+  MapPin,
+  FileText,
+  BadgeCheck,
+  Sparkles,
+  Layers,
+  ArrowUpRight,
+  X
 } from 'lucide-react';
 import { formatPersianDateTime, formatCurrency, toPersianDigits, getFieldDisplayValue } from '@/lib/persian';
+
+interface ClientCaseGroup {
+  caseCode: string;
+  fullName: string;
+  mobile: string;
+  provinceCity: string;
+  submissions: FormSubmission[];
+  formTitles: string[];
+  totalFormsCount: number;
+  latestDate: string;
+  overallStatus: SubmissionStatus;
+  totalPaidAmount: number;
+  roleInFamily?: string;
+}
 
 export const SubmissionsHub: React.FC = () => {
   const { forms, activeForm, submissions, updateSubmissionStatus, addSubmissionComment } = useForm();
   
-  const [selectedFormId, setSelectedFormId] = useState<string>(activeForm?.id || forms[0]?.id || '');
+  // دو زبانه اصلی: کارتابل پرونده‌های مراجعین (پیش‌فرض) و بانک ارسالی‌های تفکیکی فرم‌ها
+  const [hubTab, setHubTab] = useState<'cases' | 'submissions'>('cases');
+  const [selectedFormId, setSelectedFormId] = useState<string>(activeForm?.id || forms[0]?.id || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
-  const [activeSubmission, setActiveSubmission] = useState<FormSubmission | null>(null);
+  const [activeCaseModal, setActiveCaseModal] = useState<ClientCaseGroup | null>(null);
+  const [activeSubmissionModal, setActiveSubmissionModal] = useState<FormSubmission | null>(null);
   const [newCommentText, setNewCommentText] = useState('');
-
-  const currentForm = forms.find((f) => f.id === selectedFormId) || forms[0];
-  
-  // فیلتر رکوردهای ارسالی فرم جاری
-  const formSubmissions = submissions.filter((s) => s.formId === selectedFormId);
-
-  const filteredSubmissions = formSubmissions.filter((s) => {
-    // جستجو بر اساس کد پیگیری یا داده‌ها
-    const matchesSearch =
-      s.trackingCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      JSON.stringify(s.data).toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // فیلتر وضعیت
-    const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
 
   const statusConfigs: Record<SubmissionStatus, { label: string; color: string; bg: string; border: string }> = {
     new: { label: 'جدید', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
     reviewing: { label: 'در حال بررسی', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
-    approved: { label: 'تأیید شده', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+    approved: { label: 'تأیید شده / فعال', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
     rejected: { label: 'رد شده', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
   };
 
-  // دانلود خروجی استاندارد CSV با پشتیبانی کامل از حروف فارسی (BOM)
-  const handleExportCSV = () => {
-    if (!currentForm || filteredSubmissions.length === 0) return;
+  // گروه‌بندی هوشمند پاسخ‌ها به پرونده‌های مراجعین
+  const clientCases: ClientCaseGroup[] = useMemo(() => {
+    const caseMap = new Map<string, ClientCaseGroup>();
 
-    const headers = ['کد پرونده', 'تاریخ ثبت', 'وضعیت', 'وضعیت پرداخت', ...currentForm.fields.map((f) => f.label)];
-    
-    const rows = filteredSubmissions.map((s) => {
-      const fieldValues = currentForm.fields.map((f) => {
-        const val = s.data[f.id];
-        if (val === undefined || val === null) return '';
-        if (typeof val === 'object') return JSON.stringify(val);
-        return getFieldDisplayValue(f, val).replace(/"/g, '""');
-      });
+    submissions.forEach((sub) => {
+      // استخراج کد پرونده، شماره همراه، یا نام
+      const caseCode = sub.data.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
+      const fullName = sub.data.fullName || sub.data.f_fullname || 'مراجع مرکز بالحق';
+      const mobile = sub.data.f_mobile || sub.data.bk_mobile || '۰۹۱۲۰۰۰۰۰۰۰';
+      const provinceCity = sub.data.f_province_city || 'ثبت‌نشده';
+      const roleInFamily = sub.data.f_role_in_family;
 
-      return [
-        s.trackingCode,
-        formatPersianDateTime(s.createdAt),
-        statusConfigs[s.status]?.label || s.status,
-        s.paymentStatus === 'paid' ? 'پرداخت شده' : 'بدون پرداخت',
-        ...fieldValues,
-      ];
+      const formObj = forms.find((f) => f.id === sub.formId);
+      const formTitle = formObj ? formObj.title : 'فرم ثبت‌شده';
+
+      if (!caseMap.has(caseCode)) {
+        caseMap.set(caseCode, {
+          caseCode,
+          fullName,
+          mobile,
+          provinceCity,
+          submissions: [sub],
+          formTitles: [formTitle],
+          totalFormsCount: 1,
+          latestDate: sub.createdAt,
+          overallStatus: sub.status,
+          totalPaidAmount: sub.paymentStatus === 'paid' ? (sub.paymentAmount || 0) : 0,
+          roleInFamily,
+        });
+      } else {
+        const existing = caseMap.get(caseCode)!;
+        existing.submissions.push(sub);
+        if (!existing.formTitles.includes(formTitle)) {
+          existing.formTitles.push(formTitle);
+        }
+        existing.totalFormsCount = existing.submissions.length;
+        if (new Date(sub.createdAt) > new Date(existing.latestDate)) {
+          existing.latestDate = sub.createdAt;
+        }
+        if (sub.paymentStatus === 'paid') {
+          existing.totalPaidAmount += (sub.paymentAmount || 0);
+        }
+        if (sub.data.fullName && existing.fullName === 'مراجع مرکز بالحق') {
+          existing.fullName = sub.data.fullName;
+        }
+      }
     });
+
+    return Array.from(caseMap.values()).sort(
+      (a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime()
+    );
+  }, [submissions, forms]);
+
+  // فیلتر پرونده‌های مراجعین
+  const filteredCases = useMemo(() => {
+    return clientCases.filter((c) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        c.caseCode.toLowerCase().includes(q) ||
+        c.fullName.toLowerCase().includes(q) ||
+        c.mobile.includes(q) ||
+        c.provinceCity.toLowerCase().includes(q);
+
+      const matchesStatus = statusFilter === 'all' || c.overallStatus === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [clientCases, searchQuery, statusFilter]);
+
+  // فیلتر ارسالی‌های تکی فرم‌ها
+  const filteredSubmissions = useMemo(() => {
+    return submissions.filter((s) => {
+      const matchesForm = selectedFormId === 'all' || s.formId === selectedFormId;
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        s.trackingCode.toLowerCase().includes(q) ||
+        JSON.stringify(s.data).toLowerCase().includes(q);
+      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+
+      return matchesForm && matchesSearch && matchesStatus;
+    });
+  }, [submissions, selectedFormId, searchQuery, statusFilter]);
+
+  const handleExportCSV = () => {
+    if (filteredSubmissions.length === 0) return;
+
+    const headers = ['کد پرونده', 'شناسه فرم', 'تاریخ ثبت', 'وضعیت', 'وضعیت پرداخت', 'مبلغ (تومان)'];
+    const rows = filteredSubmissions.map((s) => [
+      s.trackingCode,
+      s.formId,
+      formatPersianDateTime(s.createdAt),
+      statusConfigs[s.status]?.label || s.status,
+      s.paymentStatus === 'paid' ? 'پرداخت شده' : 'بدون پرداخت',
+      s.paymentAmount ? s.paymentAmount.toString() : '0',
+    ]);
 
     const csvContent = '\uFEFF' + [headers, ...rows].map((e) => `"${e.join('","')}"`).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `form_submissions_${currentForm.slug}.csv`);
+    link.setAttribute('download', `cases_export_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleAddComment = () => {
-    if (!activeSubmission || !newCommentText.trim()) return;
-    addSubmissionComment(activeSubmission.id, 'مدیر سیستم', 'سرپرست بررسی', newCommentText.trim());
+    if (!activeSubmissionModal || !newCommentText.trim()) return;
+    addSubmissionComment(activeSubmissionModal.id, 'مدیر سیستم', 'سرپرست پذیرش بالحق', newCommentText.trim());
     setNewCommentText('');
-    // بروزرسانی استیت مودال
-    const updated = submissions.find((s) => s.id === activeSubmission.id);
-    if (updated) setActiveSubmission(updated);
+    const updated = submissions.find((s) => s.id === activeSubmissionModal.id);
+    if (updated) setActiveSubmissionModal(updated);
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-slate-50">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 overscroll-contain">
       
-      {/* نوار سربرگ کارتابل */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-sm">
+      {/* سربرگ مدرن کارتابل و نوار سوییچ زبانه */}
+      <div className="bg-white border-b border-slate-200/90 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-xs">
         
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 shrink-0">
-            <Inbox className="w-5 h-5" />
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-200/80 shrink-0 shadow-xs">
+            <FolderOpen className="w-5 h-5 text-sky-600" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-extrabold text-slate-900">بانک ارسالی‌ها و کارتابل</h1>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                {toPersianDigits(filteredSubmissions.length)} رکورد
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                کارتابل مراجعین و بانک ارسالی‌ها
+              </h1>
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200/60">
+                {toPersianDigits(clientCases.length)} پرونده فعال
               </span>
             </div>
-            <p className="text-xs text-slate-500">مدیریت پاسخ‌ها، تغییر وضعیت گردش کار و خروجی داده‌ها</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              مدیریت یکپارچه پرونده‌های روانشناسی، نوبت‌ها و استعلام تعداد فرم‌های تکمیل‌شده
+            </p>
           </div>
         </div>
 
-        {/* سوییچ فرم و ابزارهای بالا */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <select
-            value={selectedFormId}
-            onChange={(e) => setSelectedFormId(e.target.value)}
-            className="text-xs font-bold text-slate-900 border border-slate-300 rounded-md px-3 py-2 bg-white max-w-xs truncate focus:outline-none focus:ring-1 focus:ring-blue-600"
-          >
-            {forms.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.title} ({toPersianDigits(f.submissionCount)} ثبت)
-              </option>
-            ))}
-          </select>
-
-          {/* سوییچ نما: جدول / کانبان */}
-          <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100 text-xs">
+        {/* سوییچر بین پرونده‌های مراجعین و کل پاسخ‌های فرم‌ها */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="inline-flex rounded-xl border border-slate-200 p-1 bg-slate-100/80 text-xs">
             <button
-              onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
-                viewMode === 'table' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900'
+              onClick={() => setHubTab('cases')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                hubTab === 'cases'
+                  ? 'bg-white text-sky-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <TableIcon className="w-3.5 h-3.5" />
-              <span>جدول داده</span>
+              <User className="w-4 h-4 text-sky-600" />
+              <span>کارتابل پرونده‌های مراجعین ({toPersianDigits(clientCases.length)})</span>
             </button>
             <button
-              onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
-                viewMode === 'kanban' ? 'bg-white text-slate-900 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900'
+              onClick={() => setHubTab('submissions')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                hubTab === 'submissions'
+                  ? 'bg-white text-sky-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Kanban className="w-3.5 h-3.5" />
-              <span>کانبان بورد</span>
+              <Inbox className="w-4 h-4 text-slate-500" />
+              <span>کل پاسخ‌های دریافتی ({toPersianDigits(submissions.length)})</span>
             </button>
           </div>
 
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-md shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-2xs transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>خروجی اکسل (CSV)</span>
+            <span>خروجی اکسل</span>
           </button>
         </div>
 
       </div>
 
-      {/* نوار جستجو و فیلترها */}
-      <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between gap-4 text-xs shrink-0">
-        <div className="flex items-center gap-3 flex-1 max-w-md">
+      {/* نوار جستجو، فیلترها و انتخاب فرم */}
+      <div className="bg-white border-b border-slate-200/80 px-6 py-3 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 shadow-2xs">
+        <div className="flex items-center gap-3 flex-1 min-w-[260px] max-w-md">
           <div className="relative w-full">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="جستجو در کد پرونده یا اطلاعات ثبت شده..."
-              className="w-full pl-3 pr-8 py-1.5 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-blue-600 bg-slate-50/50"
+              placeholder="جستجو در کد پرونده، نام مراجع، شماره تلفن یا شهر..."
+              className="w-full pl-3 pr-9 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 bg-slate-50/70 focus:bg-white transition-all"
             />
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500 text-[11px]">فیلتر وضعیت:</span>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3 flex-wrap">
+          {hubTab === 'submissions' && (
+            <select
+              value={selectedFormId}
+              onChange={(e) => setSelectedFormId(e.target.value)}
+              className="text-xs font-bold text-slate-800 border border-slate-300 rounded-xl px-3 py-2 bg-white max-w-xs focus:ring-2 focus:ring-sky-500/20"
+            >
+              <option value="all">تمام فرم‌ها ({toPersianDigits(submissions.length)} پاسخ)</option>
+              {forms.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.title}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-500 text-xs">وضعیت:</span>
             {[
               { id: 'all', label: 'همه' },
               { id: 'new', label: 'جدید' },
               { id: 'reviewing', label: 'در حال بررسی' },
               { id: 'approved', label: 'تأیید شده' },
-              { id: 'rejected', label: 'رد شده' },
             ].map((st) => (
               <button
                 key={st.id}
                 onClick={() => setStatusFilter(st.id)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === st.id
-                    ? 'bg-slate-900 text-white font-bold'
+                    ? 'bg-sky-600 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -212,82 +301,116 @@ export const SubmissionsHub: React.FC = () => {
         </div>
       </div>
 
-      {/* نمای جدول داده‌ها */}
-      {viewMode === 'table' && (
-        <div className="flex-1 overflow-auto p-6">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <table className="w-full text-right text-xs border-collapse">
+      {/* محتوای کارتابل: ۱. کارتابل پرونده‌های مراجعین بالحق */}
+      {hubTab === 'cases' && (
+        <div className="flex-1 overflow-auto p-4 sm:p-6 overscroll-contain">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <table className="w-full text-right text-xs sm:text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold">
-                  <th className="p-3.5 w-12 text-center">#</th>
-                  <th className="p-3.5">کد پرونده</th>
-                  <th className="p-3.5">وضعیت گردش کار</th>
-                  <th className="p-3.5">وضعیت مالی</th>
-                  {currentForm?.fields.slice(0, 4).map((f) => (
-                    <th key={f.id} className="p-3.5 truncate max-w-[150px]">
-                      {f.label}
-                    </th>
-                  ))}
-                  <th className="p-3.5">تاریخ ثبت</th>
-                  <th className="p-3.5 text-center w-24">عملیات</th>
+                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-extrabold">
+                  <th className="p-3.5 sm:p-4 text-center w-12">#</th>
+                  <th className="p-3.5 sm:p-4">کد پرونده مراجع</th>
+                  <th className="p-3.5 sm:p-4">مشخصات مراجع</th>
+                  <th className="p-3.5 sm:p-4">شماره تماس و استان</th>
+                  <th className="p-3.5 sm:p-4 text-center">تعداد فرم‌ها و پرسشنامه‌ها</th>
+                  <th className="p-3.5 sm:p-4">وضعیت پرونده</th>
+                  <th className="p-3.5 sm:p-4">وضعیت مالی</th>
+                  <th className="p-3.5 sm:p-4">آخرین فعالیت</th>
+                  <th className="p-3.5 sm:p-4 text-center w-28">عملیات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredSubmissions.length === 0 ? (
+                {filteredCases.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-12 text-center text-slate-400 text-xs">
-                      رکوردی با مشخصات درخواستی یافت نشد.
+                    <td colSpan={9} className="p-16 text-center text-slate-400 text-sm">
+                      پرونده‌ای با این مشخصات یافت نشد.
                     </td>
                   </tr>
                 ) : (
-                  filteredSubmissions.map((sub, index) => {
-                    const st = statusConfigs[sub.status] || statusConfigs.new;
+                  filteredCases.map((c, index) => {
+                    const st = statusConfigs[c.overallStatus] || statusConfigs.new;
 
                     return (
-                      <tr key={sub.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="p-3.5 text-center text-slate-400 font-mono text-[11px]">
-                          {index + 1}
+                      <tr key={c.caseCode} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="p-3.5 sm:p-4 text-center text-slate-400 font-mono text-xs">
+                          {toPersianDigits(index + 1)}
                         </td>
-                        <td className="p-3.5 font-mono font-bold text-blue-700">
-                          {sub.trackingCode}
-                        </td>
-                        <td className="p-3.5">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${st.bg} ${st.color} ${st.border}`}>
-                            {st.label}
+
+                        {/* کد پرونده */}
+                        <td className="p-3.5 sm:p-4">
+                          <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200/80 inline-block text-xs">
+                            {c.caseCode}
                           </span>
                         </td>
-                        <td className="p-3.5">
-                          {sub.paymentStatus === 'paid' ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>پرداخت شده</span>
+
+                        {/* نام مراجع و آواتار */}
+                        <td className="p-3.5 sm:p-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                              {c.fullName.slice(0, 1)}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 block">{c.fullName}</span>
+                              {c.roleInFamily && (
+                                <span className="text-[11px] text-slate-400 block -mt-0.5">
+                                  نقش: {c.roleInFamily} خانواده
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* شماره تماس و استان */}
+                        <td className="p-3.5 sm:p-4">
+                          <span className="font-mono text-xs text-slate-700 block">{toPersianDigits(c.mobile)}</span>
+                          <span className="text-[11px] text-slate-400 block">{c.provinceCity}</span>
+                        </td>
+
+                        {/* تعداد فرم‌ها و پرسشنامه‌های تکمیل‌شده */}
+                        <td className="p-3.5 sm:p-4 text-center">
+                          <div className="inline-flex flex-col items-center">
+                            <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 font-extrabold text-xs border border-indigo-200 shadow-2xs flex items-center gap-1.5">
+                              <BadgeCheck className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>{toPersianDigits(c.totalFormsCount)} فرم تکمیل‌شده</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 mt-1 max-w-[160px] truncate" title={c.formTitles.join(' + ')}>
+                              {c.formTitles.join(' + ')}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* وضعیت پرونده */}
+                        <td className="p-3.5 sm:p-4">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border ${st.bg} ${st.color} ${st.border}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                            <span>{st.label}</span>
+                          </span>
+                        </td>
+
+                        {/* وضعیت مالی */}
+                        <td className="p-3.5 sm:p-4">
+                          {c.totalPaidAmount > 0 ? (
+                            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block font-mono">
+                              {formatCurrency(c.totalPaidAmount, 'IRT')}
                             </span>
                           ) : (
-                            <span className="text-[10px] text-slate-400">بدون هزینه</span>
+                            <span className="text-xs text-slate-400">بدون هزینه</span>
                           )}
                         </td>
-                        {currentForm?.fields.slice(0, 4).map((f) => {
-                          const val = sub.data[f.id];
-                          const displayVal = getFieldDisplayValue(f, val);
-                          return (
-                            <td key={f.id} className="p-3.5 truncate max-w-[150px] text-slate-800">
-                              {f.type === 'signature' && val ? (
-                                <span className="text-emerald-600 font-bold text-[10px]">دارای امضا ✓</span>
-                              ) : (
-                                displayVal
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td className="p-3.5 text-slate-500 text-[11px]">
-                          {formatPersianDateTime(sub.createdAt)}
+
+                        {/* آخرین فعالیت */}
+                        <td className="p-3.5 sm:p-4 text-xs text-slate-500">
+                          {formatPersianDateTime(c.latestDate)}
                         </td>
-                        <td className="p-3.5 text-center">
+
+                        {/* عملیات: مشاهده پرونده */}
+                        <td className="p-3.5 sm:p-4 text-center">
                           <button
-                            onClick={() => setActiveSubmission(sub)}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded border border-slate-200 transition-colors"
+                            onClick={() => setActiveCaseModal(c)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
                           >
-                            مشاهده
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>مشاهده پرونده</span>
                           </button>
                         </td>
                       </tr>
@@ -300,200 +423,262 @@ export const SubmissionsHub: React.FC = () => {
         </div>
       )}
 
-      {/* نمای کانبان بورد هوشمند */}
-      {viewMode === 'kanban' && (
-        <div className="flex-1 overflow-x-auto p-6">
-          <div className="flex gap-4 min-w-[1000px] h-full items-start">
-            {(['new', 'reviewing', 'approved', 'rejected'] as SubmissionStatus[]).map((statusKey) => {
-              const conf = statusConfigs[statusKey];
-              const columnItems = filteredSubmissions.filter((s) => s.status === statusKey);
+      {/* محتوای کارتابل: ۲. بانک کلیه ارسالی‌های تفکیکی فرم‌ها */}
+      {hubTab === 'submissions' && (
+        <div className="flex-1 overflow-auto p-4 sm:p-6 overscroll-contain">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <table className="w-full text-right text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-extrabold">
+                  <th className="p-3.5 sm:p-4 text-center w-12">#</th>
+                  <th className="p-3.5 sm:p-4">کد پرونده</th>
+                  <th className="p-3.5 sm:p-4">عنوان فرم</th>
+                  <th className="p-3.5 sm:p-4">وضعیت</th>
+                  <th className="p-3.5 sm:p-4">پرداخت</th>
+                  <th className="p-3.5 sm:p-4">تاریخ ثبت</th>
+                  <th className="p-3.5 sm:p-4 text-center w-24">عملیات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredSubmissions.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-16 text-center text-slate-400 text-sm">
+                      پاسخی برای این فرم یافت نشد.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSubmissions.map((sub, index) => {
+                    const formObj = forms.find((f) => f.id === sub.formId);
+                    const st = statusConfigs[sub.status] || statusConfigs.new;
 
-              return (
-                <div key={statusKey} className="w-72 bg-slate-100/80 rounded-xl p-3 border border-slate-200 flex flex-col max-h-full">
-                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
-                    <span className="font-bold text-xs text-slate-800">{conf.label}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-slate-600 border border-slate-200">
-                      {toPersianDigits(columnItems.length)}
-                    </span>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto space-y-2 pr-0.5">
-                    {columnItems.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => setActiveSubmission(item)}
-                        className="p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:border-blue-400 hover:shadow-md transition-all cursor-pointer space-y-2 text-xs"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-blue-700 text-[11px]">
-                            {item.trackingCode}
+                    return (
+                      <tr key={sub.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="p-3.5 sm:p-4 text-center text-slate-400 font-mono text-xs">
+                          {toPersianDigits(index + 1)}
+                        </td>
+                        <td className="p-3.5 sm:p-4 font-mono font-bold text-sky-800">
+                          {sub.trackingCode}
+                        </td>
+                        <td className="p-3.5 sm:p-4 font-bold text-slate-900">
+                          {formObj ? formObj.title : sub.formId}
+                        </td>
+                        <td className="p-3.5 sm:p-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold border ${st.bg} ${st.color} ${st.border}`}>
+                            <span>{st.label}</span>
                           </span>
-                          <span className="text-[10px] text-slate-400">
-                            {formatPersianDateTime(item.createdAt).split(' ')[0]}
-                          </span>
-                        </div>
-
-                        {/* پیش‌نمایش فیلد اول (معمولا نام) */}
-                        <div className="font-semibold text-slate-900 truncate">
-                          {Object.values(item.data)[0] || 'ثبت بدون نام'}
-                        </div>
-
-                        {/* تغییر سریع وضعیت */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <select
-                            value={item.status}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              updateSubmissionStatus(item.id, e.target.value as any);
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-[10px] font-medium border border-slate-200 rounded px-1.5 py-0.5 bg-slate-50 text-slate-700"
-                          >
-                            <option value="new">جدید</option>
-                            <option value="reviewing">در حال بررسی</option>
-                            <option value="approved">تأیید</option>
-                            <option value="rejected">رد</option>
-                          </select>
-
-                          {item.comments.length > 0 && (
-                            <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                              <MessageSquare className="w-3 h-3 text-slate-400" />
-                              <span>{toPersianDigits(item.comments.length)}</span>
+                        </td>
+                        <td className="p-3.5 sm:p-4">
+                          {sub.paymentStatus === 'paid' ? (
+                            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              {formatCurrency(sub.paymentAmount || 0, 'IRT')}
                             </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">بدون پرداخت</span>
                           )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+                        </td>
+                        <td className="p-3.5 sm:p-4 text-xs text-slate-500">
+                          {formatPersianDateTime(sub.createdAt)}
+                        </td>
+                        <td className="p-3.5 sm:p-4 text-center">
+                          <button
+                            onClick={() => setActiveSubmissionModal(sub)}
+                            className="p-1.5 text-slate-600 hover:text-sky-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            title="مشاهده جزئیات ثبت"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* مودال مشاهده جزئیات کامل ثبت و یادداشت‌های تیمی */}
-      {activeSubmission && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 text-xs">
+      {/* مودال جامع مشاهده پرونده مراجع (Client Case Details Modal) */}
+      {activeCaseModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200 text-right">
             
-            {/* سربرگ مودال */}
-            <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-              <div>
-                <div className="text-[10px] text-slate-500">کد پرونده:</div>
-                <div className="text-sm font-extrabold text-blue-800 font-mono">
-                  {activeSubmission.trackingCode}
+            {/* سربرگ پرونده مراجع */}
+            <div className="p-6 bg-gradient-to-r from-sky-900 via-blue-900 to-indigo-950 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 text-white text-lg font-bold">
+                  {activeCaseModal.fullName.slice(0, 1)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-extrabold">{activeCaseModal.fullName}</h2>
+                    <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-sky-400/20 text-sky-200 border border-sky-300/30">
+                      کد پرونده: {activeCaseModal.caseCode}
+                    </span>
+                  </div>
+                  <div className="text-xs text-sky-200/80 flex items-center gap-3 mt-1">
+                    <span>شماره تماس: {toPersianDigits(activeCaseModal.mobile)}</span>
+                    <span>•</span>
+                    <span>موقعیت: {activeCaseModal.provinceCity}</span>
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <select
-                  value={activeSubmission.status}
-                  onChange={(e) => {
-                    updateSubmissionStatus(activeSubmission.id, e.target.value as any);
-                    setActiveSubmission({ ...activeSubmission, status: e.target.value as any });
-                  }}
-                  className="px-2.5 py-1 text-xs font-bold border border-slate-300 rounded-md bg-white text-slate-800"
-                >
-                  <option value="new">وضعیت: جدید</option>
-                  <option value="reviewing">وضعیت: در حال بررسی</option>
-                  <option value="approved">وضعیت: تأیید نهایی</option>
-                  <option value="rejected">وضعیت: رد شده</option>
-                </select>
 
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setActiveSubmission(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-800 rounded-md"
+                  type="button"
+                  onClick={() => window.print()}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                  title="چاپ پرونده"
                 >
-                  ✕
+                  <Printer className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveCaseModal(null)}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* بدنه داده‌ها */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* بدنه اسکرول‌خور پرونده */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 overscroll-contain">
               
-              {/* لیست فیلدها و پاسخ‌ها */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-slate-900 border-b border-slate-100 pb-1">
-                  پاسخ‌های ثبت شده کاربر
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {currentForm?.fields.map((f) => {
-                    const val = activeSubmission.data[f.id];
+              {/* کادر خلاصه اطلاعات مراجع و وضعیت */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/90 text-xs">
+                <div>
+                  <span className="text-slate-400 block">تعداد فرم‌های تکمیل‌شده:</span>
+                  <span className="font-bold text-sky-800 text-sm mt-0.5 block">
+                    {toPersianDigits(activeCaseModal.totalFormsCount)} فرم و نوبت
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">مجموع پرداخت درگاه:</span>
+                  <span className="font-bold text-emerald-700 text-sm mt-0.5 block">
+                    {activeCaseModal.totalPaidAmount > 0 ? formatCurrency(activeCaseModal.totalPaidAmount, 'IRT') : 'بدون هزینه'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">تاریخ تشکیل پرونده:</span>
+                  <span className="font-bold text-slate-800 mt-0.5 block">
+                    {formatPersianDateTime(activeCaseModal.submissions[0]?.createdAt || activeCaseModal.latestDate)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block">وضعیت فعلی پرونده:</span>
+                  <span className="font-bold text-emerald-700 mt-0.5 block">
+                    {statusConfigs[activeCaseModal.overallStatus]?.label || 'فعال'}
+                  </span>
+                </div>
+              </div>
+
+              {/* لیست فرم‌ها و پاسخ‌های ثبت‌شده این مراجع */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-sky-600" />
+                  <span>فرم‌ها و پرسشنامه‌های تکمیل‌شده توسط مراجع:</span>
+                </h3>
+
+                <div className="space-y-4">
+                  {activeCaseModal.submissions.map((sub, sIdx) => {
+                    const formObj = forms.find((f) => f.id === sub.formId);
                     return (
-                      <div key={f.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200/80">
-                        <span className="text-[11px] text-slate-500 block mb-0.5">{f.label}</span>
-                        {f.type === 'signature' && val ? (
-                          <img src={val} alt="امضا" className="h-14 border border-slate-200 bg-white rounded mt-1 p-1" />
-                        ) : (
-                          <span className="font-semibold text-slate-900">{getFieldDisplayValue(f, val)}</span>
-                        )}
+                      <div key={sub.id} className="p-5 rounded-2xl border border-slate-200 bg-white shadow-2xs space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-sky-100 text-sky-800 font-bold text-xs flex items-center justify-center">
+                              {toPersianDigits(sIdx + 1)}
+                            </span>
+                            <span className="font-extrabold text-sm text-slate-900">
+                              {formObj ? formObj.title : sub.formId}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-400 font-mono">
+                            {formatPersianDateTime(sub.createdAt)}
+                          </span>
+                        </div>
+
+                        {/* داده‌های ورودی فرم */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          {Object.entries(sub.data).map(([key, val]) => {
+                            if (key === 'caseCode') return null;
+                            const fieldDef = formObj?.fields.find((f) => f.id === key);
+                            const label = fieldDef ? fieldDef.label : key;
+
+                            return (
+                              <div key={key} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                                <span className="text-slate-500 block mb-0.5">{label}:</span>
+                                <span className="font-bold text-slate-900">
+                                  {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* یادداشت‌ها و کامنت‌های درون‌سازمانی */}
-              <div className="space-y-3 pt-2 border-t border-slate-100">
-                <h4 className="font-bold text-slate-900 flex items-center justify-between">
-                  <span>یادداشت‌ها و دیدگاه‌های تیمی</span>
-                  <span className="text-[11px] text-slate-500 font-normal">
-                    {toPersianDigits(activeSubmission.comments.length)} پیام
-                  </span>
-                </h4>
-
-                <div className="space-y-2">
-                  {activeSubmission.comments.map((c) => (
-                    <div key={c.id} className="p-3 bg-blue-50/50 border border-blue-100 rounded-lg text-xs space-y-1">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-blue-900">{c.authorName} ({c.authorRole})</span>
-                        <span className="text-slate-400">{formatPersianDateTime(c.createdAt)}</span>
-                      </div>
-                      <p className="text-slate-700 leading-relaxed">{c.content}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* فرم ارسال دیدگاه جدید */}
-                <div className="flex gap-2 pt-2">
-                  <input
-                    type="text"
-                    value={newCommentText}
-                    onChange={(e) => setNewCommentText(e.target.value)}
-                    placeholder="ثبت یادداشت یا ارجاع برای همکاران..."
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-xs focus:ring-1 focus:ring-blue-600"
-                  />
-                  <button
-                    onClick={handleAddComment}
-                    className="px-4 py-2 bg-slate-900 text-white font-bold rounded-md hover:bg-slate-800 transition-colors"
-                  >
-                    ثبت یادداشت
-                  </button>
-                </div>
-              </div>
-
             </div>
 
-            {/* دکمه‌های فوتر مودال */}
-            <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            {/* پاورقی مودال */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <span className="text-xs text-slate-500">مرکز خدمات روانشناسی و نوبت‌دهی بالحق</span>
               <button
-                onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-slate-700 border border-slate-300 rounded-md hover:bg-slate-100"
+                type="button"
+                onClick={() => setActiveCaseModal(null)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
               >
-                <Printer className="w-3.5 h-3.5" />
-                <span>چاپ این فرم</span>
+                بستن پنجره
               </button>
+            </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* مودال مشاهده رکورد تکی ارسالی */}
+      {activeSubmissionModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-5 border border-slate-200 shadow-2xl text-right">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-sky-600" />
+                <h3 className="text-base font-extrabold text-slate-900">
+                  جزئیات رکورد: {activeSubmissionModal.trackingCode}
+                </h3>
+              </div>
               <button
-                onClick={() => setActiveSubmission(null)}
-                className="px-4 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800"
+                onClick={() => setActiveSubmissionModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-96 overflow-y-auto space-y-3 overscroll-contain">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {Object.entries(activeSubmissionModal.data).map(([k, v]) => (
+                  <div key={k} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block mb-0.5">{k}:</span>
+                    <span className="font-bold text-slate-800">{String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setActiveSubmissionModal(null)}
+                className="px-5 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl"
               >
                 بستن
               </button>
             </div>
-
           </div>
         </div>
       )}

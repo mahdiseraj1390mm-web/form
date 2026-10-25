@@ -594,8 +594,18 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   // استیت نتیجه ثبت موفق
   const [submittedResult, setSubmittedResult] = useState<FormSubmission | null>(null);
 
+  const isCasePortalForm =
+    form.generalSettings?.showPortalGate !== false &&
+    (form.id === 'form-belhagh-registration' ||
+      form.id === 'form-belhagh-booking' ||
+      form.slug === 'zexuz' ||
+      form.slug === '3uu4z' ||
+      Boolean(form.security?.authRequired));
+
   // استیت‌های پورتال ورودی پرونده (ورود / ثبت نام / بازیابی کد)
-  const [authGateMode, setAuthGateMode] = useState<'portal' | 'filling' | 'viewCase'>('portal');
+  const [authGateMode, setAuthGateMode] = useState<'portal' | 'filling' | 'viewCase'>(
+    isCasePortalForm ? 'portal' : 'filling'
+  );
   const [isLoginBoxOpen, setIsLoginBoxOpen] = useState(false);
   const [caseCodeInput, setCaseCodeInput] = useState('');
   const [caseCodeError, setCaseCodeError] = useState<string | null>(null);
@@ -768,7 +778,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     });
 
     setFormData({ ...defaults, ...prefilled });
-    if (Object.keys(prefilled).length > 0) {
+    if (Object.keys(prefilled).length > 0 || !isCasePortalForm) {
       setAuthGateMode('filling');
     }
   }, [form.id, form.slug, form.fields, initialFormData]);
@@ -1956,7 +1966,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
   return (
     <div 
-      className="min-h-screen py-8 px-4 flex flex-col items-center justify-start transition-all duration-300 w-full relative"
+      className="min-h-screen py-3 sm:py-8 px-2 sm:px-4 flex flex-col items-center justify-start transition-all duration-300 w-full relative"
       style={{
         backgroundColor: theme?.backgroundColor || '#f8fafc',
         backgroundImage: theme?.backgroundImage ? `url(${theme.backgroundImage})` : (theme?.backgroundGradient || undefined),
@@ -1977,7 +1987,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         
         {/* سربرگ فرم */}
         <div 
-          className={`${borderRadiusClass} border shadow-xs p-6 sm:p-8 mb-6 transition-all`}
+          className={`${borderRadiusClass || 'rounded-2xl sm:rounded-3xl'} border shadow-xs p-4 sm:p-8 mb-4 sm:mb-6 transition-all`}
           style={{
             backgroundColor: theme?.cardBackgroundColor || '#ffffff',
             borderColor: theme?.borderColor || '#e2e8f0',
@@ -2032,10 +2042,33 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             )}
           </div>
 
-        {/* استپر استاندارد فرم‌افزار مطابق عکس‌های ارسالی کاربر */}
+        {/* استپر استاندارد فرم‌افزار و نسخه بهینه‌شده موبایل */}
         {form.mode === 'wizard' && form.steps && form.steps.length > 1 && (
-          <div className="pt-6 pb-2 border-t border-slate-100/80">
-            <div className="relative flex items-center justify-between max-w-2xl mx-auto px-4">
+          <div className="pt-4 sm:pt-6 pb-2 border-t border-slate-100/80">
+            {/* نسخه فشرده و هوشمند موبایل */}
+            <div className="sm:hidden px-2 pb-1 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span className="flex items-center gap-1.5" style={{ color: theme?.themeColor || '#0284c7' }}>
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: theme?.themeColor || '#0284c7' }} />
+                  <span>مرحله {toPersianDigits(currentStepIndex + 1)} از {toPersianDigits(form.steps.length)}: {form.steps[currentStepIndex]?.title}</span>
+                </span>
+                <span className="font-mono text-[11px] text-slate-400">
+                  {toPersianDigits(Math.round(((currentStepIndex + 1) / form.steps.length) * 100))}%
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    backgroundColor: theme?.themeColor || '#0284c7',
+                    width: `${((currentStepIndex + 1) / form.steps.length) * 100}%`
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* نسخه کامل تبلت و دسکتاپ */}
+            <div className="hidden sm:flex relative items-center justify-between max-w-2xl mx-auto px-4">
               {/* خط افقی سرتاسری اتصال مراحل */}
               <div 
                 className="absolute top-4 left-6 right-6 h-0.5 z-0"
@@ -2103,7 +2136,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       {/* بوم رندر فیلدها */}
       <form 
         onSubmit={handleSubmit} 
-        className={`${borderRadiusClass} border shadow-xs p-6 sm:p-8 space-y-6 transition-all`}
+        className={`${borderRadiusClass || 'rounded-2xl sm:rounded-3xl'} border shadow-xs p-4 sm:p-8 space-y-5 sm:space-y-6 transition-all`}
         style={{
           backgroundColor: theme?.cardBackgroundColor || '#ffffff',
           borderColor: theme?.borderColor || '#e2e8f0',
@@ -2150,13 +2183,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 
                 {/* عنوان و وضعیت اعتبارسنجی زنده */}
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold" style={{ color: theme?.labelColor || '#1e293b' }}>
+                  <label className="block text-xs sm:text-sm font-bold" style={{ color: theme?.labelColor || '#1e293b' }}>
                     {field.label}
                     {field.validations.required && <span className="text-rose-500 mr-1">*</span>}
                   </label>
 
                   {field.type === 'nationalCode' && formData[field.id] && (
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                       isValidIranianNationalCode(formData[field.id])
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -2173,7 +2206,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     value={formData[field.id] || ''}
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
-                    className={`w-full px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white ${
+                    className={`w-full px-3.5 py-2.5 sm:py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
                       hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
                     }`}
                   />
@@ -2182,7 +2215,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     {(field.options || []).map((opt) => (
                       <label
                         key={opt.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg border text-xs cursor-pointer transition-all ${
+                        className={`flex items-center gap-3 p-3.5 sm:p-3 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all ${
                           formData[field.id] === opt.value || formData[field.id] === opt.id
                             ? 'border-blue-600 bg-blue-50/30 text-blue-900 font-bold'
                             : 'border-slate-200 hover:bg-slate-50 text-slate-700'
@@ -2212,7 +2245,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                       return (
                         <label
                           key={opt.id}
-                          className={`flex items-center gap-3 p-3 rounded-lg border text-xs cursor-pointer transition-all ${
+                          className={`flex items-center gap-3 p-3.5 sm:p-3 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all ${
                             isChecked
                               ? 'border-blue-600 bg-blue-50/30 text-blue-900 font-bold'
                               : 'border-slate-200 hover:bg-slate-50 text-slate-700'
@@ -2238,7 +2271,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   <select
                     value={formData[field.id] || ''}
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+                    className="w-full px-3.5 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                   >
                     <option value="">انتخاب کنید</option>
                     {(field.options || []).map((o) => (
@@ -2270,7 +2303,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                             });
                           }
                         }}
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md bg-white focus:ring-1 focus:ring-blue-600"
+                        className="w-full px-3.5 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
                       >
                         <option value="">-- انتخاب استان --</option>
                         {iranProvinces.map((p) => (
@@ -2303,7 +2336,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                           }
                         }}
                         disabled={!formData[`${field.id}_province`]}
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md bg-white focus:ring-1 focus:ring-blue-600 disabled:bg-slate-100"
+                        className="w-full px-3.5 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:bg-slate-100 transition-all"
                       >
                         <option value="">-- انتخاب شهر --</option>
                         {(
@@ -2375,7 +2408,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         value={formData[field.id] || ''}
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
                         placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                        className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-md font-mono text-left"
+                        className="flex-1 px-3.5 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl font-mono text-left focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all"
                       />
                       {field.validations.verifyOtp && (
                         <button
@@ -2384,7 +2417,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                             setOtpSent(true);
                             setEnteredOtp('3849');
                           }}
-                          className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-md border border-slate-300 whitespace-nowrap"
+                          className="px-3.5 py-2.5 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 whitespace-nowrap transition-colors"
                         >
                           {otpSent ? 'کد پیامک: ۳۸۴۹' : 'ارسال کد تایید'}
                         </button>
@@ -2590,7 +2623,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     value={formData[field.id] || ''}
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
-                    className={`w-full px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 bg-white ${
+                    className={`w-full px-3.5 py-2.5 sm:py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
                       hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
                     }`}
                   />
@@ -2646,17 +2679,17 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
-        {/* دکمه‌های ناوبری مرحله‌ای و ثبت فرم مطابق تصویر فرم‌افزار */}
-        <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+        {/* دکمه‌های ناوبری مرحله‌ای و ثبت فرم با چیدمان لمسی بهینه‌شده موبایل */}
+        <div className="pt-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {form.mode === 'wizard' && currentStepIndex > 0 ? (
               <>
                 <button
                   type="button"
                   onClick={handlePrevStep}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
                 >
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-4 h-4" />
                   <span>مرحله قبل</span>
                 </button>
                 <button
@@ -2665,9 +2698,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     setAuthGateMode('portal');
                     setCurrentStepIndex(0);
                   }}
-                  className="inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-2.5 sm:py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <span>بازگشت به صفحه اول</span>
+                  <span>صفحه اول</span>
                 </button>
               </>
             ) : form.mode === 'wizard' && currentStepIndex === 0 ? (
@@ -2677,9 +2710,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   setAuthGateMode('portal');
                   setCurrentStepIndex(0);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
               >
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-4 h-4" />
                 <span>بازگشت به صفحه اول</span>
               </button>
             ) : activePageIndex > 0 ? (
@@ -2687,9 +2720,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 <button
                   type="button"
                   onClick={handlePrevPage}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
                 >
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-4 h-4" />
                   <span>مرحله قبل</span>
                 </button>
                 <button
@@ -2697,9 +2730,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   onClick={() => {
                     setAuthGateMode('portal');
                   }}
-                  className="inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-2.5 sm:py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                 >
-                  <span>بازگشت به صفحه اول</span>
+                  <span>صفحه اول</span>
                 </button>
               </>
             ) : (
@@ -2708,9 +2741,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 onClick={() => {
                   setAuthGateMode('portal');
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
               >
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-4 h-4" />
                 <span>بازگشت به صفحه اول</span>
               </button>
             )}
@@ -2721,34 +2754,34 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               <button
                 type="button"
                 onClick={handleNextPage}
-                className={`inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold shadow-sm transition-all cursor-pointer ${borderRadiusClass}`}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer ${borderRadiusClass || 'rounded-xl'}`}
                 style={{
                   backgroundColor: theme?.buttonColor || '#0284c7',
                   color: theme?.buttonTextColor || '#ffffff',
                 }}
               >
                 <span>{activePageFields[activePageFields.length - 1]?.nextButtonText || 'مرحله بعد'}</span>
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <ArrowLeft className="w-4 h-4" />
               </button>
             ) : form.mode === 'wizard' && currentStepIndex < (form.steps?.length || 1) - 1 ? (
               canProceedToNextStep ? (
                 <button
                   type="button"
                   onClick={handleNextStep}
-                  className={`inline-flex items-center gap-1.5 px-6 py-2.5 text-xs font-bold shadow-sm transition-all cursor-pointer ${borderRadiusClass}`}
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer ${borderRadiusClass || 'rounded-xl'}`}
                   style={{
                     backgroundColor: theme?.buttonColor || '#0284c7',
                     color: theme?.buttonTextColor || '#ffffff',
                   }}
                 >
                   <span>مرحله بعد</span>
-                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <ArrowLeft className="w-4 h-4" />
                 </button>
               ) : null
             ) : (
               <button
                 type="submit"
-                className={`inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold shadow-md transition-all cursor-pointer ${borderRadiusClass}`}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer ${borderRadiusClass || 'rounded-xl'}`}
                 style={{
                   backgroundColor: theme?.buttonColor || '#0284c7',
                   color: theme?.buttonTextColor || '#ffffff',
@@ -2761,7 +2794,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     ? 'ثبت مشخصات و تشکیل پرونده'
                     : 'ثبت و تکمیل پرونده نوبت‌دهی'}
                 </span>
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-4 h-4" />
               </button>
             )}
           </div>

@@ -44,17 +44,21 @@ function PublicFormContent() {
             <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
               <Layers className="w-4 h-4 text-blue-400" />
             </div>
-            <span className="font-extrabold text-sm text-slate-900 tracking-tight">فرم‌افزار</span>
+            <span className="font-extrabold text-sm text-slate-900 tracking-tight block">
+              {form.id.includes('belhagh') || form.slug === 'zexuz' || form.slug === '3uu4z'
+                ? 'مرکز خدمات روانشناسی بالحق'
+                : 'فرم‌افزار سازمانی'}
+            </span>
           </div>
 
-          <div className="text-[11px] text-slate-400">
+          <div className="text-xs text-slate-500">
             سامانه امن ثبت و دریافت داده‌ها
           </div>
         </div>
       </header>
 
       {/* بوم رانر فرم */}
-      <main className="flex-1 flex flex-col justify-center">
+      <main className="flex-1 flex flex-col justify-start py-2 sm:py-6">
         <FormRunner 
           key={form.id}
           form={form} 

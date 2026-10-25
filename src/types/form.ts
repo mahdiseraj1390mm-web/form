@@ -251,6 +251,7 @@ export interface FormBehaviorSettings {
 
 export interface FormGeneralSettings {
   identifierColor?: string; // رنگ شناسایی فرم (مطابق فرم‌افزار)
+  showPortalGate?: boolean; // نمایش صفحه پورتال پرونده پیش از ورود به فرم
   requestLocation?: boolean; // درخواست دریافت موقعیت مکانی
   showSecurityCode?: boolean; // نمایش کد امنیتی
   customIdPrefix?: string; // پیشوند
