@@ -38,6 +38,7 @@ import {
   PhoneCall,
   CalendarDays,
   KeyRound,
+  User,
   UserPlus,
   FolderLock,
   Copy,
@@ -1526,107 +1527,225 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
   // نمای پورتال ورودی: ورود به پرونده قبلی یا ثبت‌نام جدید
   if (authGateMode === 'portal') {
-    const portalTitle =
+    const isBelhaghFamily =
       form.id === 'form-belhagh-registration' ||
       form.id === 'form-belhagh-booking' ||
       form.slug === 'zexuz' ||
-      form.slug === '3uu4z'
-        ? 'سامانه پرونده و نوبت‌دهی مشاوره بالحق'
-        : form.title;
+      form.slug === '3uu4z' ||
+      form.category?.includes('روانشناسی');
 
     return (
-      <div className="max-w-md mx-auto my-12 sm:my-20 px-4 animate-in fade-in zoom-in-95 duration-200">
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6 text-center">
-          
-          {/* عنوان کادر */}
-          <h1 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
-            {portalTitle}
-          </h1>
+      <>
+        {isBelhaghFamily ? (
+          <div className="max-w-[440px] w-full mx-auto my-6 sm:my-10 px-3 animate-in fade-in zoom-in-95 duration-300">
+            <div className="overflow-hidden rounded-3xl border border-stone-300/80 shadow-2xl shadow-stone-900/15 bg-[#dfbe9b] text-center">
+              
+              {/* تصویر سربرگ اختصاصی بالحق */}
+              <div className="relative w-full overflow-hidden bg-slate-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/belhagh-hero.png"
+                  alt="سامانه مشاوره تلفنی روانشناسی بالحق"
+                  className="w-full h-auto block select-none pointer-events-none"
+                />
+              </div>
 
-          {!isLoginBoxOpen ? (
-            /* حالت اولیه: فقط دکمه ثبت‌نام و دکمه ورود */
-            <div className="space-y-3 pt-1">
-              <button
-                type="button"
-                onClick={handleStartRegistration}
-                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-sm cursor-pointer"
-              >
-                ثبت‌نام جدید و تشکیل پرونده
-              </button>
+              {/* بخش دکمه‌ها و باکس ورود هماهنگ با تصاویر ۱ و ۲ و ۳ */}
+              <div className="px-5 sm:px-6 py-5 sm:py-6 space-y-4 bg-gradient-to-b from-[#dfbe9b] via-[#dcb994] to-[#d4ab86]">
+                {!isLoginBoxOpen ? (
+                  /* حالت اولیه مطابق تصویر ۱: فقط دکمه ورود و ثبت نام */
+                  <div className="space-y-4 pt-1">
+                    {/* دکمه ورود سبز تیره */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLoginBoxOpen(true);
+                        setCaseCodeError(null);
+                      }}
+                      className="w-full py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+                    >
+                      <LogIn className="w-6 h-6 text-white" />
+                      <span>ورود</span>
+                    </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLoginBoxOpen(true);
-                  setCaseCodeError(null);
-                }}
-                className="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 active:scale-[0.99] text-slate-700 font-bold text-sm rounded-xl transition-all border border-slate-200 cursor-pointer"
-              >
-                ورود به پرونده
-              </button>
-            </div>
-          ) : (
-            /* باز شدن باکس ورود با کد پرونده */
-            <div className="pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-              <form onSubmit={handleCaseLogin} className="space-y-3 text-right">
-                <div>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={caseCodeInput}
-                    onChange={(e) => {
-                      setCaseCodeInput(e.target.value);
-                      setCaseCodeError(null);
-                    }}
-                    placeholder="کد پرونده اختصاصی (مثال: BH-M749218)"
-                    className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl text-center font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-colors"
-                    dir="ltr"
-                  />
-                </div>
+                    {/* دکمه ثبت نام سفید با کادر سبز */}
+                    <button
+                      type="button"
+                      onClick={handleStartRegistration}
+                      className="w-full py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
+                    >
+                      <UserPlus className="w-6 h-6 text-[#084d3e]" />
+                      <span>ثبت نام</span>
+                    </button>
+                  </div>
+                ) : (
+                  /* حالت باز شده ورود مطابق تصویر ۲ و ۳ */
+                  <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+                    {/* دکمه ورود در بالا (کلیک مجدد برای بستن) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLoginBoxOpen(false);
+                        setCaseCodeError(null);
+                      }}
+                      className="w-full py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+                    >
+                      <LogIn className="w-6 h-6 text-white" />
+                      <span>ورود</span>
+                    </button>
 
-                {caseCodeError && (
-                  <p className="text-xs text-rose-600 text-center font-medium animate-in fade-in">
-                    {caseCodeError}
-                  </p>
+                    {/* باکس دریافت کد پرونده مطابق تصویر ۲ و ۳ */}
+                    <div className="bg-[#f7faf8] rounded-3xl border-2 border-[#739a8e] p-5 shadow-lg space-y-4 text-right animate-in fade-in slide-in-from-top-2 duration-200">
+                      {/* عنوان کادر با آیکون */}
+                      <div className="flex items-center gap-2 text-[#084d3e] font-extrabold text-sm sm:text-base">
+                        <User className="w-5 h-5 text-[#084d3e] shrink-0" />
+                        <span>لطفاً کد پرونده خود را وارد نمایید</span>
+                      </div>
+
+                      <form onSubmit={handleCaseLogin} className="space-y-3.5">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={caseCodeInput}
+                            onChange={(e) => {
+                              setCaseCodeInput(e.target.value);
+                              setCaseCodeError(null);
+                            }}
+                            placeholder="کد پرونده"
+                            className="w-full py-3.5 pr-11 pl-4 text-sm sm:text-base border-2 border-[#8faea4] rounded-2xl text-right font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-[#084d3e] bg-white text-slate-800 placeholder:text-slate-400 shadow-inner"
+                            dir="ltr"
+                          />
+                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <User className="w-5 h-5" />
+                          </div>
+                        </div>
+
+                        {caseCodeError && (
+                          <p className="text-xs text-rose-600 font-bold text-center animate-in fade-in">
+                            {caseCodeError}
+                          </p>
+                        )}
+
+                        {/* دکمه تایید سبز مطابق تصویر ۲ */}
+                        <button
+                          type="submit"
+                          className="w-full py-3 px-6 bg-[#3a7667] hover:bg-[#084d3e] active:scale-[0.99] text-white font-extrabold text-sm sm:text-base rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <LogIn className="w-5 h-5" />
+                          <span>تایید</span>
+                        </button>
+
+                        {/* لینک بازیابی کد پرونده مطابق تصویر ۳ */}
+                        <div className="text-center pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowForgotModal(true);
+                              setForgotResult(null);
+                              setForgotMobileInput('');
+                            }}
+                            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#084d3e] hover:text-[#05372c] hover:underline transition-colors cursor-pointer"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>بازیابی کد پرونده</span>
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+
+                    {/* دکمه ثبت نام در زیر باکس */}
+                    <button
+                      type="button"
+                      onClick={handleStartRegistration}
+                      className="w-full py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
+                    >
+                      <UserPlus className="w-6 h-6 text-[#084d3e]" />
+                      <span>ثبت نام</span>
+                    </button>
+                  </div>
                 )}
+              </div>
 
-                <div className="flex items-center gap-2 pt-1">
+            </div>
+          </div>
+        ) : (
+          /* برای سایر فرم‌های عمومی (غیر بالحق) */
+          <div className="max-w-md mx-auto my-12 sm:my-20 px-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-200/50 p-6 sm:p-8 space-y-6 text-center">
+              <h1 className="text-base sm:text-lg font-bold text-slate-800 tracking-tight">
+                {form.title}
+              </h1>
+
+              {!isLoginBoxOpen ? (
+                <div className="space-y-3 pt-1">
                   <button
-                    type="submit"
-                    className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+                    type="button"
+                    onClick={handleStartRegistration}
+                    className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm rounded-xl transition-all shadow-sm cursor-pointer"
                   >
-                    تأیید و ورود
+                    ثبت‌نام جدید و تکمیل فرم
                   </button>
+
                   <button
                     type="button"
                     onClick={() => {
-                      setIsLoginBoxOpen(false);
+                      setIsLoginBoxOpen(true);
                       setCaseCodeError(null);
                     }}
-                    className="py-2.5 px-4 text-slate-600 hover:bg-slate-100 font-semibold text-xs rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                    className="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 active:scale-[0.99] text-slate-700 font-bold text-sm rounded-xl transition-all border border-slate-200 cursor-pointer"
                   >
-                    بازگشت
+                    ورود با کد پیگیری
                   </button>
                 </div>
+              ) : (
+                <div className="pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <form onSubmit={handleCaseLogin} className="space-y-3 text-right">
+                    <div>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={caseCodeInput}
+                        onChange={(e) => {
+                          setCaseCodeInput(e.target.value);
+                          setCaseCodeError(null);
+                        }}
+                        placeholder="کد پیگیری یا پرونده"
+                        className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl text-center font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 focus:bg-white transition-colors"
+                        dir="ltr"
+                      />
+                    </div>
 
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowForgotModal(true);
-                      setForgotResult(null);
-                      setForgotMobileInput('');
-                    }}
-                    className="text-[11px] text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
-                  >
-                    فراموشی کد پرونده؟ (بازیابی با شماره همراه)
-                  </button>
+                    {caseCodeError && (
+                      <p className="text-xs text-rose-600 text-center font-medium animate-in fade-in">
+                        {caseCodeError}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="submit"
+                        className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+                      >
+                        تأیید و ورود
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLoginBoxOpen(false);
+                          setCaseCodeError(null);
+                        }}
+                        className="py-2.5 px-4 text-slate-600 hover:bg-slate-100 font-semibold text-xs rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                      >
+                        بازگشت
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
+              )}
             </div>
-          )}
-
-        </div>
+          </div>
+        )}
 
         {/* مودال بازیابی کد پرونده در صورت فراموشی */}
         {showForgotModal && (
@@ -1759,8 +1878,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             </div>
           </div>
         )}
-
-      </div>
+      </>
     );
   }
 
