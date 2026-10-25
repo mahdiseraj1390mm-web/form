@@ -1197,8 +1197,118 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
             {/* بخش ۲: روزبندی هفته و ساعات کاری از چه ساعتی تا چه ساعتی */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-800">۲. روزبندی و ساعت زدن در روز</span>
-                <span className="text-[10px] text-slate-400 font-medium">از ساعت ... تا ساعت ...</span>
+                <span className="font-bold text-xs text-slate-800">۲. مشخص کردن روزهای کاری و تعطیل مشاور</span>
+                <span className="text-[10px] text-slate-400 font-medium">ساعات حضور هر روز</span>
+              </div>
+
+              {/* الگوهای آماده انتخاب سریع روزها */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-500">الگوهای سریع روزهای حضور مشاور:</span>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { label: 'فقط پنج‌شنبه‌ها', days: [5] },
+                    { label: 'یکشنبه و سه‌شنبه', days: [1, 3] },
+                    { label: 'شنبه، دوشنبه، چهارشنبه', days: [0, 2, 4] },
+                    { label: 'شنبه و دوشنبه', days: [0, 2] },
+                    { label: 'شنبه تا چهارشنبه', days: [0, 1, 2, 3, 4] },
+                    { label: 'همه روزها (بجز جمعه)', days: [0, 1, 2, 3, 4, 5] },
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        onUpdate({
+                          appointmentData: {
+                            slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                            restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                            startHour: field.appointmentData?.startHour ?? '09:00',
+                            endHour: field.appointmentData?.endHour ?? '17:00',
+                            ...field.appointmentData,
+                            availableDays: preset.days,
+                          },
+                        });
+                      }}
+                      className="px-2 py-1 text-[10px] rounded bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 transition-colors"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ساعات کاری پیش‌فرض */}
+              <div className="p-2.5 bg-white border border-slate-200 rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700">ساعت کاری عمومی مشاور:</span>
+                  <span className="text-[10px] text-slate-400">اعمال به همه روزهای فعال</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-slate-500">از:</span>
+                    <input
+                      type="time"
+                      value={field.appointmentData?.startHour || '09:00'}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        onUpdate({
+                          appointmentData: {
+                            slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                            restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                            ...field.appointmentData,
+                            startHour: newStart,
+                          },
+                        });
+                      }}
+                      className="px-2 py-1 border border-slate-300 rounded font-mono text-center text-xs bg-slate-50"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-slate-500">تا:</span>
+                    <input
+                      type="time"
+                      value={field.appointmentData?.endHour || '17:00'}
+                      onChange={(e) => {
+                        const newEnd = e.target.value;
+                        onUpdate({
+                          appointmentData: {
+                            slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                            restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                            ...field.appointmentData,
+                            endHour: newEnd,
+                          },
+                        });
+                      }}
+                      className="px-2 py-1 border border-slate-300 rounded font-mono text-center text-xs bg-slate-50"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 mr-auto">
+                    {[
+                      { l: 'صبح (۰۹-۱۲)', s: '09:00', e: '12:00' },
+                      { l: 'عصر (۱۶-۱۹)', s: '16:00', e: '19:00' },
+                      { l: 'کامل (۰۹-۱۷)', s: '09:00', e: '17:00' },
+                    ].map((hPreset, hi) => (
+                      <button
+                        key={hi}
+                        type="button"
+                        onClick={() => {
+                          onUpdate({
+                            appointmentData: {
+                              slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                              restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                              ...field.appointmentData,
+                              startHour: hPreset.s,
+                              endHour: hPreset.e,
+                            },
+                          });
+                        }}
+                        className="px-1.5 py-0.5 text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-colors"
+                      >
+                        {hPreset.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1.5">

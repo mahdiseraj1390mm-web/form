@@ -651,6 +651,7 @@ export const belhaghBookingForm: Form = {
         availableDays: [2, 4, 6], // دوشنبه، چهارشنبه، جمعه
         startHour: '17:00',
         endHour: '19:00',
+        holidays: ['تعطیلات رسمی'],
       },
       options: [
         { id: 'slot_shavandi_c1', label: 'دوشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۰', value: 'mon_1700' },
@@ -776,6 +777,7 @@ export const belhaghBookingForm: Form = {
         availableDays: [2, 4, 6], // دوشنبه، چهارشنبه، جمعه
         startHour: '16:00',
         endHour: '19:10',
+        holidays: ['تعطیلات رسمی'],
       },
       options: [
         { id: 'slot_shavandi_t1', label: 'دوشنبه - ساعت ۱۸:۳۰ الی ۱۹:۱۰', value: 'mon_1830' },
@@ -838,6 +840,7 @@ export const belhaghBookingForm: Form = {
         availableDays: [2, 6], // دوشنبه و جمعه
         startHour: '11:00',
         endHour: '16:00',
+        holidays: ['تعطیلات رسمی'],
       },
       options: [
         { id: 'slot_ansari_t1', label: 'دوشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', value: 'mon_1100' },

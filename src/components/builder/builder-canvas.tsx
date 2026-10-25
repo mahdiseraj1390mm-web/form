@@ -22,7 +22,11 @@ import {
   X,
   Check,
   ArrowRightCircle,
-  UploadCloud
+  UploadCloud,
+  Calendar,
+  CalendarCheck,
+  CalendarOff,
+  Clock
 } from 'lucide-react';
 import { widgetDefinitions } from './widget-palette';
 import { toPersianDigits } from '@/lib/persian';
@@ -809,6 +813,62 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                               <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700">
                                 <input type="checkbox" readOnly checked className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300" />
                                 <span>شرایط و قوانین را می‌پذیرم.</span>
+                              </div>
+                            ) : field.type === 'appointmentBooking' ? (
+                              <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-1.5 font-bold text-emerald-950">
+                                    <Calendar className="w-4 h-4 text-emerald-600" />
+                                    <span>تنظیمات زمان‌بندی و نوبت‌دهی مشاور</span>
+                                  </div>
+                                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                                    {toPersianDigits(field.appointmentData?.slotDurationMinutes || 30)} دقیقه‌ای
+                                  </span>
+                                </div>
+
+                                {/* روزهای کاری */}
+                                <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                                  <span className="font-bold text-emerald-800 flex items-center gap-0.5">
+                                    <CalendarCheck className="w-3 h-3 text-emerald-600" />
+                                    <span>روزهای کاری:</span>
+                                  </span>
+                                  {(field.appointmentData?.availableDays || [0, 1, 2, 3, 4]).map((dIdx) => {
+                                    const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+                                    return (
+                                      <span key={dIdx} className="bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                        {dayNames[dIdx]}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* روزهای تعطیل */}
+                                <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                                  <span className="font-bold text-rose-700 flex items-center gap-0.5">
+                                    <CalendarOff className="w-3 h-3 text-rose-500" />
+                                    <span>روزهای تعطیل:</span>
+                                  </span>
+                                  {[0, 1, 2, 3, 4, 5, 6]
+                                    .filter((dIdx) => !(field.appointmentData?.availableDays || [0, 1, 2, 3, 4]).includes(dIdx))
+                                    .map((dIdx) => {
+                                      const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+                                      return (
+                                        <span key={dIdx} className="bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded font-medium text-[10px]">
+                                          {dayNames[dIdx]}
+                                        </span>
+                                      );
+                                    })}
+                                </div>
+
+                                <div className="flex items-center justify-between pt-1 border-t border-emerald-200/70 text-[10px] text-slate-500">
+                                  <span>
+                                    ساعات کاری: {toPersianDigits(field.appointmentData?.startHour || '09:00')} الی {toPersianDigits(field.appointmentData?.endHour || '17:00')}
+                                    {field.appointmentData?.restTimeMinutes ? ` (استراحت: ${toPersianDigits(field.appointmentData.restTimeMinutes)} دقیقه)` : ''}
+                                  </span>
+                                  <span className="text-emerald-700 font-bold">
+                                    کلیک برای ویرایش تقویم
+                                  </span>
+                                </div>
                               </div>
                             ) : (
                               <div className="h-8 border border-slate-200 rounded-md bg-slate-50/60 flex items-center px-3 text-[11px] text-slate-400">
