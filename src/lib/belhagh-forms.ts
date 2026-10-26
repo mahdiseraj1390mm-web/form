@@ -293,7 +293,7 @@ export const belhaghRegistrationForm: Form = {
     showPortalGate: true,
     portalTitle: 'مرکز خدمات روانشناسی بالحق',
     portalSubtitle: 'سامانه مشاوره تلفنی و پرونده مراجعین',
-    portalHeroImage: '/images/belhagh-hero.png',
+
     showPortalHeroImage: true,
     liveChatEnabled: true,
   },
@@ -1572,7 +1572,7 @@ export const belhaghBookingForm: Form = {
     showPortalGate: true,
     portalTitle: 'مرکز خدمات روانشناسی بالحق',
     portalSubtitle: 'سامانه مشاوره تلفنی و پرونده مراجعین',
-    portalHeroImage: '/images/belhagh-hero.png',
+
     showPortalHeroImage: true,
     liveChatEnabled: true,
   },

@@ -8,16 +8,15 @@ import {
   Type, 
   Image as ImageIcon, 
   UploadCloud, 
-  RefreshCw, 
   Trash2, 
   ExternalLink, 
   CheckCircle2, 
   Eye, 
   Check,
   Copy,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
-import { toPersianDigits } from '@/lib/persian';
 
 export const PortalSettingsTab: React.FC = () => {
   const { forms, activeForm, updateForm, setActiveForm } = useForm();
@@ -31,6 +30,8 @@ export const PortalSettingsTab: React.FC = () => {
 
   const [savedToast, setSavedToast] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
+  const [uploadingBg, setUploadingBg] = useState(false);
 
   const heroFileInputRef = useRef<HTMLInputElement | null>(null);
   const bgFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -48,6 +49,12 @@ export const PortalSettingsTab: React.FC = () => {
 
   const generalSettings = currentForm.generalSettings || {};
   const isPortalGateActive = generalSettings.showPortalGate ?? (currentForm.id === 'form-belhagh-registration' || currentForm.slug === 'zexuz');
+
+  // تصویر سربرگ: اگر هیچ تصویری انتخاب نشده باشد، مقدار خالی است و هیچ تصویر پیش‌فرضی نمایش داده نمی‌شود
+  const heroImage =
+    generalSettings.portalHeroImage && generalSettings.portalHeroImage !== '/images/belhagh-hero.png'
+      ? generalSettings.portalHeroImage
+      : '';
 
   const updateGeneral = (props: Partial<typeof generalSettings>) => {
     updateForm(currentForm.id, {
@@ -69,28 +76,54 @@ export const PortalSettingsTab: React.FC = () => {
     });
   };
 
-  const handleHeroFileUpload = (file: File) => {
+  const handleHeroFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        updateGeneral({ portalHeroImage: e.target.result as string, showPortalHeroImage: true });
+    try {
+      setUploadingHero(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        updateGeneral({ portalHeroImage: data.url, showPortalHeroImage: true });
         triggerSavedFeedback();
+      } else {
+        alert('خطا در بارگذاری تصویر: ' + (data.error || 'ناشناخته'));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Hero upload error:', err);
+      alert('خطا در ارتباط با سرور هنگام آپلود تصویر');
+    } finally {
+      setUploadingHero(false);
+    }
   };
 
-  const handleBgFileUpload = (file: File) => {
+  const handleBgFileUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        updateThemeBg(e.target.result as string);
+    try {
+      setUploadingBg(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        updateThemeBg(data.url);
         triggerSavedFeedback();
+      } else {
+        alert('خطا در بارگذاری عکس پس‌زمینه: ' + (data.error || 'ناشناخته'));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Bg upload error:', err);
+      alert('خطا در ارتباط با سرور هنگام آپلود عکس پس‌زمینه');
+    } finally {
+      setUploadingBg(false);
+    }
   };
 
   const triggerSavedFeedback = () => {
@@ -118,53 +151,49 @@ export const PortalSettingsTab: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-extrabold text-slate-900">تنظیمات صفحه ورود (پورتال پرونده)</h2>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#084d3e] border border-emerald-200">
-                دروازه ورود مراجعین
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-[#084d3e] border border-emerald-300">
+                دروازه پرونده مراجعین
               </span>
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              پیکربندی دروازه ورودی مراجعین، امکان ورود با کد پرونده، عنوان‌گونه، بنر سربرگ و عکس پس‌زمینه
+              مدیریت عنوان، زیرعنوان، تصویر سربرگ و ظاهر کارت ورود مراجعین به پرونده
             </p>
           </div>
         </div>
 
-        {/* دکمه‌های سریع مشاهده و کپی لینک */}
-        <div className="flex items-center gap-2 self-end sm:self-center">
+        {/* دکمه‌های اقدام سریع */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={copyPortalLink}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            title="کپی لینک اختصاصی فرم"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedLink ? 'لینک کپی شد' : 'کپی لینک ورود'}</span>
+            {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+            <span>{copiedLink ? 'کپی شد!' : 'کپی نشانی صفحه'}</span>
           </button>
 
           <a
             href={`/form/${currentForm.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3.5 py-1.5 bg-[#084d3e] hover:bg-[#063b2f] text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
+            className="px-4 py-2 bg-[#084d3e] hover:bg-[#063b2f] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs"
           >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>مشاهده صفحه زنده</span>
+            <ExternalLink className="w-4 h-4" />
+            <span>مشاهده صفحه عمومی</span>
           </a>
         </div>
       </div>
 
-      {/* انتخاب فرم هدف */}
+      {/* انتخاب فرم هدف برای اعمال تنظیمات */}
       <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <label className="block text-xs sm:text-sm font-extrabold text-slate-900">
-              انتخاب فرم جهت پیکربندی صفحه پورتال:
-            </label>
-            <span className="text-[11px] text-slate-500 block mt-0.5">
-              تنظیمات روی فرم انتخاب‌شده اعمال می‌شوند و مراجعین هنگام باز کردن لینک این فرم، این صفحه ورود را مشاهده می‌کنند.
-            </span>
-          </div>
-          <div className="text-[11px] font-bold text-slate-500">
-            تعداد کل فرم‌ها: {toPersianDigits(forms.length)}
-          </div>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <span>انتخاب فرم مورد نظر جهت تنظیم پورتال:</span>
+          </label>
+          <span className="text-xs text-slate-500">
+            فرم فعلی: <strong className="text-emerald-900">{currentForm.title}</strong>
+          </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
@@ -292,13 +321,13 @@ export const PortalSettingsTab: React.FC = () => {
         <div>
           <span className="text-sm font-extrabold text-slate-900 block">زیرعنوان یا توضیح کوتاه پورتال</span>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            متن مکمل که زیر عنوان اصلی در کادر ورودی پورتال قرار می‌گیرد (مثال: «سامانه مشاوره تلفنی و پرونده مراجعین»).
+            متن مکمل که زیر عنوان اصلی در کادر ورودی پورتال قرار می‌گیرد (مثال: «ورود به پرونده یا ثبت‌نام جدید»).
           </p>
         </div>
         <input
           type="text"
           value={generalSettings.portalSubtitle ?? ''}
-          placeholder="سامانه مشاوره تلفنی و پرونده مراجعین"
+          placeholder="ورود به پرونده یا ثبت‌نام جدید"
           onChange={(e) => updateGeneral({ portalSubtitle: e.target.value })}
           className="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 focus:bg-white text-slate-700 transition-colors"
         />
@@ -309,23 +338,25 @@ export const PortalSettingsTab: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ImageIcon className="w-4 h-4 text-emerald-700" />
-            <span className="text-sm font-extrabold text-slate-900">تصویر سربرگ پورتال (بنر بالای کادر ورود)</span>
+            <span className="text-sm font-extrabold text-slate-900">تصویر سربرگ پورتال (بنر کادر ورود)</span>
           </div>
-          <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={generalSettings.showPortalHeroImage !== false}
-              onChange={(e) => {
-                updateGeneral({ showPortalHeroImage: e.target.checked });
-                triggerSavedFeedback();
-              }}
-              className="w-4 h-4 text-emerald-600 rounded border-slate-300"
-            />
-            <span>نمایش بنر</span>
-          </label>
+          {heroImage && (
+            <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={generalSettings.showPortalHeroImage !== false}
+                onChange={(e) => {
+                  updateGeneral({ showPortalHeroImage: e.target.checked });
+                  triggerSavedFeedback();
+                }}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300"
+              />
+              <span>نمایش تصویر</span>
+            </label>
+          )}
         </div>
         <p className="text-xs text-slate-500 leading-relaxed">
-          تصویر تصویرسازی بالای کارت پورتال؛ می‌توانید عکس دلخواه بارگذاری کرده یا از تصویر پیش‌فرض بالحق استفاده نمایید.
+          تصویر سربرگ کارت پورتال؛ هیچ تصویر پیش‌فرضی وجود ندارد و در صورت بارگذاری تصویر جدید، تصویر در سرور ذخیره شده و برای تمامی کاربران و دستگاه‌ها به صورت یکپارچه نمایش داده می‌شود.
         </p>
 
         <input
@@ -342,33 +373,47 @@ export const PortalSettingsTab: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 pt-1">
           <div className="w-36 h-20 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 shadow-2xs">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={generalSettings.portalHeroImage || currentForm.theme?.portalHeroImage || '/images/belhagh-hero.png'}
-              alt="Portal Hero"
-              className="w-full h-full object-cover"
-            />
+            {heroImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={heroImage}
+                alt="Portal Hero"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-[11px] text-slate-400 font-bold">بدون تصویر</span>
+            )}
           </div>
           <div className="flex-1 flex flex-wrap gap-2">
             <button
               type="button"
+              disabled={uploadingHero}
               onClick={() => heroFileInputRef.current?.click()}
-              className="px-3.5 py-2 bg-[#084d3e] hover:bg-[#063b2f] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-3.5 py-2 bg-[#084d3e] hover:bg-[#063b2f] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-60"
             >
-              <UploadCloud className="w-4 h-4" />
-              <span>بارگذاری تصویر جدید</span>
+              {uploadingHero ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>در حال ذخیره در سرور...</span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-4 h-4" />
+                  <span>{heroImage ? 'تغییر تصویر (آپلود در سرور)' : 'بارگذاری تصویر سربرگ'}</span>
+                </>
+              )}
             </button>
-            {(generalSettings.portalHeroImage || currentForm.theme?.portalHeroImage) && (
+            {heroImage && (
               <button
                 type="button"
                 onClick={() => {
-                  updateGeneral({ portalHeroImage: '/images/belhagh-hero.png' });
+                  updateGeneral({ portalHeroImage: '', showPortalHeroImage: false });
                   triggerSavedFeedback();
                 }}
-                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer border border-slate-200"
+                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer border border-rose-200"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>بازنشانی به بنر بالحق</span>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>حذف تصویر</span>
               </button>
             )}
           </div>
@@ -428,11 +473,21 @@ export const PortalSettingsTab: React.FC = () => {
           <div className="flex-1 flex flex-wrap gap-2">
             <button
               type="button"
+              disabled={uploadingBg}
               onClick={() => bgFileInputRef.current?.click()}
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-60"
             >
-              <UploadCloud className="w-4 h-4" />
-              <span>بارگذاری عکس پس‌زمینه</span>
+              {uploadingBg ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>در حال آپلود...</span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-4 h-4" />
+                  <span>بارگذاری عکس پس‌زمینه</span>
+                </>
+              )}
             </button>
             <button
               type="button"
@@ -469,16 +524,18 @@ export const PortalSettingsTab: React.FC = () => {
         </p>
 
         <div className="max-w-xs mx-auto relative rounded-3xl border border-stone-300 shadow-md overflow-hidden mt-3 min-h-[380px] flex flex-col justify-end text-center bg-stone-100">
-          {generalSettings.showPortalHeroImage !== false && (
+          {heroImage && generalSettings.showPortalHeroImage !== false ? (
             <div className="absolute inset-0 w-full h-full overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={generalSettings.portalHeroImage || currentForm.theme?.portalHeroImage || '/images/belhagh-hero.png'}
+                src={heroImage}
                 alt="Banner Preview"
                 className="w-full h-full object-cover object-top select-none pointer-events-none"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/50 to-transparent pointer-events-none" />
             </div>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-teal-50 to-white pointer-events-none" />
           )}
           <div className="relative z-10 p-4 space-y-2.5 text-center">
             {generalSettings.portalTitle && (
@@ -509,7 +566,7 @@ export const PortalSettingsTab: React.FC = () => {
           {savedToast && (
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 animate-in fade-in">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>تنظیمات صفحه پورتال با موفقیت ذخیره شد.</span>
+              <span>تنظیمات صفحه پورتال با موفقیت در پایگاه‌داده ذخیره شد.</span>
             </span>
           )}
         </div>

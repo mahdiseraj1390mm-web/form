@@ -223,6 +223,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
             generalSettings: {
               ...base.generalSettings,
               ...f.generalSettings,
+              portalHeroImage:
+                f.generalSettings?.portalHeroImage === '/images/belhagh-hero.png'
+                  ? undefined
+                  : f.generalSettings?.portalHeroImage,
             },
             theme: {
               ...(base.theme || { themeColor: '#0284c7', fontFamily: 'vazirmatn', borderRadius: 'md' }),
@@ -271,6 +275,27 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       // استفاده از مقادیر اولیه
     }
     setIsInitialized(true);
+
+    // همگام‌سازی از پایگاه‌داده سرور تا تمامی کاربران و دستگاه‌ها آخرین فرم‌ها و بنرها را مشاهده کنند
+    fetch('/api/forms')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.forms && Array.isArray(data.forms) && data.forms.length > 0) {
+          setForms(data.forms);
+          setActiveForm((prev) => {
+            if (!prev) return data.forms[0];
+            return data.forms.find((f: Form) => f.id === prev.id) || data.forms[0];
+          });
+          try {
+            localStorage.setItem('formafzar_forms', JSON.stringify(data.forms));
+          } catch {
+            // ignore
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not sync forms from /api/forms:', err);
+      });
   }, []);
 
   useEffect(() => {
@@ -383,6 +408,15 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         return f;
       })
     );
+
+    // ذخیره همگام در سرور تا تغییرات برای تمامی کاربران و بازدیدکنندگان پایدار باشد
+    fetch('/api/forms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ formId: id, updated }),
+    }).catch((err) => {
+      console.warn('Failed to sync form update to server DB:', err);
+    });
   };
 
   const deleteForm = (id: string) => {
