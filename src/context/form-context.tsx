@@ -223,10 +223,6 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
             generalSettings: {
               ...base.generalSettings,
               ...f.generalSettings,
-              portalHeroImage:
-                f.generalSettings?.portalHeroImage === '/images/belhagh-hero.png'
-                  ? undefined
-                  : f.generalSettings?.portalHeroImage,
             },
             theme: {
               ...(base.theme || { themeColor: '#0284c7', fontFamily: 'vazirmatn', borderRadius: 'md' }),
