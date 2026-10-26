@@ -838,6 +838,44 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   }, [form.id, form.slug, form.fields, initialFormData]);
 
+  // بازیابی خودکار اطلاعات هویتی مراجع بر اساس کد پرونده در فرم نوبت‌دهی
+  useEffect(() => {
+    if (form.id !== 'form-belhagh-booking' && form.slug !== '3uu4z') return;
+    const rawCode = formData.f_case_code;
+    if (!rawCode || typeof rawCode !== 'string') return;
+    const cleanCode = toEnglishDigits(rawCode.trim().toUpperCase());
+    if (cleanCode.length < 5) return;
+
+    if (formData.f_name && formData.f_mobile) return;
+
+    let allSubs = [...submissions];
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('formafzar_submissions');
+        if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
+        const storedCases = localStorage.getItem('belhagh_all_cases');
+        if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
+      } catch (err) {}
+    }
+
+    const found = allSubs.find(
+      (s) =>
+        s.trackingCode?.toUpperCase() === cleanCode ||
+        s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
+    );
+
+    if (found && found.data) {
+      setFormData((prev) => ({
+        ...prev,
+        f_name: found.data.f_name || found.data.f_applicant_name || prev.f_name || '',
+        f_family: found.data.f_family || prev.f_family || '',
+        f_mobile: found.data.f_mobile || found.data.mobile || prev.f_mobile || '',
+        f_province_city: found.data.f_province_city || prev.f_province_city || '',
+        f_role_in_family: found.data.f_role_in_family || prev.f_role_in_family || '',
+      }));
+    }
+  }, [formData.f_case_code, form.id, form.slug, formData.f_name, formData.f_mobile, submissions]);
+
   const handleGoToNextChainedForm = () => {
     const targetSlug = form.behavior?.nextChainedForm?.formSlug || '3uu4z';
     const targetId = form.behavior?.nextChainedForm?.formId || 'form-belhagh-booking';
@@ -1674,6 +1712,17 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* دکمه‌های بازگشت و عملیات نهایی */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3 print:hidden">
+          {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && (
+            <button
+              type="button"
+              onClick={handleGoToNextChainedForm}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white text-xs sm:text-sm font-black rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <span>ورود به مرحله اخذ نوبت مشاوره</span>
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
