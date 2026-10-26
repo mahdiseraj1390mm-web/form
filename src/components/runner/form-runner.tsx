@@ -1081,8 +1081,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       }
 
       // الزامی بودن
-      if (f.validations?.required && (!val || val === '')) {
-        newErrors[f.id] = 'تکمیل این فیلد الزامی است.';
+      if (f.validations?.required && (!val || val === '' || (typeof val === 'string' && val.trim() === ''))) {
+        newErrors[f.id] = f.validations?.customErrorMessage || 'تکمیل این فیلد الزامی است.';
         return;
       }
 
@@ -1130,7 +1130,17 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const errKeys = Object.keys(newErrors);
+    if (errKeys.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`field-${errKeys[0]}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 60);
+      return false;
+    }
+    return true;
   };
 
   // فیلدهای قابل نمایش مرحله جاری
@@ -1234,6 +1244,27 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     if (form.mode === 'wizard' && form.steps && form.steps.length > 0 && currentStepIndex < form.steps.length - 1) {
       handleNextStep();
       return;
+    }
+
+    // در مرحله چهارم تا وقتی تمام بخش‌ها تکمیل نشده فرم به هیچ عنوان تکمیل و ثبت نگردد
+    if ((form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 3) {
+      const step4Fields = ['f_physical_illness', 'f_mental_illness', 'f_medications'];
+      const emptyStep4 = step4Fields.filter((fid) => {
+        const val = formData[fid];
+        return !val || (typeof val === 'string' && val.trim() === '');
+      });
+      if (emptyStep4.length > 0) {
+        const step4Errors: Record<string, string> = {};
+        emptyStep4.forEach((fid) => {
+          step4Errors[fid] = 'تکمیل تمام بخش‌های مرحله چهارم الزامی است (در صورت عدم سابقه بنویسید «ندارم»).';
+        });
+        setErrors((prev) => ({ ...prev, ...step4Errors }));
+        setTimeout(() => {
+          const el = document.getElementById(`field-${emptyStep4[0]}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 60);
+        return;
+      }
     }
 
     const fieldsToValidate = form.fields;
@@ -1544,6 +1575,12 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   <img
                     src={heroImage}
                     alt={portalTitle}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.src.includes('belhagh-hero.jpg')) {
+                        target.src = '/images/belhagh-hero.jpg';
+                      }
+                    }}
                     className="w-full h-full object-cover object-top select-none pointer-events-none"
                   />
                   {/* لایه گرادینت نرم در بخش پایینی برای تفکیک و خوانایی چشم‌نواز متون و دکمه‌ها روی تصویر */}
@@ -2322,7 +2359,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             const hasError = !!errors[field.id];
 
             return (
-              <div key={field.id} className={`${colClass} space-y-1.5`}>
+              <div key={field.id} id={`field-${field.id}`} className={`${colClass} space-y-1.5 scroll-mt-24`}>
                 
                 {/* عنوان و وضعیت اعتبارسنجی زنده */}
                 <div className="flex items-center justify-between">
@@ -2800,6 +2837,36 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             </div>
           </div>
         )}
+
+        {/* پیام راهنمای تکمیل کامل مرحله چهارم وضعیت سلامت */}
+        {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 3 && (() => {
+          const step4Fields = ['f_physical_illness', 'f_mental_illness', 'f_medications'];
+          const isStep4Incomplete = step4Fields.some((fid) => {
+            const val = formData[fid];
+            return !val || (typeof val === 'string' && val.trim() === '');
+          });
+          return (
+            <div className={`p-3.5 rounded-2xl border text-xs flex items-center gap-2.5 my-3 transition-all animate-in fade-in ${isStep4Incomplete ? 'bg-amber-50/90 border-amber-300 text-amber-900 shadow-xs' : 'bg-emerald-50/90 border-emerald-300 text-emerald-900 shadow-xs'}`}>
+              {isStep4Incomplete ? (
+                <>
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-extrabold block text-amber-950 mb-0.5">توجه: مرحله چهارم نهایی است</span>
+                    <span>تا زمانی که تمام قسمت‌های مرحله چهارم (وضعیت بیماری جسمی، بیماری روانی و داروهای مصرفی) تکمیل نشوند، امکان ثبت نهایی فرم وجود ندارد (در صورت عدم سابقه، بنویسید «ندارم»).</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-extrabold block text-emerald-950 mb-0.5">تمام قسمت‌های مرحله چهارم تکمیل شد</span>
+                    <span>اطلاعات سلامت با موفقیت تکمیل گردید. اکنون می‌توانید روی دکمه «ثبت فرم» کلیک فرمایید.</span>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
 
         {/* هشدار شرطی در صورتی که کاربر عضو سایت نباشد و اجازه رفتن به مرحله بعد نداشته باشد */}
         {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 0 && (formData['f_ebadollah_member'] === 'no' || formData['f_ebadollah_member'] === 'خیر') && (
