@@ -1551,7 +1551,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const heroImage =
       form.generalSettings?.portalHeroImage ||
       form.theme?.portalHeroImage ||
-      '';
+      (isBelhaghFamily ? '/images/belhagh-hero.png' : '');
 
     const showHeroImage =
       Boolean(heroImage) && form.generalSettings?.showPortalHeroImage !== false;

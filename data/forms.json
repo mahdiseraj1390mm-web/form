@@ -394,7 +394,7 @@
       "portalSubtitle": "سامانه مشاوره تلفنی و پرونده مراجعین",
       "showPortalHeroImage": true,
       "liveChatEnabled": true,
-      "portalHeroImage": "/uploads/portal-1792978317808-mmivjy.jpg"
+      "portalHeroImage": "/images/belhagh-hero.png"
     },
     "theme": {
       "themeId": "belhagh_official",
@@ -2259,7 +2259,8 @@
       "portalTitle": "مرکز خدمات روانشناسی بالحق",
       "portalSubtitle": "سامانه مشاوره تلفنی و پرونده مراجعین",
       "showPortalHeroImage": true,
-      "liveChatEnabled": true
+      "liveChatEnabled": true,
+      "portalHeroImage": "/images/belhagh-hero.png"
     },
     "theme": {
       "themeId": "belhagh_official",
