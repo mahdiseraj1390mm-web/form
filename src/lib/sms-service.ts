@@ -1,7 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-export const MELIPAYAMAK_API_KEY = process.env.MELIPAYAMAK_API_KEY || '627eeb6c-8e98-4563-9160-dc2f60d293e3';
+export const MELIPAYAMAK_USERNAME = process.env.MELIPAYAMAK_USERNAME || '9120449093';
+export const MELIPAYAMAK_PASSWORD = process.env.MELIPAYAMAK_PASSWORD || '627eeb6c-8e98-4563-9160-dc2f60d293e3';
 
 export const PATTERN_IDS = {
   CASE_REGISTRATION: 568830,      // کد پرونده مراجع: {0}
@@ -14,8 +15,8 @@ export interface SmsLogEntry {
   timestamp: string;
   type: 'case_registration' | 'appointment_client' | 'appointment_counselor';
   recipient: string;
-  bodyId?: number;
-  args?: string[];
+  bodyId: number;
+  args: string[];
   message: string;
   status: 'sent' | 'failed' | 'simulated';
   providerResponse?: any;
@@ -49,7 +50,8 @@ export async function logSms(entry: SmsLogEntry): Promise<void> {
 }
 
 /**
- * ارسال پیامک خدماتی بر اساس الگوی تاییدشده ملی‌پیامک (Console Shared Pattern)
+ * ارسال پیامک خدماتی از طریق وب‌سرویس ملی‌پیامک (SendByBaseNumber2)
+ * در این روش پیامک حتی به لیست سیاه (بلک‌لیست) و در کمتر از چند ثانیه تحویل می‌شود.
  */
 export async function sendSharedPatternSms(
   to: string,
@@ -65,34 +67,49 @@ export async function sendSharedPatternSms(
   let providerResponse: any = null;
   let isSuccess = false;
 
-  const apiKey = process.env.MELIPAYAMAK_API_KEY || MELIPAYAMAK_API_KEY;
+  const username = process.env.MELIPAYAMAK_USERNAME || MELIPAYAMAK_USERNAME;
+  const password = process.env.MELIPAYAMAK_PASSWORD || MELIPAYAMAK_PASSWORD;
+
+  // در وب‌سرویس ملی‌پیامک، آرگومان‌ها با کاراکتر ; از یکدیگر تفکیک می‌شوند
+  const textJoined = args.join(';');
 
   try {
-    // روش ۱: کنسول ملی‌پیامک - ارسال سریع الگوی خدماتی
-    const consoleUrl = `https://console.melipayamak.com/api/send/shared/${apiKey}`;
-    const consoleRes = await fetch(consoleUrl, {
+    // روش ۱: وب‌سرویس قدرتمند SendByBaseNumber2 ملی‌پیامک
+    const soapUrl = 'http://api.payamak-panel.com/post/Send.asmx/SendByBaseNumber2';
+    const formParams = new URLSearchParams();
+    formParams.append('username', username);
+    formParams.append('password', password);
+    formParams.append('text', textJoined);
+    formParams.append('to', standardTo);
+    formParams.append('bodyId', String(bodyId));
+
+    const res = await fetch(soapUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({
-        bodyId,
-        to: standardTo,
-        args,
-      }),
+      body: formParams.toString(),
     });
 
-    const consoleData = await consoleRes.json().catch(() => null);
-    providerResponse = consoleData;
+    const resText = await res.text();
+    providerResponse = resText;
 
-    if (consoleRes.ok && consoleData && !consoleData.error && consoleData.status !== 'کلید کنسول معتبر نیست') {
+    // در ملی‌پیامک اگر پاسخ یک رشته عددی بزرگ (شناسه پیگیری ارسال RecID) باشد، ارسال موفق بوده است
+    const match = resText.match(/<string[^>]*>(\d+)<\/string>/);
+    if (match && match[1] && match[1].length > 5) {
       isSuccess = true;
+      providerResponse = { status: 'sent', recId: match[1] };
+    } else {
+      // در صورت دریافت عدد منفی، خطا رخ داده است
+      const errMatch = resText.match(/<string[^>]*>(-?\d+)<\/string>/);
+      const code = errMatch ? errMatch[1] : resText;
+      providerResponse = { status: 'failed', code };
     }
   } catch (err: any) {
     providerResponse = { error: err.message };
   }
 
-  // لاگ رویداد ارسال پیامک
+  // ثبت در فایل لاگ سیستم
   await logSms({
     id: `sms-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     timestamp: new Date().toISOString(),
@@ -109,7 +126,7 @@ export async function sendSharedPatternSms(
 }
 
 /**
- * ۱. پیامک کد پرونده پس از ثبت نام مراجع (الگوی ۵۶۸۸۳۰)
+ * ۱. پیامک کد پرونده پس از ثبت نام مراجع (الگوی تایید شده ۵۶۸۸۳۰)
  * الگو: کد پرونده مشاوره شما:{0} این کد را بخاطر بسپارید و در اختیار کسی قرار ندهید. psy-belhagh
  */
 export async function sendCaseRegistrationSms(clientMobile: string, caseCode: string): Promise<any> {
@@ -124,7 +141,7 @@ export async function sendCaseRegistrationSms(clientMobile: string, caseCode: st
 }
 
 /**
- * ۲. پیامک تایید نوبت برای مراجع (الگوی ۵۶۸۸۱۸)
+ * ۲. پیامک تایید نوبت برای مراجع (الگوی تایید شده ۵۶۸۸۱۸)
  * الگو: سلام {0} عزیز نوبت مشاوره شما با موفقیت ثبت شد. نام مشاور: {1} تاریخ نوبت: {2} ساعت نوبت: {3} لطفاً در زمان تعیین‌شده برای مشاوره آماده باشید. psy-belhagh
  */
 export async function sendAppointmentClientSms(
@@ -136,7 +153,7 @@ export async function sendAppointmentClientSms(
     time: string;
   }
 ): Promise<any> {
-  const clientName = details.clientName || 'مراجع';
+  const clientName = details.clientName || 'مُراجع';
   const counselorName = details.counselorName || 'مشاور مرکز';
   const date = details.date || 'تعیین‌شده';
   const time = details.time || 'تعیین‌شده';
@@ -153,7 +170,7 @@ export async function sendAppointmentClientSms(
 }
 
 /**
- * ۳. پیامک اطلاع‌رسانی نوبت به مشاور (الگوی ۵۶۸۸۰۵)
+ * ۳. پیامک اطلاع‌رسانی نوبت به مشاور (الگوی تایید شده ۵۶۸۸۰۵)
  * الگو: مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد. نام مراجعه‌کننده: {0} شماره تماس: {1} تاریخ نوبت: {2} ساعت نوبت: {3} psy-belhagh
  */
 export async function sendAppointmentCounselorSms(
