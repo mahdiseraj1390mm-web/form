@@ -629,6 +629,12 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     sub?: FormSubmission;
   } | null>(null);
 
+  // زمان ورود به هر مرحله جهت جلوگیری از پرش و ثبت تصادفی ناشی از دابل‌کلیک در مرحله قبل
+  const [stepEnteredAt, setStepEnteredAt] = useState<number>(Date.now());
+  useEffect(() => {
+    setStepEnteredAt(Date.now());
+  }, [currentStepIndex]);
+
   // انتقال به فرم ثبت نام یا ورود به مراحل ثبت نام
   const handleStartRegistration = () => {
     const isReg = form.id === 'form-belhagh-registration' || form.slug === 'zexuz';
@@ -1193,14 +1199,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   };
 
   const handleNextStep = () => {
+    if (!form.steps || form.steps.length === 0) return;
     if (!validateFields(currentStepFields)) return;
 
     if (currentStepIndex < form.steps.length - 1) {
-      setCurrentStepIndex(currentStepIndex + 1);
+      setCurrentStepIndex((prev) => Math.min(prev + 1, form.steps.length - 1));
       setInternalPageIndex(0);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      handleSubmit();
     }
   };
 
@@ -1215,12 +1220,17 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    // جلوگیری قطعی از پرش از روی مرحله چهارم و ثبت تصادفی ناشی از دابل‌کلیک
+    if (Date.now() - stepEnteredAt < 700) {
+      return;
+    }
+
     if (pages.length > 1 && activePageIndex < pages.length - 1) {
       handleNextPage();
       return;
     }
 
-    // رفع مشکل عدم نمایش مرحله چهارم: اگر فرم ویزارد است و هنوز به مرحله آخر نرسیده‌ایم، حتماً به مرحله بعد برود!
+    // اگر فرم ویزارد است و هنوز به مرحله آخر نرسیده‌ایم، هرگز نباید فرم سابمیت شود
     if (form.mode === 'wizard' && form.steps && form.steps.length > 0 && currentStepIndex < form.steps.length - 1) {
       handleNextStep();
       return;
@@ -1453,47 +1463,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             <div className="text-[11px] text-emerald-700 font-mono">
               شماره مرجع بانکی: {submittedResult.paymentRefId}
             </div>
-          </div>
-        )}
-
-        {/* کارت راهنمای بازگشت به صفحه اصلی جهت ورود به سامانه نوبت‌دهی */}
-        {(form.behavior?.nextChainedForm || form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && (
-          <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50/70 to-purple-50 rounded-2xl border-2 border-blue-400 text-right space-y-4 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300 print:hidden">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                <Home className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[11px] font-extrabold text-blue-700 bg-blue-100/90 px-2 py-0.5 rounded-md inline-block mb-1">
-                  مرحله بعدی: دریافت نوبت مشاوره
-                </span>
-                <h3 className="text-base font-extrabold text-slate-900">
-                  سامانه نوبت دهی مشاوره تلفنی
-                </h3>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              ثبت نام شما با موفقیت تکمیل شد. اکنون برای اخذ نوبت، بر روی کلید «بازگشت به صفحه اصلی» کلیک فرمایید تا با درج کد پرونده در قسمت ورود، نوبت مشاوره خود را رزرو نمایید:
-            </p>
-
-            <button
-              type="button"
-              onClick={() => {
-                const code = submittedResult?.trackingCode || '';
-                setSubmittedResult(null);
-                setAuthGateMode('portal');
-                setIsLoginBoxOpen(false);
-                if (code) {
-                  setCaseCodeInput(code);
-                }
-              }}
-              className="w-full py-3.5 px-5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Home className="w-4 h-4" />
-              <span>بازگشت به صفحه اصلی (ورود به سامانه نوبت‌دهی)</span>
-              <ArrowLeft className="w-4 h-4 mr-auto" />
-            </button>
           </div>
         )}
 
@@ -2940,6 +2909,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             ) : form.mode === 'wizard' && currentStepIndex < (form.steps?.length || 1) - 1 ? (
               canProceedToNextStep ? (
                 <button
+                key={`wizard-step-next-${currentStepIndex}`}
                   type="button"
                   onClick={handleNextStep}
                   className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer ${borderRadiusClass || 'rounded-xl'}`}
