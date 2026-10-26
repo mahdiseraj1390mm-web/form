@@ -1584,7 +1584,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     className="w-full h-full object-cover object-top select-none pointer-events-none"
                   />
                   {/* لایه گرادینت نرم در بخش پایینی برای تفکیک و خوانایی چشم‌نواز متون و دکمه‌ها روی تصویر */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/45 to-transparent pointer-events-none" />
+                  <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-white/95 via-white/40 to-transparent pointer-events-none" />
                 </div>
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-teal-50 to-white" />
@@ -1592,21 +1592,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
               {/* المان‌های پورتال: پایین تصویر و روی تصویر */}
               <div className="relative z-10 px-5 sm:px-6 pb-6 pt-12 space-y-3.5">
-                {/* عنوان‌گونه اختصاصی و زیرعنوان روی بخش پایینی تصویر */}
-                {(portalTitle || portalSubtitle) && (
-                  <div className="text-center px-2">
-                    {portalTitle && (
-                      <h1 className="text-base sm:text-lg font-black text-[#084d3e] tracking-tight drop-shadow-xs">
-                        {portalTitle}
-                      </h1>
-                    )}
-                    {portalSubtitle && (
-                      <p className="text-xs text-stone-700 font-bold mt-1 drop-shadow-xs">
-                        {portalSubtitle}
-                      </p>
-                    )}
-                  </div>
-                )}
 
                 {!isLoginBoxOpen ? (
                   /* حالت اولیه مطابق رفرنس: فقط دکمه ورود و ثبت نام روی تصویر */
