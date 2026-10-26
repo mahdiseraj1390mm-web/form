@@ -111,7 +111,7 @@ export function formatExactTime(timeStr: string): string {
   }
 
   if (period) {
-    return `${cleanTime} (${period})`;
+    return `${cleanTime} ${period}`;
   }
   return cleanTime;
 }
@@ -161,6 +161,29 @@ export function extractBookingDetails(formData: Record<string, any>) {
   const clientName = `${formData.f_name || ''} ${formData.f_family || ''}`.trim() || formData.f_applicant_name || 'مُراجع محترم';
   const clientMobile = formData.f_mobile || formData.mobile || formData.f_phone || '';
 
+  // استخراج استان و شهر مراجع
+  const rawProvinceCity = formData.f_province_city || formData.province_city || '';
+  let province = '';
+  let city = '';
+  if (rawProvinceCity) {
+    if (rawProvinceCity.includes(' - ')) {
+      const parts = rawProvinceCity.split(' - ');
+      province = parts[0]?.trim() || '';
+      city = parts[1]?.trim() || '';
+    } else {
+      province = rawProvinceCity;
+      city = rawProvinceCity;
+    }
+  }
+  if (!province && formData.f_province_city_province) {
+    province = formData.f_province_city_province;
+  }
+  if (!city && formData.f_province_city_city) {
+    city = formData.f_province_city_city;
+  }
+  if (!province) province = 'مشخص‌نشده';
+  if (!city) city = 'مشخص‌نشده';
+
   return {
     counselorName: counselorInfo.name,
     counselorMobile: counselorInfo.mobile,
@@ -169,5 +192,7 @@ export function extractBookingDetails(formData: Record<string, any>) {
     time: timePart,
     clientName,
     clientMobile,
+    province,
+    city,
   };
 }

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'appointment_booked') {
-      const { clientMobile, counselorMobile, clientName, counselorName, date, time } = body;
+      const { clientMobile, counselorMobile, clientName, counselorName, date, time, province, city } = body;
       const results: any = {};
 
       if (clientMobile) {
@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
       if (counselorMobile) {
         results.counselor = await sendAppointmentCounselorSms(counselorMobile, {
           clientName: clientName || 'مُراجع محترم',
+          province: province || 'مشخص‌نشده',
+          city: city || 'مشخص‌نشده',
           clientMobile: clientMobile || '',
           date: date || 'تعیین‌شده',
           time: time || 'مشخص‌شده',

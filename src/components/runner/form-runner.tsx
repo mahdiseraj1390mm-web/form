@@ -1360,8 +1360,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         }
       : undefined;
 
-    // ایجاد کد پرونده اختصاصی با پیشوند SP و ۶ رقم عدد (مثلاً SP849201)
-    const newCaseCode = generateCaseCode('SP');
+    // ایجاد یا حفظ کد پرونده اختصاصی (مثلاً SP849201)
+    const existingCaseCode = formData.f_case_code || formData.caseCode || (typeof window !== 'undefined' ? localStorage.getItem('belhagh_current_case_code') : null);
+    const newCaseCode = existingCaseCode || generateCaseCode('SP');
 
     const sub = submitFormResponse(form.id, { ...formData, caseCode: newCaseCode }, paymentInfo, quizResult);
     const finalSub: FormSubmission = {
@@ -1402,6 +1403,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           counselorName: booking.counselorName,
           date: booking.date,
           time: booking.time,
+          province: booking.province,
+          city: booking.city,
         }),
       }).catch((err) => console.warn('SMS booking dispatch error:', err));
     }
@@ -1472,6 +1475,102 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
   // صفحه تأیید نهایی ثبت فرم و رسید چاپی
   if (submittedResult) {
+    const isBookingForm = form.id === 'form-belhagh-booking' || form.slug === '3uu4z';
+
+    // در فرم نوبت‌دهی، مشخصات نوبت رزرو شده نمایش داده می‌شود نه کادر ذخیره مجدد پرونده
+    if (isBookingForm) {
+      const booking = extractBookingDetails({ ...formData, ...submittedResult.data });
+      return (
+        <div className="max-w-2xl mx-auto my-6 sm:my-12 p-5 sm:p-8 bg-white rounded-3xl border border-emerald-200 shadow-xl text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-200 shadow-sm">
+            <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10" />
+          </div>
+
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+              نوبت مشاوره شما با موفقیت ثبت شد
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1.5">
+              پیامک تأیید نوبت برای شما و مشاور محترم ارسال گردید.
+            </p>
+          </div>
+
+          {/* کارت مشخصات کامل نوبت رزرو شده */}
+          <div className="bg-gradient-to-br from-emerald-50/80 via-teal-50/40 to-slate-50 rounded-2xl border-2 border-emerald-300/80 p-5 sm:p-6 text-right space-y-4 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-emerald-200/60">
+              <span className="font-extrabold text-sm sm:text-base text-emerald-950 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-emerald-700" />
+                <span>مشخصات نوبت مشاوره تلفنی</span>
+              </span>
+              <span className="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold">
+                تأیید قطعی
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 text-xs sm:text-sm">
+              <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">مشاور انتخابی:</span>
+                <span className="font-extrabold text-slate-900">{booking.counselorName}</span>
+              </div>
+              <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">تاریخ نوبت (شمسی):</span>
+                <span className="font-extrabold text-emerald-800">{booking.date}</span>
+              </div>
+              <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">ساعت نوبت:</span>
+                <span className="font-extrabold text-emerald-800">{booking.time}</span>
+              </div>
+              <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">مراجع محترم:</span>
+                <span className="font-extrabold text-slate-900">{booking.clientName}</span>
+              </div>
+              {booking.clientMobile && (
+                <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                  <span className="text-slate-500">شماره تماس مراجع:</span>
+                  <span className="font-mono font-bold text-slate-900" dir="ltr">{booking.clientMobile}</span>
+                </div>
+              )}
+              {submittedResult.trackingCode && (
+                <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                  <span className="text-slate-500">کد پرونده مراجع:</span>
+                  <span className="font-mono font-black text-blue-800 tracking-wider" dir="ltr">{submittedResult.trackingCode}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-emerald-900/5 rounded-xl border border-emerald-200 text-emerald-950 text-xs sm:text-sm font-semibold leading-relaxed">
+              📞 <strong>راهنمای تماس با مشاور:</strong> مشاور در ساعت مقرر در دسترس و منتظر تماس شما خواهد بود. لطفاً رأس ساعت تعیین‌شده با مشاور تماس بگیرید.
+            </div>
+          </div>
+
+          {/* دکمه‌های بازگشت و عملیات نهایی */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3 print:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setSubmittedResult(null);
+                setAuthGateMode('portal');
+                setIsLoginBoxOpen(false);
+              }}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <Home className="w-4 h-4" />
+              <span>بازگشت به صفحه اصلی سامانه</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 active:scale-[0.99] transition-all cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>چاپ رسید نوبت</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-2xl mx-auto my-12 p-8 bg-white rounded-2xl border border-slate-200 shadow-xl text-center space-y-6">
         
@@ -1642,11 +1741,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       >
         {isBelhaghFamily ? (
           <div className="max-w-[440px] w-full mx-auto my-2 sm:my-6 px-3 animate-in fade-in zoom-in-95 duration-300">
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-stone-300/80 shadow-2xl shadow-stone-900/15 text-center min-h-[460px] sm:min-h-[560px] md:min-h-[600px] flex flex-col justify-end bg-stone-100">
+            <div className="overflow-hidden rounded-[2.5rem] border border-stone-200/90 shadow-2xl shadow-stone-900/10 text-center flex flex-col bg-white">
               
-              {/* تصویر پس‌زمینه کامل کارت پورتال */}
+              {/* تصویر پس‌زمینه کارت پورتال: کاملاً تمیز و بدون هیچ دکمه‌ای روی آن */}
               {showHeroImage && heroImage ? (
-                <div className="absolute inset-0 w-full h-full overflow-hidden">
+                <div className="w-full relative overflow-hidden bg-stone-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={heroImage}
@@ -1657,18 +1756,16 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         target.src = '/images/belhagh-hero.jpg';
                       }
                     }}
-                    className="w-full h-full object-cover object-top select-none pointer-events-none"
+                    className="w-full h-auto object-cover select-none pointer-events-none block"
                   />
                 </div>
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-teal-50 to-white" />
-              )}
+              ) : null}
 
-              {/* المان‌های پورتال: پایین تصویر و روی تصویر */}
-              <div className="relative z-10 px-5 sm:px-6 pb-6 pt-12 space-y-3.5">
+              {/* المان‌های پورتال: زیر تصویر و در بخش تمیز و لمسی موبایل */}
+              <div className="p-5 sm:p-6 bg-white space-y-3.5">
 
                 {!isLoginBoxOpen ? (
-                  /* حالت اولیه مطابق رفرنس: فقط دکمه ورود و ثبت نام روی تصویر */
+                  /* حالت اولیه: فقط دکمه ورود و ثبت نام در زیر تصویر */
                   <div className="space-y-3.5 pt-1">
                     {/* دکمه ورود سبز تیره */}
                     <button
@@ -1710,7 +1807,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     </button>
 
                     {/* باکس دریافت کد پرونده */}
-                    <div className="bg-[#f7faf8]/95 backdrop-blur-md rounded-3xl border-2 border-[#739a8e] p-5 shadow-xl space-y-4 text-right animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="bg-[#f7faf8] rounded-3xl border-2 border-[#739a8e] p-5 shadow-inner space-y-4 text-right animate-in fade-in slide-in-from-top-2 duration-200">
                       {/* عنوان کادر با آیکون */}
                       <div className="flex items-center gap-2 text-[#084d3e] font-extrabold text-sm sm:text-base">
                         <User className="w-5 h-5 text-[#084d3e] shrink-0" />

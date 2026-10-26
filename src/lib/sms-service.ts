@@ -127,10 +127,10 @@ export async function sendSharedPatternSms(
 
 /**
  * ۱. پیامک کد پرونده پس از ثبت نام مراجع (الگوی تایید شده ۵۶۸۸۳۰)
- * الگو: کد پرونده مشاوره شما:{0} این کد را بخاطر بسپارید و در اختیار کسی قرار ندهید. psy-belhagh
+ * الگو: با سلام کد پرونده شما: {0} می باشد لطفا این کد را ذخیره بفرمایید نوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد سایت روانشناسی بالحق
  */
 export async function sendCaseRegistrationSms(clientMobile: string, caseCode: string): Promise<any> {
-  const fallbackText = `کد پرونده مشاوره شما:${caseCode}\nاین کد را بخاطر بسپارید و در اختیار کسی قرار ندهید.\npsy-belhagh`;
+  const fallbackText = `با سلام\nکد پرونده شما: ${caseCode} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق`;
   return sendSharedPatternSms(
     clientMobile,
     PATTERN_IDS.CASE_REGISTRATION,
@@ -142,7 +142,7 @@ export async function sendCaseRegistrationSms(clientMobile: string, caseCode: st
 
 /**
  * ۲. پیامک تایید نوبت برای مراجع (الگوی تایید شده ۵۶۸۸۱۸)
- * الگو: سلام {0} عزیز نوبت مشاوره شما با موفقیت ثبت شد. نام مشاور: {1} تاریخ نوبت: {2} ساعت نوبت: {3} لطفاً در زمان تعیین‌شده برای مشاوره آماده باشید. psy-belhagh
+ * الگو: سلام {0} عزیز نوبت مشاوره شما با موفقیت ثبت شد. نام مشاور: {1} ساعت نوبت: {3} لطفاً در زمان تعیین‌شده با مشاور تماس بگیرید سایت روانشناسی بالحق psy-belhagh.com
  */
 export async function sendAppointmentClientSms(
   clientMobile: string,
@@ -158,7 +158,7 @@ export async function sendAppointmentClientSms(
   const date = details.date || 'تعیین‌شده';
   const time = details.time || 'تعیین‌شده';
 
-  const fallbackText = `سلام ${clientName} عزیز نوبت مشاوره شما با موفقیت ثبت شد. نام مشاور: ${counselorName} تاریخ نوبت: ${date} ساعت نوبت: ${time} لطفاً در زمان تعیین‌شده برای مشاوره آماده باشید. psy-belhagh`;
+  const fallbackText = `سلام ${clientName} عزیز\n\nنوبت مشاوره شما با موفقیت ثبت شد.\n\nنام مشاور: ${counselorName}\nساعت نوبت: ${time}\n\nلطفاً در زمان تعیین‌شده با مشاور تماس بگیرید\n\nسایت روانشناسی بالحق\npsy-belhagh.com`;
 
   return sendSharedPatternSms(
     clientMobile,
@@ -171,28 +171,32 @@ export async function sendAppointmentClientSms(
 
 /**
  * ۳. پیامک اطلاع‌رسانی نوبت به مشاور (الگوی تایید شده ۵۶۸۸۰۵)
- * الگو: مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد. نام مراجعه‌کننده: {0} شماره تماس: {1} تاریخ نوبت: {2} ساعت نوبت: {3} psy-belhagh
+ * الگو: مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد. نام مراجعه‌کننده: {0} استان: {1} شهر: {2} شماره تماس: {3} تاریخ نوبت: {4} ساعت نوبت: {5}
  */
 export async function sendAppointmentCounselorSms(
   counselorMobile: string,
   details: {
     clientName: string;
+    province?: string;
+    city?: string;
     clientMobile: string;
     date: string;
     time: string;
   }
 ): Promise<any> {
   const clientName = details.clientName || 'مُراجع محترم';
+  const province = details.province || 'مشخص‌نشده';
+  const city = details.city || 'مشخص‌نشده';
   const clientMobile = details.clientMobile || 'ثبت‌شده در پرونده';
   const date = details.date || 'تعیین‌شده';
   const time = details.time || 'تعیین‌شده';
 
-  const fallbackText = `مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد. نام مراجعه‌کننده: ${clientName} شماره تماس: ${clientMobile} تاریخ نوبت: ${date} ساعت نوبت: ${time} psy-belhagh`;
+  const fallbackText = `مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.\n\nنام مراجعه‌کننده: ${clientName}\nاستان: ${province} شهر: ${city}\nشماره تماس: ${clientMobile}\nتاریخ نوبت: ${date}\nساعت نوبت: ${time}`;
 
   return sendSharedPatternSms(
     counselorMobile,
     PATTERN_IDS.APPOINTMENT_COUNSELOR,
-    [clientName, clientMobile, date, time],
+    [clientName, province, city, clientMobile, date, time],
     'appointment_counselor',
     fallbackText
   );
