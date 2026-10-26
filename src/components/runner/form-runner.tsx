@@ -1524,20 +1524,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             <Printer className="w-4 h-4" />
             <span>ذخیره و چاپ کد پرونده</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSubmittedResult(null);
-              setFormData({});
-              setCurrentStepIndex(0);
-              setAuthGateMode('filling');
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>ثبت فرم جدید</span>
-          </button>
         </div>
 
       </div>
