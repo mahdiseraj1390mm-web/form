@@ -70,17 +70,16 @@ export function formatCurrency(amount: number, currency: 'IRT' | 'IRR' = 'IRT'):
  * ایجاد کد پرونده اختصاصی شامل حروف و اعداد با طول بیش از ۶ رقم
  * ترکیب حروف و ارقام انگلیسی جهت استعلام و ورود دقیق به پرونده (مثال: BH-M749218)
  */
-export function generateCaseCode(prefix: string = 'BH'): string {
-  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const randomChar = letters.charAt(Math.floor(Math.random() * letters.length));
+export function generateCaseCode(prefix: string = 'SP'): string {
+  // فرمت اختصاصی: شروع با حروف SP و ۶ رقم عدد (مثال: SP849201)
   const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
-  return `${prefix}-${randomChar}${randomDigits}`;
+  return `SP${randomDigits}`;
 }
 
 /**
  * ایجاد کد پرونده یکتای اداری
  */
-export function generateTrackingCode(prefix: string = 'BH'): string {
+export function generateTrackingCode(prefix: string = 'SP'): string {
   return generateCaseCode(prefix);
 }
 

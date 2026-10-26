@@ -62,6 +62,7 @@ import {
   generateCaseCode,
   getFieldDisplayValue
 } from '@/lib/persian';
+import { extractBookingDetails } from '@/lib/belhagh-sms-helper';
 import { iranProvinces } from '@/lib/iran-geo';
 import { PaymentModal } from './payment-modal';
 import { AppointmentScheduler } from './appointment-scheduler';
@@ -559,6 +560,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   initialFormData,
 }) => {
   const { submitFormResponse, submissions } = useForm();
+  const isBelhaghFamily = form.id.includes('belhagh') || form.slug === 'zexuz' || form.slug === '3uu4z';
   
   // استیت مقادیر فیلدها
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -681,22 +683,41 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     if (found) {
       setActiveCaseSubmission(found);
       setIsLoginBoxOpen(false);
+      const caseCode = found.trackingCode;
+      const prefilledData = {
+        ...found.data,
+        f_name: found.data?.f_name || found.data?.f_applicant_name || '',
+        f_family: found.data?.f_family || '',
+        f_mobile: found.data?.f_mobile || found.data?.mobile || '',
+        f_province_city: found.data?.f_province_city || '',
+        f_role_in_family: found.data?.f_role_in_family || '',
+        f_case_code: caseCode,
+      };
+
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('belhagh_current_case_code', found.trackingCode);
+          localStorage.setItem('belhagh_current_case_code', caseCode);
+          localStorage.setItem('belhagh_active_case_data', JSON.stringify(prefilledData));
         } catch (err) {}
       }
+
       setFormData((prev) => ({
         ...prev,
-        ...found.data,
-        f_name: found.data?.f_name || found.data?.f_applicant_name || prev.f_name || '',
-        f_family: found.data?.f_family || prev.f_family || '',
-        f_mobile: found.data?.f_mobile || found.data?.mobile || prev.f_mobile || '',
-        f_province_city: found.data?.f_province_city || prev.f_province_city || '',
-        f_role_in_family: found.data?.f_role_in_family || prev.f_role_in_family || '',
-        f_case_code: found.trackingCode,
+        ...prefilledData,
       }));
-      setAuthGateMode('viewCase');
+
+      // انتقال مستقیم به صفحه نوبت‌دهی بدون نمایش صفحه میانی
+      if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+        setAuthGateMode('filling');
+        setCurrentStepIndex(0);
+        setInternalPageIndex(0);
+      } else {
+        if (onNavigateToForm) {
+          onNavigateToForm('3uu4z');
+        } else if (typeof window !== 'undefined') {
+          window.location.href = '/form/3uu4z';
+        }
+      }
     } else {
       setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید.');
     }
@@ -748,6 +769,27 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   useEffect(() => {
     setSubmittedResult(null);
     setCurrentStepIndex(0);
+
+    // ورود مستقیم به نوبت‌دهی در صورت وجود پرونده فعال از پیش ثبت‌شده
+    if (typeof window !== 'undefined' && (form.id === 'form-belhagh-booking' || form.slug === '3uu4z')) {
+      try {
+        const storedCaseJson = localStorage.getItem('belhagh_active_case_data');
+        if (storedCaseJson) {
+          const caseData = JSON.parse(storedCaseJson);
+          setFormData((prev) => ({
+            ...prev,
+            ...caseData,
+            f_name: caseData.f_name || caseData.f_applicant_name || prev.f_name || '',
+            f_family: caseData.f_family || prev.f_family || '',
+            f_mobile: caseData.f_mobile || caseData.mobile || prev.f_mobile || '',
+            f_province_city: caseData.f_province_city || prev.f_province_city || '',
+            f_role_in_family: caseData.f_role_in_family || prev.f_role_in_family || '',
+            f_case_code: caseData.f_case_code || caseData.caseCode,
+          }));
+          setAuthGateMode('filling');
+        }
+      } catch (err) {}
+    }
     setInternalPageIndex(0);
     setErrors({});
     setOtpVerified(false);
@@ -1318,8 +1360,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         }
       : undefined;
 
-    // ایجاد کد پرونده اختصاصی شامل حروف و اعداد و طول بیشتر از ۶ رقم (مثلاً BH-M749218)
-    const newCaseCode = generateCaseCode('BH');
+    // ایجاد کد پرونده اختصاصی با پیشوند SP و ۶ رقم عدد (مثلاً SP849201)
+    const newCaseCode = generateCaseCode('SP');
 
     const sub = submitFormResponse(form.id, { ...formData, caseCode: newCaseCode }, paymentInfo, quizResult);
     const finalSub: FormSubmission = {
@@ -1329,6 +1371,40 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     setSubmittedResult(finalSub);
     setActiveCaseSubmission(finalSub);
+
+    // ۱. ارسال پیامک کد پرونده پس از ثبت نام مراجع (مطابق پترن عکس ۳)
+    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
+      const clientMobile = formData.f_mobile || formData.mobile;
+      if (clientMobile) {
+        fetch('/api/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'case_registration',
+            mobile: clientMobile,
+            caseCode: newCaseCode,
+          }),
+        }).catch((err) => console.warn('SMS dispatch error:', err));
+      }
+    }
+
+    // ۲ و ۳. ارسال پیامک تایید نوبت برای مراجع و مشاور (فرم نوبت‌دهی 3uu4z)
+    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+      const booking = extractBookingDetails({ ...formData, ...finalSub.data });
+      fetch('/api/sms/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'appointment_booked',
+          clientMobile: booking.clientMobile,
+          counselorMobile: booking.counselorMobile,
+          clientName: booking.clientName,
+          counselorName: booking.counselorName,
+          date: booking.date,
+          time: booking.time,
+        }),
+      }).catch((err) => console.warn('SMS booking dispatch error:', err));
+    }
 
     // ذخیره دائمی پرونده در localStorage
     if (typeof window !== 'undefined') {
@@ -1653,7 +1729,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                               setCaseCodeInput(e.target.value);
                               setCaseCodeError(null);
                             }}
-                            placeholder="کد پرونده"
+                            placeholder="مثال: SP123456"
                             className="w-full py-3.5 pr-11 pl-4 text-sm sm:text-base border-2 border-[#8faea4] rounded-2xl text-right font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-[#084d3e] bg-white text-slate-800 placeholder:text-slate-400 shadow-inner"
                             dir="ltr"
                           />
@@ -2136,6 +2212,38 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       )}
       <div className={`${formWidthClass} ${fontClass} w-full transition-all duration-200 relative z-10`}>
         
+        {/* نوار وضعیت پرونده متصل‌شده */}
+        {formData.f_case_code && (isBelhaghFamily || form.id.includes('belhagh') || form.slug === '3uu4z') && (
+          <div className="mb-3.5 p-3 px-4 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl text-xs flex items-center justify-between text-emerald-950 font-bold shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
+              <span>
+                نوبت‌دهی برای پرونده: <strong className="font-mono text-emerald-950 font-black text-sm px-1.5 py-0.5 bg-white rounded-lg border border-emerald-200">{formData.f_case_code}</strong>
+              </span>
+              {Boolean(formData.f_name || formData.f_family) && (
+                <span className="text-emerald-800">
+                  ({formData.f_name} {formData.f_family})
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('belhagh_active_case_data');
+                  localStorage.removeItem('belhagh_current_case_code');
+                }
+                setFormData((prev) => ({ ...prev, f_case_code: '' }));
+                setAuthGateMode('portal');
+                setIsLoginBoxOpen(true);
+              }}
+              className="text-[11px] text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
+            >
+              تغییر پرونده / ورود مجدد
+            </button>
+          </div>
+        )}
+
         {/* سربرگ فرم */}
         <div 
           className={`${borderRadiusClass || 'rounded-2xl sm:rounded-3xl'} border shadow-xs p-4 sm:p-8 mb-4 sm:mb-6 transition-all`}
