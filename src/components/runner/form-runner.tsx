@@ -2924,6 +2924,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               ) : null
             ) : (
               <button
+                key={`wizard-step-submit-${currentStepIndex}`}
                 type="submit"
                 className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer ${borderRadiusClass || 'rounded-xl'}`}
                 style={{
