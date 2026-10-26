@@ -1580,37 +1580,45 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       >
         {isBelhaghFamily ? (
           <div className="max-w-[440px] w-full mx-auto my-2 sm:my-6 px-3 animate-in fade-in zoom-in-95 duration-300">
-            <div className="overflow-hidden rounded-3xl border border-stone-300/80 shadow-2xl shadow-stone-900/15 bg-[#dfbe9b] text-center">
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-stone-300/80 shadow-2xl shadow-stone-900/15 text-center min-h-[540px] sm:min-h-[600px] flex flex-col justify-end bg-stone-100">
               
-              {/* تصویر سربرگ اختصاصی (قابل تغییر) */}
-              {showHeroImage && heroImage && (
-                <div className="relative w-full overflow-hidden bg-slate-100">
+              {/* تصویر پس‌زمینه کامل کارت پورتال */}
+              {showHeroImage && heroImage ? (
+                <div className="absolute inset-0 w-full h-full overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={heroImage}
                     alt={portalTitle}
-                    className="w-full h-auto block select-none pointer-events-none"
+                    className="w-full h-full object-cover object-top select-none pointer-events-none"
                   />
+                  {/* لایه گرادینت نرم در بخش پایینی برای تفکیک و خوانایی چشم‌نواز متون و دکمه‌ها روی تصویر */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/45 to-transparent pointer-events-none" />
                 </div>
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-teal-50 to-white" />
               )}
 
-              {/* عنوان‌گونه اختصاصی بالای دکمه‌ها / پورتال (قابل تغییر) */}
-              <div className="px-5 pt-3.5 pb-1 text-center">
-                <h1 className="text-base sm:text-lg font-black text-[#084d3e] tracking-tight">
-                  {portalTitle}
-                </h1>
-                {portalSubtitle && (
-                  <p className="text-xs text-stone-700 font-semibold mt-1">
-                    {portalSubtitle}
-                  </p>
+              {/* المان‌های پورتال: پایین تصویر و روی تصویر */}
+              <div className="relative z-10 px-5 sm:px-6 pb-6 pt-12 space-y-3.5">
+                {/* عنوان‌گونه اختصاصی و زیرعنوان روی بخش پایینی تصویر */}
+                {(portalTitle || portalSubtitle) && (
+                  <div className="text-center px-2">
+                    {portalTitle && (
+                      <h1 className="text-base sm:text-lg font-black text-[#084d3e] tracking-tight drop-shadow-xs">
+                        {portalTitle}
+                      </h1>
+                    )}
+                    {portalSubtitle && (
+                      <p className="text-xs text-stone-700 font-bold mt-1 drop-shadow-xs">
+                        {portalSubtitle}
+                      </p>
+                    )}
+                  </div>
                 )}
-              </div>
 
-              {/* بخش دکمه‌ها و باکس ورود هماهنگ با تصاویر ۱ و ۲ و ۳ */}
-              <div className="px-5 sm:px-6 py-5 sm:py-6 space-y-4 bg-gradient-to-b from-[#dfbe9b] via-[#dcb994] to-[#d4ab86]">
                 {!isLoginBoxOpen ? (
-                  /* حالت اولیه مطابق تصویر ۱: فقط دکمه ورود و ثبت نام */
-                  <div className="space-y-4 pt-1">
+                  /* حالت اولیه مطابق رفرنس: فقط دکمه ورود و ثبت نام روی تصویر */
+                  <div className="space-y-3.5 pt-1">
                     {/* دکمه ورود سبز تیره */}
                     <button
                       type="button"
@@ -1618,9 +1626,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         setIsLoginBoxOpen(true);
                         setCaseCodeError(null);
                       }}
-                      className="w-full py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
                     >
-                      <LogIn className="w-6 h-6 text-white" />
+                      <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       <span>ورود</span>
                     </button>
 
@@ -1628,15 +1636,15 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     <button
                       type="button"
                       onClick={handleStartRegistration}
-                      className="w-full py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full py-3.5 sm:py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
                     >
-                      <UserPlus className="w-6 h-6 text-[#084d3e]" />
+                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-[#084d3e]" />
                       <span>ثبت نام</span>
                     </button>
                   </div>
                 ) : (
-                  /* حالت باز شده ورود مطابق تصویر ۲ و ۳ */
-                  <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+                  /* حالت باز شده ورود مطابق رفرنس و تصویر ۲ و ۳ */
+                  <div className="space-y-3.5 pt-1 animate-in fade-in duration-200">
                     {/* دکمه ورود در بالا (کلیک مجدد برای بستن) */}
                     <button
                       type="button"
@@ -1644,14 +1652,14 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         setIsLoginBoxOpen(false);
                         setCaseCodeError(null);
                       }}
-                      className="w-full py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
                     >
-                      <LogIn className="w-6 h-6 text-white" />
+                      <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       <span>ورود</span>
                     </button>
 
-                    {/* باکس دریافت کد پرونده مطابق تصویر ۲ و ۳ */}
-                    <div className="bg-[#f7faf8] rounded-3xl border-2 border-[#739a8e] p-5 shadow-lg space-y-4 text-right animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* باکس دریافت کد پرونده */}
+                    <div className="bg-[#f7faf8]/95 backdrop-blur-md rounded-3xl border-2 border-[#739a8e] p-5 shadow-xl space-y-4 text-right animate-in fade-in slide-in-from-top-2 duration-200">
                       {/* عنوان کادر با آیکون */}
                       <div className="flex items-center gap-2 text-[#084d3e] font-extrabold text-sm sm:text-base">
                         <User className="w-5 h-5 text-[#084d3e] shrink-0" />
@@ -1714,9 +1722,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     <button
                       type="button"
                       onClick={handleStartRegistration}
-                      className="w-full py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full py-3.5 sm:py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
                     >
-                      <UserPlus className="w-6 h-6 text-[#084d3e]" />
+                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-[#084d3e]" />
                       <span>ثبت نام</span>
                     </button>
                   </div>

@@ -468,31 +468,35 @@ export const PortalSettingsTab: React.FC = () => {
           نمای زیر خلاصه‌ای از تجربه دیداری مراجع به محض ورود به فرم است:
         </p>
 
-        <div className="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-2">
+        <div className="max-w-xs mx-auto relative rounded-3xl border border-stone-300 shadow-md overflow-hidden mt-3 min-h-[380px] flex flex-col justify-end text-center bg-stone-100">
           {generalSettings.showPortalHeroImage !== false && (
-            <div className="w-full h-28 bg-slate-100 overflow-hidden relative">
+            <div className="absolute inset-0 w-full h-full overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={generalSettings.portalHeroImage || currentForm.theme?.portalHeroImage || '/images/belhagh-hero.png'}
                 alt="Banner Preview"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-top select-none pointer-events-none"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/50 to-transparent pointer-events-none" />
             </div>
           )}
-          <div className="p-4 space-y-3 text-center">
-            <h4 className="font-extrabold text-sm text-slate-900">
-              {generalSettings.portalTitle || 'مرکز خدمات روانشناسی بالحق'}
-            </h4>
-            <p className="text-xs text-slate-500">
-              {generalSettings.portalSubtitle || 'سامانه مشاوره تلفنی و پرونده مراجعین'}
-            </p>
-            <div className="pt-2 flex flex-col gap-2">
-              <div className="w-full py-2 px-3 rounded-lg bg-emerald-600 text-white text-xs font-bold text-center">
-                ورود به پرونده با کد پرونده
+          <div className="relative z-10 p-4 space-y-2.5 text-center">
+            {generalSettings.portalTitle && (
+              <h4 className="font-extrabold text-sm text-[#084d3e] tracking-tight drop-shadow-2xs">
+                {generalSettings.portalTitle}
+              </h4>
+            )}
+            {generalSettings.portalSubtitle && (
+              <p className="text-[11px] text-stone-700 font-bold drop-shadow-2xs">
+                {generalSettings.portalSubtitle}
+              </p>
+            )}
+            <div className="pt-1 flex flex-col gap-2">
+              <div className="w-full py-2.5 px-3 rounded-full bg-[#084d3e] text-white text-xs font-black text-center shadow-xs">
+                ورود
               </div>
-              <div className="w-full py-2 px-3 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold text-center border border-slate-200">
-                تشکیل پرونده و ثبت‌نام جدید
+              <div className="w-full py-2.5 px-3 rounded-full bg-white text-[#084d3e] text-xs font-black text-center border-2 border-[#084d3e] shadow-xs">
+                ثبت نام
               </div>
             </div>
           </div>
