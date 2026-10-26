@@ -1,3 +1,5 @@
+import { belhaghBookingForm } from './belhagh-forms';
+
 export interface CounselorInfo {
   name: string;
   mobile: string;
@@ -45,34 +47,54 @@ export function extractBookingDetails(formData: Record<string, any>) {
     ? COUNSELOR_MAP[matchedBookingField]
     : { name: 'مشاور مرکز روانشناسی بالحق', mobile: '' };
 
-  // تفکیک روز/تاریخ و ساعت از رشته نوبت (مثلاً: «پنجشنبه - ساعت ۱۰:۳۰ الی ۱۱:۰۰»)
-  let datePart = 'مشخص‌شده در سامانه';
-  let timePart = 'تعیین‌شده';
-
-  if (slotValue) {
-    if (slotValue.includes(' - ')) {
-      const parts = slotValue.split(' - ');
-      datePart = parts[0].trim();
-      timePart = parts[1].replace('ساعت', '').trim();
-    } else if (slotValue.includes('ساعت')) {
-      const parts = slotValue.split('ساعت');
-      datePart = parts[0].trim() || 'روز تعیین‌شده';
-      timePart = parts[1].trim();
-    } else {
-      datePart = slotValue;
+  // پیدا کردن عنوان نمایشی اسلات در صورتی که فقط کد/شناسه مقدار ذخیره شده باشد
+  let displaySlot = slotValue;
+  if (matchedBookingField && slotValue && !slotValue.includes(' - ') && !slotValue.includes('ساعت')) {
+    const fieldDef = belhaghBookingForm.fields?.find((f) => f.id === matchedBookingField);
+    if (fieldDef && fieldDef.options) {
+      const matchedOpt = fieldDef.options.find((opt) => opt.value === slotValue || opt.id === slotValue);
+      if (matchedOpt) {
+        displaySlot = matchedOpt.label;
+      }
     }
   }
 
-  const clientName = `${formData.f_name || ''} ${formData.f_family || ''}`.trim() || formData.f_applicant_name || 'مُراجع محترم';
-  const clientMobile = formData.f_mobile || formData.mobile || formData.f_phone || '';
+  // تفکیک روز/تاریخ و ساعت از رشته نوبت (مثلاً: «پنجشنبه - ساعت ۱۰:۳۰ الی ۱۱:۰۰»)
+  let datePart = 'روز تعیین‌شده';
+  let timePart = 'ساعت مقرر';
+
+  if (displaySlot) {
+    if (displaySlot.includes(' - ')) {
+      const parts = displaySlot.split(' - ');
+      datePart = parts[0].trim();
+      timePart = parts[1].replace(/ساعت/g, '').trim();
+    } else if (displaySlot.includes('ساعت')) {
+      const parts = displaySlot.split('ساعت');
+      datePart = parts[0].trim() || 'روز تعیین‌شده';
+      timePart = parts[1].trim();
+    } else {
+      datePart = displaySlot;
+    }
+  }
+
+  const rawClientName = `${formData.f_name || ''} ${formData.f_family || ''}`.trim() || formData.f_applicant_name || 'مُراجع محترم';
+  const clientName = rawClientName.trim() || 'مُراجع محترم';
+  
+  let rawClientMobile = formData.f_mobile || formData.mobile || formData.f_phone || formData.phone || '';
+  if (typeof rawClientMobile === 'string') {
+    rawClientMobile = rawClientMobile.replace(/\D/g, '');
+    if (rawClientMobile.startsWith('98')) {
+      rawClientMobile = '0' + rawClientMobile.slice(2);
+    }
+  }
 
   return {
     counselorName: counselorInfo.name,
     counselorMobile: counselorInfo.mobile,
-    slotValue,
+    slotValue: displaySlot,
     date: datePart,
     time: timePart,
     clientName,
-    clientMobile,
+    clientMobile: rawClientMobile,
   };
 }

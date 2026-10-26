@@ -1,0 +1,35 @@
+[
+  {
+    "id": "sms-1793022389056-g4llk",
+    "timestamp": "2026-10-26T13:46:29.056Z",
+    "type": "appointment_counselor",
+    "recipient": "09364280322",
+    "message": "مشاور محترم، نوبت dffe dfdfd\nبرای شما\nدر روز: پنجشنبه\nساعت: ۰۹:۰۰ الی ۰۹:۳۰\nثبت شده است",
+    "status": "simulated",
+    "providerResponse": {
+      "status": "کلید کنسول معتبر نیست"
+    }
+  },
+  {
+    "id": "sms-1793022388474-7ho21",
+    "timestamp": "2026-10-26T13:46:28.474Z",
+    "type": "appointment_client",
+    "recipient": "09912958662",
+    "message": "سلام علیکم\nنوبت شما در تاریخ پنجشنبه\nدر ساعت: ۰۹:۰۰ الی ۰۹:۳۰\nبا جناب آقای یاسر فرهمندی\nثبت شد",
+    "status": "simulated",
+    "providerResponse": {
+      "status": "کلید کنسول معتبر نیست"
+    }
+  },
+  {
+    "id": "sms-1793022276706-5chqc",
+    "timestamp": "2026-10-26T13:44:36.706Z",
+    "type": "case_registration",
+    "recipient": "09912958662",
+    "message": "کد پرونده مشاوره شما:SP260120\nاین کد را بخاطر بسپارید و در اختیار کسی قرار ندهید.\npsy-belhagh",
+    "status": "simulated",
+    "providerResponse": {
+      "status": "کلید کنسول معتبر نیست"
+    }
+  }
+]
