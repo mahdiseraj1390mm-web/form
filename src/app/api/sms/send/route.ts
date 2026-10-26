@@ -25,15 +25,17 @@ export async function POST(req: NextRequest) {
 
       if (clientMobile) {
         results.client = await sendAppointmentClientSms(clientMobile, {
+          clientName: clientName || 'مراجع',
+          counselorName: counselorName || 'مشاور مرکز',
           date: date || 'تعیین‌شده',
           time: time || 'مشخص‌شده',
-          counselorName: counselorName || 'مشاور مرکز',
         });
       }
 
       if (counselorMobile) {
         results.counselor = await sendAppointmentCounselorSms(counselorMobile, {
           clientName: clientName || 'مُراجع محترم',
+          clientMobile: clientMobile || '',
           date: date || 'تعیین‌شده',
           time: time || 'مشخص‌شده',
         });
