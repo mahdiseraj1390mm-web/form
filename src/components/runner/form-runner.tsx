@@ -1642,7 +1642,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       >
         {isBelhaghFamily ? (
           <div className="max-w-[440px] w-full mx-auto my-2 sm:my-6 px-3 animate-in fade-in zoom-in-95 duration-300">
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-stone-300/80 shadow-2xl shadow-stone-900/15 text-center min-h-[540px] sm:min-h-[600px] flex flex-col justify-end bg-stone-100">
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-stone-300/80 shadow-2xl shadow-stone-900/15 text-center min-h-[460px] sm:min-h-[560px] md:min-h-[600px] flex flex-col justify-end bg-stone-100">
               
               {/* تصویر پس‌زمینه کامل کارت پورتال */}
               {showHeroImage && heroImage ? (
@@ -2191,7 +2191,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
   return (
     <div 
-      className="min-h-screen py-3 sm:py-8 px-2 sm:px-4 flex flex-col items-center justify-start transition-all duration-300 w-full relative"
+      className="min-h-screen py-2 sm:py-8 px-2 sm:px-4 flex flex-col items-center justify-start transition-all duration-300 w-full relative overflow-x-hidden"
       style={{
         backgroundColor: theme?.backgroundColor || '#f8fafc',
         backgroundImage: theme?.backgroundImage ? `url(${theme.backgroundImage})` : (theme?.backgroundGradient || undefined),
@@ -2244,7 +2244,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* سربرگ فرم */}
         <div 
-          className={`${borderRadiusClass || 'rounded-2xl sm:rounded-3xl'} border shadow-xs p-4 sm:p-8 mb-4 sm:mb-6 transition-all`}
+          className={`${borderRadiusClass || 'rounded-2xl sm:rounded-3xl'} border shadow-xs p-3.5 sm:p-8 mb-3 sm:mb-6 transition-all`}
           style={{
             backgroundColor: theme?.cardBackgroundColor || '#ffffff',
             borderColor: theme?.borderColor || '#e2e8f0',
@@ -2477,7 +2477,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     value={formData[field.id] || ''}
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
-                    className={`w-full px-3.5 py-2.5 sm:py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
+                    className={`w-full px-3.5 py-2.5 sm:py-2 text-base sm:text-sm border rounded-xl touch-manipulation focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
                       hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
                     }`}
                   />
@@ -2894,7 +2894,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     value={formData[field.id] || ''}
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
-                    className={`w-full px-3.5 py-2.5 sm:py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
+                    className={`w-full px-3.5 py-2.5 sm:py-2 text-base sm:text-sm border rounded-xl touch-manipulation focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
                       hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
                     }`}
                   />

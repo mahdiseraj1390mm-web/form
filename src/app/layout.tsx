@@ -1,10 +1,18 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { FormProvider } from '@/context/form-context';
 
 export const metadata: Metadata = {
   title: 'فرم‌افزار سازمانی | سامانه جامع فرم‌ساز، آزمون‌ساز و گردش کار هوشمند',
   description: 'پلتفرم حرفه‌ای، امن و پیشرفته ساخت انواع فرم‌های سازمانی، آزمون‌های آنلاین، فاکتورساز و رزرو نوبت با طراحی اختصاصی و اتصال به درگاه بانکی شاپرک',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#084d3e',
 };
 
 export default function RootLayout({

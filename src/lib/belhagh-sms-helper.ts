@@ -27,7 +27,97 @@ export const COUNSELOR_MAP: Record<string, { name: string; mobile: string }> = {
 };
 
 /**
- * استخراج مشخصات کامل نوبت، مشاور و مراجع از داده‌های فرم
+ * تبدیل ارقام فارسی به انگلیسی جهت محاسبات
+ */
+function normalizePersianDigits(str: string): string {
+  return str.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+}
+
+/**
+ * تبدیل نام روز هفته به تاریخ دقیق شمسی (مثلاً: «پنجشنبه ۱۴۰۵/۰۸/۰۷»)
+ */
+export function formatJalaliDateFromDay(dayName: string): string {
+  if (!dayName) return 'تاریخ تعیین‌شده';
+  
+  // اگر از قبل در رشته تاریخ عددی شمسی یا فرمت ۱۴۰... وجود دارد
+  if (dayName.includes('۱۴۰') || dayName.includes('140') || dayName.includes('/')) {
+    return dayName;
+  }
+
+  const cleanName = dayName.replace(/\u200c/g, '').replace(/[\s\-_]/g, '').trim();
+  const dayMap: Record<string, number> = {
+    'شنبه': 6,
+    'یکشنبه': 0,
+    'دوشنبه': 1,
+    'سهشنبه': 2,
+    'چهارشنبه': 3,
+    'پنجشنبه': 4,
+    'پنج‌شنبه': 4,
+    'جمعه': 5
+  };
+
+  const targetDay = dayMap[cleanName];
+  if (targetDay === undefined) {
+    return dayName;
+  }
+
+  const now = new Date();
+  const currentDay = now.getDay();
+  let diff = (targetDay - currentDay + 7) % 7;
+
+  const targetDate = new Date(now.getTime() + diff * 24 * 60 * 60 * 1000);
+  
+  try {
+    const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const shamsiDate = formatter.format(targetDate);
+    return `${dayName} ${shamsiDate}`;
+  } catch {
+    return dayName;
+  }
+}
+
+/**
+ * قالب‌بندی زمان دقیق با مشخص کردن صریح صبح، عصر یا شب (مثلاً «۰۹:۰۰ الی ۰۹:۳۰ (صبح)» یا «۲۱:۰۰ (شب)»)
+ */
+export function formatExactTime(timeStr: string): string {
+  if (!timeStr) return 'زمان مشخص‌شده';
+
+  const cleanTime = timeStr.replace(/ساعت/g, '').trim();
+  
+  // اگر قبلاً قید صبح یا عصر یا شب در آن هست
+  if (cleanTime.includes('صبح') || cleanTime.includes('عصر') || cleanTime.includes('شب') || cleanTime.includes('ظهر')) {
+    return cleanTime;
+  }
+
+  const englishStr = normalizePersianDigits(cleanTime);
+  const match = englishStr.match(/(\d{1,2})(?::(\d{2}))?/);
+
+  let period = '';
+  if (match) {
+    const hour = parseInt(match[1], 10);
+    if (hour >= 5 && hour < 12) {
+      period = 'صبح';
+    } else if (hour >= 12 && hour < 16) {
+      period = 'ظهر';
+    } else if (hour >= 16 && hour < 19) {
+      period = 'عصر';
+    } else if (hour >= 19 || hour < 5) {
+      period = 'شب';
+    }
+  }
+
+  if (period) {
+    return `${cleanTime} (${period})`;
+  }
+  return cleanTime;
+}
+
+/**
+ * استخراج مشخصات کامل نوبت، مشاور و مراجع از داده‌های فرم با تاریخ شمسی و زمان تفکیک‌شده صبح/شب
  */
 export function extractBookingDetails(formData: Record<string, any>) {
   let matchedBookingField = '';
@@ -45,23 +135,28 @@ export function extractBookingDetails(formData: Record<string, any>) {
     ? COUNSELOR_MAP[matchedBookingField]
     : { name: 'مشاور مرکز روانشناسی بالحق', mobile: '' };
 
-  // تفکیک روز/تاریخ و ساعت از رشته نوبت (مثلاً: «پنجشنبه - ساعت ۱۰:۳۰ الی ۱۱:۰۰»)
-  let datePart = 'مشخص‌شده در سامانه';
-  let timePart = 'تعیین‌شده';
+  // تفکیک روز/تاریخ و ساعت از رشته نوبت (مثلاً: «پنجشنبه - ساعت ۰۹:۰۰ الی ۰۹:۳۰»)
+  let rawDatePart = 'مشخص‌شده در سامانه';
+  let rawTimePart = 'تعیین‌شده';
 
   if (slotValue) {
     if (slotValue.includes(' - ')) {
       const parts = slotValue.split(' - ');
-      datePart = parts[0].trim();
-      timePart = parts[1].replace('ساعت', '').trim();
+      rawDatePart = parts[0].trim();
+      rawTimePart = parts[1].replace('ساعت', '').trim();
     } else if (slotValue.includes('ساعت')) {
       const parts = slotValue.split('ساعت');
-      datePart = parts[0].trim() || 'روز تعیین‌شده';
-      timePart = parts[1].trim();
+      rawDatePart = parts[0].trim() || 'روز تعیین‌شده';
+      rawTimePart = parts[1].trim();
     } else {
-      datePart = slotValue;
+      rawDatePart = slotValue;
     }
   }
+
+  // تبدیل روز به تاریخ کامل شمسی
+  const datePart = formatJalaliDateFromDay(rawDatePart);
+  // مشخص کردن دقیق صبح یا شب
+  const timePart = formatExactTime(rawTimePart);
 
   const clientName = `${formData.f_name || ''} ${formData.f_family || ''}`.trim() || formData.f_applicant_name || 'مُراجع محترم';
   const clientMobile = formData.f_mobile || formData.mobile || formData.f_phone || '';
