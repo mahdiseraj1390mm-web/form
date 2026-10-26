@@ -629,6 +629,12 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     sub?: FormSubmission;
   } | null>(null);
 
+  // زمان ورود به هر مرحله جهت جلوگیری از پرش و ثبت تصادفی ناشی از دابل‌کلیک در مرحله قبل
+  const [stepEnteredAt, setStepEnteredAt] = useState<number>(Date.now());
+  useEffect(() => {
+    setStepEnteredAt(Date.now());
+  }, [currentStepIndex]);
+
   // انتقال به فرم ثبت نام یا ورود به مراحل ثبت نام
   const handleStartRegistration = () => {
     const isReg = form.id === 'form-belhagh-registration' || form.slug === 'zexuz';
@@ -1075,8 +1081,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       }
 
       // الزامی بودن
-      if (f.validations?.required && (!val || val === '')) {
-        newErrors[f.id] = 'تکمیل این فیلد الزامی است.';
+      if (f.validations?.required && (!val || val === '' || (typeof val === 'string' && val.trim() === ''))) {
+        newErrors[f.id] = f.validations?.customErrorMessage || 'تکمیل این فیلد الزامی است.';
         return;
       }
 
@@ -1124,7 +1130,17 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const errKeys = Object.keys(newErrors);
+    if (errKeys.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`field-${errKeys[0]}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 60);
+      return false;
+    }
+    return true;
   };
 
   // فیلدهای قابل نمایش مرحله جاری
@@ -1193,14 +1209,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   };
 
   const handleNextStep = () => {
+    if (!form.steps || form.steps.length === 0) return;
     if (!validateFields(currentStepFields)) return;
 
     if (currentStepIndex < form.steps.length - 1) {
-      setCurrentStepIndex(currentStepIndex + 1);
+      setCurrentStepIndex((prev) => Math.min(prev + 1, form.steps.length - 1));
       setInternalPageIndex(0);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      handleSubmit();
     }
   };
 
@@ -1215,15 +1230,41 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    // جلوگیری قطعی از پرش از روی مرحله چهارم و ثبت تصادفی ناشی از دابل‌کلیک
+    if (Date.now() - stepEnteredAt < 700) {
+      return;
+    }
+
     if (pages.length > 1 && activePageIndex < pages.length - 1) {
       handleNextPage();
       return;
     }
 
-    // رفع مشکل عدم نمایش مرحله چهارم: اگر فرم ویزارد است و هنوز به مرحله آخر نرسیده‌ایم، حتماً به مرحله بعد برود!
+    // اگر فرم ویزارد است و هنوز به مرحله آخر نرسیده‌ایم، هرگز نباید فرم سابمیت شود
     if (form.mode === 'wizard' && form.steps && form.steps.length > 0 && currentStepIndex < form.steps.length - 1) {
       handleNextStep();
       return;
+    }
+
+    // در مرحله چهارم تا وقتی تمام بخش‌ها تکمیل نشده فرم به هیچ عنوان تکمیل و ثبت نگردد
+    if ((form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 3) {
+      const step4Fields = ['f_physical_illness', 'f_mental_illness', 'f_medications'];
+      const emptyStep4 = step4Fields.filter((fid) => {
+        const val = formData[fid];
+        return !val || (typeof val === 'string' && val.trim() === '');
+      });
+      if (emptyStep4.length > 0) {
+        const step4Errors: Record<string, string> = {};
+        emptyStep4.forEach((fid) => {
+          step4Errors[fid] = 'تکمیل تمام بخش‌های مرحله چهارم الزامی است (در صورت عدم سابقه بنویسید «ندارم»).';
+        });
+        setErrors((prev) => ({ ...prev, ...step4Errors }));
+        setTimeout(() => {
+          const el = document.getElementById(`field-${emptyStep4[0]}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 60);
+        return;
+      }
     }
 
     const fieldsToValidate = form.fields;
@@ -1456,47 +1497,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
-        {/* کارت راهنمای بازگشت به صفحه اصلی جهت ورود به سامانه نوبت‌دهی */}
-        {(form.behavior?.nextChainedForm || form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && (
-          <div className="p-6 bg-gradient-to-br from-blue-50 via-indigo-50/70 to-purple-50 rounded-2xl border-2 border-blue-400 text-right space-y-4 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300 print:hidden">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                <Home className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[11px] font-extrabold text-blue-700 bg-blue-100/90 px-2 py-0.5 rounded-md inline-block mb-1">
-                  مرحله بعدی: دریافت نوبت مشاوره
-                </span>
-                <h3 className="text-base font-extrabold text-slate-900">
-                  سامانه نوبت دهی مشاوره تلفنی
-                </h3>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              ثبت نام شما با موفقیت تکمیل شد. اکنون برای اخذ نوبت، بر روی کلید «بازگشت به صفحه اصلی» کلیک فرمایید تا با درج کد پرونده در قسمت ورود، نوبت مشاوره خود را رزرو نمایید:
-            </p>
-
-            <button
-              type="button"
-              onClick={() => {
-                const code = submittedResult?.trackingCode || '';
-                setSubmittedResult(null);
-                setAuthGateMode('portal');
-                setIsLoginBoxOpen(false);
-                if (code) {
-                  setCaseCodeInput(code);
-                }
-              }}
-              className="w-full py-3.5 px-5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Home className="w-4 h-4" />
-              <span>بازگشت به صفحه اصلی (ورود به سامانه نوبت‌دهی)</span>
-              <ArrowLeft className="w-4 h-4 mr-auto" />
-            </button>
-          </div>
-        )}
-
         {/* دکمه‌های بازگشت و عملیات نهایی */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3 print:hidden">
           <button
@@ -1523,20 +1523,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           >
             <Printer className="w-4 h-4" />
             <span>ذخیره و چاپ کد پرونده</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSubmittedResult(null);
-              setFormData({});
-              setCurrentStepIndex(0);
-              setAuthGateMode('filling');
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>ثبت فرم جدید</span>
           </button>
         </div>
 
@@ -1589,6 +1575,12 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   <img
                     src={heroImage}
                     alt={portalTitle}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.src.includes('belhagh-hero.jpg')) {
+                        target.src = '/images/belhagh-hero.jpg';
+                      }
+                    }}
                     className="w-full h-full object-cover object-top select-none pointer-events-none"
                   />
                   {/* لایه گرادینت نرم در بخش پایینی برای تفکیک و خوانایی چشم‌نواز متون و دکمه‌ها روی تصویر */}
@@ -2367,7 +2359,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             const hasError = !!errors[field.id];
 
             return (
-              <div key={field.id} className={`${colClass} space-y-1.5`}>
+              <div key={field.id} id={`field-${field.id}`} className={`${colClass} space-y-1.5 scroll-mt-24`}>
                 
                 {/* عنوان و وضعیت اعتبارسنجی زنده */}
                 <div className="flex items-center justify-between">
@@ -2846,6 +2838,36 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
+        {/* پیام راهنمای تکمیل کامل مرحله چهارم وضعیت سلامت */}
+        {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 3 && (() => {
+          const step4Fields = ['f_physical_illness', 'f_mental_illness', 'f_medications'];
+          const isStep4Incomplete = step4Fields.some((fid) => {
+            const val = formData[fid];
+            return !val || (typeof val === 'string' && val.trim() === '');
+          });
+          return (
+            <div className={`p-3.5 rounded-2xl border text-xs flex items-center gap-2.5 my-3 transition-all animate-in fade-in ${isStep4Incomplete ? 'bg-amber-50/90 border-amber-300 text-amber-900 shadow-xs' : 'bg-emerald-50/90 border-emerald-300 text-emerald-900 shadow-xs'}`}>
+              {isStep4Incomplete ? (
+                <>
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-extrabold block text-amber-950 mb-0.5">توجه: مرحله چهارم نهایی است</span>
+                    <span>تا زمانی که تمام قسمت‌های مرحله چهارم (وضعیت بیماری جسمی، بیماری روانی و داروهای مصرفی) تکمیل نشوند، امکان ثبت نهایی فرم وجود ندارد (در صورت عدم سابقه، بنویسید «ندارم»).</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-extrabold block text-emerald-950 mb-0.5">تمام قسمت‌های مرحله چهارم تکمیل شد</span>
+                    <span>اطلاعات سلامت با موفقیت تکمیل گردید. اکنون می‌توانید روی دکمه «ثبت فرم» کلیک فرمایید.</span>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
+
         {/* هشدار شرطی در صورتی که کاربر عضو سایت نباشد و اجازه رفتن به مرحله بعد نداشته باشد */}
         {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 0 && (formData['f_ebadollah_member'] === 'no' || formData['f_ebadollah_member'] === 'خیر') && (
           <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs leading-relaxed flex items-start gap-2.5 my-3 animate-in fade-in">
@@ -2954,6 +2976,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             ) : form.mode === 'wizard' && currentStepIndex < (form.steps?.length || 1) - 1 ? (
               canProceedToNextStep ? (
                 <button
+                key={`wizard-step-next-${currentStepIndex}`}
                   type="button"
                   onClick={handleNextStep}
                   className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer ${borderRadiusClass || 'rounded-xl'}`}
@@ -2968,6 +2991,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               ) : null
             ) : (
               <button
+                key={`wizard-step-submit-${currentStepIndex}`}
                 type="submit"
                 className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer ${borderRadiusClass || 'rounded-xl'}`}
                 style={{
