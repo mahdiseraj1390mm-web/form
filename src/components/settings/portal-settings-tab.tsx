@@ -532,7 +532,6 @@ export const PortalSettingsTab: React.FC = () => {
                 alt="Banner Preview"
                 className="w-full h-full object-cover object-top select-none pointer-events-none"
               />
-              <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-white/95 via-white/40 to-transparent pointer-events-none" />
             </div>
           ) : (
             <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-teal-50 to-white pointer-events-none" />

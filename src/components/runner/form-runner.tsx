@@ -1659,8 +1659,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     }}
                     className="w-full h-full object-cover object-top select-none pointer-events-none"
                   />
-                  {/* لایه گرادینت نرم در بخش پایینی برای تفکیک و خوانایی چشم‌نواز متون و دکمه‌ها روی تصویر */}
-                  <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-white/95 via-white/40 to-transparent pointer-events-none" />
                 </div>
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-teal-50 to-white" />
