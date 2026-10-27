@@ -15,6 +15,10 @@ function PublicFormContent() {
 
   const form = getFormBySlug(slug);
 
+  React.useEffect(() => {
+    document.title = 'سامانه خدمات روانشناسی بالحق';
+  }, []);
+
   if (!form) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
@@ -39,7 +43,7 @@ function PublicFormContent() {
     form.generalSettings?.portalTitle ||
     form.printTemplate?.headerTitle ||
     (form.id.includes('belhagh') || form.slug === 'zexuz' || form.slug === '3uu4z'
-      ? 'مرکز خدمات روانشناسی بالحق'
+      ? 'سامانه خدمات روانشناسی بالحق'
       : form.title || 'فرم‌افزار سازمانی');
 
   const hasBgImage = Boolean(form.theme?.backgroundImage);

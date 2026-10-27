@@ -631,6 +631,50 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     sub?: FormSubmission;
   } | null>(null);
 
+  // ثبت‌نام قبلی شناسایی‌شده در سامانه
+  const [duplicateCaseInfo, setDuplicateCaseInfo] = useState<{
+    exists: boolean;
+    caseCode: string;
+    name?: string;
+    message: string;
+  } | null>(null);
+
+  // وضعیت ذخیره / کپی کد پرونده در کلیپ‌بورد
+  const [copiedCodeToast, setCopiedCodeToast] = useState(false);
+
+  // تابع ذخیره و چاپ هوشمند کد پرونده برای موبایل و دسکتاپ
+  const handleSaveAndPrintCaseCode = async () => {
+    const code = submittedResult?.trackingCode || '';
+    if (!code) return;
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(code);
+      }
+    } catch (e) {}
+
+    setCopiedCodeToast(true);
+    setTimeout(() => setCopiedCodeToast(false), 4000);
+
+    // اشتراک‌گذاری نیتیو در موبایل (جهت ذخیره در واتساپ، پیامک، یادداشت‌ها)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'کد پرونده سامانه روانشناسی بالحق',
+          text: `کد پرونده اختصاصی شما در مرکز روانشناسی بالحق: ${code}\nجهت ورود به سامانه و دریافت نوبت مشاوره این کد را ذخیره داشته باشید.\nhttps://s.psy-belhagh.com/form/3uu4z`,
+        });
+        return;
+      } catch (e) {}
+    }
+
+    // دستور چاپ در صورت اتصال به پرینتر یا مرورگر دسکتاپ
+    if (typeof window !== 'undefined' && typeof window.print === 'function') {
+      try {
+        window.print();
+      } catch (e) {}
+    }
+  };
+
   // زمان ورود به هر مرحله جهت جلوگیری از پرش و ثبت تصادفی ناشی از دابل‌کلیک در مرحله قبل
   const [stepEnteredAt, setStepEnteredAt] = useState<number>(Date.now());
   useEffect(() => {
@@ -1374,6 +1418,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       });
       const data = await res.json();
       if (data.exists) {
+        setDuplicateCaseInfo(data);
         setErrors((prev) => ({
           ...prev,
           f_mobile: 'شما قبلاً ثبت نام کرده اید و باید شماره پرونده را بازیابی کنید',
@@ -1914,13 +1959,20 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={handleSaveAndPrintCaseCode}
             className="inline-flex items-center gap-2 px-5 py-3 bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 active:scale-[0.99] transition-all cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             <span>ذخیره و چاپ کد پرونده</span>
           </button>
         </div>
+
+        {copiedCodeToast && (
+          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center justify-center gap-2 animate-in fade-in duration-200">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>کد پرونده با موفقیت کپی و در حافظه دستگاه ذخیره شد!</span>
+          </div>
+        )}
 
       </div>
     );
@@ -3479,6 +3531,79 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         }}
         onCancel={() => setIsPaymentOpen(false)}
       />
+
+      {/* مودال اطلاع‌رسانی ثبت‌نام تکراری */}
+      {duplicateCaseInfo && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-amber-200 text-center relative overflow-hidden">
+            <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 border border-amber-200 shadow-inner">
+              <AlertCircle className="w-9 h-9" />
+            </div>
+
+            <h3 className="text-base sm:text-lg font-black text-slate-800 mb-2 leading-relaxed">
+              شما قبلاً ثبت نام کرده اید و باید شماره پرونده را بازیابی کنید
+            </h3>
+
+            <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+              برای شماره همراه وارد شده قبلاً در سامانه خدمات روانشناسی بالحق پرونده تشکیل شده است و امکان ثبت‌نام مجدد وجود ندارد.
+            </p>
+
+            <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl mb-5 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">نام و نام خانوادگی:</span>
+                <span className="font-bold text-slate-800">{duplicateCaseInfo.name || 'مراجع محترم'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-amber-200/60">
+                <span className="text-slate-500 font-medium">کد پرونده شما:</span>
+                <span className="font-black text-amber-700 font-mono tracking-wider text-base">
+                  {duplicateCaseInfo.caseCode}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const caseCode = duplicateCaseInfo.caseCode;
+                  if (typeof window !== 'undefined') {
+                    try {
+                      localStorage.setItem('belhagh_current_case_code', caseCode);
+                    } catch (e) {}
+                  }
+                  setDuplicateCaseInfo(null);
+                  if (onNavigateToForm) {
+                    onNavigateToForm('3uu4z');
+                  } else if (typeof window !== 'undefined') {
+                    window.location.href = '/form/3uu4z';
+                  }
+                }}
+                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>ورود به سامانه نوبت‌دهی با این پرونده</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDuplicateCaseInfo(null);
+                  setCurrentStepIndex(0);
+                  setInternalPageIndex(0);
+                  setTimeout(() => {
+                    const el = document.getElementById('field-f_mobile');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 100);
+                }}
+                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <FileEdit className="w-4 h-4" />
+                <span>ویرایش یا تغییر شماره همراه</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>
