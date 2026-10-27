@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { WebhookTester } from './webhook-tester';
 import { PortalSettingsTab } from './portal-settings-tab';
+import { SmsSettingsTab } from './sms-settings-tab';
 import { useForm } from '@/context/form-context';
 import { TeamMember, TeamRole } from '@/types/advanced';
 import { InviteMemberModal } from '@/components/team/invite-member-modal';
@@ -172,43 +173,7 @@ export const SystemSettingsView: React.FC = () => {
           <PortalSettingsTab />
         )}
 
-        {activeTab === 'sms' && (
-          <div className="space-y-4 max-w-xl">
-            <div>
-              <label className="block font-bold text-slate-800 mb-1">ارائه‌دهنده سرویس پیامکی</label>
-              <select className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white text-xs">
-                <option>کاوه‌نگار (Kavenegar Webhook / Pattern)</option>
-                <option>فراپیامک (Farapayamak)</option>
-                <option>ملی پیامک (Melipayamak)</option>
-                <option>مدیریت پیامک سازمانی آسانک (Asanak)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-800 mb-1">کلید API وب‌سرویس پیامک (API Key)</label>
-              <input
-                type="password"
-                defaultValue="42981928409182390812903810293"
-                className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white font-mono text-left text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-800 mb-1">شماره خط اختصاصی فرستنده</label>
-              <input
-                type="text"
-                defaultValue="1000889922"
-                className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white font-mono text-left text-xs"
-              />
-            </div>
-
-            <div className="pt-3">
-              <button className="px-5 py-2 bg-slate-900 text-white font-bold rounded-md hover:bg-slate-800">
-                بررسی اتصال و ذخیره
-              </button>
-            </div>
-          </div>
-        )}
+        {activeTab === 'sms' && <SmsSettingsTab />}
 
         {activeTab === 'payment' && (
           <div className="space-y-4 max-w-xl">

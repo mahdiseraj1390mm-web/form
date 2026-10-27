@@ -131,9 +131,47 @@ export function extractBookingDetails(formData: Record<string, any>) {
     }
   }
 
-  const counselorInfo = matchedBookingField
-    ? COUNSELOR_MAP[matchedBookingField]
+  let counselorInfo = matchedBookingField
+    ? { ...COUNSELOR_MAP[matchedBookingField] }
     : { name: 'مشاور مرکز روانشناسی بالحق', mobile: '' };
+
+  // جستجوی تکمیلی بر اساس فیلدهای انتخابی مشاور در صورت خالی بودن
+  if (!counselorInfo.mobile || counselorInfo.name === 'مشاور مرکز روانشناسی بالحق') {
+    const counselorFields = [
+      formData.f_counselor_child,
+      formData.f_counselor_teen,
+      formData.f_counselor_education,
+      formData.f_counselor_clinical,
+      formData.f_counselor_family,
+    ].filter(Boolean);
+
+    const nameToMobileMap: Record<string, { name: string; mobile: string }> = {
+      'فرهمندی': { name: 'جناب آقای یاسر فرهمندی', mobile: '09364280322' },
+      'تیموریان': { name: 'سرکار خانم تیموریان', mobile: '09140288938' },
+      'شوندی': { name: 'سرکار خانم شوندی', mobile: '09127944985' },
+      'انصاری': { name: 'سرکار خانم نوشین انصاری', mobile: '09122301387' },
+      'زینلی': { name: 'سرکار خانم زینلی', mobile: '09379709635' },
+      'برهانی': { name: 'جناب آقای علیرضا برهانی', mobile: '09120449093' },
+      'راستگو': { name: 'سرکار خانم راستگو', mobile: '09123069447' },
+      'عبدی': { name: 'جناب آقای عبدی', mobile: '09127853843' },
+      'ترشیزی': { name: 'جناب آقای ترشیزی', mobile: '09155513734' },
+      'یاوری': { name: 'سرکار خانم یاوری', mobile: '09307556919' },
+      'گلیایی': { name: 'سرکار خانم گلیایی', mobile: '09125140551' },
+      'صدیقی': { name: 'جناب آقای صدیقی', mobile: '09151538227' },
+      'کریمی': { name: 'سرکار خانم کریمی', mobile: '09192180481' },
+    };
+
+    for (const val of counselorFields) {
+      const valStr = String(val);
+      for (const [key, info] of Object.entries(nameToMobileMap)) {
+        if (valStr.includes(key)) {
+          counselorInfo = { ...info };
+          break;
+        }
+      }
+      if (counselorInfo.mobile) break;
+    }
+  }
 
   // تفکیک روز/تاریخ و ساعت از رشته نوبت (مثلاً: «پنجشنبه - ساعت ۰۹:۰۰ الی ۰۹:۳۰»)
   let rawDatePart = 'مشخص‌شده در سامانه';
