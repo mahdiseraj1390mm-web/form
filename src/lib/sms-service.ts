@@ -338,10 +338,10 @@ export async function sendAppointmentClientSms(
 
   const exactText = `سلام ${clientName} عزیز\n\nنوبت مشاوره شما با موفقیت ثبت شد.\n\nنام مشاور: ${counselorName}\nساعت نوبت: ${time}\n\n${date}\nلطفاً در زمان تعیینشده با مشاور تماس بگیرید\n\nسایت روانشناسی بالحق\npsy-belhagh.com`;
 
-  // در پترن ۵۶۸۸۱۸ ملی‌پیامک آرگومان‌ها به ترتیب: [نام مراجع, نام مشاور, تاریخ, ساعت] هستند
-  const patternArgs = [clientName, counselorName, date, time];
+  // در پترن ۵۶۸۸۱۸ ملی‌پیامک آرگومان‌ها به ترتیب: [نام مراجع, نام مشاور, ساعت نوبت, تاریخ نوبت] هستند
+  const patternArgs = [clientName, counselorName, time, date];
 
-  return sendSmartSms(
+  return sendSharedPatternSms(
     clientMobile,
     bodyId,
     patternArgs,
@@ -354,7 +354,7 @@ export async function sendAppointmentClientSms(
  * ۳. پیامک اطلاع‌رسانی نوبت به مشاور
  * متن دقیق درخواستی کاربر:
  * مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.
- * نام مراجعهکننده: {نام مراجعه‌کننده}
+ * نام مراجعه‌کننده: {نام مراجعه‌کننده}
  * استان: {استان} شهر: {شهر}
  * شماره تماس: {شماره تماس}
  * تاریخ نوبت: {تاریخ نوبت}
@@ -382,15 +382,13 @@ export async function sendAppointmentCounselorSms(
   const pattern = settings.patterns.appointment_counselor;
   const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.APPOINTMENT_COUNSELOR;
 
-  const exactText = `مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.\n\nنام مراجعهکننده: ${clientName}\nاستان: ${province} شهر: ${city} \nشماره تماس: ${clientMobile}\nتاریخ نوبت: ${date}\nساعت نوبت: ${time}`;
+  const exactText = `مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.\n\nنام مراجعه‌کننده: ${clientName}\nاستان: ${province} شهر: ${city} \nشماره تماس: ${clientMobile}\nتاریخ نوبت: ${date}\nساعت نوبت: ${time}`;
 
-  // اگر پترن ۵۶۸۸۰۵ بود، فقط ۴ آرگومان قبول می‌کند: [نام مراجع, شماره مراجع, تاریخ, ساعت]
-  // اگر پترن جدید ثبت‌شده بود، هر ۶ آرگومان ارسال می‌شود
-  const patternArgs = bodyId === 568805
-    ? [clientName, clientMobile, date, time]
-    : [clientName, province, city, clientMobile, date, time];
+  // پترن ۵۶۸۸۰۵ ملی‌پیامک دقیقاً ۶ آرگومان می‌پذیرد:
+  // [نام مراجعه‌کننده, استان, شهر, شماره تماس, تاریخ نوبت, ساعت نوبت]
+  const patternArgs = [clientName, province, city, clientMobile, date, time];
 
-  return sendSmartSms(
+  return sendSharedPatternSms(
     counselorMobile,
     bodyId,
     patternArgs,

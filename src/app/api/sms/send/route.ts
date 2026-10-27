@@ -43,6 +43,19 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      // ارسال رونوشت به مدیر مرکز (09120449093) در صورتی که شماره مشاور متفاوت باشد
+      const adminMobile = '09120449093';
+      if (counselorMobile !== adminMobile) {
+        results.admin = await sendAppointmentCounselorSms(adminMobile, {
+          clientName: clientName || 'مُراجع محترم',
+          province: province || 'مشخص‌نشده',
+          city: city || 'مشخص‌نشده',
+          clientMobile: clientMobile || '',
+          date: date || 'تعیین‌شده',
+          time: time || 'مشخص‌شده',
+        });
+      }
+
       return NextResponse.json({ success: true, results });
     }
 

@@ -655,7 +655,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   };
 
   // ورود به پرونده با کد پرونده
-  const handleCaseLogin = (e?: React.FormEvent) => {
+  const handleCaseLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setCaseCodeError(null);
     const cleanCode = toEnglishDigits(caseCodeInput.trim().toUpperCase());
@@ -674,11 +674,41 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       } catch (err) {}
     }
 
-    const found = allSubs.find(
+    let found = allSubs.find(
       (s) =>
         s.trackingCode?.toUpperCase() === cleanCode ||
         s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
     );
+
+    // اگر در حافظه مرورگر نبود، جستجوی بلادرنگ در دیتابیس ابری Neon
+    if (!found) {
+      try {
+        const res = await fetch(`/api/cases?code=${encodeURIComponent(cleanCode)}`);
+        const json = await res.json();
+        if (json.success && json.found && json.caseRecord) {
+          const rec = json.caseRecord;
+          found = {
+            id: `case-${rec.id}`,
+            formId: 'form-belhagh-registration',
+            trackingCode: rec.case_code,
+            status: 'approved',
+            createdAt: rec.created_at,
+            comments: [],
+            data: {
+              ...rec.data,
+              f_name: rec.first_name || rec.data?.f_name || '',
+              f_family: rec.last_name || rec.data?.f_family || '',
+              f_mobile: rec.mobile || rec.data?.f_mobile || '',
+              f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
+              f_role_in_family: rec.data?.f_role_in_family || '',
+              f_case_code: rec.case_code,
+            },
+          };
+        }
+      } catch (err) {
+        console.warn('API case lookup error:', err);
+      }
+    }
 
     if (found) {
       setActiveCaseSubmission(found);
@@ -724,7 +754,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   };
 
   // بازیابی کد پرونده با شماره تلفن همراه
-  const handleForgotLookup = (e?: React.FormEvent) => {
+  const handleForgotLookup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanPhone = toEnglishDigits(forgotMobileInput.trim().replace(/\s+/g, ''));
     if (!cleanPhone || !isValidIranianMobile(cleanPhone)) {
@@ -745,22 +775,52 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       } catch (err) {}
     }
 
-    const found = allSubs.find((s) => {
+    let found = allSubs.find((s) => {
       const subPhone = toEnglishDigits(String(s.data?.f_mobile || s.data?.mobile || s.data?.f_phone || '')).trim();
       return subPhone === cleanPhone || subPhone.includes(cleanPhone) || (subPhone.length >= 10 && cleanPhone.includes(subPhone));
     });
+
+    // اگر در حافظه مرورگر نبود، جستجو در دیتابیس ابری Neon
+    if (!found || !found.trackingCode) {
+      try {
+        const res = await fetch(`/api/cases?mobile=${encodeURIComponent(cleanPhone)}`);
+        const json = await res.json();
+        if (json.success && json.found && json.caseRecord) {
+          const rec = json.caseRecord;
+          found = {
+            id: `case-${rec.id}`,
+            formId: 'form-belhagh-registration',
+            trackingCode: rec.case_code,
+            status: 'approved',
+            createdAt: rec.created_at,
+            comments: [],
+            data: {
+              ...rec.data,
+              f_name: rec.first_name || rec.data?.f_name || '',
+              f_family: rec.last_name || rec.data?.f_family || '',
+              f_mobile: rec.mobile || rec.data?.f_mobile || '',
+              f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
+              f_role_in_family: rec.data?.f_role_in_family || '',
+              f_case_code: rec.case_code,
+            },
+          };
+        }
+      } catch (err) {
+        console.warn('API forgot lookup error:', err);
+      }
+    }
 
     if (found && found.trackingCode) {
       setForgotResult({
         found: true,
         caseCode: found.trackingCode,
-        message: 'پرونده شما با موفقیت شناسایی شد!',
+        message: 'پرونده شما با موفقیت شناسایی شد! کد پرونده قبلی شما بازیابی گردید.',
         sub: found,
       });
     } else {
       setForgotResult({
         found: false,
-        message: 'با این شماره ثبت نامی انجام نشده است.',
+        message: 'با این شماره پرونده‌ای در سامانه ثبت نشده است.',
       });
     }
   };
@@ -1288,9 +1348,46 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   };
 
-  const handleNextStep = () => {
+  // اعتبارسنجی ثبت نام تکراری بر اساس دیتابیس
+  const checkDuplicateMobile = async (rawMobile: string): Promise<boolean> => {
+    const clean = toEnglishDigits(rawMobile.replace(/\s+/g, ''));
+    if (!clean || clean.length < 10) return false;
+    try {
+      const res = await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check_registration', mobile: clean }),
+      });
+      const data = await res.json();
+      if (data.exists) {
+        setErrors((prev) => ({
+          ...prev,
+          f_mobile: 'شما قبلاً ثبت نام کرده اید و باید شماره پرونده را بازیابی کنید',
+        }));
+        return true;
+      }
+    } catch (err) {
+      console.warn('Check registration error:', err);
+    }
+    return false;
+  };
+
+  const handleNextStep = async () => {
     if (!form.steps || form.steps.length === 0) return;
     if (!validateFields(currentStepFields)) return;
+
+    // بررسی ثبت‌نام تکراری در مرحله اول فرم ثبت نام مراجع
+    if ((form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 0) {
+      const mobileVal = formData.f_mobile || formData.mobile;
+      if (mobileVal) {
+        const isDuplicate = await checkDuplicateMobile(mobileVal);
+        if (isDuplicate) {
+          const el = document.getElementById('field-f_mobile');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+    }
 
     if (currentStepIndex < form.steps.length - 1) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, form.steps.length - 1));
@@ -1307,7 +1404,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     // جلوگیری قطعی از پرش از روی مرحله چهارم و ثبت تصادفی ناشی از دابل‌کلیک
@@ -1349,6 +1446,19 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     const fieldsToValidate = form.fields;
     if (!validateFields(fieldsToValidate)) return;
+
+    // بررسی ثبت‌نام تکراری قبل از ثبت نهایی فرم ثبت‌نام مراجع
+    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
+      const mobileVal = formData.f_mobile || formData.mobile;
+      if (mobileVal) {
+        const isDuplicate = await checkDuplicateMobile(mobileVal);
+        if (isDuplicate) {
+          const el = document.getElementById('field-f_mobile');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+    }
 
     if (form.payment.enabled && calculatedAmount > 0) {
       setIsPaymentOpen(true);
@@ -1426,6 +1536,33 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         }).catch((err) => console.warn('SMS dispatch error:', err));
       }
     }
+
+    // ثبت یا نگهداری دائم پرونده در دیتابیس ابری Neon PostgreSQL
+    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
+      const clientMobile = formData.f_mobile || formData.mobile;
+      if (clientMobile) {
+        fetch('/api/cases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'register_case',
+            caseCode: newCaseCode,
+            mobile: clientMobile,
+            data: formData,
+          }),
+        }).catch((err) => console.warn('Case DB save error:', err));
+      }
+    }
+
+    // ذخیره سابمیشن در دیتابیس ابری Neon PostgreSQL
+    fetch('/api/cases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_submission',
+        submission: finalSub,
+      }),
+    }).catch((err) => console.warn('Submission DB save error:', err));
 
     // ۲ و ۳. ارسال پیامک تایید نوبت برای مراجع و مشاور (فرم نوبت‌دهی 3uu4z)
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
@@ -2104,14 +2241,42 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                           type="button"
                           onClick={() => {
                             if (forgotResult.sub) {
-                              setActiveCaseSubmission(forgotResult.sub);
-                              setAuthGateMode('viewCase');
+                              const sub = forgotResult.sub;
+                              setActiveCaseSubmission(sub);
+                              const caseCode = forgotResult.caseCode || sub.trackingCode;
+                              const prefilledData = {
+                                ...sub.data,
+                                f_name: sub.data?.f_name || sub.data?.f_applicant_name || '',
+                                f_family: sub.data?.f_family || '',
+                                f_mobile: sub.data?.f_mobile || sub.data?.mobile || '',
+                                f_province_city: sub.data?.f_province_city || '',
+                                f_role_in_family: sub.data?.f_role_in_family || '',
+                                f_case_code: caseCode,
+                              };
+                              if (typeof window !== 'undefined') {
+                                try {
+                                  localStorage.setItem('belhagh_current_case_code', caseCode);
+                                  localStorage.setItem('belhagh_active_case_data', JSON.stringify(prefilledData));
+                                } catch (err) {}
+                              }
+                              setFormData((prev) => ({ ...prev, ...prefilledData }));
                               setShowForgotModal(false);
+
+                              if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+                                setAuthGateMode('filling');
+                                setCurrentStepIndex(0);
+                                setInternalPageIndex(0);
+                              } else if (onNavigateToForm) {
+                                onNavigateToForm('3uu4z');
+                              } else if (typeof window !== 'undefined') {
+                                window.location.href = '/form/3uu4z';
+                              }
                             }
                           }}
-                          className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
+                          className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
-                          ورود به پرونده با این کد
+                          <LogIn className="w-4 h-4" />
+                          <span>ورود به پرونده و ادامه نوبت‌دهی</span>
                         </button>
                       </div>
                     )}
@@ -2600,7 +2765,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 <span className="font-extrabold block text-emerald-900">مرحله چهارم: موضوع مراجعه، انتخاب مشاور و تعیین نوبت</span>
                 <span className="text-[11px] text-emerald-800">
                   {formData['f_topic']
-                    ? 'موضوع مراجعه انتخاب شد. اکنون مشاور مورد نظر و سانس تقویم را رزرو فرمایید.'
+                    ? 'موضوع مراجعه انتخاب شد. اکنون مشاور مورد نظر و نوبت تقویم را رزرو فرمایید.'
                     : 'لطفاً ابتدا موضوع مراجعه را انتخاب فرمایید تا لیست مشاوران و تقویم نوبت‌دهی فعال گردد.'}
                 </span>
               </div>
@@ -3074,9 +3239,25 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 )}
 
                 {hasError && (
-                  <div className="text-[11px] text-rose-600 flex items-center gap-1 pt-0.5">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{errors[field.id]}</span>
+                  <div className="pt-1">
+                    <div className="text-xs text-rose-600 font-bold flex items-center gap-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                      <span>{errors[field.id]}</span>
+                    </div>
+                    {field.id === 'f_mobile' && errors[field.id]?.includes('بازیابی') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotMobileInput(formData[field.id] || '');
+                          setShowForgotModal(true);
+                          setForgotResult(null);
+                        }}
+                        className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>بازیابی شماره پرونده</span>
+                      </button>
+                    )}
                   </div>
                 )}
 

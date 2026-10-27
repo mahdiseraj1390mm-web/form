@@ -95,7 +95,7 @@ export const widgetDefinitions: WidgetDef[] = [
   { type: 'audioRecord', label: 'مالتی‌مدیا', tab: 'fields', group: 'advanced', icon: PlaySquare, description: 'پخش یا ضبط فایل‌های صوتی و تصویری' },
   { type: 'mapLocation', label: 'نقشه', tab: 'fields', group: 'advanced', icon: MapPin, description: 'انتخاب موقعیت جغرافیایی روی نقشه و ثبت لوکیشن' },
   { type: 'choiceTable', label: 'جدول انتخاب', tab: 'fields', group: 'advanced', icon: Table2, description: 'جدول ماتریسی سوالات و گزینه‌ها' },
-  { type: 'appointmentBooking', label: 'رزرو وقت', tab: 'fields', group: 'advanced', icon: CalendarClock, description: 'تقویم هوشمند سانس‌های کاری بدون تداخل', badge: 'نوبت' },
+  { type: 'appointmentBooking', label: 'رزرو وقت', tab: 'fields', group: 'advanced', icon: CalendarClock, description: 'تقویم هوشمند نوبت‌های کاری بدون تداخل (نوبت‌های باقی‌مانده)', badge: 'نوبت' },
   { type: 'termsCheckbox', label: 'شرایط استفاده', tab: 'fields', group: 'advanced', icon: FileCheck2, description: 'چک‌باکس توافق‌نامه و پذیرش قوانین' },
   { type: 'nationalCode', label: 'کد ملی ۱۰ رقمی', tab: 'fields', group: 'advanced', icon: CreditCard, description: 'اعتبارسنجی با الگوریتم کنترل ثبت‌احوال', badge: 'ایران' },
 

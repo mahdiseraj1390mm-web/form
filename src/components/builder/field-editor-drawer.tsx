@@ -1510,7 +1510,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
               </div>
             </div>
 
-            {/* بخش ۴: تولید خودکار و به‌روزرسانی سانس‌ها در فیلد */}
+            {/* بخش ۴: تولید خودکار و به‌روزرسانی نوبت‌ها در فیلد */}
             <div className="pt-1">
               <button
                 type="button"
@@ -1518,7 +1518,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                 className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>تولید و ثبت خودکار سانس‌های زمانی در فیلد</span>
+                <span>تولید و ثبت خودکار نوبت‌های زمانی در فیلد (نوبت‌های باقی‌مانده)</span>
               </button>
             </div>
           </div>

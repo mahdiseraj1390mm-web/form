@@ -179,7 +179,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
               <Calendar className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-xs font-extrabold text-slate-900 block">انتخاب روز و سانس مشاوره</span>
+              <span className="text-xs font-extrabold text-slate-900 block">انتخاب روز و ساعت نوبت مشاوره</span>
               <span className="text-[10px] text-slate-500">برای مشاهده ساعات آزاد، روز کاری مورد نظر را انتخاب فرمایید</span>
             </div>
           </div>
@@ -314,7 +314,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>مشاهده سانس‌های روز {workingDaysList[0].name} (کاری)</span>
+                <span>مشاهده نوبت‌های روز {workingDaysList[0].name} (کاری)</span>
               </button>
             )}
           </div>
@@ -323,7 +323,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
               <Clock className="w-5 h-5" />
             </div>
-            <p className="text-xs font-bold text-slate-700">هیچ سانس آزادی برای این روز تعریف نشده است</p>
+            <p className="text-xs font-bold text-slate-700">هیچ نوبت آزادی برای این روز تعریف نشده است</p>
             <p className="text-[11px] text-slate-400">سایر روزهای کاری مشاور را در نوار بالا انتخاب فرمایید.</p>
           </div>
         ) : (
@@ -331,10 +331,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>سانس‌های آزاد {WEEK_DAYS[selectedDayIndex]?.name}:</span>
+                <span>نوبت‌های آزاد {WEEK_DAYS[selectedDayIndex]?.name}:</span>
               </span>
               <span className="text-[11px] text-slate-500 font-medium">
-                {toPersianDigits(generatedSlotsForDay.length)} سانس قابل رزرو
+                {toPersianDigits(generatedSlotsForDay.length)} نوبت باقی‌مانده
               </span>
             </div>
 
