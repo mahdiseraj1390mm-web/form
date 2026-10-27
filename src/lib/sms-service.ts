@@ -6,8 +6,8 @@ export const MELIPAYAMAK_PASSWORD = process.env.MELIPAYAMAK_PASSWORD || '627eeb6
 
 export const DEFAULT_PATTERN_IDS = {
   CASE_REGISTRATION: 568830,      // کد پرونده مراجع: {0}
-  APPOINTMENT_CLIENT: 568818,     // تایید نوبت مراجع: {0}=نام مراجع, {1}=نام مشاور, {2}=تاریخ, {3}=ساعت
-  APPOINTMENT_COUNSELOR: 568805,  // اطلاع به مشاور: {0}=نام مراجع, {1}=شماره مراجع, {2}=تاریخ, {3}=ساعت
+  APPOINTMENT_CLIENT: 568818,     // تایید نوبت مراجع
+  APPOINTMENT_COUNSELOR: 568805,  // اطلاع به مشاور
 };
 
 export interface SmsPatternConfig {
@@ -56,7 +56,7 @@ export async function getSmsSettings(): Promise<SmsSettings> {
       return parsed;
     }
   } catch {
-    // در صورت عدم وجود فایل، مقدار پیش‌فرض را بازمی‌گردانیم
+    // بازگشت مقدار پیش‌فرض
   }
 
   return {
@@ -67,24 +67,24 @@ export async function getSmsSettings(): Promise<SmsSettings> {
     patterns: {
       case_registration: {
         bodyId: DEFAULT_PATTERN_IDS.CASE_REGISTRATION,
-        title: 'پیامک ثبت‌نام و صدور کد پرونده',
-        description: 'ارسال کد پرونده اختصاصی به مراجع پس از تکمیل فرم ثبت پرونده',
-        template: 'با سلام\nکد پرونده شما: {0} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق\npsy-belhagh.com',
-        variables: ['{0}: کد پرونده مراجع'],
+        title: 'پیامک صدور کد پرونده',
+        description: 'ارسال کد پرونده اختصاصی به مراجع',
+        template: 'با سلام\nکد پرونده شما: {0} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق',
+        variables: ['{0}: کد پرونده'],
       },
       appointment_client: {
         bodyId: DEFAULT_PATTERN_IDS.APPOINTMENT_CLIENT,
-        title: 'پیامک تأیید نوبت برای مراجع',
-        description: 'ارسال مشخصات نوبت رزرو شده به شماره مراجع',
-        template: 'سلام {0} عزیز\nنوبت مشاوره شما با موفقیت ثبت شد.\nنام مشاور: {1}\nتاریخ: {2}\nساعت نوبت: {3}\nلطفاً در زمان تعیین‌شده با مشاور تماس بگیرید\nسایت روانشناسی بالحق\npsy-belhagh.com',
-        variables: ['{0}: نام مراجع', '{1}: نام مشاور', '{2}: تاریخ نوبت', '{3}: ساعت نوبت'],
+        title: 'پیامک تأیید نوبت مراجع',
+        description: 'ارسال مشخصات نوبت رزرو شده به شماره همراه مراجع',
+        template: 'سلام {0} عزیز\n\nنوبت مشاوره شما با موفقیت ثبت شد.\n\nنام مشاور: {1}\nساعت نوبت: {2}\n\n{3}\nلطفاً در زمان تعیینشده با مشاور تماس بگیرید\n\nسایت روانشناسی بالحق\npsy-belhagh.com',
+        variables: ['{0}: نام مراجع', '{1}: نام مشاور', '{2}: ساعت نوبت', '{3}: تاریخ نوبت'],
       },
       appointment_counselor: {
         bodyId: DEFAULT_PATTERN_IDS.APPOINTMENT_COUNSELOR,
-        title: 'پیامک اطلاع‌رسانی نوبت به مشاور',
-        description: 'ارسال مشخصات نوبت جدید و شماره تماس مراجع به تلفن همراه مشاور',
-        template: 'مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.\n\nنام مراجعه‌کننده: {0}\nشماره تماس: {1}\nتاریخ نوبت: {2}\nساعت نوبت: {3}\n\npsy-belhagh.com',
-        variables: ['{0}: نام مراجعه‌کننده', '{1}: شماره تماس مراجع', '{2}: تاریخ نوبت', '{3}: ساعت نوبت'],
+        title: 'پیامک اطلاع‌رسانی نوبت مشاور',
+        description: 'ارسال مشخصات نوبت جدید مراجع به تلفن مشاور',
+        template: 'مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.\n\nنام مراجعهکننده: {0}\nاستان: {1} شهر: {2} \nشماره تماس: {3}\nتاریخ نوبت: {4}\nساعت نوبت: {5}',
+        variables: ['{0}: نام مراجعه‌کننده', '{1}: استان', '{2}: شهر', '{3}: شماره تماس', '{4}: تاریخ نوبت', '{5}: ساعت نوبت'],
       },
     },
   };
@@ -125,6 +125,74 @@ export async function logSms(entry: SmsLogEntry): Promise<void> {
 }
 
 /**
+ * ارسال مستقیم متن کامل پیامک بدون پترن (جهت ارسال دقیق متن دلخواه کاربر کاراکتر به کاراکتر)
+ */
+export async function sendDirectTextSms(
+  to: string,
+  text: string,
+  type: SmsLogEntry['type']
+): Promise<{ success: boolean; response?: any }> {
+  const cleanTo = to.replace(/[^0-9]/g, '');
+  const standardTo = cleanTo.startsWith('98') ? '0' + cleanTo.slice(2) : cleanTo;
+
+  let providerResponse: any = null;
+  let isSuccess = false;
+
+  const settings = await getSmsSettings();
+  const username = settings.username || MELIPAYAMAK_USERNAME;
+  const password = settings.password || MELIPAYAMAK_PASSWORD;
+  const from = settings.senderNumber || '50004';
+
+  try {
+    const soapUrl = 'http://api.payamak-panel.com/post/Send.asmx/SendSMS';
+    const formParams = new URLSearchParams();
+    formParams.append('username', username);
+    formParams.append('password', password);
+    formParams.append('to', standardTo);
+    formParams.append('from', from);
+    formParams.append('text', text);
+    formParams.append('isflash', 'false');
+
+    const res = await fetch(soapUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formParams.toString(),
+    });
+
+    const resText = await res.text();
+    providerResponse = resText;
+
+    const match = resText.match(/<string[^>]*>(\d+)<\/string>/);
+    if (match && match[1] && match[1].length > 5) {
+      isSuccess = true;
+      providerResponse = { status: 'sent', recId: match[1] };
+    } else {
+      const errMatch = resText.match(/<string[^>]*>(-?\d+)<\/string>/);
+      const code = errMatch ? errMatch[1] : resText;
+      providerResponse = { status: 'failed', code };
+    }
+  } catch (err: any) {
+    providerResponse = { error: err.message };
+  }
+
+  await logSms({
+    id: `sms-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: new Date().toISOString(),
+    type,
+    recipient: standardTo,
+    bodyId: 0,
+    args: [],
+    message: text,
+    status: isSuccess ? 'sent' : 'failed',
+    providerResponse,
+  });
+
+  return { success: isSuccess, response: providerResponse };
+}
+
+/**
  * ارسال پیامک خدماتی از طریق وب‌سرویس ملی‌پیامک (SendByBaseNumber2)
  * در این روش پیامک حتی به لیست سیاه (بلک‌لیست) و در کمتر از چند ثانیه تحویل می‌شود.
  */
@@ -151,7 +219,6 @@ export async function sendSharedPatternSms(
   const textJoined = args.join(';');
 
   try {
-    // وب‌سرویس SendByBaseNumber2 ملی‌پیامک
     const soapUrl = 'http://api.payamak-panel.com/post/Send.asmx/SendByBaseNumber2';
     const formParams = new URLSearchParams();
     formParams.append('username', username);
@@ -171,13 +238,11 @@ export async function sendSharedPatternSms(
     const resText = await res.text();
     providerResponse = resText;
 
-    // در ملی‌پیامک اگر پاسخ یک رشته عددی بزرگ (شناسه پیگیری ارسال RecID) باشد، ارسال موفق بوده است
     const match = resText.match(/<string[^>]*>(\d+)<\/string>/);
     if (match && match[1] && match[1].length > 5) {
       isSuccess = true;
       providerResponse = { status: 'sent', recId: match[1] };
     } else {
-      // در صورت دریافت عدد منفی یا هر پیام خطا
       const errMatch = resText.match(/<string[^>]*>(-?\d+)<\/string>/);
       const code = errMatch ? errMatch[1] : resText;
       providerResponse = { status: 'failed', code };
@@ -203,6 +268,26 @@ export async function sendSharedPatternSms(
 }
 
 /**
+ * ارسال هوشمند: ابتدا ارسال متن مستقیم دقیق تلاش می‌شود؛ در صورت عدم موفقیت خط یا بلک‌لیست، با پترن خدماتی ارسال می‌شود.
+ */
+export async function sendSmartSms(
+  to: string,
+  bodyId: number,
+  args: string[],
+  type: SmsLogEntry['type'],
+  exactMessage: string
+): Promise<{ success: boolean; response?: any }> {
+  // ۱. تلاش با ارسال مستقیم متن دقیق
+  const directRes = await sendDirectTextSms(to, exactMessage, type);
+  if (directRes.success) {
+    return directRes;
+  }
+
+  // ۲. در صورت خطا یا مسدود بودن خط، ارسال با وب‌سرویس پترن خدماتی
+  return sendSharedPatternSms(to, bodyId, args, type, exactMessage);
+}
+
+/**
  * ۱. پیامک کد پرونده پس از ثبت نام مراجع (الگوی تایید شده ۵۶۸۸۳۰ یا تنظیم‌شده در پنل)
  */
 export async function sendCaseRegistrationSms(clientMobile: string, caseCode: string): Promise<any> {
@@ -210,26 +295,28 @@ export async function sendCaseRegistrationSms(clientMobile: string, caseCode: st
   const pattern = settings.patterns.case_registration;
   const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.CASE_REGISTRATION;
 
-  let fallbackText = pattern?.template
-    ? pattern.template.replace(/\{0\}/g, caseCode)
-    : `با سلام\nکد پرونده شما: ${caseCode} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق`;
+  const exactText = `با سلام\nکد پرونده شما: ${caseCode} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق`;
 
   return sendSharedPatternSms(
     clientMobile,
     bodyId,
     [caseCode],
     'case_registration',
-    fallbackText
+    exactText
   );
 }
 
 /**
- * ۲. پیامک تایید نوبت برای مراجع (الگوی تایید شده ۵۶۸۸۱۸ یا تنظیم‌شده در پنل)
- * ترتیب دقیق آرگومان‌های پترن ملی‌پیامک:
- * {0} = نام مراجع
- * {1} = نام مشاور
- * {2} = تاریخ نوبت
- * {3} = ساعت نوبت
+ * ۲. پیامک تایید نوبت برای مراجع
+ * متن دقیق درخواستی کاربر:
+ * سلام {نام مراجع} عزیز
+ * نوبت مشاوره شما با موفقیت ثبت شد.
+ * نام مشاور: {نام مشاور}
+ * ساعت نوبت: {ساعت نوبت}
+ * {تاریخ نوبت}
+ * لطفاً در زمان تعیینشده با مشاور تماس بگیرید
+ * سایت روانشناسی بالحق
+ * psy-belhagh.com
  */
 export async function sendAppointmentClientSms(
   clientMobile: string,
@@ -249,41 +336,44 @@ export async function sendAppointmentClientSms(
   const pattern = settings.patterns.appointment_client;
   const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.APPOINTMENT_CLIENT;
 
-  let fallbackText = pattern?.template
-    ? pattern.template
-        .replace(/\{0\}/g, clientName)
-        .replace(/\{1\}/g, counselorName)
-        .replace(/\{2\}/g, date)
-        .replace(/\{3\}/g, time)
-    : `سلام ${clientName} عزیز\n\nنوبت مشاوره شما با موفقیت ثبت شد.\n\nنام مشاور: ${counselorName}\nساعت نوبت: ${time}\n\nلطفاً در زمان تعیین‌شده با مشاور تماس بگیرید\n\nسایت روانشناسی بالحق\npsy-belhagh.com`;
+  const exactText = `سلام ${clientName} عزیز\n\nنوبت مشاوره شما با موفقیت ثبت شد.\n\nنام مشاور: ${counselorName}\nساعت نوبت: ${time}\n\n${date}\nلطفاً در زمان تعیینشده با مشاور تماس بگیرید\n\nسایت روانشناسی بالحق\npsy-belhagh.com`;
 
-  return sendSharedPatternSms(
+  // در پترن ۵۶۸۸۱۸ ملی‌پیامک آرگومان‌ها به ترتیب: [نام مراجع, نام مشاور, تاریخ, ساعت] هستند
+  const patternArgs = [clientName, counselorName, date, time];
+
+  return sendSmartSms(
     clientMobile,
     bodyId,
-    [clientName, counselorName, date, time],
+    patternArgs,
     'appointment_client',
-    fallbackText
+    exactText
   );
 }
 
 /**
- * ۳. پیامک اطلاع‌رسانی نوبت به مشاور (الگوی تایید شده ۵۶۸۸۰۵ یا تنظیم‌شده در پنل)
- * ترتیب دقیق آرگومان‌های پترن ملی‌پیامک:
- * {0} = نام مراجعه‌کننده
- * {1} = شماره تماس مراجع
- * {2} = تاریخ نوبت شمسی
- * {3} = ساعت نوبت
+ * ۳. پیامک اطلاع‌رسانی نوبت به مشاور
+ * متن دقیق درخواستی کاربر:
+ * مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.
+ * نام مراجعهکننده: {نام مراجعه‌کننده}
+ * استان: {استان} شهر: {شهر}
+ * شماره تماس: {شماره تماس}
+ * تاریخ نوبت: {تاریخ نوبت}
+ * ساعت نوبت: {ساعت نوبت}
  */
 export async function sendAppointmentCounselorSms(
   counselorMobile: string,
   details: {
     clientName: string;
+    province?: string;
+    city?: string;
     clientMobile: string;
     date: string;
     time: string;
   }
 ): Promise<any> {
   const clientName = details.clientName || 'مُراجع محترم';
+  const province = details.province || 'مشخص‌نشده';
+  const city = details.city || 'مشخص‌نشده';
   const clientMobile = details.clientMobile || 'ثبت‌شده در پرونده';
   const date = details.date || 'تعیین‌شده';
   const time = details.time || 'تعیین‌شده';
@@ -292,19 +382,19 @@ export async function sendAppointmentCounselorSms(
   const pattern = settings.patterns.appointment_counselor;
   const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.APPOINTMENT_COUNSELOR;
 
-  let fallbackText = pattern?.template
-    ? pattern.template
-        .replace(/\{0\}/g, clientName)
-        .replace(/\{1\}/g, clientMobile)
-        .replace(/\{2\}/g, date)
-        .replace(/\{3\}/g, time)
-    : `مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.\n\nنام مراجعه‌کننده: ${clientName}\nشماره تماس: ${clientMobile}\nتاریخ نوبت: ${date}\nساعت نوبت: ${time}\n\npsy-belhagh.com`;
+  const exactText = `مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد.\n\nنام مراجعهکننده: ${clientName}\nاستان: ${province} شهر: ${city} \nشماره تماس: ${clientMobile}\nتاریخ نوبت: ${date}\nساعت نوبت: ${time}`;
 
-  return sendSharedPatternSms(
+  // اگر پترن ۵۶۸۸۰۵ بود، فقط ۴ آرگومان قبول می‌کند: [نام مراجع, شماره مراجع, تاریخ, ساعت]
+  // اگر پترن جدید ثبت‌شده بود، هر ۶ آرگومان ارسال می‌شود
+  const patternArgs = bodyId === 568805
+    ? [clientName, clientMobile, date, time]
+    : [clientName, province, city, clientMobile, date, time];
+
+  return sendSmartSms(
     counselorMobile,
     bodyId,
-    [clientName, clientMobile, date, time],
+    patternArgs,
     'appointment_counselor',
-    fallbackText
+    exactText
   );
 }

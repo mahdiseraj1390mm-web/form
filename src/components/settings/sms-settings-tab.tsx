@@ -101,7 +101,7 @@ export const SmsSettingsTab: React.FC = () => {
           patternKey,
           mobile: phone,
           args: patternKey === 'case_registration' 
-            ? ['SP999999']
+            ? ['SP260120']
             : patternKey === 'appointment_client'
             ? ['مراجع آزمایشی', 'دکتر علیرضا برهانی', '1405/08/10', '16:00 عصر']
             : ['مهدی سراج', phone, '1405/08/10', '16:00 عصر'],

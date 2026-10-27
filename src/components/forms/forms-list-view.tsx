@@ -88,11 +88,11 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
         {forms.map((form) => (
           <div
             key={form.id}
-            onClick={() => {
-              setActiveForm(form);
-              setReportsFormId(form.id);
-              onNavigateTab('analytics');
-            }}
+            onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveForm(form);
+                    onNavigateTab('runner');
+                  }}
             className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between overflow-hidden p-6 space-y-4 cursor-pointer"
           >
             <div>
@@ -139,7 +139,8 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setActiveForm(form);
                     onNavigateTab('builder');
                   }}
@@ -149,7 +150,8 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                   <span>طراحی</span>
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setActiveForm(form);
                     onNavigateTab('runner');
                   }}
@@ -159,7 +161,10 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                   <Eye className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleShare(form)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShare(form);
+                  }}
                   className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors"
                   title="اشتراک‌گذاری و کد تعبیه"
                 >
@@ -180,7 +185,8 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
               </div>
 
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (confirm('آیا از حذف این فرم اطمینان دارید؟')) deleteForm(form.id);
                 }}
                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
