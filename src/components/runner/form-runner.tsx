@@ -2065,13 +2065,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     <button
                       type="button"
                       onClick={handleStartRegistration}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-[#008269] hover:bg-[#00705a] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-between cursor-pointer"
+                      className="w-full relative py-3.5 sm:py-4 px-6 bg-[#008269] hover:bg-[#00705a] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                        <span>ثبت نام</span>
-                      </div>
-                      <ChevronLeft className="w-5 h-5 text-white/80" />
+                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                      <span>ثبت نام</span>
+                      <ChevronLeft className="w-5 h-5 text-white/80 absolute left-5 sm:left-6 top-1/2 -translate-y-1/2" />
                     </button>
 
                     {/* دکمه ورود سرمه‌ای مطابق تصویر بالحق */}
@@ -2081,13 +2079,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         setIsLoginBoxOpen(true);
                         setCaseCodeError(null);
                       }}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-blue-950/25 transition-all flex items-center justify-between cursor-pointer"
+                      className="w-full relative py-3.5 sm:py-4 px-6 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-blue-950/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                        <span>ورود</span>
-                      </div>
-                      <ChevronLeft className="w-5 h-5 text-white/80" />
+                      <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                      <span>ورود</span>
+                      <ChevronLeft className="w-5 h-5 text-white/80 absolute left-5 sm:left-6 top-1/2 -translate-y-1/2" />
                     </button>
                   </div>
                 ) : (
@@ -2100,13 +2096,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         setIsLoginBoxOpen(false);
                         setCaseCodeError(null);
                       }}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-blue-950/25 transition-all flex items-center justify-between cursor-pointer"
+                      className="w-full relative py-3.5 sm:py-4 px-6 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-blue-950/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                        <span>ورود</span>
-                      </div>
-                      <ChevronLeft className="w-5 h-5 text-white/80 -rotate-90 transition-transform" />
+                      <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                      <span>ورود</span>
+                      <ChevronLeft className="w-5 h-5 text-white/80 absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 -rotate-90 transition-transform" />
                     </button>
 
                     {/* باکس دریافت کد پرونده */}
@@ -2173,13 +2167,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     <button
                       type="button"
                       onClick={handleStartRegistration}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-[#008269] hover:bg-[#00705a] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-md transition-all flex items-center justify-between cursor-pointer"
+                      className="w-full relative py-3.5 sm:py-4 px-6 bg-[#008269] hover:bg-[#00705a] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-md transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                        <span>ثبت نام</span>
-                      </div>
-                      <ChevronLeft className="w-5 h-5 text-white/80" />
+                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                      <span>ثبت نام</span>
+                      <ChevronLeft className="w-5 h-5 text-white/80 absolute left-5 sm:left-6 top-1/2 -translate-y-1/2" />
                     </button>
                   </div>
                 )}
