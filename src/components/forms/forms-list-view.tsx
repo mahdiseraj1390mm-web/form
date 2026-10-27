@@ -16,7 +16,10 @@ import {
   QrCode, 
   Code2, 
   ExternalLink,
-  Layers
+  Layers,
+  BarChart3,
+  FileText,
+  Download,
 } from 'lucide-react';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
 
@@ -33,6 +36,7 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
   const [sharingForm, setSharingForm] = useState<Form | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+  const [reportsFormId, setReportsFormId] = useState<string | null>(null);
 
   const handleShare = (form: Form) => {
     setSharingForm(form);
@@ -84,7 +88,12 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
         {forms.map((form) => (
           <div
             key={form.id}
-            className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between overflow-hidden p-6 space-y-4"
+            onClick={() => {
+              setActiveForm(form);
+              setReportsFormId(form.id);
+              onNavigateTab('analytics');
+            }}
+            className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between overflow-hidden p-6 space-y-4 cursor-pointer"
           >
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -155,6 +164,18 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                   title="اشتراک‌گذاری و کد تعبیه"
                 >
                   <Share2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveForm(form);
+                    setReportsFormId(form.id);
+                    onNavigateTab('analytics');
+                  }}
+                  className="p-1.5 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                  title="مشاهده گزارش‌های آماری فرم"
+                >
+                  <BarChart3 className="w-4 h-4" />
                 </button>
               </div>
 

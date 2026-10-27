@@ -4,6 +4,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus } from '@/types/form';
 import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
+import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib/additional-mock-submissions';
+
+export const allInitialSubmissions: FormSubmission[] = [
+  ...initialSubmissions,
+  ...quizSubmissions,
+  ...recruitmentSubmissions,
+  ...orderSubmissions,
+];
 import { belhaghRegistrationForm, belhaghBookingForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 
@@ -192,7 +200,7 @@ const FormContext = createContext<FormContextType | undefined>(undefined);
 
 export function FormProvider({ children }: { children: React.ReactNode }) {
   const [forms, setForms] = useState<Form[]>(initialForms);
-  const [submissions, setSubmissions] = useState<FormSubmission[]>(initialSubmissions);
+  const [submissions, setSubmissions] = useState<FormSubmission[]>(allInitialSubmissions);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChatMessages);
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>(initialWebhookLogs);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
@@ -251,18 +259,18 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
           if (Array.isArray(parsed) && parsed.length > 0) {
             const existingIds = new Set(parsed.map((s: any) => s.id));
             const merged = [...parsed];
-            initialSubmissions.forEach((s) => {
+            allInitialSubmissions.forEach((s) => {
               if (!existingIds.has(s.id)) merged.push(s);
             });
             setSubmissions(merged);
           } else {
-            setSubmissions(initialSubmissions);
+            setSubmissions(allInitialSubmissions);
           }
         } catch {
-          setSubmissions(initialSubmissions);
+          setSubmissions(allInitialSubmissions);
         }
       } else {
-        setSubmissions(initialSubmissions);
+        setSubmissions(allInitialSubmissions);
       }
       if (storedChat) setChatMessages(JSON.parse(storedChat));
       if (storedLogs) setWebhookLogs(JSON.parse(storedLogs));

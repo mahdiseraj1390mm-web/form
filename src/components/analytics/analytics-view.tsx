@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useForm } from '@/context/form-context';
 import { 
   BarChart3, 
@@ -16,23 +16,37 @@ import {
   Inbox,
   Award,
   CreditCard,
-  Hash
+  Hash,
+  FileText,
+  Download,
+  AlertTriangle,
+  Users,
+  List,
 } from 'lucide-react';
-import { toPersianDigits, formatCurrency } from '@/lib/persian';
+import { toPersianDigits, formatCurrency, formatPersianDateTime, getFieldDisplayValue } from '@/lib/persian';
+import { exportFormSubmissionsToCSV } from '@/lib/excel-export';
 
 interface AnalyticsViewProps {
   onNavigateToRunner?: () => void;
 }
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner }) => {
-  const { forms, submissions, setActiveForm } = useForm();
-  const [selectedFormId, setSelectedFormId] = useState<string>(forms[0]?.id || '');
+  const { forms, submissions, setActiveForm, activeForm } = useForm();
+  const [selectedFormId, setSelectedFormId] = useState<string>(activeForm?.id || forms[0]?.id || '');
   
   // فیلترهای انتخابی جهت تحلیل فیلد به فیلد
   const [selectedChoiceFieldId, setSelectedChoiceFieldId] = useState<string>('');
   const [selectedNumericFieldId, setSelectedNumericFieldId] = useState<string>('');
 
   const currentForm = forms.find((f) => f.id === selectedFormId) || forms[0];
+
+  const statusConfigs: Record<string, { label: string; color: string; bg: string; border: string }> = {
+    new: { label: 'جدید', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+    reviewing: { label: 'در حال بررسی', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+    approved: { label: 'تأیید شده / فعال', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+    rejected: { label: 'رد شده', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
+    archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
+  };
   
   // داده‌های ارسالی واقعی مرتبط با این فرم
   const formSubmissions = submissions.filter((s) => s.formId === selectedFormId);
@@ -113,6 +127,86 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
       passedCount: quizSubmissions.filter((s) => s.quizResult!.passed).length,
     };
   }
+
+  // محاسبه سوالات با بیشترین اشتباه (برای فرم‌های آزمون)
+  const quizWrongAnswers: { questionId: string; questionLabel: string; wrongCount: number; totalCount: number; wrongPercentage: number }[] = useMemo(() => {
+    if (!currentForm?.quiz.enabled || quizSubmissions.length === 0) return [];
+    
+    const quizFields = currentForm.fields.filter((f) => f.type === 'quizQuestion');
+    return quizFields.map((field) => {
+      let wrongCount = 0;
+      let totalCount = 0;
+      
+      quizSubmissions.forEach((sub) => {
+        const userAnswer = sub.data[field.id];
+        if (userAnswer === undefined || userAnswer === null) return;
+        totalCount++;
+        
+        const correctOptionId = field.quizData?.correctOptionId;
+        //userAnswer can be option id or value
+        const isCorrect = userAnswer === correctOptionId || 
+          (field.options?.find((o) => o.value === userAnswer)?.id === correctOptionId);
+        if (!isCorrect) wrongCount++;
+      });
+      
+      return {
+        questionId: field.id,
+        questionLabel: field.label,
+        wrongCount,
+        totalCount,
+        wrongPercentage: totalCount > 0 ? Math.round((wrongCount / totalCount) * 100) : 0,
+      };
+    }).sort((a, b) => b.wrongCount - a.wrongCount);
+  }, [currentForm, quizSubmissions]);
+
+  // محاسبه بررسی ähnliness (پاسخ‌های مشابهی که بیشترین تکرار را دارند)
+  const similarAnswers: { fieldId: string; fieldLabel: string; value: string; count: number; percentage: number }[] = useMemo(() => {
+    if (formSubmissions.length === 0) return [];
+    
+    const textFields = currentForm?.fields.filter((f) => 
+      ['text', 'select', 'radio', 'mobile', 'nationalCode', 'jalaliDate'].includes(f.type)
+    ) || [];
+    
+    const allValues: { fieldId: string; fieldLabel: string; value: string; count: number }[] = [];
+    
+    textFields.forEach((field) => {
+      const valueCounts: Record<string, number> = {};
+      formSubmissions.forEach((sub) => {
+        const val = sub.data[field.id];
+        if (val === undefined || val === null || val === '') return;
+        const strVal = Array.isArray(val) ? val.join('، ') : String(val);
+        valueCounts[strVal] = (valueCounts[strVal] || 0) + 1;
+      });
+      
+      Object.entries(valueCounts).forEach(([value, count]) => {
+        if (count > 1) { // فقط مقادیر تکرار شده
+          allValues.push({
+            fieldId: field.id,
+            fieldLabel: field.label,
+            value,
+            count,
+          });
+        }
+      });
+    });
+    
+    return allValues
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((item) => ({
+        ...item,
+        percentage: Math.round((item.count / formSubmissions.length) * 100),
+      }));
+  }, [currentForm, formSubmissions]);
+
+  // قیمت برای خروجی اکسل
+  const handleExportExcel = () => {
+    if (formSubmissions.length === 0) {
+      alert('پاسخی برای خروجی اکسل وجود ندارد.');
+      return;
+    }
+    exportFormSubmissionsToCSV(currentForm, formSubmissions);
+  };
 
   return (
     <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bg-slate-50 select-none">
@@ -377,6 +471,188 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   </span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* بخش ۴: سوالات با بیشترین اشتباه */}
+          {currentForm.quiz.enabled && quizWrongAnswers.length > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-rose-200/80 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-rose-100">
+                <AlertTriangle className="w-5 h-5 text-rose-600" />
+                <h2 className="text-sm font-bold text-rose-900">سوالات با بیشترین نرخ اشتباه</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-rose-50 border-b border-rose-200 text-rose-700 font-extrabold">
+                      <th className="p-3 text-center w-12">#</th>
+                      <th className="p-3">متن سوال</th>
+                      <th className="p-3 text-center">پاسخ‌های اشتباه</th>
+                      <th className="p-3 text-center">تعداد کل پاسخ‌ها</th>
+                      <th className="p-3 text-center">نرخ اشتباه</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {quizWrongAnswers.map((qa, idx) => (
+                      <tr key={qa.questionId} className="hover:bg-rose-50/50 transition-colors">
+                        <td className="p-3 text-center text-slate-400 font-mono">
+                          {toPersianDigits(idx + 1)}
+                        </td>
+                        <td className="p-3 font-medium text-slate-900 truncate max-w-xs" title={qa.questionLabel}>
+                          {qa.questionLabel}
+                        </td>
+                        <td className="p-3 text-center font-bold text-rose-700">
+                          {toPersianDigits(qa.wrongCount)}
+                        </td>
+                        <td className="p-3 text-center text-slate-600">
+                          {toPersianDigits(qa.totalCount)}
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
+                            {toPersianDigits(qa.wrongPercentage)}٪
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* بخش ۵: تکرار بیشترین پاسخ‌ها */}
+          {similarAnswers.length > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-amber-200/80 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-amber-100">
+                <Users className="w-5 h-5 text-amber-600" />
+                <h2 className="text-sm font-bold text-amber-900">بیشترین پاسخ‌های مشابه (تکرار شده)</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {similarAnswers.map((sa, idx) => (
+                  <div key={`${sa.fieldId}-${sa.value}`} className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                        #{toPersianDigits(idx + 1)}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {toPersianDigits(sa.count)} بار
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      <div>
+                        <span className="text-slate-500 block">فیلد:</span>
+                        <span className="font-bold text-slate-900">{sa.fieldLabel}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">مقدار تکراری:</span>
+                        <span className="font-bold text-slate-900 truncate max-w-xs" title={sa.value}>
+                          {sa.value}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">نرخ تکرار:</span>
+                        <span className="font-bold text-amber-800">
+                          {toPersianDigits(sa.percentage)}٪ از ارسالی‌ها
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-1">
+                        <div
+                          className="bg-amber-500 h-full rounded-full"
+                          style={{ width: `${Math.max(sa.percentage, 1)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* بخش ۶: لیست کامل پاسخ‌ها */}
+          {formSubmissions.length > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <List className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-sm font-bold text-slate-900">لیست کامل پاسخ‌های دریافتی</h2>
+                </div>
+                <button
+                  onClick={handleExportExcel}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>خروجی اکسل</span>
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-extrabold">
+                      <th className="p-3 text-center w-12">#</th>
+                      <th className="p-3">کد پیگیری</th>
+                      <th className="p-3">نام و نام خانوادگی</th>
+                      <th className="p-3 text-center">تاریخ ثبت</th>
+                      <th className="p-3 text-center">وضعیت</th>
+                      <th className="p-3 text-center">پرداخت</th>
+                      <th className="p-3 text-center w-20">عملیات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {formSubmissions.slice(0, 10).map((sub, idx) => {
+                      const st = statusConfigs[sub.status] || statusConfigs.new;
+                      const fullName =
+                        sub.data.fullName ||
+                        sub.data.f_fullname ||
+                        sub.data.q_fullname ||
+                        'نامشخص';
+                      return (
+                        <tr key={sub.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="p-3 text-center text-slate-400 font-mono">
+                            {toPersianDigits(idx + 1)}
+                          </td>
+                          <td className="p-3 font-mono font-bold text-sky-800">
+                            {sub.trackingCode}
+                          </td>
+                          <td className="p-3 font-medium text-slate-900 truncate max-w-xs" title={fullName}>
+                            {fullName}
+                          </td>
+                          <td className="p-3 text-center text-slate-600">
+                            {formatPersianDateTime(sub.createdAt)}
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold border ${st.bg} ${st.color} ${st.border}`}>
+                              {st.label}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            {sub.paymentStatus === 'paid' ? (
+                              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                {formatCurrency(sub.paymentAmount || 0, 'IRT')}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-400">بدون پرداخت</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            <button
+                              className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-md transition-colors"
+                              title="مشاهده جزئیات"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {formSubmissions.length > 10 && (
+                <div className="p-3 bg-slate-50 rounded-xl text-center text-xs text-slate-500">
+                  نمایش {Math.min(10, formSubmissions.length)} از {toPersianDigits(formSubmissions.length)} پاسخ
+                </div>
+              )}
             </div>
           )}
 
