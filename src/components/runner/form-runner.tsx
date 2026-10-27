@@ -1996,10 +1996,14 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       form.generalSettings?.portalSubtitle ||
       (isBelhaghFamily ? 'ورود به پرونده یا ثبت‌نام جدید' : form.description || '');
 
-    const heroImage =
+    let heroImage =
       form.generalSettings?.portalHeroImage ||
       form.theme?.portalHeroImage ||
       (isBelhaghFamily ? '/images/belhagh-hero.png' : '');
+
+    if (heroImage && isBelhaghFamily && !heroImage.includes('?v=')) {
+      heroImage = `${heroImage}?v=3`;
+    }
 
     const showHeroImage =
       Boolean(heroImage) && form.generalSettings?.showPortalHeroImage !== false;
@@ -2038,33 +2042,39 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               <div className="p-5 sm:p-6 bg-white space-y-3.5">
 
                 {!isLoginBoxOpen ? (
-                  /* حالت اولیه: فقط دکمه ورود و ثبت نام در زیر تصویر */
+                  /* حالت اولیه: دکمه‌های ثبت نام و ورود اختصاصی سامانه بالحق */
                   <div className="space-y-3.5 pt-1">
-                    {/* دکمه ورود سبز تیره */}
+                    {/* دکمه ثبت نام سبز زمردی مطابق تصویر بالحق */}
+                    <button
+                      type="button"
+                      onClick={handleStartRegistration}
+                      className="w-full py-3.5 sm:py-4 px-6 bg-[#008269] hover:bg-[#00705a] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-between cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                        <span>ثبت نام</span>
+                      </div>
+                      <ChevronLeft className="w-5 h-5 text-white/80" />
+                    </button>
+
+                    {/* دکمه ورود سرمه‌ای مطابق تصویر بالحق */}
                     <button
                       type="button"
                       onClick={() => {
                         setIsLoginBoxOpen(true);
                         setCaseCodeError(null);
                       }}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-blue-950/25 transition-all flex items-center justify-between cursor-pointer"
                     >
-                      <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                      <span>ورود</span>
-                    </button>
-
-                    {/* دکمه ثبت نام سفید با کادر سبز */}
-                    <button
-                      type="button"
-                      onClick={handleStartRegistration}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
-                    >
-                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-[#084d3e]" />
-                      <span>ثبت نام</span>
+                      <div className="flex items-center gap-3">
+                        <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                        <span>ورود</span>
+                      </div>
+                      <ChevronLeft className="w-5 h-5 text-white/80" />
                     </button>
                   </div>
                 ) : (
-                  /* حالت باز شده ورود مطابق رفرنس و تصویر ۲ و ۳ */
+                  /* حالت باز شده ورود با دکمه سرمه‌ای و کادر وارد کردن کد */
                   <div className="space-y-3.5 pt-1 animate-in fade-in duration-200">
                     {/* دکمه ورود در بالا (کلیک مجدد برای بستن) */}
                     <button
@@ -2073,10 +2083,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         setIsLoginBoxOpen(false);
                         setCaseCodeError(null);
                       }}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-blue-950/25 transition-all flex items-center justify-between cursor-pointer"
                     >
-                      <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                      <span>ورود</span>
+                      <div className="flex items-center gap-3">
+                        <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                        <span>ورود</span>
+                      </div>
+                      <ChevronLeft className="w-5 h-5 text-white/80 -rotate-90 transition-transform" />
                     </button>
 
                     {/* باکس دریافت کد پرونده */}
@@ -2143,10 +2156,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     <button
                       type="button"
                       onClick={handleStartRegistration}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full py-3.5 sm:py-4 px-6 bg-[#008269] hover:bg-[#00705a] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-md transition-all flex items-center justify-between cursor-pointer"
                     >
-                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-[#084d3e]" />
-                      <span>ثبت نام</span>
+                      <div className="flex items-center gap-3">
+                        <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                        <span>ثبت نام</span>
+                      </div>
+                      <ChevronLeft className="w-5 h-5 text-white/80" />
                     </button>
                   </div>
                 )}
