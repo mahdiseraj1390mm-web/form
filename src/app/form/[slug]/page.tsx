@@ -67,28 +67,28 @@ function PublicFormContent() {
         />
       )}
 
-      {/* هدر فرم عمومی */}
-      <header className={`py-4 border-b border-slate-200/80 shadow-sm relative z-10 transition-colors ${
+      {/* هدر فرم عمومی - بهینه‌شده برای موبایل */}
+      <header className={`py-3 sm:py-4 border-b border-slate-200/80 shadow-xs relative z-10 transition-colors ${
         hasBgImage ? 'backdrop-blur-md bg-white/85' : 'bg-white'
       }`}>
-        <div className="max-w-3xl mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
-              <Layers className="w-4 h-4 text-blue-400" />
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
             </div>
-            <span className="font-extrabold text-sm text-slate-900 tracking-tight block">
+            <span className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight block truncate">
               {headerTitle}
             </span>
           </div>
 
-          <div className="text-xs text-slate-500 font-medium">
-            سامانه امن ثبت و دریافت داده‌ها
+          <div className="text-[10px] sm:text-xs text-slate-500 font-medium whitespace-nowrap shrink-0">
+            سامانه امن ثبت داده‌ها
           </div>
         </div>
       </header>
 
       {/* بوم رانر فرم */}
-      <main className="flex-1 flex flex-col justify-start py-2 sm:py-6 relative z-10">
+      <main className="flex-1 flex flex-col justify-start py-1.5 sm:py-6 relative z-10 w-full overflow-x-hidden">
         <FormRunner 
           key={form.id}
           form={form} 
@@ -101,12 +101,12 @@ function PublicFormContent() {
       </main>
 
       {/* پاورقی رسمی فرم عمومی */}
-      <footer className={`py-6 text-center text-xs text-slate-500 border-t border-slate-200/60 relative z-10 transition-colors ${
+      <footer className={`py-4 sm:py-6 text-center text-[11px] sm:text-xs text-slate-500 border-t border-slate-200/60 relative z-10 transition-colors ${
         hasBgImage ? 'backdrop-blur-md bg-white/85' : 'bg-white'
       }`}>
-        <div className="max-w-3xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2">
           <span>قدرت گرفته از سامانه فرم‌افزار سازمانی</span>
-          <span className="text-[11px]">رمزنگاری اطلاعات و اعتبارسنجی شبکه شاپرک</span>
+          <span className="text-[10px] sm:text-[11px] text-slate-400">رمزنگاری اطلاعات و اعتبارسنجی شبکه شاپرک</span>
         </div>
       </footer>
     </div>

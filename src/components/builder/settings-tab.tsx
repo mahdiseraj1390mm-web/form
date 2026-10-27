@@ -62,7 +62,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
     showPortalGate: false,
     requestLocation: false,
     showSecurityCode: false,
-    customIdPrefix: 'BH-',
+    customIdPrefix: 'SP',
     customIdSuffix: '',
     customIdMinDigits: 6,
     customIdStartNumber: 1000,
@@ -290,7 +290,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                     <label className="block text-xs font-semibold text-slate-600 mb-1">پیشوند</label>
                     <input
                       type="text"
-                      placeholder="مثال: BH-"
+                      placeholder="مثال: SP"
                       value={generalSettings.customIdPrefix || ''}
                       onChange={(e) => updateGeneral({ customIdPrefix: e.target.value })}
                       className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20"

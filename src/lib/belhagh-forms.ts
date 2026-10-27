@@ -24,6 +24,8 @@ export const belhaghRegistrationForm: Form = {
       title: 'مشخصات فردی',
       description: 'ثبت اطلاعات تماس و وضعیت خانوادگی',
       fieldIds: [
+        'f_name',
+        'f_family',
         'f_mobile',
         'f_birth_date',
         'f_role_in_family',
@@ -60,6 +62,24 @@ export const belhaghRegistrationForm: Form = {
       ],
     },
     // مرحله ۲: مشخصات فردی
+    {
+      id: 'f_name',
+      type: 'text',
+      label: 'نام:',
+      placeholder: 'نام خود را وارد کنید...',
+      stepId: 'step-2',
+      gridCols: 6,
+      validations: { required: true },
+    },
+    {
+      id: 'f_family',
+      type: 'text',
+      label: 'نام خانوادگی:',
+      placeholder: 'نام خانوادگی خود را وارد کنید...',
+      stepId: 'step-2',
+      gridCols: 6,
+      validations: { required: true },
+    },
     {
       id: 'f_mobile',
       type: 'mobile',
@@ -302,7 +322,7 @@ export const belhaghRegistrationForm: Form = {
     showPortalGate: true,
     portalTitle: 'مرکز خدمات روانشناسی بالحق',
     portalSubtitle: 'سامانه مشاوره تلفنی و پرونده مراجعین',
-
+    portalHeroImage: '/images/belhagh-hero.png',
     showPortalHeroImage: true,
     liveChatEnabled: true,
   },
@@ -336,9 +356,9 @@ export const belhaghBookingForm: Form = {
   steps: [
     {
       id: 'step-1',
-      title: 'مشخصات مُراجع',
-      description: 'اطلاعات هویتی و شماره تماس جهت مشاوره',
-      fieldIds: ['f_name', 'f_family', 'f_mobile'],
+      title: 'اطلاعات پرونده و تماس',
+      description: 'نوبت‌دهی با کد پرونده مشاوره بالحق',
+      fieldIds: ['f_case_code', 'f_mobile'],
     },
     {
       id: 'step-2',
@@ -410,23 +430,15 @@ export const belhaghBookingForm: Form = {
     },
   ],
   fields: [
-    // مرحله ۱: مشخصات مُراجع
+    // مرحله ۱: اطلاعات پرونده و تماس
     {
-      id: 'f_name',
+      id: 'f_case_code',
       type: 'text',
-      label: 'نام:',
-      placeholder: 'نام خود را وارد کنید...',
+      label: 'کد پرونده مشاوره:',
+      placeholder: 'مثال: SP260120',
+      helpText: 'کد پرونده اختصاصی شما که در زمان ثبت‌نام صادر گردیده است',
       stepId: 'step-1',
-      gridCols: 6,
-      validations: { required: true },
-    },
-    {
-      id: 'f_family',
-      type: 'text',
-      label: 'نام خانوادگی:',
-      placeholder: 'نام خانوادگی خود را وارد کنید...',
-      stepId: 'step-1',
-      gridCols: 6,
+      gridCols: 12,
       validations: { required: true },
     },
     {
@@ -1581,7 +1593,7 @@ export const belhaghBookingForm: Form = {
     showPortalGate: true,
     portalTitle: 'مرکز خدمات روانشناسی بالحق',
     portalSubtitle: 'سامانه مشاوره تلفنی و پرونده مراجعین',
-
+    portalHeroImage: '/images/belhagh-hero.png',
     showPortalHeroImage: true,
     liveChatEnabled: true,
   },

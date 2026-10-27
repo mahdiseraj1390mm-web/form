@@ -6,30 +6,9 @@ import { Form } from '@/types/form';
 
 const DB_PATH = path.join(process.cwd(), 'data', 'forms.json');
 
-// پاک‌سازی ارجاعات پیش‌فرض یا فایل حذف‌شده از فرم‌ها
+// بازگرداندن فرم‌ها بدون حذف تصویر پیش‌فرض
 function sanitizeForms(rawForms: Form[]): Form[] {
-  return rawForms.map((f) => {
-    const copy = { ...f };
-    if (copy.generalSettings) {
-      copy.generalSettings = { ...copy.generalSettings };
-      if (
-        copy.generalSettings.portalHeroImage === '/images/belhagh-hero.png' ||
-        copy.generalSettings.portalHeroImage === ''
-      ) {
-        copy.generalSettings.portalHeroImage = undefined;
-      }
-    }
-    if (copy.theme) {
-      copy.theme = { ...copy.theme };
-      if (
-        copy.theme.portalHeroImage === '/images/belhagh-hero.png' ||
-        copy.theme.portalHeroImage === ''
-      ) {
-        copy.theme.portalHeroImage = undefined;
-      }
-    }
-    return copy;
-  });
+  return rawForms;
 }
 
 async function loadFormsFromDb(): Promise<Form[]> {

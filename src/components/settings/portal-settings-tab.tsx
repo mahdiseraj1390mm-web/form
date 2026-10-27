@@ -532,18 +532,17 @@ export const PortalSettingsTab: React.FC = () => {
                 alt="Banner Preview"
                 className="w-full h-full object-cover object-top select-none pointer-events-none"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/50 to-transparent pointer-events-none" />
             </div>
           ) : (
             <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-teal-50 to-white pointer-events-none" />
           )}
           <div className="relative z-10 p-4 space-y-2.5 text-center">
-            {generalSettings.portalTitle && (
+            {!heroImage && generalSettings.portalTitle && (
               <h4 className="font-extrabold text-sm text-[#084d3e] tracking-tight drop-shadow-2xs">
                 {generalSettings.portalTitle}
               </h4>
             )}
-            {generalSettings.portalSubtitle && (
+            {!heroImage && generalSettings.portalSubtitle && (
               <p className="text-[11px] text-stone-700 font-bold drop-shadow-2xs">
                 {generalSettings.portalSubtitle}
               </p>

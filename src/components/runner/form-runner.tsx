@@ -62,6 +62,7 @@ import {
   generateCaseCode,
   getFieldDisplayValue
 } from '@/lib/persian';
+import { extractBookingDetails } from '@/lib/belhagh-sms-helper';
 import { iranProvinces } from '@/lib/iran-geo';
 import { PaymentModal } from './payment-modal';
 import { AppointmentScheduler } from './appointment-scheduler';
@@ -559,6 +560,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   initialFormData,
 }) => {
   const { submitFormResponse, submissions } = useForm();
+  const isBelhaghFamily = form.id.includes('belhagh') || form.slug === 'zexuz' || form.slug === '3uu4z';
   
   // استیت مقادیر فیلدها
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -681,22 +683,41 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     if (found) {
       setActiveCaseSubmission(found);
       setIsLoginBoxOpen(false);
+      const caseCode = found.trackingCode;
+      const prefilledData = {
+        ...found.data,
+        f_name: found.data?.f_name || found.data?.f_applicant_name || '',
+        f_family: found.data?.f_family || '',
+        f_mobile: found.data?.f_mobile || found.data?.mobile || '',
+        f_province_city: found.data?.f_province_city || '',
+        f_role_in_family: found.data?.f_role_in_family || '',
+        f_case_code: caseCode,
+      };
+
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('belhagh_current_case_code', found.trackingCode);
+          localStorage.setItem('belhagh_current_case_code', caseCode);
+          localStorage.setItem('belhagh_active_case_data', JSON.stringify(prefilledData));
         } catch (err) {}
       }
+
       setFormData((prev) => ({
         ...prev,
-        ...found.data,
-        f_name: found.data?.f_name || found.data?.f_applicant_name || prev.f_name || '',
-        f_family: found.data?.f_family || prev.f_family || '',
-        f_mobile: found.data?.f_mobile || found.data?.mobile || prev.f_mobile || '',
-        f_province_city: found.data?.f_province_city || prev.f_province_city || '',
-        f_role_in_family: found.data?.f_role_in_family || prev.f_role_in_family || '',
-        f_case_code: found.trackingCode,
+        ...prefilledData,
       }));
-      setAuthGateMode('viewCase');
+
+      // انتقال مستقیم به صفحه نوبت‌دهی بدون نمایش صفحه میانی
+      if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+        setAuthGateMode('filling');
+        setCurrentStepIndex(0);
+        setInternalPageIndex(0);
+      } else {
+        if (onNavigateToForm) {
+          onNavigateToForm('3uu4z');
+        } else if (typeof window !== 'undefined') {
+          window.location.href = '/form/3uu4z';
+        }
+      }
     } else {
       setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید.');
     }
@@ -748,6 +769,27 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   useEffect(() => {
     setSubmittedResult(null);
     setCurrentStepIndex(0);
+
+    // ورود مستقیم به نوبت‌دهی در صورت وجود پرونده فعال از پیش ثبت‌شده
+    if (typeof window !== 'undefined' && (form.id === 'form-belhagh-booking' || form.slug === '3uu4z')) {
+      try {
+        const storedCaseJson = localStorage.getItem('belhagh_active_case_data');
+        if (storedCaseJson) {
+          const caseData = JSON.parse(storedCaseJson);
+          setFormData((prev) => ({
+            ...prev,
+            ...caseData,
+            f_name: caseData.f_name || caseData.f_applicant_name || prev.f_name || '',
+            f_family: caseData.f_family || prev.f_family || '',
+            f_mobile: caseData.f_mobile || caseData.mobile || prev.f_mobile || '',
+            f_province_city: caseData.f_province_city || prev.f_province_city || '',
+            f_role_in_family: caseData.f_role_in_family || prev.f_role_in_family || '',
+            f_case_code: caseData.f_case_code || caseData.caseCode,
+          }));
+          setAuthGateMode('filling');
+        }
+      } catch (err) {}
+    }
     setInternalPageIndex(0);
     setErrors({});
     setOtpVerified(false);
@@ -795,6 +837,44 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       setAuthGateMode('filling');
     }
   }, [form.id, form.slug, form.fields, initialFormData]);
+
+  // بازیابی خودکار اطلاعات هویتی مراجع بر اساس کد پرونده در فرم نوبت‌دهی
+  useEffect(() => {
+    if (form.id !== 'form-belhagh-booking' && form.slug !== '3uu4z') return;
+    const rawCode = formData.f_case_code;
+    if (!rawCode || typeof rawCode !== 'string') return;
+    const cleanCode = toEnglishDigits(rawCode.trim().toUpperCase());
+    if (cleanCode.length < 5) return;
+
+    if (formData.f_name && formData.f_mobile) return;
+
+    let allSubs = [...submissions];
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('formafzar_submissions');
+        if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
+        const storedCases = localStorage.getItem('belhagh_all_cases');
+        if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
+      } catch (err) {}
+    }
+
+    const found = allSubs.find(
+      (s) =>
+        s.trackingCode?.toUpperCase() === cleanCode ||
+        s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
+    );
+
+    if (found && found.data) {
+      setFormData((prev) => ({
+        ...prev,
+        f_name: found.data.f_name || found.data.f_applicant_name || prev.f_name || '',
+        f_family: found.data.f_family || prev.f_family || '',
+        f_mobile: found.data.f_mobile || found.data.mobile || prev.f_mobile || '',
+        f_province_city: found.data.f_province_city || prev.f_province_city || '',
+        f_role_in_family: found.data.f_role_in_family || prev.f_role_in_family || '',
+      }));
+    }
+  }, [formData.f_case_code, form.id, form.slug, formData.f_name, formData.f_mobile, submissions]);
 
   const handleGoToNextChainedForm = () => {
     const targetSlug = form.behavior?.nextChainedForm?.formSlug || '3uu4z';
@@ -1318,8 +1398,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         }
       : undefined;
 
-    // ایجاد کد پرونده اختصاصی شامل حروف و اعداد و طول بیشتر از ۶ رقم (مثلاً BH-M749218)
-    const newCaseCode = generateCaseCode('BH');
+    // ایجاد یا حفظ کد پرونده اختصاصی (مثلاً SP849201)
+    const existingCaseCode = formData.f_case_code || formData.caseCode || (typeof window !== 'undefined' ? localStorage.getItem('belhagh_current_case_code') : null);
+    const newCaseCode = existingCaseCode || generateCaseCode('SP');
 
     const sub = submitFormResponse(form.id, { ...formData, caseCode: newCaseCode }, paymentInfo, quizResult);
     const finalSub: FormSubmission = {
@@ -1329,6 +1410,42 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     setSubmittedResult(finalSub);
     setActiveCaseSubmission(finalSub);
+
+    // ۱. ارسال پیامک کد پرونده پس از ثبت نام مراجع (مطابق پترن عکس ۳)
+    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
+      const clientMobile = formData.f_mobile || formData.mobile;
+      if (clientMobile) {
+        fetch('/api/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'case_registration',
+            mobile: clientMobile,
+            caseCode: newCaseCode,
+          }),
+        }).catch((err) => console.warn('SMS dispatch error:', err));
+      }
+    }
+
+    // ۲ و ۳. ارسال پیامک تایید نوبت برای مراجع و مشاور (فرم نوبت‌دهی 3uu4z)
+    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+      const booking = extractBookingDetails({ ...formData, ...finalSub.data });
+      fetch('/api/sms/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'appointment_booked',
+          clientMobile: booking.clientMobile,
+          counselorMobile: booking.counselorMobile,
+          clientName: booking.clientName,
+          counselorName: booking.counselorName,
+          date: booking.date,
+          time: booking.time,
+          province: booking.province,
+          city: booking.city,
+        }),
+      }).catch((err) => console.warn('SMS booking dispatch error:', err));
+    }
 
     // ذخیره دائمی پرونده در localStorage
     if (typeof window !== 'undefined') {
@@ -1396,6 +1513,102 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
   // صفحه تأیید نهایی ثبت فرم و رسید چاپی
   if (submittedResult) {
+    const isBookingForm = form.id === 'form-belhagh-booking' || form.slug === '3uu4z';
+
+    // در فرم نوبت‌دهی، مشخصات نوبت رزرو شده نمایش داده می‌شود نه کادر ذخیره مجدد پرونده
+    if (isBookingForm) {
+      const booking = extractBookingDetails({ ...formData, ...submittedResult.data });
+      return (
+        <div className="max-w-2xl mx-auto my-6 sm:my-12 p-5 sm:p-8 bg-white rounded-3xl border border-emerald-200 shadow-xl text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-200 shadow-sm">
+            <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10" />
+          </div>
+
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+              نوبت مشاوره شما با موفقیت ثبت شد
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1.5">
+              پیامک تأیید نوبت برای شما و مشاور محترم ارسال گردید.
+            </p>
+          </div>
+
+          {/* کارت مشخصات کامل نوبت رزرو شده */}
+          <div className="bg-gradient-to-br from-emerald-50/80 via-teal-50/40 to-slate-50 rounded-2xl border-2 border-emerald-300/80 p-5 sm:p-6 text-right space-y-4 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-emerald-200/60">
+              <span className="font-extrabold text-sm sm:text-base text-emerald-950 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-emerald-700" />
+                <span>مشخصات نوبت مشاوره تلفنی</span>
+              </span>
+              <span className="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold">
+                تأیید قطعی
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 text-xs sm:text-sm">
+              <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">مشاور انتخابی:</span>
+                <span className="font-extrabold text-slate-900">{booking.counselorName}</span>
+              </div>
+              <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">تاریخ نوبت (شمسی):</span>
+                <span className="font-extrabold text-emerald-800">{booking.date}</span>
+              </div>
+              <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">ساعت نوبت:</span>
+                <span className="font-extrabold text-emerald-800">{booking.time}</span>
+              </div>
+              <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                <span className="text-slate-500">مراجع محترم:</span>
+                <span className="font-extrabold text-slate-900">{booking.clientName}</span>
+              </div>
+              {booking.clientMobile && (
+                <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                  <span className="text-slate-500">شماره تماس مراجع:</span>
+                  <span className="font-mono font-bold text-slate-900" dir="ltr">{booking.clientMobile}</span>
+                </div>
+              )}
+              {submittedResult.trackingCode && (
+                <div className="p-3 bg-white/95 rounded-xl border border-emerald-100 flex items-center justify-between">
+                  <span className="text-slate-500">کد پرونده مراجع:</span>
+                  <span className="font-mono font-black text-blue-800 tracking-wider" dir="ltr">{submittedResult.trackingCode}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-emerald-900/5 rounded-xl border border-emerald-200 text-emerald-950 text-xs sm:text-sm font-semibold leading-relaxed">
+              📞 <strong>راهنمای تماس با مشاور:</strong> مشاور در ساعت مقرر در دسترس و منتظر تماس شما خواهد بود. لطفاً رأس ساعت تعیین‌شده با مشاور تماس بگیرید.
+            </div>
+          </div>
+
+          {/* دکمه‌های بازگشت و عملیات نهایی */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3 print:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                setSubmittedResult(null);
+                setAuthGateMode('portal');
+                setIsLoginBoxOpen(false);
+              }}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <Home className="w-4 h-4" />
+              <span>بازگشت به صفحه اصلی سامانه</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 active:scale-[0.99] transition-all cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>چاپ رسید نوبت</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-2xl mx-auto my-12 p-8 bg-white rounded-2xl border border-slate-200 shadow-xl text-center space-y-6">
         
@@ -1499,6 +1712,17 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* دکمه‌های بازگشت و عملیات نهایی */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3 print:hidden">
+          {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && (
+            <button
+              type="button"
+              onClick={handleGoToNextChainedForm}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white text-xs sm:text-sm font-black rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <span>ورود به مرحله اخذ نوبت مشاوره</span>
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
@@ -1551,7 +1775,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const heroImage =
       form.generalSettings?.portalHeroImage ||
       form.theme?.portalHeroImage ||
-      '';
+      (isBelhaghFamily ? '/images/belhagh-hero.png' : '');
 
     const showHeroImage =
       Boolean(heroImage) && form.generalSettings?.showPortalHeroImage !== false;
@@ -1566,11 +1790,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       >
         {isBelhaghFamily ? (
           <div className="max-w-[440px] w-full mx-auto my-2 sm:my-6 px-3 animate-in fade-in zoom-in-95 duration-300">
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-stone-300/80 shadow-2xl shadow-stone-900/15 text-center min-h-[540px] sm:min-h-[600px] flex flex-col justify-end bg-stone-100">
+            <div className="overflow-hidden rounded-[2.5rem] border border-stone-200/90 shadow-2xl shadow-stone-900/10 text-center flex flex-col bg-white">
               
-              {/* تصویر پس‌زمینه کامل کارت پورتال */}
+              {/* تصویر پس‌زمینه کارت پورتال: کاملاً تمیز و بدون هیچ دکمه‌ای روی آن */}
               {showHeroImage && heroImage ? (
-                <div className="absolute inset-0 w-full h-full overflow-hidden">
+                <div className="w-full relative overflow-hidden bg-stone-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={heroImage}
@@ -1581,35 +1805,16 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         target.src = '/images/belhagh-hero.jpg';
                       }
                     }}
-                    className="w-full h-full object-cover object-top select-none pointer-events-none"
+                    className="w-full h-auto object-cover select-none pointer-events-none block"
                   />
-                  {/* لایه گرادینت نرم در بخش پایینی برای تفکیک و خوانایی چشم‌نواز متون و دکمه‌ها روی تصویر */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/45 to-transparent pointer-events-none" />
                 </div>
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-teal-50 to-white" />
-              )}
+              ) : null}
 
-              {/* المان‌های پورتال: پایین تصویر و روی تصویر */}
-              <div className="relative z-10 px-5 sm:px-6 pb-6 pt-12 space-y-3.5">
-                {/* عنوان‌گونه اختصاصی و زیرعنوان روی بخش پایینی تصویر */}
-                {(portalTitle || portalSubtitle) && (
-                  <div className="text-center px-2">
-                    {portalTitle && (
-                      <h1 className="text-base sm:text-lg font-black text-[#084d3e] tracking-tight drop-shadow-xs">
-                        {portalTitle}
-                      </h1>
-                    )}
-                    {portalSubtitle && (
-                      <p className="text-xs text-stone-700 font-bold mt-1 drop-shadow-xs">
-                        {portalSubtitle}
-                      </p>
-                    )}
-                  </div>
-                )}
+              {/* المان‌های پورتال: زیر تصویر و در بخش تمیز و لمسی موبایل */}
+              <div className="p-5 sm:p-6 bg-white space-y-3.5">
 
                 {!isLoginBoxOpen ? (
-                  /* حالت اولیه مطابق رفرنس: فقط دکمه ورود و ثبت نام روی تصویر */
+                  /* حالت اولیه: فقط دکمه ورود و ثبت نام در زیر تصویر */
                   <div className="space-y-3.5 pt-1">
                     {/* دکمه ورود سبز تیره */}
                     <button
@@ -1651,7 +1856,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     </button>
 
                     {/* باکس دریافت کد پرونده */}
-                    <div className="bg-[#f7faf8]/95 backdrop-blur-md rounded-3xl border-2 border-[#739a8e] p-5 shadow-xl space-y-4 text-right animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="bg-[#f7faf8] rounded-3xl border-2 border-[#739a8e] p-5 shadow-inner space-y-4 text-right animate-in fade-in slide-in-from-top-2 duration-200">
                       {/* عنوان کادر با آیکون */}
                       <div className="flex items-center gap-2 text-[#084d3e] font-extrabold text-sm sm:text-base">
                         <User className="w-5 h-5 text-[#084d3e] shrink-0" />
@@ -1668,7 +1873,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                               setCaseCodeInput(e.target.value);
                               setCaseCodeError(null);
                             }}
-                            placeholder="کد پرونده"
+                            placeholder="مثال: SP123456"
                             className="w-full py-3.5 pr-11 pl-4 text-sm sm:text-base border-2 border-[#8faea4] rounded-2xl text-right font-mono font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-[#084d3e] bg-white text-slate-800 placeholder:text-slate-400 shadow-inner"
                             dir="ltr"
                           />
@@ -2132,7 +2337,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
   return (
     <div 
-      className="min-h-screen py-3 sm:py-8 px-2 sm:px-4 flex flex-col items-center justify-start transition-all duration-300 w-full relative"
+      className="min-h-screen py-2 sm:py-8 px-2 sm:px-4 flex flex-col items-center justify-start transition-all duration-300 w-full relative overflow-x-hidden"
       style={{
         backgroundColor: theme?.backgroundColor || '#f8fafc',
         backgroundImage: theme?.backgroundImage ? `url(${theme.backgroundImage})` : (theme?.backgroundGradient || undefined),
@@ -2151,9 +2356,41 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       )}
       <div className={`${formWidthClass} ${fontClass} w-full transition-all duration-200 relative z-10`}>
         
+        {/* نوار وضعیت پرونده متصل‌شده */}
+        {formData.f_case_code && (isBelhaghFamily || form.id.includes('belhagh') || form.slug === '3uu4z') && (
+          <div className="mb-3.5 p-3 px-4 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl text-xs flex items-center justify-between text-emerald-950 font-bold shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
+              <span>
+                نوبت‌دهی برای پرونده: <strong className="font-mono text-emerald-950 font-black text-sm px-1.5 py-0.5 bg-white rounded-lg border border-emerald-200">{formData.f_case_code}</strong>
+              </span>
+              {Boolean(formData.f_name || formData.f_family) && (
+                <span className="text-emerald-800">
+                  ({formData.f_name} {formData.f_family})
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('belhagh_active_case_data');
+                  localStorage.removeItem('belhagh_current_case_code');
+                }
+                setFormData((prev) => ({ ...prev, f_case_code: '' }));
+                setAuthGateMode('portal');
+                setIsLoginBoxOpen(true);
+              }}
+              className="text-[11px] text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
+            >
+              تغییر پرونده / ورود مجدد
+            </button>
+          </div>
+        )}
+
         {/* سربرگ فرم */}
         <div 
-          className={`${borderRadiusClass || 'rounded-2xl sm:rounded-3xl'} border shadow-xs p-4 sm:p-8 mb-4 sm:mb-6 transition-all`}
+          className={`${borderRadiusClass || 'rounded-2xl sm:rounded-3xl'} border shadow-xs p-3.5 sm:p-8 mb-3 sm:mb-6 transition-all`}
           style={{
             backgroundColor: theme?.cardBackgroundColor || '#ffffff',
             borderColor: theme?.borderColor || '#e2e8f0',
@@ -2386,7 +2623,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     value={formData[field.id] || ''}
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
-                    className={`w-full px-3.5 py-2.5 sm:py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
+                    className={`w-full px-3.5 py-2.5 sm:py-2 text-base sm:text-sm border rounded-xl touch-manipulation focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
                       hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
                     }`}
                   />
@@ -2803,7 +3040,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     value={formData[field.id] || ''}
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
-                    className={`w-full px-3.5 py-2.5 sm:py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
+                    className={`w-full px-3.5 py-2.5 sm:py-2 text-base sm:text-sm border rounded-xl touch-manipulation focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white transition-all ${
                       hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'
                     }`}
                   />

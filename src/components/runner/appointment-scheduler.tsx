@@ -254,7 +254,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         </div>
 
         {/* لیست دکمه‌های روزهای هفته (روزبندی) */}
-        <div className="grid grid-cols-7 gap-1.5 mt-3 pt-3 border-t border-slate-200/70">
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-slate-200/70">
           {WEEK_DAYS.map((day) => {
             const isDayAvailable = availableDays.includes(day.index);
             const isSelected = selectedDayIndex === day.index;
@@ -264,7 +264,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                 key={day.index}
                 type="button"
                 onClick={() => setSelectedDayIndex(day.index)}
-                className={`py-2 px-1 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                className={`py-2 px-1 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer touch-manipulation min-h-[44px] ${
                   isSelected
                     ? 'text-white font-extrabold shadow-sm scale-102 ring-2'
                     : isDayAvailable
@@ -347,7 +347,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                     key={slot.id}
                     type="button"
                     onClick={() => onChange(slot.label)}
-                    className={`p-3 rounded-xl border text-right transition-all flex items-center justify-between gap-2 cursor-pointer ${
+                    className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border text-right transition-all flex items-center justify-between gap-2 cursor-pointer touch-manipulation min-h-[46px] ${
                       isSelected
                         ? 'border-2 text-white font-extrabold shadow-sm scale-[1.01]'
                         : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100/80 text-slate-700 hover:border-slate-300'

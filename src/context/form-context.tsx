@@ -209,6 +209,13 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
+      const CACHE_VERSION = 'v-2026-10-26-r5';
+      const storedVersion = localStorage.getItem('formafzar_cache_ver');
+      if (storedVersion !== CACHE_VERSION) {
+        localStorage.removeItem('formafzar_forms');
+        localStorage.removeItem('belhagh_active_case_data');
+        localStorage.setItem('formafzar_cache_ver', CACHE_VERSION);
+      }
       const storedForms = localStorage.getItem('formafzar_forms');
       const storedSubmissions = localStorage.getItem('formafzar_submissions');
       const storedChat = localStorage.getItem('formafzar_chat');
@@ -231,10 +238,6 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
             generalSettings: {
               ...base.generalSettings,
               ...f.generalSettings,
-              portalHeroImage:
-                f.generalSettings?.portalHeroImage === '/images/belhagh-hero.png'
-                  ? undefined
-                  : f.generalSettings?.portalHeroImage,
             },
             theme: {
               ...(base.theme || { themeColor: '#0284c7', fontFamily: 'vazirmatn', borderRadius: 'md' }),
@@ -284,8 +287,8 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     }
     setIsInitialized(true);
 
-    // همگام‌سازی از پایگاه‌داده سرور تا تمامی کاربران و دستگاه‌ها آخرین فرم‌ها و بنرها را مشاهده کنند
-    fetch('/api/forms')
+    // همگام‌سازی از پایگاه‌داده سرور تا تمامی کاربران و دستگاه‌ها آخرین فرم‌ها و بنرها را مشاهده کنند (بدون کش)
+    fetch(`/api/forms?_nocache=${Date.now()}`, { cache: 'no-store', headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' } })
       .then((res) => res.json())
       .then((data) => {
         if (data?.forms && Array.isArray(data.forms) && data.forms.length > 0) {
