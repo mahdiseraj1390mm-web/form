@@ -3,7 +3,7 @@ import { FormSubmission } from '@/types/form';
 
 const connectionString =
   process.env.DATABASE_URL ||
-  'postgresql://neondb_owner:npg_Qot6MjL0GwuC@ep-dry-bar-b82s07yu-pooler.c-14.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require';
+  'postgresql://neondb_owner:npg_hbad8wm9oYIT@ep-flat-band-b70xzvhu-pooler.c-13.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require';
 
 export const sql = neon(connectionString);
 
