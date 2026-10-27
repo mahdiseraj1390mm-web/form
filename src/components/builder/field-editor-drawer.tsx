@@ -20,7 +20,8 @@ import {
   Ban,
   Edit2,
   GitBranch,
-  Sliders
+  Sliders,
+  Copy
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { predefinedLists, iranProvinces } from '@/lib/iran-geo';
@@ -31,6 +32,7 @@ interface FieldEditorDrawerProps {
   onClose: () => void;
   onUpdate: (updated: Partial<FormField>) => void;
   onDelete: (fieldId: string) => void;
+  onDuplicate?: (field: FormField) => void;
   onUpdateForm?: (updated: Partial<Form>) => void;
 }
 
@@ -40,6 +42,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
   onClose,
   onUpdate,
   onDelete,
+  onDuplicate,
   onUpdateForm,
 }) => {
   if (!field) return null;
@@ -349,6 +352,18 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
             <h3 className="text-xs sm:text-sm font-bold text-slate-900 mt-1">تنظیمات پیشرفته فیلد</h3>
           </div>
           <div className="flex items-center gap-1">
+            {onDuplicate && (
+              <button
+                type="button"
+                onClick={() => {
+                  onDuplicate(field);
+                }}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                title="کپی و تکثیر فیلد"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={() => {
                 if (confirm('آیا از حذف این فیلد اطمینان دارید؟')) {
