@@ -664,50 +664,53 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       return;
     }
 
-    let allSubs = [...submissions];
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('formafzar_submissions');
-        if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
-        const storedCases = localStorage.getItem('belhagh_all_cases');
-        if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
-      } catch (err) {}
+    let found: any = null;
+
+    // ۱. استعلام اول و مستقیم از دیتابیس ابری Neon (مرجع اصلی و قطعی پرونده‌ها)
+    try {
+      const res = await fetch(`/api/cases?code=${encodeURIComponent(cleanCode)}`);
+      const json = await res.json();
+      if (json.success && json.found && json.caseRecord) {
+        const rec = json.caseRecord;
+        found = {
+          id: `case-${rec.id}`,
+          formId: 'form-belhagh-registration',
+          trackingCode: rec.case_code,
+          status: 'approved',
+          createdAt: rec.created_at,
+          comments: [],
+          data: {
+            ...rec.data,
+            f_name: rec.first_name || rec.data?.f_name || '',
+            f_family: rec.last_name || rec.data?.f_family || '',
+            f_mobile: rec.mobile || rec.data?.f_mobile || '',
+            f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
+            f_role_in_family: rec.data?.f_role_in_family || '',
+            f_case_code: rec.case_code,
+          },
+        };
+      }
+    } catch (err) {
+      console.warn('API case lookup error:', err);
     }
 
-    let found = allSubs.find(
-      (s) =>
-        s.trackingCode?.toUpperCase() === cleanCode ||
-        s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
-    );
-
-    // اگر در حافظه مرورگر نبود، جستجوی بلادرنگ در دیتابیس ابری Neon
+    // ۲. در صورت قطع ارتباط شبکه، بررسی در حافظه محلی به عنوان پشتیبان
     if (!found) {
-      try {
-        const res = await fetch(`/api/cases?code=${encodeURIComponent(cleanCode)}`);
-        const json = await res.json();
-        if (json.success && json.found && json.caseRecord) {
-          const rec = json.caseRecord;
-          found = {
-            id: `case-${rec.id}`,
-            formId: 'form-belhagh-registration',
-            trackingCode: rec.case_code,
-            status: 'approved',
-            createdAt: rec.created_at,
-            comments: [],
-            data: {
-              ...rec.data,
-              f_name: rec.first_name || rec.data?.f_name || '',
-              f_family: rec.last_name || rec.data?.f_family || '',
-              f_mobile: rec.mobile || rec.data?.f_mobile || '',
-              f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
-              f_role_in_family: rec.data?.f_role_in_family || '',
-              f_case_code: rec.case_code,
-            },
-          };
-        }
-      } catch (err) {
-        console.warn('API case lookup error:', err);
+      let allSubs = [...submissions];
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('formafzar_submissions');
+          if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
+          const storedCases = localStorage.getItem('belhagh_all_cases');
+          if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
+        } catch (err) {}
       }
+
+      found = allSubs.find(
+        (s) =>
+          s.trackingCode?.toUpperCase() === cleanCode ||
+          s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
+      );
     }
 
     if (found) {
@@ -765,52 +768,63 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       return;
     }
 
-    let allSubs = [...submissions];
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('formafzar_submissions');
-        if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
-        const storedCases = localStorage.getItem('belhagh_all_cases');
-        if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
-      } catch (err) {}
+    let found: any = null;
+
+    // ۱. استعلام اول و قطعی از دیتابیس ابری Neon (مرجع اصلی)
+    try {
+      const res = await fetch(`/api/cases?mobile=${encodeURIComponent(cleanPhone)}`);
+      const json = await res.json();
+      if (json.success && json.found && json.caseRecord) {
+        const rec = json.caseRecord;
+        found = {
+          id: `case-${rec.id}`,
+          formId: 'form-belhagh-registration',
+          trackingCode: rec.case_code,
+          status: 'approved',
+          createdAt: rec.created_at,
+          comments: [],
+          data: {
+            ...rec.data,
+            f_name: rec.first_name || rec.data?.f_name || '',
+            f_family: rec.last_name || rec.data?.f_family || '',
+            f_mobile: rec.mobile || rec.data?.f_mobile || cleanPhone,
+            f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
+            f_role_in_family: rec.data?.f_role_in_family || '',
+            f_case_code: rec.case_code,
+          },
+        };
+      }
+    } catch (err) {
+      console.warn('API forgot lookup error:', err);
     }
 
-    let found = allSubs.find((s) => {
-      const subPhone = toEnglishDigits(String(s.data?.f_mobile || s.data?.mobile || s.data?.f_phone || '')).trim();
-      return subPhone === cleanPhone || subPhone.includes(cleanPhone) || (subPhone.length >= 10 && cleanPhone.includes(subPhone));
-    });
-
-    // اگر در حافظه مرورگر نبود، جستجو در دیتابیس ابری Neon
-    if (!found || !found.trackingCode) {
-      try {
-        const res = await fetch(`/api/cases?mobile=${encodeURIComponent(cleanPhone)}`);
-        const json = await res.json();
-        if (json.success && json.found && json.caseRecord) {
-          const rec = json.caseRecord;
-          found = {
-            id: `case-${rec.id}`,
-            formId: 'form-belhagh-registration',
-            trackingCode: rec.case_code,
-            status: 'approved',
-            createdAt: rec.created_at,
-            comments: [],
-            data: {
-              ...rec.data,
-              f_name: rec.first_name || rec.data?.f_name || '',
-              f_family: rec.last_name || rec.data?.f_family || '',
-              f_mobile: rec.mobile || rec.data?.f_mobile || '',
-              f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
-              f_role_in_family: rec.data?.f_role_in_family || '',
-              f_case_code: rec.case_code,
-            },
-          };
-        }
-      } catch (err) {
-        console.warn('API forgot lookup error:', err);
+    // ۲. در صورت قطع شبکه، بررسی به عنوان پشتیبان در حافظه محلی
+    if (!found) {
+      let allSubs = [...submissions];
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('formafzar_submissions');
+          if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
+          const storedCases = localStorage.getItem('belhagh_all_cases');
+          if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
+        } catch (err) {}
       }
+
+      found = allSubs.find((s) => {
+        const subPhone = toEnglishDigits(String(s.data?.f_mobile || s.data?.mobile || s.data?.f_phone || '')).trim();
+        return subPhone === cleanPhone || (subPhone.length >= 10 && cleanPhone.endsWith(subPhone));
+      });
     }
 
     if (found && found.trackingCode) {
+      // بروزرسانی حافظه محلی با کد معتبر دیتابیس
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('belhagh_current_case_code', found.trackingCode);
+          localStorage.setItem('belhagh_active_case_data', JSON.stringify(found.data));
+        } catch (err) {}
+      }
+
       setForgotResult({
         found: true,
         caseCode: found.trackingCode,
@@ -820,7 +834,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     } else {
       setForgotResult({
         found: false,
-        message: 'با این شماره پرونده‌ای در سامانه ثبت نشده است.',
+        message: 'با این شماره همراه هیچ پرونده‌ای در سامانه یافت نشد.',
       });
     }
   };
@@ -1876,29 +1890,23 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* دکمه‌های بازگشت و عملیات نهایی */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3 print:hidden">
-          {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && (
-            <button
-              type="button"
-              onClick={handleGoToNextChainedForm}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white text-xs sm:text-sm font-black rounded-xl shadow-md transition-all cursor-pointer"
-            >
-              <span>ورود به مرحله اخذ نوبت مشاوره</span>
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          )}
-
           <button
             type="button"
             onClick={() => {
               const code = submittedResult?.trackingCode || '';
+              if (typeof window !== 'undefined' && code) {
+                try {
+                  localStorage.setItem('belhagh_current_case_code', code);
+                } catch (e) {}
+              }
               setSubmittedResult(null);
-              setAuthGateMode('portal');
-              setIsLoginBoxOpen(false);
-              if (code) {
-                setCaseCodeInput(code);
+              if (onNavigateToForm) {
+                onNavigateToForm('3uu4z');
+              } else if (typeof window !== 'undefined') {
+                window.location.href = '/form/3uu4z';
               }
             }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all cursor-pointer"
           >
             <Home className="w-4 h-4" />
             <span>بازگشت به صفحه اصلی</span>
@@ -1907,7 +1915,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           <button
             type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 active:scale-[0.99] transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-3 bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 active:scale-[0.99] transition-all cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             <span>ذخیره و چاپ کد پرونده</span>
