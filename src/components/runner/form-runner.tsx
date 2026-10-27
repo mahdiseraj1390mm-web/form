@@ -647,27 +647,44 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const code = submittedResult?.trackingCode || '';
     if (!code) return;
 
+    // ۱. کپی سریع و قطعی در کلیپ‌بورد با پشتیبانی کامل از تمام مرورگرها
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(code);
+      } else if (typeof document !== 'undefined') {
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Clipboard copy error:', e);
+    }
 
+    // نمایش اعلان موفقیت‌آمیز کپی
     setCopiedCodeToast(true);
-    setTimeout(() => setCopiedCodeToast(false), 4000);
+    setTimeout(() => setCopiedCodeToast(false), 5000);
 
-    // اشتراک‌گذاری نیتیو در موبایل (جهت ذخیره در واتساپ، پیامک، یادداشت‌ها)
+    // ۲. اشتراک‌گذاری هوشمند در موبایل (جهت ارسال به واتساپ، ایتا، یادداشت‌ها، تلگرام، پیامک)
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
           title: 'کد پرونده سامانه روانشناسی بالحق',
-          text: `کد پرونده اختصاصی شما در مرکز روانشناسی بالحق: ${code}\nجهت ورود به سامانه و دریافت نوبت مشاوره این کد را ذخیره داشته باشید.\nhttps://s.psy-belhagh.com/form/3uu4z`,
+          text: `کد پرونده اختصاصی شما در مرکز روانشناسی بالحق: ${code}\nجهت ورود به سامانه و دریافت نوبت مشاوره این کد را ذخیره داشته باشید:\nhttps://s.psy-belhagh.com/form/3uu4z`,
         });
         return;
-      } catch (e) {}
+      } catch (e) {
+        // اگر کاربر اشتراک‌گذاری را لغو کرد به چاپ ادامه دهد
+      }
     }
 
-    // دستور چاپ در صورت اتصال به پرینتر یا مرورگر دسکتاپ
+    // ۳. دستور چاپ (پرینت یا ذخیره به صورت PDF)
     if (typeof window !== 'undefined' && typeof window.print === 'function') {
       try {
         window.print();
