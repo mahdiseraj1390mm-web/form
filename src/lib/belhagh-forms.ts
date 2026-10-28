@@ -1784,13 +1784,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -1828,13 +1828,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -1872,13 +1872,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -1916,13 +1916,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -1960,13 +1960,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2004,13 +2004,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2048,13 +2048,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2092,13 +2092,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2136,13 +2136,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2180,13 +2180,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2224,13 +2224,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2268,13 +2268,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2312,13 +2312,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2356,13 +2356,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2400,13 +2400,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2444,13 +2444,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2488,13 +2488,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2532,13 +2532,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2576,13 +2576,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2620,13 +2620,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2664,13 +2664,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2708,13 +2708,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2752,13 +2752,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2796,13 +2796,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2840,13 +2840,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2884,13 +2884,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2928,13 +2928,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -2972,13 +2972,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3016,13 +3016,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3060,13 +3060,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3104,13 +3104,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3148,13 +3148,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3192,13 +3192,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3236,13 +3236,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3280,13 +3280,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3324,13 +3324,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3368,13 +3368,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3412,13 +3412,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3456,13 +3456,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3500,13 +3500,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3544,13 +3544,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3588,13 +3588,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3632,13 +3632,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3676,13 +3676,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3720,13 +3720,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3764,13 +3764,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3808,13 +3808,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3852,13 +3852,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3896,13 +3896,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3940,13 +3940,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -3984,13 +3984,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -4028,13 +4028,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -4072,13 +4072,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -4116,13 +4116,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -4160,13 +4160,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -4204,13 +4204,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },
@@ -4248,13 +4248,13 @@ export const safaanAssessmentForm: Form = {
       "options": [
         {
           "id": "opt-1",
-          "label": "تقریباً هیچ‌وقت",
+          "label": "تقریباً هیچ وقت",
           "value": "1",
           "score": 1
         },
         {
           "id": "opt-2",
-          "label": "به‌ندرت",
+          "label": "بهندرت",
           "value": "2",
           "score": 2
         },

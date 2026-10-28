@@ -797,11 +797,19 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                 <span className="text-lg opacity-75">😍</span>
                               </div>
                             ) : field.type === 'likertScale' ? (
-                              <div className="grid grid-cols-4 gap-1 text-center text-[10px] py-1.5 px-2 bg-slate-50 rounded-lg border border-slate-200">
-                                <div className="p-1 border-l border-slate-200 text-slate-700">بسیار خوب</div>
-                                <div className="p-1 border-l border-slate-200 text-slate-700">خوب</div>
-                                <div className="p-1 border-l border-slate-200 text-slate-700">متوسط</div>
-                                <div className="p-1 text-slate-700">ضعیف</div>
+                              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 text-center text-[10px] py-1.5 px-2 bg-slate-50 rounded-lg border border-slate-200">
+                                {(field.options && field.options.length > 0 ? field.options : [
+                                  { label: 'تقریباً هیچ وقت', score: 1 },
+                                  { label: 'بهندرت', score: 2 },
+                                  { label: 'گاهی', score: 3 },
+                                  { label: 'بیشتر اوقات', score: 4 },
+                                  { label: 'تقریباً همیشه', score: 5 },
+                                ]).map((opt: any, oIdx: number) => (
+                                  <div key={oIdx} className="p-1 border-l last:border-l-0 border-slate-200 text-slate-700 flex flex-col items-center gap-0.5">
+                                    <span className="font-medium">{opt.label}</span>
+                                    <span className="text-[9px] text-slate-400 font-mono">({opt.score ?? oIdx + 1})</span>
+                                  </div>
+                                ))}
                               </div>
                             ) : field.type === 'mapLocation' ? (
                               <div className="h-12 border border-dashed border-emerald-300 rounded-lg bg-emerald-50/40 flex items-center justify-center gap-2 text-xs text-emerald-800">

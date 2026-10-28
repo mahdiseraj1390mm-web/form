@@ -3357,27 +3357,60 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     />
                   </div>
                 ) : field.type === 'likertScale' ? (
-                  <div className="grid grid-cols-4 gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-200">
-                    {[
-                      { label: 'بسیار خوب', val: 4 },
-                      { label: 'خوب', val: 3 },
-                      { label: 'متوسط', val: 2 },
-                      { label: 'ضعیف', val: 1 },
-                    ].map((item) => (
-                      <button
-                        key={item.val}
-                        type="button"
-                        onClick={() => handleFieldChange(field.id, item.val)}
-                        className={`py-2 px-1 text-center text-xs rounded-lg transition-all ${
-                          formData[field.id] === item.val
-                            ? 'bg-blue-600 text-white font-bold shadow-xs'
-                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
+                  (() => {
+                    const likertOptions = (field.options && field.options.length > 0)
+                      ? field.options.map((opt) => ({
+                          label: opt.label,
+                          val: opt.value !== undefined ? opt.value : (opt.score ?? opt.id),
+                          score: opt.score ?? Number(opt.value) ?? 1,
+                        }))
+                      : [
+                          { label: 'تقریباً هیچ وقت', val: '1', score: 1 },
+                          { label: 'بهندرت', val: '2', score: 2 },
+                          { label: 'گاهی', val: '3', score: 3 },
+                          { label: 'بیشتر اوقات', val: '4', score: 4 },
+                          { label: 'تقریباً همیشه', val: '5', score: 5 },
+                        ];
+
+                    const colsClass =
+                      likertOptions.length === 5
+                        ? 'grid-cols-2 sm:grid-cols-5'
+                        : likertOptions.length === 4
+                        ? 'grid-cols-2 sm:grid-cols-4'
+                        : 'grid-cols-3';
+
+                    return (
+                      <div className={`grid ${colsClass} gap-2 p-2 bg-slate-50/80 rounded-2xl border border-slate-200`}>
+                        {likertOptions.map((item) => {
+                          const isSelected =
+                            formData[field.id] !== undefined &&
+                            formData[field.id] !== null &&
+                            (String(formData[field.id]) === String(item.val) ||
+                             String(formData[field.id]) === String(item.score));
+
+                          return (
+                            <button
+                              key={String(item.val)}
+                              type="button"
+                              onClick={() => handleFieldChange(field.id, item.score ?? item.val)}
+                              className={`py-2.5 px-1.5 text-center rounded-xl transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                                isSelected
+                                  ? 'bg-blue-600 text-white font-bold shadow-xs ring-2 ring-blue-500/30'
+                                  : 'bg-white text-slate-700 hover:bg-slate-100 hover:border-slate-300 border border-slate-200'
+                              }`}
+                            >
+                              <span className="text-xs font-bold leading-tight">{item.label}</span>
+                              <span className={`text-[10px] font-extrabold font-mono px-2 py-0.5 rounded-full ${
+                                isSelected ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {item.score ?? item.val}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
                 ) : field.type === 'choiceTable' ? (
                   <div className="border border-slate-200 rounded-xl overflow-hidden text-xs bg-white">
                     <div className="grid grid-cols-3 bg-slate-100 font-bold p-2 text-center text-slate-700">
