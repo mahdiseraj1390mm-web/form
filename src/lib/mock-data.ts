@@ -470,7 +470,7 @@ export const initialForms: Form[] = [
     id: 'form-booking-04',
     title: 'سامانه نوبت‌دهی و رزرو وقت مشاوره تخصصی',
     slug: 'appointment-booking',
-    description: 'انتخاب سانس زمانی آزاد، جلوگیری از رزرو همزمان، ثبت مشخصات و دریافت پیامک یادآوری',
+    description: 'انتخاب نوبت زمانی آزاد (نوبت‌های باقی‌مانده)، جلوگیری از رزرو همزمان، ثبت مشخصات و دریافت پیامک یادآوری',
     category: 'نوبت‌دهی و رزرو',
     mode: 'classic',
     status: 'published',
@@ -512,7 +512,7 @@ export const initialForms: Form[] = [
       {
         id: 'bk_date_time',
         type: 'appointmentBooking',
-        label: 'انتخاب سانس و زمان مراجعه',
+        label: 'انتخاب نوبت و زمان مراجعه (نوبت‌های باقی‌مانده)',
         gridCols: 12,
         validations: { required: true },
         appointmentData: {

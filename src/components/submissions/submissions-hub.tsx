@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm } from '@/context/form-context';
 import { FormSubmission, SubmissionStatus, Form } from '@/types/form';
 import { ClientDossierFullview } from './client-dossier-fullview';
@@ -53,7 +53,29 @@ interface ClientCaseGroup {
 }
 
 export const SubmissionsHub: React.FC = () => {
-  const { forms, activeForm, submissions, updateSubmissionStatus, addSubmissionComment } = useForm();
+  const { forms, activeForm, submissions, updateSubmissionStatus, addSubmissionComment, refreshSubmissionsFromDb } = useForm();
+  const [isLoadingDb, setIsLoadingDb] = useState(false);
+
+  // بارگذاری اولیه پاسخ‌ها از Neon DB
+  useEffect(() => {
+    setIsLoadingDb(true);
+    Promise.all([
+      refreshSubmissionsFromDb('form-belhagh-registration'),
+      refreshSubmissionsFromDb('form-belhagh-booking'),
+    ]).finally(() => setIsLoadingDb(false));
+  }, []);
+
+  const handleRefreshFromDb = useCallback(async () => {
+    setIsLoadingDb(true);
+    try {
+      await Promise.all([
+        refreshSubmissionsFromDb('form-belhagh-registration'),
+        refreshSubmissionsFromDb('form-belhagh-booking'),
+      ]);
+    } finally {
+      setIsLoadingDb(false);
+    }
+  }, [refreshSubmissionsFromDb]);
   
   // دو زبانه اصلی: کارتابل پرونده‌های مراجعین (پیش‌فرض) و بانک ارسالی‌های تفکیکی فرم‌ها
   const [hubTab, setHubTab] = useState<'cases' | 'submissions'>('cases');
@@ -248,10 +270,18 @@ export const SubmissionsHub: React.FC = () => {
           </div>
 
           <button
+            onClick={handleRefreshFromDb}
+            disabled={isLoadingDb}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-60"
+          >
+            {isLoadingDb ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+            <span>{isLoadingDb ? 'در حال بارگذاری...' : 'بروزرسانی از سرور'}</span>
+          </button>
+          <button
             onClick={handleExportExcel}
             disabled={isExporting}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
-            title="خروجی فایل اکسل XLSX با فونت B Lotus"
+            title="خروجی فایل اکسل XLSX با فونت B Lotus" 
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
             <span>{isExporting ? 'در حال صدور...' : 'خروجی اکسل (XLSX)'}</span>

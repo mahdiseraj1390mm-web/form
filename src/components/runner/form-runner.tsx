@@ -632,6 +632,67 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     sub?: FormSubmission;
   } | null>(null);
 
+  // ثبت‌نام قبلی شناسایی‌شده در سامانه
+  const [duplicateCaseInfo, setDuplicateCaseInfo] = useState<{
+    exists: boolean;
+    caseCode: string;
+    name?: string;
+    message: string;
+  } | null>(null);
+
+  // وضعیت ذخیره / کپی کد پرونده در کلیپ‌بورد
+  const [copiedCodeToast, setCopiedCodeToast] = useState(false);
+
+  // تابع ذخیره و چاپ هوشمند کد پرونده برای موبایل و دسکتاپ
+  const handleSaveAndPrintCaseCode = async () => {
+    const code = submittedResult?.trackingCode || '';
+    if (!code) return;
+
+    // ۱. کپی سریع و قطعی در کلیپ‌بورد با پشتیبانی کامل از تمام مرورگرها
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else if (typeof document !== 'undefined') {
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+    } catch (e) {
+      console.warn('Clipboard copy error:', e);
+    }
+
+    // نمایش اعلان موفقیت‌آمیز کپی
+    setCopiedCodeToast(true);
+    setTimeout(() => setCopiedCodeToast(false), 5000);
+
+    // ۲. اشتراک‌گذاری هوشمند در موبایل (جهت ارسال به واتساپ، ایتا، یادداشت‌ها، تلگرام، پیامک)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'کد پرونده سامانه روانشناسی بالحق',
+          text: `کد پرونده اختصاصی شما در مرکز روانشناسی بالحق: ${code}\nجهت ورود به سامانه و دریافت نوبت مشاوره این کد را ذخیره داشته باشید:\nhttps://s.psy-belhagh.com/form/3uu4z`,
+        });
+        return;
+      } catch (e) {
+        // اگر کاربر اشتراک‌گذاری را لغو کرد به چاپ ادامه دهد
+      }
+    }
+
+    // ۳. دستور چاپ (پرینت یا ذخیره به صورت PDF)
+    if (typeof window !== 'undefined' && typeof window.print === 'function') {
+      try {
+        window.print();
+      } catch (e) {}
+    }
+  };
+
   // زمان ورود به هر مرحله جهت جلوگیری از پرش و ثبت تصادفی ناشی از دابل‌کلیک در مرحله قبل
   const [stepEnteredAt, setStepEnteredAt] = useState<number>(Date.now());
   useEffect(() => {
@@ -656,7 +717,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   };
 
   // ورود به پرونده با کد پرونده
-  const handleCaseLogin = (e?: React.FormEvent) => {
+  const handleCaseLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setCaseCodeError(null);
     const cleanCode = toEnglishDigits(caseCodeInput.trim().toUpperCase());
@@ -665,21 +726,54 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       return;
     }
 
-    let allSubs = [...submissions];
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('formafzar_submissions');
-        if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
-        const storedCases = localStorage.getItem('belhagh_all_cases');
-        if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
-      } catch (err) {}
+    let found: any = null;
+
+    // ۱. استعلام اول و مستقیم از دیتابیس ابری Neon (مرجع اصلی و قطعی پرونده‌ها)
+    try {
+      const res = await fetch(`/api/cases?code=${encodeURIComponent(cleanCode)}`);
+      const json = await res.json();
+      if (json.success && json.found && json.caseRecord) {
+        const rec = json.caseRecord;
+        found = {
+          id: `case-${rec.id}`,
+          formId: 'form-belhagh-registration',
+          trackingCode: rec.case_code,
+          status: 'approved',
+          createdAt: rec.created_at,
+          comments: [],
+          data: {
+            ...rec.data,
+            f_name: rec.first_name || rec.data?.f_name || '',
+            f_family: rec.last_name || rec.data?.f_family || '',
+            f_mobile: rec.mobile || rec.data?.f_mobile || '',
+            f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
+            f_role_in_family: rec.data?.f_role_in_family || '',
+            f_case_code: rec.case_code,
+          },
+        };
+      }
+    } catch (err) {
+      console.warn('API case lookup error:', err);
     }
 
-    const found = allSubs.find(
-      (s) =>
-        s.trackingCode?.toUpperCase() === cleanCode ||
-        s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
-    );
+    // ۲. در صورت قطع ارتباط شبکه، بررسی در حافظه محلی به عنوان پشتیبان
+    if (!found) {
+      let allSubs = [...submissions];
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('formafzar_submissions');
+          if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
+          const storedCases = localStorage.getItem('belhagh_all_cases');
+          if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
+        } catch (err) {}
+      }
+
+      found = allSubs.find(
+        (s) =>
+          s.trackingCode?.toUpperCase() === cleanCode ||
+          s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
+      );
+    }
 
     if (found) {
       setActiveCaseSubmission(found);
@@ -725,7 +819,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   };
 
   // بازیابی کد پرونده با شماره تلفن همراه
-  const handleForgotLookup = (e?: React.FormEvent) => {
+  const handleForgotLookup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanPhone = toEnglishDigits(forgotMobileInput.trim().replace(/\s+/g, ''));
     if (!cleanPhone || !isValidIranianMobile(cleanPhone)) {
@@ -736,32 +830,73 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       return;
     }
 
-    let allSubs = [...submissions];
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('formafzar_submissions');
-        if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
-        const storedCases = localStorage.getItem('belhagh_all_cases');
-        if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
-      } catch (err) {}
+    let found: any = null;
+
+    // ۱. استعلام اول و قطعی از دیتابیس ابری Neon (مرجع اصلی)
+    try {
+      const res = await fetch(`/api/cases?mobile=${encodeURIComponent(cleanPhone)}`);
+      const json = await res.json();
+      if (json.success && json.found && json.caseRecord) {
+        const rec = json.caseRecord;
+        found = {
+          id: `case-${rec.id}`,
+          formId: 'form-belhagh-registration',
+          trackingCode: rec.case_code,
+          status: 'approved',
+          createdAt: rec.created_at,
+          comments: [],
+          data: {
+            ...rec.data,
+            f_name: rec.first_name || rec.data?.f_name || '',
+            f_family: rec.last_name || rec.data?.f_family || '',
+            f_mobile: rec.mobile || rec.data?.f_mobile || cleanPhone,
+            f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
+            f_role_in_family: rec.data?.f_role_in_family || '',
+            f_case_code: rec.case_code,
+          },
+        };
+      }
+    } catch (err) {
+      console.warn('API forgot lookup error:', err);
     }
 
-    const found = allSubs.find((s) => {
-      const subPhone = toEnglishDigits(String(s.data?.f_mobile || s.data?.mobile || s.data?.f_phone || '')).trim();
-      return subPhone === cleanPhone || subPhone.includes(cleanPhone) || (subPhone.length >= 10 && cleanPhone.includes(subPhone));
-    });
+    // ۲. در صورت قطع شبکه، بررسی به عنوان پشتیبان در حافظه محلی
+    if (!found) {
+      let allSubs = [...submissions];
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('formafzar_submissions');
+          if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
+          const storedCases = localStorage.getItem('belhagh_all_cases');
+          if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
+        } catch (err) {}
+      }
+
+      found = allSubs.find((s) => {
+        const subPhone = toEnglishDigits(String(s.data?.f_mobile || s.data?.mobile || s.data?.f_phone || '')).trim();
+        return subPhone === cleanPhone || (subPhone.length >= 10 && cleanPhone.endsWith(subPhone));
+      });
+    }
 
     if (found && found.trackingCode) {
+      // بروزرسانی حافظه محلی با کد معتبر دیتابیس
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('belhagh_current_case_code', found.trackingCode);
+          localStorage.setItem('belhagh_active_case_data', JSON.stringify(found.data));
+        } catch (err) {}
+      }
+
       setForgotResult({
         found: true,
         caseCode: found.trackingCode,
-        message: 'پرونده شما با موفقیت شناسایی شد!',
+        message: 'پرونده شما با موفقیت شناسایی شد! کد پرونده قبلی شما بازیابی گردید.',
         sub: found,
       });
     } else {
       setForgotResult({
         found: false,
-        message: 'با این شماره ثبت نامی انجام نشده است.',
+        message: 'با این شماره همراه هیچ پرونده‌ای در سامانه یافت نشد.',
       });
     }
   };
@@ -1289,9 +1424,47 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   };
 
-  const handleNextStep = () => {
+  // اعتبارسنجی ثبت نام تکراری بر اساس دیتابیس
+  const checkDuplicateMobile = async (rawMobile: string): Promise<boolean> => {
+    const clean = toEnglishDigits(rawMobile.replace(/\s+/g, ''));
+    if (!clean || clean.length < 10) return false;
+    try {
+      const res = await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check_registration', mobile: clean }),
+      });
+      const data = await res.json();
+      if (data.exists) {
+        setDuplicateCaseInfo(data);
+        setErrors((prev) => ({
+          ...prev,
+          f_mobile: 'شما قبلاً ثبت نام کرده اید و باید شماره پرونده را بازیابی کنید',
+        }));
+        return true;
+      }
+    } catch (err) {
+      console.warn('Check registration error:', err);
+    }
+    return false;
+  };
+
+  const handleNextStep = async () => {
     if (!form.steps || form.steps.length === 0) return;
     if (!validateFields(currentStepFields)) return;
+
+    // بررسی ثبت‌نام تکراری در مرحله اول فرم ثبت نام مراجع
+    if ((form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && currentStepIndex === 0) {
+      const mobileVal = formData.f_mobile || formData.mobile;
+      if (mobileVal) {
+        const isDuplicate = await checkDuplicateMobile(mobileVal);
+        if (isDuplicate) {
+          const el = document.getElementById('field-f_mobile');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+    }
 
     if (currentStepIndex < form.steps.length - 1) {
       setCurrentStepIndex((prev) => Math.min(prev + 1, form.steps.length - 1));
@@ -1308,7 +1481,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     // جلوگیری قطعی از پرش از روی مرحله چهارم و ثبت تصادفی ناشی از دابل‌کلیک
@@ -1350,6 +1523,50 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     const fieldsToValidate = form.fields;
     if (!validateFields(fieldsToValidate)) return;
+
+    // بررسی ثبت‌نام تکراری قبل از ثبت نهایی فرم ثبت‌نام مراجع
+    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
+      const mobileVal = formData.f_mobile || formData.mobile;
+      if (mobileVal) {
+        const isDuplicate = await checkDuplicateMobile(mobileVal);
+        if (isDuplicate) {
+          const el = document.getElementById('field-f_mobile');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+    }
+
+    // بررسی رزرو نبودن نوبت انتخابی در فرم نوبت‌دهی (جلوگیری از ثبت نوبت تکراری در همان زمان)
+    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+      try {
+        const checkRes = await fetch('/api/cases?action=booked_slots&formId=form-belhagh-booking');
+        const checkData = await checkRes.json();
+        if (checkData.success && Array.isArray(checkData.bookedSlots)) {
+          let selectedSlotVal = '';
+          let bookingFieldKey = '';
+          for (const key of Object.keys(formData)) {
+            if (key.startsWith('f_booking_') && formData[key]) {
+              selectedSlotVal = String(formData[key]).trim();
+              bookingFieldKey = key;
+              break;
+            }
+          }
+
+          if (selectedSlotVal && checkData.bookedSlots.some((b: string) => b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal))) {
+            setErrors((prev) => ({
+              ...prev,
+              [bookingFieldKey]: '⚠️ این نوبت قبلاً توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
+            }));
+            const el = document.getElementById(`field-${bookingFieldKey}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Check booked slots on submit error:', e);
+      }
+    }
 
     if (form.payment.enabled && calculatedAmount > 0) {
       setIsPaymentOpen(true);
@@ -1495,6 +1712,33 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       }
     }
 
+    // ثبت یا نگهداری دائم پرونده در دیتابیس ابری Neon PostgreSQL
+    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
+      const clientMobile = formData.f_mobile || formData.mobile;
+      if (clientMobile) {
+        fetch('/api/cases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'register_case',
+            caseCode: newCaseCode,
+            mobile: clientMobile,
+            data: formData,
+          }),
+        }).catch((err) => console.warn('Case DB save error:', err));
+      }
+    }
+
+    // ذخیره سابمیشن در دیتابیس ابری Neon PostgreSQL
+    fetch('/api/cases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_submission',
+        submission: finalSub,
+      }),
+    }).catch((err) => console.warn('Submission DB save error:', err));
+
     // ۲ و ۳. ارسال پیامک تایید نوبت برای مراجع و مشاور (فرم نوبت‌دهی 3uu4z)
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
       const booking = extractBookingDetails({ ...formData, ...finalSub.data });
@@ -1635,8 +1879,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
                   <span>شماره تماس مشاور:</span>
                 </span>
-                <a href={`tel:${booking.counselorMobile || '09120449093'}`} className="font-mono font-black text-emerald-800 text-sm hover:underline" dir="ltr">
-                  {booking.counselorMobile || '09120449093'}
+                <a href={`tel:${booking.counselorMobile || ''}`} className="font-mono font-black text-emerald-800 text-sm hover:underline" dir="ltr">
+                  {booking.counselorMobile || 'ثبت‌شده در سامانه'}
                 </a>
               </div>
               {submittedResult.trackingCode && (
@@ -1649,7 +1893,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
             <div className="p-4 bg-emerald-900/5 rounded-xl border border-emerald-200 text-emerald-950 text-xs sm:text-sm font-semibold leading-relaxed flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
-                📞 <strong>راهنمای تماس با مشاور:</strong> مشاور در ساعت مقرر در دسترس و منتظر تماس شما خواهد بود. لطفاً رأس ساعت تعیین‌شده با شماره مشاور ({booking.counselorMobile || '09120449093'}) تماس بگیرید.
+                📞 <strong>راهنمای تماس با مشاور:</strong> مشاور در ساعت مقرر در دسترس و منتظر تماس شما خواهد بود. لطفاً رأس ساعت تعیین‌شده با شماره مشاور ({booking.counselorMobile || 'ثبت‌شده در پرونده'}) تماس بگیرید.
               </div>
               {booking.counselorMobile && (
                 <a
@@ -1685,7 +1929,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 try {
                   const printWin = window.open('', '_blank');
                   if (printWin) {
-                    printWin.document.write(`<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="utf-8"><title>رسید نوبت مشاوره روانشناسی بالحق</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { font-family: Tahoma, system-ui, sans-serif; padding: 20px; direction: rtl; text-align: right; background: #f8fafc; color: #1e293b; } .card { max-width: 480px; margin: 20px auto; background: #fff; border: 2px solid #059669; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); } h2 { color: #065f46; text-align: center; margin: 0 0 20px; font-size: 18px; border-bottom: 2px solid #ecfdf5; padding-bottom: 12px; } .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px; } .label { color: #64748b; font-weight: 500; } .val { font-weight: bold; color: #0f172a; } .highlight { color: #047857; font-size: 15px; } .guide { margin-top: 18px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 14px; border-radius: 12px; font-size: 13px; line-height: 1.7; color: #064e3b; } .btn { display: block; width: 100%; margin-top: 20px; padding: 14px; background: #084d3e; color: #fff; text-align: center; border-radius: 10px; font-weight: bold; font-size: 14px; border: none; cursor: pointer; } @media print { .btn { display: none !important; } body { background: #fff; padding: 0; } .card { box-shadow: none; border: 1px solid #ccc; } }</style></head><body><div class="card"><h2>رسید نوبت مشاوره تلفنی بالحق</h2><div class="row"><span class="label">مشاور انتخابی:</span><span class="val">${booking.counselorName}</span></div><div class="row"><span class="label">تاریخ نوبت:</span><span class="val highlight">${booking.date}</span></div><div class="row"><span class="label">ساعت نوبت:</span><span class="val highlight">${booking.time}</span></div><div class="row"><span class="label">مراجع محترم:</span><span class="val">${booking.clientName}</span></div><div class="row"><span class="label">شماره تماس مشاور:</span><span class="val" dir="ltr">${booking.counselorMobile || '09120449093'}</span></div><div class="row"><span class="label">کد پرونده:</span><span class="val" dir="ltr">${submittedResult.trackingCode || '-'}</span></div><div class="guide">📞 <strong>راهنما:</strong> لطفاً رأس ساعت مقرر با شماره مشاور (${booking.counselorMobile || '09120449093'}) تماس حاصل فرمایید.</div><button class="btn" onclick="window.print()">چاپ / ذخیره به صورت PDF</button></div><script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
+                    printWin.document.write(`<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="utf-8"><title>رسید نوبت مشاوره روانشناسی بالحق</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { font-family: Tahoma, system-ui, sans-serif; padding: 20px; direction: rtl; text-align: right; background: #f8fafc; color: #1e293b; } .card { max-width: 480px; margin: 20px auto; background: #fff; border: 2px solid #059669; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); } h2 { color: #065f46; text-align: center; margin: 0 0 20px; font-size: 18px; border-bottom: 2px solid #ecfdf5; padding-bottom: 12px; } .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px; } .label { color: #64748b; font-weight: 500; } .val { font-weight: bold; color: #0f172a; } .highlight { color: #047857; font-size: 15px; } .guide { margin-top: 18px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 14px; border-radius: 12px; font-size: 13px; line-height: 1.7; color: #064e3b; } .btn { display: block; width: 100%; margin-top: 20px; padding: 14px; background: #084d3e; color: #fff; text-align: center; border-radius: 10px; font-weight: bold; font-size: 14px; border: none; cursor: pointer; } @media print { .btn { display: none !important; } body { background: #fff; padding: 0; } .card { box-shadow: none; border: 1px solid #ccc; } }</style></head><body><div class="card"><h2>رسید نوبت مشاوره تلفنی بالحق</h2><div class="row"><span class="label">مشاور انتخابی:</span><span class="val">${booking.counselorName}</span></div><div class="row"><span class="label">تاریخ نوبت:</span><span class="val highlight">${booking.date}</span></div><div class="row"><span class="label">ساعت نوبت:</span><span class="val highlight">${booking.time}</span></div><div class="row"><span class="label">مراجع محترم:</span><span class="val">${booking.clientName}</span></div><div class="row"><span class="label">شماره تماس مشاور:</span><span class="val" dir="ltr">${booking.counselorMobile || ''}</span></div><div class="row"><span class="label">کد پرونده:</span><span class="val" dir="ltr">${submittedResult.trackingCode || '-'}</span></div><div class="guide">📞 <strong>راهنما:</strong> لطفاً رأس ساعت مقرر با شماره مشاور (${booking.counselorMobile || ''}) تماس حاصل فرمایید.</div><button class="btn" onclick="window.print()">چاپ / ذخیره به صورت PDF</button></div><script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
                     printWin.document.close();
                     return;
                   }
@@ -1807,29 +2051,23 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* دکمه‌های بازگشت و عملیات نهایی */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3 print:hidden">
-          {(form.id === 'form-belhagh-registration' || form.slug === 'zexuz') && (
-            <button
-              type="button"
-              onClick={handleGoToNextChainedForm}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white text-xs sm:text-sm font-black rounded-xl shadow-md transition-all cursor-pointer"
-            >
-              <span>ورود به مرحله اخذ نوبت مشاوره</span>
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          )}
-
           <button
             type="button"
             onClick={() => {
               const code = submittedResult?.trackingCode || '';
+              if (typeof window !== 'undefined' && code) {
+                try {
+                  localStorage.setItem('belhagh_current_case_code', code);
+                } catch (e) {}
+              }
               setSubmittedResult(null);
-              setAuthGateMode('portal');
-              setIsLoginBoxOpen(false);
-              if (code) {
-                setCaseCodeInput(code);
+              if (onNavigateToForm) {
+                onNavigateToForm('3uu4z');
+              } else if (typeof window !== 'undefined') {
+                window.location.href = '/form/3uu4z';
               }
             }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all cursor-pointer"
           >
             <Home className="w-4 h-4" />
             <span>بازگشت به صفحه اصلی</span>
@@ -1837,13 +2075,20 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
           <button
             type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 active:scale-[0.99] transition-all cursor-pointer"
+            onClick={handleSaveAndPrintCaseCode}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm hover:bg-slate-800 active:scale-[0.99] transition-all cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             <span>ذخیره و چاپ کد پرونده</span>
           </button>
         </div>
+
+        {copiedCodeToast && (
+          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center justify-center gap-2 animate-in fade-in duration-200">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>کد پرونده با موفقیت کپی و در حافظه دستگاه ذخیره شد!</span>
+          </div>
+        )}
 
       </div>
     );
@@ -1867,10 +2112,14 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       form.generalSettings?.portalSubtitle ||
       (isBelhaghFamily ? 'ورود به پرونده یا ثبت‌نام جدید' : form.description || '');
 
-    const heroImage =
+    let heroImage =
       form.generalSettings?.portalHeroImage ||
       form.theme?.portalHeroImage ||
       (isBelhaghFamily ? '/images/belhagh-hero.png' : '');
+
+    if (heroImage && isBelhaghFamily && !heroImage.includes('?v=')) {
+      heroImage = `${heroImage}?v=3`;
+    }
 
     const showHeroImage =
       Boolean(heroImage) && form.generalSettings?.showPortalHeroImage !== false;
@@ -1909,33 +2158,35 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               <div className="p-5 sm:p-6 bg-white space-y-3.5">
 
                 {!isLoginBoxOpen ? (
-                  /* حالت اولیه: فقط دکمه ورود و ثبت نام در زیر تصویر */
+                  /* حالت اولیه: دکمه‌های ثبت نام و ورود اختصاصی سامانه بالحق */
                   <div className="space-y-3.5 pt-1">
-                    {/* دکمه ورود سبز تیره */}
+                    {/* دکمه ثبت نام سبز زمردی مطابق تصویر بالحق */}
+                    <button
+                      type="button"
+                      onClick={handleStartRegistration}
+                      className="w-full relative py-3.5 sm:py-4 px-6 bg-[#008269] hover:bg-[#00705a] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+                    >
+                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                      <span>ثبت نام</span>
+                      <ChevronLeft className="w-5 h-5 text-white/80 absolute left-5 sm:left-6 top-1/2 -translate-y-1/2" />
+                    </button>
+
+                    {/* دکمه ورود سرمه‌ای مطابق تصویر بالحق */}
                     <button
                       type="button"
                       onClick={() => {
                         setIsLoginBoxOpen(true);
                         setCaseCodeError(null);
                       }}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full relative py-3.5 sm:py-4 px-6 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-blue-950/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
                       <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       <span>ورود</span>
-                    </button>
-
-                    {/* دکمه ثبت نام سفید با کادر سبز */}
-                    <button
-                      type="button"
-                      onClick={handleStartRegistration}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
-                    >
-                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-[#084d3e]" />
-                      <span>ثبت نام</span>
+                      <ChevronLeft className="w-5 h-5 text-white/80 absolute left-5 sm:left-6 top-1/2 -translate-y-1/2" />
                     </button>
                   </div>
                 ) : (
-                  /* حالت باز شده ورود مطابق رفرنس و تصویر ۲ و ۳ */
+                  /* حالت باز شده ورود با دکمه سرمه‌ای و کادر وارد کردن کد */
                   <div className="space-y-3.5 pt-1 animate-in fade-in duration-200">
                     {/* دکمه ورود در بالا (کلیک مجدد برای بستن) */}
                     <button
@@ -1944,10 +2195,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         setIsLoginBoxOpen(false);
                         setCaseCodeError(null);
                       }}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-[#084d3e] hover:bg-[#063e32] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-emerald-950/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full relative py-3.5 sm:py-4 px-6 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-lg shadow-blue-950/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
                       <LogIn className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       <span>ورود</span>
+                      <ChevronLeft className="w-5 h-5 text-white/80 absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 -rotate-90 transition-transform" />
                     </button>
 
                     {/* باکس دریافت کد پرونده */}
@@ -2014,10 +2266,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     <button
                       type="button"
                       onClick={handleStartRegistration}
-                      className="w-full py-3.5 sm:py-4 px-6 bg-white hover:bg-slate-50 active:scale-[0.99] text-[#084d3e] font-black text-base sm:text-lg rounded-full border-2 border-[#084d3e] shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      className="w-full relative py-3.5 sm:py-4 px-6 bg-[#008269] hover:bg-[#00705a] active:scale-[0.99] text-white font-black text-base sm:text-lg rounded-full shadow-md transition-all flex items-center justify-center gap-2.5 cursor-pointer"
                     >
-                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-[#084d3e]" />
+                      <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       <span>ثبت نام</span>
+                      <ChevronLeft className="w-5 h-5 text-white/80 absolute left-5 sm:left-6 top-1/2 -translate-y-1/2" />
                     </button>
                   </div>
                 )}
@@ -2172,14 +2425,42 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                           type="button"
                           onClick={() => {
                             if (forgotResult.sub) {
-                              setActiveCaseSubmission(forgotResult.sub);
-                              setAuthGateMode('viewCase');
+                              const sub = forgotResult.sub;
+                              setActiveCaseSubmission(sub);
+                              const caseCode = forgotResult.caseCode || sub.trackingCode;
+                              const prefilledData = {
+                                ...sub.data,
+                                f_name: sub.data?.f_name || sub.data?.f_applicant_name || '',
+                                f_family: sub.data?.f_family || '',
+                                f_mobile: sub.data?.f_mobile || sub.data?.mobile || '',
+                                f_province_city: sub.data?.f_province_city || '',
+                                f_role_in_family: sub.data?.f_role_in_family || '',
+                                f_case_code: caseCode,
+                              };
+                              if (typeof window !== 'undefined') {
+                                try {
+                                  localStorage.setItem('belhagh_current_case_code', caseCode);
+                                  localStorage.setItem('belhagh_active_case_data', JSON.stringify(prefilledData));
+                                } catch (err) {}
+                              }
+                              setFormData((prev) => ({ ...prev, ...prefilledData }));
                               setShowForgotModal(false);
+
+                              if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+                                setAuthGateMode('filling');
+                                setCurrentStepIndex(0);
+                                setInternalPageIndex(0);
+                              } else if (onNavigateToForm) {
+                                onNavigateToForm('3uu4z');
+                              } else if (typeof window !== 'undefined') {
+                                window.location.href = '/form/3uu4z';
+                              }
                             }
                           }}
-                          className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
+                          className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
                         >
-                          ورود به پرونده با این کد
+                          <LogIn className="w-4 h-4" />
+                          <span>ورود به پرونده و ادامه نوبت‌دهی</span>
                         </button>
                       </div>
                     )}
@@ -2668,7 +2949,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 <span className="font-extrabold block text-emerald-900">مرحله چهارم: موضوع مراجعه، انتخاب مشاور و تعیین نوبت</span>
                 <span className="text-[11px] text-emerald-800">
                   {formData['f_topic']
-                    ? 'موضوع مراجعه انتخاب شد. اکنون مشاور مورد نظر و سانس تقویم را رزرو فرمایید.'
+                    ? 'موضوع مراجعه انتخاب شد. اکنون مشاور مورد نظر و نوبت تقویم را رزرو فرمایید.'
                     : 'لطفاً ابتدا موضوع مراجعه را انتخاب فرمایید تا لیست مشاوران و تقویم نوبت‌دهی فعال گردد.'}
                 </span>
               </div>
@@ -3142,9 +3423,25 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 )}
 
                 {hasError && (
-                  <div className="text-[11px] text-rose-600 flex items-center gap-1 pt-0.5">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{errors[field.id]}</span>
+                  <div className="pt-1">
+                    <div className="text-xs text-rose-600 font-bold flex items-center gap-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                      <span>{errors[field.id]}</span>
+                    </div>
+                    {field.id === 'f_mobile' && errors[field.id]?.includes('بازیابی') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotMobileInput(formData[field.id] || '');
+                          setShowForgotModal(true);
+                          setForgotResult(null);
+                        }}
+                        className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>بازیابی شماره پرونده</span>
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -3358,6 +3655,79 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         }}
         onCancel={() => setIsPaymentOpen(false)}
       />
+
+      {/* مودال اطلاع‌رسانی ثبت‌نام تکراری */}
+      {duplicateCaseInfo && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-amber-200 text-center relative overflow-hidden">
+            <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 border border-amber-200 shadow-inner">
+              <AlertCircle className="w-9 h-9" />
+            </div>
+
+            <h3 className="text-base sm:text-lg font-black text-slate-800 mb-2 leading-relaxed">
+              شما قبلاً ثبت نام کرده اید و باید شماره پرونده را بازیابی کنید
+            </h3>
+
+            <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+              برای شماره همراه وارد شده قبلاً در سامانه خدمات روانشناسی بالحق پرونده تشکیل شده است و امکان ثبت‌نام مجدد وجود ندارد.
+            </p>
+
+            <div className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl mb-5 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">نام و نام خانوادگی:</span>
+                <span className="font-bold text-slate-800">{duplicateCaseInfo.name || 'مراجع محترم'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-amber-200/60">
+                <span className="text-slate-500 font-medium">کد پرونده شما:</span>
+                <span className="font-black text-amber-700 font-mono tracking-wider text-base">
+                  {duplicateCaseInfo.caseCode}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const caseCode = duplicateCaseInfo.caseCode;
+                  if (typeof window !== 'undefined') {
+                    try {
+                      localStorage.setItem('belhagh_current_case_code', caseCode);
+                    } catch (e) {}
+                  }
+                  setDuplicateCaseInfo(null);
+                  if (onNavigateToForm) {
+                    onNavigateToForm('3uu4z');
+                  } else if (typeof window !== 'undefined') {
+                    window.location.href = '/form/3uu4z';
+                  }
+                }}
+                className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>ورود به سامانه نوبت‌دهی با این پرونده</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDuplicateCaseInfo(null);
+                  setCurrentStepIndex(0);
+                  setInternalPageIndex(0);
+                  setTimeout(() => {
+                    const el = document.getElementById('field-f_mobile');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }, 100);
+                }}
+                className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <FileEdit className="w-4 h-4" />
+                <span>ویرایش یا تغییر شماره همراه</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>

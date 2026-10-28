@@ -139,6 +139,7 @@ interface FormContextType {
   updateSubmissionStatus: (submissionId: string, newStatus: SubmissionStatus) => void;
   addSubmissionComment: (submissionId: string, authorName: string, authorRole: string, content: string) => void;
   getSubmissionsByFormId: (formId: string) => FormSubmission[];
+  refreshSubmissionsFromDb: (formId?: string) => Promise<void>;
   sendChatMessage: (formId: string, sender: 'respondent' | 'admin', senderName: string, text: string) => void;
   getChatMessagesByFormId: (formId: string) => ChatMessage[];
   addWebhookLog: (log: Omit<WebhookLog, 'id' | 'createdAt'>) => void;
@@ -296,6 +297,47 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       // استفاده از مقادیر اولیه
     }
     setIsInitialized(true);
+
+    // همگام‌سازی پاسخ‌های فرم از Neon DB با هر بار بارگذاری صفحه ادمین
+    fetch('/api/cases?formId=form-belhagh-registration', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
+          setSubmissions((prev) => {
+            const existingIds = new Set(prev.map((s) => s.id));
+            const merged = [...prev];
+            data.submissions.forEach((s: FormSubmission) => {
+              if (!existingIds.has(s.id)) merged.push(s);
+              else {
+                const idx = merged.findIndex((m) => m.id === s.id);
+                if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
+              }
+            });
+            return merged;
+          });
+        }
+      })
+      .catch((err) => console.warn('Could not load belhagh-registration submissions from DB:', err));
+
+    fetch('/api/cases?formId=form-belhagh-booking', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
+          setSubmissions((prev) => {
+            const existingIds = new Set(prev.map((s) => s.id));
+            const merged = [...prev];
+            data.submissions.forEach((s: FormSubmission) => {
+              if (!existingIds.has(s.id)) merged.push(s);
+              else {
+                const idx = merged.findIndex((m) => m.id === s.id);
+                if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
+              }
+            });
+            return merged;
+          });
+        }
+      })
+      .catch((err) => console.warn('Could not load belhagh-booking submissions from DB:', err));
 
     // همگام‌سازی از پایگاه‌داده سرور تا تمامی کاربران و دستگاه‌ها آخرین فرم‌ها و بنرها را مشاهده کنند (بدون کش)
     fetch(`/api/forms?_nocache=${Date.now()}`, { cache: 'no-store', headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' } })
@@ -720,6 +762,34 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   const getSubmissionsByFormId = (formId: string) => submissions.filter((s) => s.formId === formId);
 
+  // واکشی پاسخ‌های فرم از دیتابیس ابری Neon و ادغام با وضعیت موجود
+  const refreshSubmissionsFromDb = async (formId?: string): Promise<void> => {
+    try {
+      const url = formId ? `/api/cases?formId=${formId}` : "/api/cases?formId=all";
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data?.submissions || !Array.isArray(data.submissions)) return;
+      const dbSubmissions: FormSubmission[] = data.submissions;
+      setSubmissions((prev) => {
+        const existingIds = new Set(prev.map((s) => s.id));
+        const merged = [...prev];
+        dbSubmissions.forEach((s) => {
+          if (!existingIds.has(s.id)) {
+            merged.push(s);
+          } else {
+            // به‌روزرسانی وضعیت با داده‌های پایگاه‌داده
+            const idx = merged.findIndex((m) => m.id === s.id);
+            if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
+          }
+        });
+        return merged;
+      });
+    } catch (err) {
+      console.warn('refreshSubmissionsFromDb error:', err);
+    }
+  };
+
   const sendChatMessage = (
     formId: string,
     sender: 'respondent' | 'admin',
@@ -807,6 +877,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         updateSubmissionStatus,
         addSubmissionComment,
         getSubmissionsByFormId,
+        refreshSubmissionsFromDb,
         sendChatMessage,
         getChatMessagesByFormId,
         addWebhookLog,

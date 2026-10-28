@@ -123,11 +123,18 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
 
   // کپی / تکثیر فیلد
   const handleDuplicateField = (field: FormField, index: number) => {
-    const duplicate: FormField = {
-      ...field,
-      id: `f_${Date.now()}`,
-      label: `${field.label} (کپی)`,
-    };
+    const duplicate: FormField = JSON.parse(JSON.stringify(field));
+    duplicate.id = `f_${Date.now()}`;
+    duplicate.label = `${field.label} (کپی)`;
+
+    // ایجاد شناسه‌های یکتا برای گزینه‌ها در صورت وجود
+    if (duplicate.options && Array.isArray(duplicate.options)) {
+      duplicate.options = duplicate.options.map((opt, oIdx) => ({
+        ...opt,
+        id: `opt_${Date.now()}_${oIdx}`,
+      }));
+    }
+
     const newFields = [...form.fields];
     newFields.splice(index + 1, 0, duplicate);
     onUpdateForm({ fields: newFields });
@@ -722,21 +729,23 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                 <ChevronDown className="w-3.5 h-3.5" />
                               </button>
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleDuplicateField(field, globalIndex);
                                 }}
-                                className="p-1 text-slate-400 hover:text-blue-600 hidden sm:block"
-                                title="کپی فیلد"
+                                className="p-1 text-slate-400 hover:text-blue-600 active:text-blue-700 active:scale-95 transition-all cursor-pointer"
+                                title="کپی و تکثیر این فیلد"
                               >
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleDeleteField(field.id);
                                 }}
-                                className="p-1 text-slate-400 hover:text-rose-600"
+                                className="p-1 text-slate-400 hover:text-rose-600 active:text-rose-700 active:scale-95 transition-all cursor-pointer"
                                 title="حذف فیلد"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />

@@ -3,8 +3,8 @@ import './globals.css';
 import { FormProvider } from '@/context/form-context';
 
 export const metadata: Metadata = {
-  title: 'فرم‌افزار سازمانی | سامانه جامع فرم‌ساز، آزمون‌ساز و گردش کار هوشمند',
-  description: 'پلتفرم حرفه‌ای، امن و پیشرفته ساخت انواع فرم‌های سازمانی، آزمون‌های آنلاین، فاکتورساز و رزرو نوبت با طراحی اختصاصی و اتصال به درگاه بانکی شاپرک',
+  title: 'سامانه خدمات روانشناسی بالحق',
+  description: 'سامانه هوشمند ثبت پرونده و نوبت‌دهی مرکز مشاوره و روانشناسی بالحق',
 };
 
 export const viewport: Viewport = {

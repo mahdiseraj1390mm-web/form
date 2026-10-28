@@ -108,6 +108,23 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
     setEditingField(null);
   };
 
+  const handleDuplicateField = (field: FormField) => {
+    const duplicate: FormField = JSON.parse(JSON.stringify(field));
+    duplicate.id = `f_${Date.now()}`;
+    duplicate.label = `${field.label} (کپی)`;
+    if (duplicate.options && Array.isArray(duplicate.options)) {
+      duplicate.options = duplicate.options.map((opt, oIdx) => ({
+        ...opt,
+        id: `opt_${Date.now()}_${oIdx}`,
+      }));
+    }
+    const idx = activeForm.fields.findIndex((f) => f.id === field.id);
+    const newFields = [...activeForm.fields];
+    newFields.splice(idx >= 0 ? idx + 1 : newFields.length, 0, duplicate);
+    updateForm(activeForm.id, { fields: newFields });
+    setEditingField(duplicate);
+  };
+
   const handleSave = () => {
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 2500);
@@ -327,6 +344,7 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
         onClose={() => setEditingField(null)}
         onUpdate={handleUpdateField}
         onDelete={handleDeleteField}
+        onDuplicate={handleDuplicateField}
         onUpdateForm={(updated) => updateForm(activeForm.id, updated)}
       />
 

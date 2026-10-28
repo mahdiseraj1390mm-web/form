@@ -20,7 +20,8 @@ import {
   Ban,
   Edit2,
   GitBranch,
-  Sliders
+  Sliders,
+  Copy
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { predefinedLists, iranProvinces } from '@/lib/iran-geo';
@@ -31,6 +32,7 @@ interface FieldEditorDrawerProps {
   onClose: () => void;
   onUpdate: (updated: Partial<FormField>) => void;
   onDelete: (fieldId: string) => void;
+  onDuplicate?: (field: FormField) => void;
   onUpdateForm?: (updated: Partial<Form>) => void;
 }
 
@@ -40,6 +42,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
   onClose,
   onUpdate,
   onDelete,
+  onDuplicate,
   onUpdateForm,
 }) => {
   if (!field) return null;
@@ -349,6 +352,18 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
             <h3 className="text-xs sm:text-sm font-bold text-slate-900 mt-1">تنظیمات پیشرفته فیلد</h3>
           </div>
           <div className="flex items-center gap-1">
+            {onDuplicate && (
+              <button
+                type="button"
+                onClick={() => {
+                  onDuplicate(field);
+                }}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                title="کپی و تکثیر فیلد"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
             <button
               onClick={() => {
                 if (confirm('آیا از حذف این فیلد اطمینان دارید؟')) {
@@ -1510,7 +1525,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
               </div>
             </div>
 
-            {/* بخش ۴: تولید خودکار و به‌روزرسانی سانس‌ها در فیلد */}
+            {/* بخش ۴: تولید خودکار و به‌روزرسانی نوبت‌ها در فیلد */}
             <div className="pt-1">
               <button
                 type="button"
@@ -1518,7 +1533,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                 className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>تولید و ثبت خودکار سانس‌های زمانی در فیلد</span>
+                <span>تولید و ثبت خودکار نوبت‌های زمانی در فیلد (نوبت‌های باقی‌مانده)</span>
               </button>
             </div>
           </div>

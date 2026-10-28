@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { getSmsSettings, saveSmsSettings, sendSharedPatternSms, SmsSettings } from '@/lib/sms-service';
+import { getSmsSettings, saveSmsSettings, sendSmartSms, SmsSettings } from '@/lib/sms-service';
 
 const LOG_PATH = path.join(process.cwd(), 'data', 'sms_logs.json');
 
@@ -54,14 +54,23 @@ export async function POST(req: NextRequest) {
 
       const testArgs = Array.isArray(args) && args.length > 0 
         ? args 
-        : ['تست سامانه', '09120449093', '1405/08/10', '16:00 الی 16:30'];
+        : patternKey === 'case_registration'
+        ? ['SP260120']
+        : patternKey === 'appointment_client'
+        ? ['مسیح مهدی پور', 'آقای فرهمندی', '۰۹:۰۰ صبح', 'یکشنبه : ۱۴۰۵/۸/۷']
+        : ['مهدی سراج', 'اصفهان', 'نجف آباد', mobile, 'پنجشنبه ۱۴۰۵/۸/۷', '۰۹:۰۰ الی ۰۹:۳۰ صبح'];
 
-      const result = await sendSharedPatternSms(
+      let exactMessage = patternConfig.template || 'پیامک آزمایشی سامانه';
+      testArgs.forEach((arg, idx) => {
+        exactMessage = exactMessage.replace(new RegExp(`\\{${idx}\\}`, 'g'), String(arg));
+      });
+
+      const result = await sendSmartSms(
         mobile,
         patternConfig.bodyId,
         testArgs,
         patternKey as any,
-        patternConfig.template || 'پیامک آزمایشی سامانه'
+        exactMessage
       );
 
       return NextResponse.json({ success: result.success, result });
