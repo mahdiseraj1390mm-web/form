@@ -54,21 +54,26 @@ interface ClientCaseGroup {
 
 export const SubmissionsHub: React.FC = () => {
   const { forms, activeForm, submissions, updateSubmissionStatus, addSubmissionComment, refreshSubmissionsFromDb } = useForm();
-  const [isLoadingDb, setIsLoadingDb] = useState(false);
-
-  // بارگذاری اولیه پاسخ‌ها از Neon DB
+  // همگام‌سازی کاملاً خودکار و زنده با پایگاه‌داده سرور
   useEffect(() => {
-    setIsLoadingDb(true);
-    refreshSubmissionsFromDb('all').finally(() => setIsLoadingDb(false));
-  }, []);
+    // ۱. دریافت بلافاصله در بدو ورود به کارتابل
+    refreshSubmissionsFromDb('all');
 
-  const handleRefreshFromDb = useCallback(async () => {
-    setIsLoadingDb(true);
-    try {
-      await refreshSubmissionsFromDb('all');
-    } finally {
-      setIsLoadingDb(false);
-    }
+    // ۲. به‌روزرسانی خودکار در پس‌زمینه هر ۱۵ ثانیه بدون نیاز به هیچ کلیک
+    const interval = setInterval(() => {
+      refreshSubmissionsFromDb('all');
+    }, 15000);
+
+    // ۳. دریافت آخرین اطلاعات به محض بازگشت کاربر به تب مرورگر
+    const handleFocus = () => {
+      refreshSubmissionsFromDb('all');
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [refreshSubmissionsFromDb]);
   
   // دو زبانه اصلی: کارتابل پرونده‌های مراجعین (پیش‌فرض) و بانک ارسالی‌های تفکیکی فرم‌ها
@@ -277,14 +282,7 @@ export const SubmissionsHub: React.FC = () => {
             </button>
           </div>
 
-          <button
-            onClick={handleRefreshFromDb}
-            disabled={isLoadingDb}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-60"
-          >
-            {isLoadingDb ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
-            <span>{isLoadingDb ? 'در حال بارگذاری...' : 'بروزرسانی از سرور'}</span>
-          </button>
+
           <button
             onClick={handleExportExcel}
             disabled={isExporting}
