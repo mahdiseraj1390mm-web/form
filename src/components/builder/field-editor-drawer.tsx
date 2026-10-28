@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FormField, SelectOption, Form, ConditionalRule, ConditionOperator, ConditionAction } from '@/types/form';
+import { FormField, SelectOption, Form, ConditionalRule, ConditionOperator, ConditionAction, WorkDayPeriod } from '@/types/form';
 import { 
   X, 
   Trash2, 
@@ -295,38 +295,43 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
     availableDays.forEach((dayIdx) => {
       const dayName = dayNames[dayIdx];
       const dayConfig = config?.daySchedules?.[dayIdx];
-      const period = dayConfig?.periods?.[0] || {
-        startHour: config?.startHour || '09:00',
-        endHour: config?.endHour || '17:00',
-      };
+      const periods = (dayConfig?.periods && dayConfig.periods.length > 0)
+        ? dayConfig.periods
+        : [{
+            startHour: config?.startHour || '09:00',
+            endHour: config?.endHour || '17:00',
+          }];
 
-      const [startH, startM] = period.startHour.split(':').map(Number);
-      const [endH, endM] = period.endHour.split(':').map(Number);
-      const startMin = (startH || 9) * 60 + (startM || 0);
-      const endMin = (endH || 17) * 60 + (endM || 0);
+      periods.forEach((period, pIdx) => {
+        const [startH, startM] = (period.startHour || '09:00').split(':').map(Number);
+        const [endH, endM] = (period.endHour || '17:00').split(':').map(Number);
+        const startMin = (startH || 0) * 60 + (startM || 0);
+        const endMin = (endH || 0) * 60 + (endM || 0);
 
-      let currentMin = startMin;
-      while (currentMin + slotDuration <= endMin) {
-        const sH = Math.floor(currentMin / 60);
-        const sM = currentMin % 60;
-        const eH = Math.floor((currentMin + slotDuration) / 60);
-        const eM = (currentMin + slotDuration) % 60;
+        let currentMin = startMin;
+        while (currentMin + slotDuration <= endMin) {
+          const sH = Math.floor(currentMin / 60);
+          const sM = currentMin % 60;
+          const eH = Math.floor((currentMin + slotDuration) / 60);
+          const eM = (currentMin + slotDuration) % 60;
 
-        const formatTime = (h: number, m: number) =>
-          `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
+          const formatTime = (h: number, m: number) =>
+            `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
 
-        const timeRange = `${toPersianDigits(formatTime(sH, sM))} الی ${toPersianDigits(formatTime(eH, eM))}`;
-        const label = `${dayName} - ساعت ${timeRange}`;
-        const optId = `slot_${dayIdx}_${currentMin}`;
+          const timeRange = `${toPersianDigits(formatTime(sH, sM))} الی ${toPersianDigits(formatTime(eH, eM))}`;
+          const shiftPart = periods.length > 1 ? ` (نوبت ${toPersianDigits(pIdx + 1)})` : '';
+          const label = `${dayName}${shiftPart} - ساعت ${timeRange}`;
+          const optId = `slot_${dayIdx}_${pIdx}_${currentMin}`;
 
-        newOptions.push({
-          id: optId,
-          label,
-          value: optId,
-        });
+          newOptions.push({
+            id: optId,
+            label,
+            value: optId,
+          });
 
-        currentMin += slotDuration + restDuration;
-      }
+          currentMin += slotDuration + restDuration;
+        }
+      });
     });
 
     onUpdate({ options: newOptions });
@@ -1252,12 +1257,40 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
               </div>
 
               {/* ساعات کاری پیش‌فرض */}
-              <div className="p-2.5 bg-white border border-slate-200 rounded-lg space-y-1.5">
+              <div className="p-2.5 bg-white border border-slate-200 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold text-slate-700">ساعت کاری عمومی مشاور:</span>
-                  <span className="text-[10px] text-slate-400">اعمال به همه روزهای فعال</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const curDays = field.appointmentData?.availableDays ?? [0, 1, 2, 3, 4];
+                      const sH = field.appointmentData?.startHour || '09:00';
+                      const eH = field.appointmentData?.endHour || '17:00';
+                      const prevSchedules = field.appointmentData?.daySchedules || {};
+                      const newSchedules: Record<number, any> = { ...prevSchedules };
+                      curDays.forEach((d) => {
+                        newSchedules[d] = {
+                          enabled: true,
+                          periods: [{ startHour: sH, endHour: eH }],
+                        };
+                      });
+                      onUpdate({
+                        appointmentData: {
+                          slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                          restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                          ...field.appointmentData,
+                          daySchedules: newSchedules,
+                        },
+                      });
+                    }}
+                    className="text-[10px] text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-bold px-2 py-0.5 rounded border border-emerald-200 transition-colors cursor-pointer"
+                    title="تنظیم ساعات تمام روزهای فعال به این بازه"
+                  >
+                    اعمال به همه روزهای فعال
+                  </button>
                 </div>
-                <div className="flex items-center gap-2 text-xs">
+
+                <div className="flex flex-wrap items-center gap-2 text-xs">
                   <div className="flex items-center gap-1">
                     <span className="text-[11px] text-slate-500">از:</span>
                     <input
@@ -1274,7 +1307,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                           },
                         });
                       }}
-                      className="px-2 py-1 border border-slate-300 rounded font-mono text-center text-xs bg-slate-50"
+                      className="px-2 py-1 border border-slate-300 rounded font-mono text-center text-xs bg-slate-50 text-slate-800"
                     />
                   </div>
                   <div className="flex items-center gap-1">
@@ -1293,31 +1326,76 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                           },
                         });
                       }}
-                      className="px-2 py-1 border border-slate-300 rounded font-mono text-center text-xs bg-slate-50"
+                      className="px-2 py-1 border border-slate-300 rounded font-mono text-center text-xs bg-slate-50 text-slate-800"
                     />
                   </div>
 
-                  <div className="flex items-center gap-1 mr-auto">
+                  <div className="flex flex-wrap items-center gap-1 mr-auto">
                     {[
                       { l: 'صبح (۰۹-۱۲)', s: '09:00', e: '12:00' },
                       { l: 'عصر (۱۶-۱۹)', s: '16:00', e: '19:00' },
                       { l: 'کامل (۰۹-۱۷)', s: '09:00', e: '17:00' },
-                    ].map((hPreset, hi) => (
+                      { 
+                        l: 'دو شیفته (۱۰-۱۲ و ۱۴-۱۶)', 
+                        periods: [
+                          { startHour: '10:00', endHour: '12:00' },
+                          { startHour: '14:00', endHour: '16:00' }
+                        ] 
+                      },
+                      { 
+                        l: 'دو شیفته (۰۹-۱۲ و ۱۶-۱۹)', 
+                        periods: [
+                          { startHour: '09:00', endHour: '12:00' },
+                          { startHour: '16:00', endHour: '19:00' }
+                        ] 
+                      },
+                    ].map((hPreset: any, hi) => (
                       <button
                         key={hi}
                         type="button"
                         onClick={() => {
-                          onUpdate({
-                            appointmentData: {
-                              slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
-                              restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
-                              ...field.appointmentData,
-                              startHour: hPreset.s,
-                              endHour: hPreset.e,
-                            },
-                          });
+                          const curDays = field.appointmentData?.availableDays ?? [0, 1, 2, 3, 4];
+                          const prevSchedules = field.appointmentData?.daySchedules || {};
+                          const newSchedules: Record<number, any> = { ...prevSchedules };
+                          
+                          if (hPreset.periods) {
+                            curDays.forEach((d) => {
+                              newSchedules[d] = {
+                                enabled: true,
+                                periods: hPreset.periods.map((p: any) => ({ ...p })),
+                              };
+                            });
+                            onUpdate({
+                              appointmentData: {
+                                slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                                restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                                ...field.appointmentData,
+                                startHour: hPreset.periods[0].startHour,
+                                endHour: hPreset.periods[hPreset.periods.length - 1].endHour,
+                                daySchedules: newSchedules,
+                              },
+                            });
+                          } else {
+                            curDays.forEach((d) => {
+                              newSchedules[d] = {
+                                enabled: true,
+                                periods: [{ startHour: hPreset.s, endHour: hPreset.e }],
+                              };
+                            });
+                            onUpdate({
+                              appointmentData: {
+                                slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                                restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                                ...field.appointmentData,
+                                startHour: hPreset.s,
+                                endHour: hPreset.e,
+                                daySchedules: newSchedules,
+                              },
+                            });
+                          }
                         }}
-                        className="px-1.5 py-0.5 text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded transition-colors"
+                        className="px-1.5 py-0.5 text-[9px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 rounded border border-slate-200 transition-colors whitespace-nowrap cursor-pointer"
+                        title="تنظیم ساعت روزهای فعال بر اساس این الگو"
                       >
                         {hPreset.l}
                       </button>
@@ -1326,7 +1404,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {[
                   { dayIdx: 0, label: 'شنبه' },
                   { dayIdx: 1, label: 'یکشنبه' },
@@ -1339,94 +1417,250 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                   const currentAvailableDays = field.appointmentData?.availableDays ?? [0, 1, 2, 3, 4];
                   const isDayEnabled = currentAvailableDays.includes(dayIdx);
                   const daySchedule = field.appointmentData?.daySchedules?.[dayIdx];
-                  const period = daySchedule?.periods?.[0] || {
-                    startHour: field.appointmentData?.startHour || '09:00',
-                    endHour: field.appointmentData?.endHour || '17:00',
-                  };
+                  const periods: WorkDayPeriod[] = (daySchedule?.periods && daySchedule.periods.length > 0)
+                    ? daySchedule.periods
+                    : [{
+                        startHour: field.appointmentData?.startHour || '09:00',
+                        endHour: field.appointmentData?.endHour || '17:00',
+                      }];
 
                   return (
                     <div 
                       key={dayIdx} 
-                      className={`p-2 rounded-lg border text-xs flex items-center justify-between gap-2 transition-all ${
-                        isDayEnabled ? 'bg-white border-slate-300 shadow-2xs' : 'bg-slate-100/60 border-slate-200 opacity-60'
+                      className={`p-2.5 rounded-xl border text-xs transition-all ${
+                        isDayEnabled ? 'bg-white border-slate-300 shadow-2xs space-y-2' : 'bg-slate-100/60 border-slate-200 opacity-60 flex items-center justify-between'
                       }`}
                     >
-                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 select-none">
-                        <input
-                          type="checkbox"
-                          checked={isDayEnabled}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            const newAvailable = checked
-                              ? Array.from(new Set([...currentAvailableDays, dayIdx]))
-                              : currentAvailableDays.filter((d) => d !== dayIdx);
-                            onUpdate({
-                              appointmentData: {
-                                slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
-                                restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
-                                startHour: field.appointmentData?.startHour ?? '09:00',
-                                endHour: field.appointmentData?.endHour ?? '17:00',
-                                ...field.appointmentData,
-                                availableDays: newAvailable,
-                              },
-                            });
-                          }}
-                          className="w-3.5 h-3.5 text-emerald-600 rounded"
-                        />
-                        <span>{label}</span>
-                        {!isDayEnabled && <span className="text-[10px] text-rose-500 font-semibold">(تعطیل)</span>}
-                      </label>
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 select-none">
+                          <input
+                            type="checkbox"
+                            checked={isDayEnabled}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              const newAvailable = checked
+                                ? Array.from(new Set([...currentAvailableDays, dayIdx]))
+                                : currentAvailableDays.filter((d) => d !== dayIdx);
+                              
+                              const prevSchedules = field.appointmentData?.daySchedules || {};
+                              const newSchedules = { ...prevSchedules };
+                              if (checked) {
+                                newSchedules[dayIdx] = {
+                                  enabled: true,
+                                  periods: (prevSchedules[dayIdx]?.periods && prevSchedules[dayIdx].periods.length > 0)
+                                    ? prevSchedules[dayIdx].periods
+                                    : [{
+                                        startHour: field.appointmentData?.startHour || '09:00',
+                                        endHour: field.appointmentData?.endHour || '17:00',
+                                      }],
+                                };
+                              } else if (newSchedules[dayIdx]) {
+                                newSchedules[dayIdx] = {
+                                  ...newSchedules[dayIdx],
+                                  enabled: false,
+                                };
+                              }
 
+                              onUpdate({
+                                appointmentData: {
+                                  slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                                  restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                                  startHour: field.appointmentData?.startHour ?? '09:00',
+                                  endHour: field.appointmentData?.endHour ?? '17:00',
+                                  ...field.appointmentData,
+                                  availableDays: newAvailable,
+                                  daySchedules: newSchedules,
+                                },
+                              });
+                            }}
+                            className="w-3.5 h-3.5 text-emerald-600 rounded"
+                          />
+                          <span>{label}</span>
+                          {isDayEnabled ? (
+                            <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-semibold border border-emerald-100">
+                              {toPersianDigits(periods.length)} نوبت کاری
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-rose-500 font-semibold">(تعطیل)</span>
+                          )}
+                        </label>
+
+                        {/* دکمه افزودن نوبت دوم یا بیشتر برای این روز */}
+                        {isDayEnabled && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const prevSchedules = field.appointmentData?.daySchedules || {};
+                              const currentPeriods = (prevSchedules[dayIdx]?.periods && prevSchedules[dayIdx].periods.length > 0)
+                                ? [...prevSchedules[dayIdx].periods]
+                                : [{
+                                    startHour: field.appointmentData?.startHour || '09:00',
+                                    endHour: field.appointmentData?.endHour || '17:00',
+                                  }];
+
+                              const lastPeriod = currentPeriods[currentPeriods.length - 1];
+                              let newStart = '14:00';
+                              let newEnd = '16:00';
+                              if (lastPeriod && lastPeriod.endHour) {
+                                const [h, m] = lastPeriod.endHour.split(':').map(Number);
+                                const startH = Math.min(21, (h || 12) + (h < 13 ? 2 : 1));
+                                const endH = Math.min(23, startH + 2);
+                                newStart = `${startH < 10 ? '0' + startH : startH}:${m < 10 ? '0' + m : m || '00'}`;
+                                newEnd = `${endH < 10 ? '0' + endH : endH}:${m < 10 ? '0' + endH : endH || '00'}`;
+                              }
+
+                              const updatedPeriods = [...currentPeriods, { startHour: newStart, endHour: newEnd }];
+
+                              onUpdate({
+                                appointmentData: {
+                                  slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                                  restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                                  startHour: field.appointmentData?.startHour ?? '09:00',
+                                  endHour: field.appointmentData?.endHour ?? '17:00',
+                                  ...field.appointmentData,
+                                  daySchedules: {
+                                    ...prevSchedules,
+                                    [dayIdx]: {
+                                      enabled: true,
+                                      periods: updatedPeriods,
+                                    },
+                                  },
+                                },
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors cursor-pointer"
+                            title={`افزودن نوبت کاری دوم یا بیشتر برای ${label}`}
+                          >
+                            <Plus className="w-3 h-3 text-emerald-600" />
+                            <span>افزودن نوبت جدید ({toPersianDigits(periods.length + 1)})</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* لیست تمام نوبت‌های زمانی این روز */}
                       {isDayEnabled && (
-                        <div className="flex items-center gap-1.5 text-[11px]">
-                          <span className="text-slate-400">از</span>
-                          <input
-                            type="time"
-                            value={period.startHour}
-                            onChange={(e) => {
-                              const newStart = e.target.value;
-                              const prevSchedules = field.appointmentData?.daySchedules || {};
-                              onUpdate({
-                                appointmentData: {
-                                  slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
-                                  restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
-                                  ...field.appointmentData,
-                                  daySchedules: {
-                                    ...prevSchedules,
-                                    [dayIdx]: {
-                                      enabled: true,
-                                      periods: [{ startHour: newStart, endHour: period.endHour }],
-                                    },
-                                  },
-                                },
-                              });
-                            }}
-                            className="w-16 px-1 py-0.5 border border-slate-300 rounded font-mono text-center text-xs bg-white"
-                          />
-                          <span className="text-slate-400">تا</span>
-                          <input
-                            type="time"
-                            value={period.endHour}
-                            onChange={(e) => {
-                              const newEnd = e.target.value;
-                              const prevSchedules = field.appointmentData?.daySchedules || {};
-                              onUpdate({
-                                appointmentData: {
-                                  slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
-                                  restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
-                                  ...field.appointmentData,
-                                  daySchedules: {
-                                    ...prevSchedules,
-                                    [dayIdx]: {
-                                      enabled: true,
-                                      periods: [{ startHour: period.startHour, endHour: newEnd }],
-                                    },
-                                  },
-                                },
-                              });
-                            }}
-                            className="w-16 px-1 py-0.5 border border-slate-300 rounded font-mono text-center text-xs bg-white"
-                          />
+                        <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                          {periods.map((period, pIdx) => (
+                            <div 
+                              key={pIdx} 
+                              className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px]"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-700 min-w-[50px]">
+                                  نوبت {toPersianDigits(pIdx + 1)}:
+                                </span>
+                                <span className="text-slate-400">از</span>
+                                <input
+                                  type="time"
+                                  value={period.startHour || '09:00'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const prevSchedules = field.appointmentData?.daySchedules || {};
+                                    const currentPeriods = (prevSchedules[dayIdx]?.periods && prevSchedules[dayIdx].periods.length > 0)
+                                      ? [...prevSchedules[dayIdx].periods]
+                                      : [{
+                                          startHour: field.appointmentData?.startHour || '09:00',
+                                          endHour: field.appointmentData?.endHour || '17:00',
+                                        }];
+                                    currentPeriods[pIdx] = {
+                                      ...currentPeriods[pIdx],
+                                      startHour: val,
+                                    };
+                                    onUpdate({
+                                      appointmentData: {
+                                        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                                        restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                                        startHour: field.appointmentData?.startHour ?? '09:00',
+                                        endHour: field.appointmentData?.endHour ?? '17:00',
+                                        ...field.appointmentData,
+                                        daySchedules: {
+                                          ...prevSchedules,
+                                          [dayIdx]: {
+                                            enabled: true,
+                                            periods: currentPeriods,
+                                          },
+                                        },
+                                      },
+                                    });
+                                  }}
+                                  className="w-16 px-1 py-0.5 border border-slate-300 rounded font-mono text-center text-xs bg-white text-slate-800"
+                                />
+                                <span className="text-slate-400">تا</span>
+                                <input
+                                  type="time"
+                                  value={period.endHour || '17:00'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const prevSchedules = field.appointmentData?.daySchedules || {};
+                                    const currentPeriods = (prevSchedules[dayIdx]?.periods && prevSchedules[dayIdx].periods.length > 0)
+                                      ? [...prevSchedules[dayIdx].periods]
+                                      : [{
+                                          startHour: field.appointmentData?.startHour || '09:00',
+                                          endHour: field.appointmentData?.endHour || '17:00',
+                                        }];
+                                    currentPeriods[pIdx] = {
+                                      ...currentPeriods[pIdx],
+                                      endHour: val,
+                                    };
+                                    onUpdate({
+                                      appointmentData: {
+                                        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                                        restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                                        startHour: field.appointmentData?.startHour ?? '09:00',
+                                        endHour: field.appointmentData?.endHour ?? '17:00',
+                                        ...field.appointmentData,
+                                        daySchedules: {
+                                          ...prevSchedules,
+                                          [dayIdx]: {
+                                            enabled: true,
+                                            periods: currentPeriods,
+                                          },
+                                        },
+                                      },
+                                    });
+                                  }}
+                                  className="w-16 px-1 py-0.5 border border-slate-300 rounded font-mono text-center text-xs bg-white text-slate-800"
+                                />
+                              </div>
+
+                              {/* دکمه حذف نوبت کاری */}
+                              {periods.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const prevSchedules = field.appointmentData?.daySchedules || {};
+                                    const currentPeriods = (prevSchedules[dayIdx]?.periods && prevSchedules[dayIdx].periods.length > 0)
+                                      ? [...prevSchedules[dayIdx].periods]
+                                      : [{
+                                          startHour: field.appointmentData?.startHour || '09:00',
+                                          endHour: field.appointmentData?.endHour || '17:00',
+                                        }];
+                                    const updatedPeriods = currentPeriods.filter((_, idx) => idx !== pIdx);
+                                    onUpdate({
+                                      appointmentData: {
+                                        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 30,
+                                        restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 5,
+                                        startHour: field.appointmentData?.startHour ?? '09:00',
+                                        endHour: field.appointmentData?.endHour ?? '17:00',
+                                        ...field.appointmentData,
+                                        daySchedules: {
+                                          ...prevSchedules,
+                                          [dayIdx]: {
+                                            enabled: true,
+                                            periods: updatedPeriods,
+                                          },
+                                        },
+                                      },
+                                    });
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                  title={`حذف نوبت ${toPersianDigits(pIdx + 1)}`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>

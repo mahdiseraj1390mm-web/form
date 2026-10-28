@@ -127,11 +127,13 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         const isTaken = bookedSlots.some(
           (b) => b === slotLabel || b === slotVal || b.includes(slotLabel) || slotLabel.includes(b)
         );
+        const shiftMatch = slotLabel.match(/(نوبت\s+(?:اول|دوم|سوم|چهارم|[\d\u06F0-\u06F9]+))/);
 
         return {
           id: o.value || o.id,
           label: o.label,
           time: o.label.replace(/^.*ساعت\s*/, '').trim(),
+          shiftName: shiftMatch ? shiftMatch[1] : undefined,
           available: !isTaken,
         };
       });
@@ -144,43 +146,55 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
     // بر اساس ساعات کاری و استراحت محاسبه کن
     const dayConfig = appointmentConfig?.daySchedules?.[selectedDayIndex];
-    const period = dayConfig?.periods?.[0] || {
-      startHour: appointmentConfig?.startHour || '09:00',
-      endHour: appointmentConfig?.endHour || '17:00',
-    };
+    const periods = (dayConfig?.periods && dayConfig.periods.length > 0)
+      ? dayConfig.periods
+      : [{
+          startHour: appointmentConfig?.startHour || '09:00',
+          endHour: appointmentConfig?.endHour || '17:00',
+        }];
 
-    const [startH, startM] = (period.startHour || '09:00').split(':').map(Number);
-    const [endH, endM] = (period.endHour || '17:00').split(':').map(Number);
+    const slots: Array<{ id: string; label: string; time: string; shiftName?: string; available: boolean }> = [];
 
-    const startTotalMin = (startH || 9) * 60 + (startM || 0);
-    const endTotalMin = (endH || 17) * 60 + (endM || 0);
+    periods.forEach((period, pIdx) => {
+      const [startH, startM] = (period.startHour || '09:00').split(':').map(Number);
+      const [endH, endM] = (period.endHour || '17:00').split(':').map(Number);
 
-    const slots: Array<{ id: string; label: string; time: string; available: boolean }> = [];
-    let currentMin = startTotalMin;
+      const startTotalMin = (startH || 0) * 60 + (startM || 0);
+      const endTotalMin = (endH || 0) * 60 + (endM || 0);
 
-    while (currentMin + slotDuration <= endTotalMin) {
-      const slotStartH = Math.floor(currentMin / 60);
-      const slotStartM = currentMin % 60;
-      const slotEndMin = currentMin + slotDuration;
-      const slotEndH = Math.floor(slotEndMin / 60);
-      const slotEndM = slotEndMin % 60;
+      let currentMin = startTotalMin;
 
-      const formatTime = (h: number, m: number) =>
-        `${toPersianDigits(h < 10 ? '0' + h : h)}:${toPersianDigits(m < 10 ? '0' + m : m)}`;
+      while (currentMin + slotDuration <= endTotalMin) {
+        const slotStartH = Math.floor(currentMin / 60);
+        const slotStartM = currentMin % 60;
+        const slotEndMin = currentMin + slotDuration;
+        const slotEndH = Math.floor(slotEndMin / 60);
+        const slotEndM = slotEndMin % 60;
 
-      const timeRange = `${formatTime(slotStartH, slotStartM)} الی ${formatTime(slotEndH, slotEndM)}`;
-      const fullLabel = `${currentDay.name} - ساعت ${timeRange}`;
+        const formatTime = (h: number, m: number) =>
+          `${toPersianDigits(h < 10 ? '0' + h : h)}:${toPersianDigits(m < 10 ? '0' + m : m)}`;
 
-      slots.push({
-        id: `slot_${selectedDayIndex}_${currentMin}`,
-        label: fullLabel,
-        time: timeRange,
-        available: true,
-      });
+        const timeRange = `${formatTime(slotStartH, slotStartM)} الی ${formatTime(slotEndH, slotEndM)}`;
+        const shiftPart = periods.length > 1 ? ` (نوبت ${toPersianDigits(pIdx + 1)})` : '';
+        const fullLabel = `${currentDay.name}${shiftPart} - ساعت ${timeRange}`;
+        const optId = `slot_${selectedDayIndex}_${pIdx}_${currentMin}`;
 
-      // اضافه کردن مدت جلسه + زمان استراحت بین مشاوره‌ها
-      currentMin += slotDuration + restDuration;
-    }
+        const isTaken = bookedSlots.some(
+          (b) => b === fullLabel || b === optId || b.includes(timeRange)
+        );
+
+        slots.push({
+          id: optId,
+          label: fullLabel,
+          time: timeRange,
+          shiftName: periods.length > 1 ? `نوبت ${toPersianDigits(pIdx + 1)}` : undefined,
+          available: !isTaken,
+        });
+
+        // اضافه کردن مدت جلسه + زمان استراحت بین مشاوره‌ها
+        currentMin += slotDuration + restDuration;
+      }
+    });
 
     return slots;
   }, [field.options, appointmentConfig, selectedDayIndex, availableDays, slotDuration, restDuration, bookedSlots]);
@@ -210,7 +224,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 text-blue-800 font-extrabold border border-blue-200/80 shadow-xs">
               <Clock className="w-3.5 h-3.5 text-blue-600" />
-              <span>مدت هر جلسه مشاوره: ۴۵ دقیقه</span>
+              <span>مدت هر جلسه مشاوره: {toPersianDigits(slotDuration)} دقیقه</span>
             </span>
           </div>
         </div>
@@ -225,11 +239,15 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             </span>
             <div className="flex flex-wrap items-center gap-1">
               {workingDaysList.map((day) => {
-                const dayConfig = appointmentConfig?.daySchedules?.[day.index]?.periods?.[0];
-                const hoursLabel = dayConfig 
-                  ? ` (از ${toPersianDigits(dayConfig.startHour)} تا ${toPersianDigits(dayConfig.endHour)})`
-                  : appointmentConfig?.startHour && appointmentConfig?.endHour
-                  ? ` (از ${toPersianDigits(appointmentConfig.startHour)} تا ${toPersianDigits(appointmentConfig.endHour)})`
+                const daySchedule = appointmentConfig?.daySchedules?.[day.index];
+                const periods = (daySchedule?.periods && daySchedule.periods.length > 0)
+                  ? daySchedule.periods
+                  : (appointmentConfig?.startHour && appointmentConfig?.endHour)
+                  ? [{ startHour: appointmentConfig.startHour, endHour: appointmentConfig.endHour }]
+                  : [];
+
+                const hoursLabel = periods.length > 0
+                  ? ` (${periods.map((p) => `از ${toPersianDigits(p.startHour)} تا ${toPersianDigits(p.endHour)}`).join(' و ')})`
                   : '';
 
                 return (
@@ -384,9 +402,16 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                       ) : (
                         <Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
                       )}
-                      <span className={`text-xs font-bold font-mono ${isBooked ? 'line-through text-slate-400' : ''}`}>
-                        {slot.time || slot.label}
-                      </span>
+                      <div className="flex flex-col text-right">
+                        <span className={`text-xs font-bold font-mono ${isBooked ? 'line-through text-slate-400' : ''}`}>
+                          {slot.time || slot.label}
+                        </span>
+                        {slot.shiftName && (
+                          <span className={`text-[10px] ${isSelected ? 'text-white/90 font-medium' : 'text-emerald-700 font-semibold'}`}>
+                            {slot.shiftName}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {isBooked ? (

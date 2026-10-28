@@ -880,6 +880,7 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                 <div className="flex items-center justify-between pt-1 border-t border-emerald-200/70 text-[10px] text-slate-500">
                                   <span>
                                     ساعات کاری: {toPersianDigits(field.appointmentData?.startHour || '09:00')} الی {toPersianDigits(field.appointmentData?.endHour || '17:00')}
+                                    {Object.values(field.appointmentData?.daySchedules || {}).some((d: any) => (d.periods?.length || 0) > 1) ? ' (چندنوبته)' : ''}
                                     {field.appointmentData?.restTimeMinutes ? ` (استراحت: ${toPersianDigits(field.appointmentData.restTimeMinutes)} دقیقه)` : ''}
                                   </span>
                                   <span className="text-emerald-700 font-bold">
