@@ -13,8 +13,28 @@ export async function GET(req: NextRequest) {
   const mobile = searchParams.get('mobile');
   const code = searchParams.get('code');
   const formId = searchParams.get('formId');
+  const action = searchParams.get('action');
 
   try {
+    // دریافت تمامی نوبت‌های از قبل رزرو شده جهت جلوگیری از ثبت تکراری نوبت در یک زمان
+    if (action === 'booked_slots') {
+      const targetFormId = formId || 'form-belhagh-booking';
+      const submissions = await getFormSubmissionsFromDb(targetFormId);
+      const bookedSlots: string[] = [];
+
+      submissions.forEach((s) => {
+        if (s.data && typeof s.data === 'object') {
+          Object.entries(s.data).forEach(([key, val]) => {
+            if (key.startsWith('f_booking_') && val && typeof val === 'string') {
+              bookedSlots.push(val.trim());
+            }
+          });
+        }
+      });
+
+      return NextResponse.json({ success: true, bookedSlots });
+    }
+
     if (mobile) {
       const clean = normalizeMobile(mobile);
       const caseRecord = await getCaseByMobile(clean);

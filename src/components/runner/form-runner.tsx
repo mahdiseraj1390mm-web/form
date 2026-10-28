@@ -1536,6 +1536,37 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       }
     }
 
+    // بررسی رزرو نبودن نوبت انتخابی در فرم نوبت‌دهی (جلوگیری از ثبت نوبت تکراری در همان زمان)
+    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+      try {
+        const checkRes = await fetch('/api/cases?action=booked_slots&formId=form-belhagh-booking');
+        const checkData = await checkRes.json();
+        if (checkData.success && Array.isArray(checkData.bookedSlots)) {
+          let selectedSlotVal = '';
+          let bookingFieldKey = '';
+          for (const key of Object.keys(formData)) {
+            if (key.startsWith('f_booking_') && formData[key]) {
+              selectedSlotVal = String(formData[key]).trim();
+              bookingFieldKey = key;
+              break;
+            }
+          }
+
+          if (selectedSlotVal && checkData.bookedSlots.some((b: string) => b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal))) {
+            setErrors((prev) => ({
+              ...prev,
+              [bookingFieldKey]: '⚠️ این نوبت قبلاً توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
+            }));
+            const el = document.getElementById(`field-${bookingFieldKey}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Check booked slots on submit error:', e);
+      }
+    }
+
     if (form.payment.enabled && calculatedAmount > 0) {
       setIsPaymentOpen(true);
       return;
