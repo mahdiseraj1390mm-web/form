@@ -52,8 +52,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, found: false, message: 'پرونده‌ای با این کد یافت نشد.' });
     }
 
-    if (formId) {
-      const submissions = await getFormSubmissionsFromDb(formId);
+    const searchQuery = searchParams.get('q') || searchParams.get('search');
+
+    if (formId || searchQuery) {
+      const submissions = await getFormSubmissionsFromDb(formId || 'all', searchQuery || undefined);
       return NextResponse.json({ success: true, submissions });
     }
 

@@ -58,14 +58,52 @@ export async function getCaseByMobile(mobile: string): Promise<CaseRecord | null
  */
 export async function getCaseByCode(caseCode: string): Promise<CaseRecord | null> {
   if (!caseCode) return null;
-  const cleanCode = caseCode.trim().toUpperCase();
+  const digits = caseCode.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).trim();
+  const cleanCode = digits.toUpperCase();
+  const strippedCode = cleanCode.replace(/^(SF|CASE|SP)-/i, '');
 
   try {
     const rows = await sql.query(
-      `SELECT * FROM belhagh_cases WHERE UPPER(case_code) = $1 LIMIT 1`,
-      [cleanCode]
+      `SELECT * FROM belhagh_cases 
+       WHERE UPPER(case_code) = $1 OR UPPER(case_code) = $2 OR UPPER(case_code) = $3 
+       LIMIT 1`,
+      [cleanCode, `SF-${strippedCode}`, `CASE-${strippedCode}`]
     );
-    return (rows[0] as CaseRecord) || null;
+    if (rows && rows[0]) {
+      return rows[0] as CaseRecord;
+    }
+
+    // جستجوی تکمیلی در جدول ارسالی‌ها (form_submissions) برای پرونده‌های واردشده از سامانه صفاً
+    const subRows = await sql.query(
+      `SELECT * FROM form_submissions 
+       WHERE UPPER(tracking_code) = $1 
+          OR UPPER(tracking_code) = $2 
+          OR data->>'caseCode' = $1 
+          OR data->>'caseCode' = $2 
+          OR data->>'userCode' = $1 
+          OR data->>'userCode' = $3
+          OR tracking_code ILIKE $4
+       ORDER BY created_at DESC LIMIT 1`,
+      [cleanCode, `SF-${strippedCode}`, strippedCode, `%${strippedCode}%`]
+    );
+
+    if (subRows && subRows[0]) {
+      const sub = subRows[0];
+      const dataObj = typeof sub.data === 'string' ? JSON.parse(sub.data) : sub.data || {};
+      return {
+        id: sub.id,
+        case_code: sub.tracking_code || dataObj.caseCode || cleanCode,
+        mobile: sub.mobile || dataObj.mobile || '',
+        first_name: dataObj.fullName || dataObj.f_name || 'مراجع صفاً',
+        last_name: dataObj.f_family || '',
+        province: dataObj.province || dataObj.f_province_city_province || '',
+        city: dataObj.city || dataObj.f_province_city_city || '',
+        data: dataObj,
+        created_at: sub.created_at,
+      };
+    }
+
+    return null;
   } catch (err) {
     console.error('Error in getCaseByCode:', err);
     return null;
@@ -173,15 +211,35 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
 }
 
 /**
- * استخراج همه پاسخ‌های فرم‌ها از پایگاه‌داده
+ * استخراج همه پاسخ‌های فرم‌ها از پایگاه‌داده همراه با پشتیبانی از فیلتر فرم و جستجوی کلمات
  */
-export async function getFormSubmissionsFromDb(formId?: string): Promise<FormSubmission[]> {
+export async function getFormSubmissionsFromDb(formId?: string, search?: string): Promise<FormSubmission[]> {
   try {
     const isFiltered = formId && formId !== 'all';
-    const query = isFiltered
-      ? `SELECT * FROM form_submissions WHERE form_id = $1 ORDER BY created_at DESC LIMIT 500`
-      : `SELECT * FROM form_submissions ORDER BY created_at DESC LIMIT 500`;
-    const params = isFiltered ? [formId] : [];
+    let query = isFiltered
+      ? `SELECT * FROM form_submissions WHERE form_id = $1`
+      : `SELECT * FROM form_submissions WHERE 1=1`;
+    const params: any[] = isFiltered ? [formId] : [];
+
+    if (search && search.trim()) {
+      const cleanSearch = search.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).trim();
+      const stripped = cleanSearch.replace(/^(SF|CASE|SP)-/i, '');
+
+      params.push(`%${cleanSearch}%`);
+      const p1 = `$${params.length}`;
+      params.push(`%${stripped}%`);
+      const p2 = `$${params.length}`;
+
+      query += ` AND (
+        tracking_code ILIKE ${p1} OR tracking_code ILIKE ${p2}
+        OR data->>'caseCode' ILIKE ${p1} OR data->>'caseCode' ILIKE ${p2}
+        OR data->>'userCode' ILIKE ${p1} OR data->>'userCode' ILIKE ${p2}
+        OR data->>'fullName' ILIKE ${p1}
+        OR mobile ILIKE ${p1}
+      )`;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT 3000`;
     const rows = await sql.query(query, params);
 
     return rows.map((r: any) => ({
