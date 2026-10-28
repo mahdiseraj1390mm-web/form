@@ -59,19 +59,13 @@ export const SubmissionsHub: React.FC = () => {
   // بارگذاری اولیه پاسخ‌ها از Neon DB
   useEffect(() => {
     setIsLoadingDb(true);
-    Promise.all([
-      refreshSubmissionsFromDb('form-belhagh-registration'),
-      refreshSubmissionsFromDb('form-belhagh-booking'),
-    ]).finally(() => setIsLoadingDb(false));
+    refreshSubmissionsFromDb('all').finally(() => setIsLoadingDb(false));
   }, []);
 
   const handleRefreshFromDb = useCallback(async () => {
     setIsLoadingDb(true);
     try {
-      await Promise.all([
-        refreshSubmissionsFromDb('form-belhagh-registration'),
-        refreshSubmissionsFromDb('form-belhagh-booking'),
-      ]);
+      await refreshSubmissionsFromDb('all');
     } finally {
       setIsLoadingDb(false);
     }

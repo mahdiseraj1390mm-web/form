@@ -107,6 +107,28 @@ export async function createCaseRecord(
        RETURNING *`,
       [cleanCode, cleanMobile, firstName, lastName, province, city, JSON.stringify(data)]
     );
+
+    // ثبت همگام در جدول form_submissions برای نمایش فوری در کارتابل
+    try {
+      await sql.query(
+        `INSERT INTO form_submissions (id, form_id, tracking_code, mobile, data, status, payment_status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`,
+        [
+          `sub-case-${cleanCode}`,
+          'form-belhagh-registration',
+          cleanCode,
+          cleanMobile,
+          JSON.stringify({ ...data, caseCode: cleanCode }),
+          'new',
+          'none',
+          new Date().toISOString()
+        ]
+      );
+    } catch (e) {
+      console.warn('Sync to form_submissions warning:', e);
+    }
+
     return { isNew: true, caseRecord: rows[0] as CaseRecord };
   } catch (err: any) {
     // در صورت وجود همزمان (race condition)
@@ -155,10 +177,11 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
  */
 export async function getFormSubmissionsFromDb(formId?: string): Promise<FormSubmission[]> {
   try {
-    const query = formId
+    const isFiltered = formId && formId !== 'all';
+    const query = isFiltered
       ? `SELECT * FROM form_submissions WHERE form_id = $1 ORDER BY created_at DESC LIMIT 500`
       : `SELECT * FROM form_submissions ORDER BY created_at DESC LIMIT 500`;
-    const params = formId ? [formId] : [];
+    const params = isFiltered ? [formId] : [];
     const rows = await sql.query(query, params);
 
     return rows.map((r: any) => ({

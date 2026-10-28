@@ -8,13 +8,7 @@ import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib
 import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
 import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
 
-export const allInitialSubmissions: FormSubmission[] = [
-  ...initialSubmissions,
-  ...quizSubmissions,
-  ...recruitmentSubmissions,
-  ...orderSubmissions,
-  ...safaanInitialSubmissions,
-];
+export const allInitialSubmissions: FormSubmission[] = [];
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 
@@ -216,7 +210,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-10-26-r5';
+      const CACHE_VERSION = 'v-2026-10-29-clean-real-db';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');
@@ -298,8 +292,8 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     }
     setIsInitialized(true);
 
-    // همگام‌سازی پاسخ‌های فرم از Neon DB با هر بار بارگذاری صفحه ادمین
-    fetch('/api/cases?formId=form-belhagh-registration', { cache: 'no-store' })
+    // همگام‌سازی کلیه پاسخ‌های فرم از Neon DB با هر بار بارگذاری صفحه ادمین
+    fetch('/api/cases?formId=all', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
@@ -317,27 +311,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
           });
         }
       })
-      .catch((err) => console.warn('Could not load belhagh-registration submissions from DB:', err));
-
-    fetch('/api/cases?formId=form-belhagh-booking', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
-          setSubmissions((prev) => {
-            const existingIds = new Set(prev.map((s) => s.id));
-            const merged = [...prev];
-            data.submissions.forEach((s: FormSubmission) => {
-              if (!existingIds.has(s.id)) merged.push(s);
-              else {
-                const idx = merged.findIndex((m) => m.id === s.id);
-                if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
-              }
-            });
-            return merged;
-          });
-        }
-      })
-      .catch((err) => console.warn('Could not load belhagh-booking submissions from DB:', err));
+      .catch((err) => console.warn('Could not load submissions from DB:', err));
 
     // همگام‌سازی از پایگاه‌داده سرور تا تمامی کاربران و دستگاه‌ها آخرین فرم‌ها و بنرها را مشاهده کنند (بدون کش)
     fetch(`/api/forms?_nocache=${Date.now()}`, { cache: 'no-store', headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' } })
