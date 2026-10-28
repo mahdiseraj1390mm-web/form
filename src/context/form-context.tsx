@@ -8,7 +8,13 @@ import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib
 import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
 import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
 
-export const allInitialSubmissions: FormSubmission[] = [];
+export const allInitialSubmissions: FormSubmission[] = [
+  ...initialSubmissions,
+  ...quizSubmissions,
+  ...recruitmentSubmissions,
+  ...orderSubmissions,
+  ...safaanInitialSubmissions,
+];
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 
