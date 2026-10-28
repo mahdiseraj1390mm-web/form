@@ -1,18 +1,21 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus } from '@/types/form';
+import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus, EvaluationResult, SimilarityNotification } from '@/types/form';
 import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
 import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib/additional-mock-submissions';
+import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
+import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
 
 export const allInitialSubmissions: FormSubmission[] = [
   ...initialSubmissions,
   ...quizSubmissions,
   ...recruitmentSubmissions,
   ...orderSubmissions,
+  ...safaanInitialSubmissions,
 ];
-import { belhaghRegistrationForm, belhaghBookingForm } from '@/lib/belhagh-forms';
+import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 
 export const initialTeamMembers: TeamMember[] = [
@@ -114,6 +117,8 @@ export const initialTeamMembers: TeamMember[] = [
 interface FormContextType {
   forms: Form[];
   submissions: FormSubmission[];
+  similarityNotifications: SimilarityNotification[];
+  resolveSimilarityNotification: (notificationId: string, action: 'confirm' | 'reject', selectedCaseCode?: string) => void;
   chatMessages: ChatMessage[];
   webhookLogs: WebhookLog[];
   teamMembers: TeamMember[];
@@ -130,7 +135,7 @@ interface FormContextType {
   reorderFieldsInForm: (formId: string, newFields: FormField[]) => void;
   addRuleToForm: (formId: string, rule: ConditionalRule) => void;
   removeRuleFromForm: (formId: string, ruleId: string) => void;
-  submitFormResponse: (formId: string, data: Record<string, any>, paymentInfo?: any, quizResult?: any) => FormSubmission;
+  submitFormResponse: (formId: string, data: Record<string, any>, paymentInfo?: any, quizResult?: any, evaluationResult?: EvaluationResult, meta?: { deviceFingerprint?: string; detectedSafaCode?: string }) => FormSubmission;
   updateSubmissionStatus: (submissionId: string, newStatus: SubmissionStatus) => void;
   addSubmissionComment: (submissionId: string, authorName: string, authorRole: string, content: string) => void;
   getSubmissionsByFormId: (formId: string) => FormSubmission[];
@@ -201,6 +206,7 @@ const FormContext = createContext<FormContextType | undefined>(undefined);
 export function FormProvider({ children }: { children: React.ReactNode }) {
   const [forms, setForms] = useState<Form[]>(initialForms);
   const [submissions, setSubmissions] = useState<FormSubmission[]>(allInitialSubmissions);
+  const [similarityNotifications, setSimilarityNotifications] = useState<SimilarityNotification[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChatMessages);
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>(initialWebhookLogs);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
@@ -221,6 +227,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       const storedChat = localStorage.getItem('formafzar_chat');
       const storedLogs = localStorage.getItem('formafzar_webhooks');
       const storedTeam = localStorage.getItem('formafzar_team_members');
+      const storedNotifs = localStorage.getItem('formafzar_sim_notifs');
+      if (storedNotifs) {
+        try { setSimilarityNotifications(JSON.parse(storedNotifs)); } catch {}
+      }
       if (storedForms) {
         const parsed: Form[] = JSON.parse(storedForms);
         const initialFormMap = new Map<string, Form>();
@@ -317,6 +327,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('formafzar_chat', JSON.stringify(chatMessages));
       localStorage.setItem('formafzar_webhooks', JSON.stringify(webhookLogs));
       localStorage.setItem('formafzar_team_members', JSON.stringify(teamMembers));
+      localStorage.setItem('formafzar_sim_notifs', JSON.stringify(similarityNotifications));
     } catch {
       // ignore
     }
@@ -327,6 +338,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     if (found) return found;
     if (id === 'form-belhagh-booking' || id === '3uu4z') return belhaghBookingForm;
     if (id === 'form-belhagh-registration' || id === 'zexuz') return belhaghRegistrationForm;
+    if (id === 'form-safaan-assessment' || id === 'safaan') return safaanAssessmentForm;
     return forms.find((f) => f.id === id);
   };
   const getFormBySlug = (slug: string) => {
@@ -334,6 +346,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     if (found) return found;
     if (slug === '3uu4z' || slug === 'form-belhagh-booking') return belhaghBookingForm;
     if (slug === 'zexuz' || slug === 'form-belhagh-registration') return belhaghRegistrationForm;
+    if (slug === 'safaan' || slug === 'form-safaan-assessment') return safaanAssessmentForm;
     return forms.find((f) => f.slug === slug || f.id === slug);
   };
 
@@ -519,23 +532,90 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     formId: string,
     data: Record<string, any>,
     paymentInfo?: any,
-    quizResult?: any
+    quizResult?: any,
+    evaluationResult?: EvaluationResult,
+    meta?: { deviceFingerprint?: string; detectedSafaCode?: string }
   ): FormSubmission => {
     const trackingCode = generateTrackingCode('پرونده');
-    const newSubmission: FormSubmission = {
+    let submissionData = { ...data };
+    let assignedLinkingStatus: 'linked' | 'pending_match' | 'requires_admin_resolution' = 'linked';
+    let assignedCandidates: string[] | undefined;
+
+    // استخراج خلاصه‌ای از پروفایل‌های موجود جهت ارزیابی تشابه
+    const profileMap = new Map<string, ClientProfileSummary>();
+    submissions.forEach((s) => {
+      const cCode = s.data?.caseCode || s.trackingCode;
+      if (cCode && !profileMap.has(cCode)) {
+        profileMap.set(cCode, {
+          caseCode: cCode,
+          fullName: s.data?.fullName || `${s.data?.f_name || ''} ${s.data?.f_family || ''}`.trim() || '',
+          mobile: s.data?.f_mobile || s.data?.bk_mobile || '',
+          schoolName: s.data?.f_school_name || s.data?.school_name,
+          provinceCity: s.data?.f_province_city || s.data?.province,
+          birthYear: s.data?.birth_year,
+          deviceFingerprint: s.deviceFingerprint,
+          safaUserCode: s.detectedSafaCode || (cCode.startsWith('SF-') ? cCode.replace('SF-', '') : undefined),
+        });
+      }
+    });
+    const existingProfiles = Array.from(profileMap.values());
+
+    const initialSubObj: FormSubmission = {
       id: `sub-${Date.now()}`,
       formId,
       trackingCode,
-      data,
+      data: submissionData,
       status: 'new',
       paymentStatus: paymentInfo?.status || 'none',
       paymentAmount: paymentInfo?.amount,
       paymentRefId: paymentInfo?.refId,
       paymentDate: paymentInfo?.date,
       quizResult,
+      evaluationResult,
+      deviceFingerprint: meta?.deviceFingerprint,
+      detectedSafaCode: meta?.detectedSafaCode,
       userIp: '185.143.232.19',
       createdAt: new Date().toISOString(),
       comments: [],
+    };
+
+    // ۱. بررسی اصالت کد صریح دستگاه (Authoritative Reclaiming)
+    if (meta?.detectedSafaCode) {
+      const reclaimRes = reclaimDossierWithExplicitCode(
+        meta.detectedSafaCode,
+        initialSubObj,
+        submissions,
+        existingProfiles
+      );
+      if (reclaimRes.displacedUserId) {
+        setSubmissions(reclaimRes.updatedSubmissions);
+      }
+      submissionData.caseCode = reclaimRes.reassignedCaseCode;
+      assignedLinkingStatus = 'linked';
+    } else {
+      // ۲. ارزیابی تشابه فازی
+      const simDecision = evaluateSubmissionSimilarity(initialSubObj, existingProfiles);
+      assignedLinkingStatus = simDecision.status;
+
+      if (simDecision.status === 'linked' && simDecision.matchedCaseCode) {
+        submissionData.caseCode = simDecision.matchedCaseCode;
+      } else if (simDecision.status === 'requires_admin_resolution' && simDecision.notification) {
+        setSimilarityNotifications((prev) => [simDecision.notification!, ...prev]);
+        assignedCandidates = simDecision.notification.candidates.map((c) => c.caseCode);
+      }
+    }
+
+    // ۳. اگر ثبت‌نام جدید است، بررسی و الحاق پرونده‌های معلق صفا به این کاربر جدید
+    if (formId === 'form-belhagh-registration') {
+      const userCaseCode = submissionData.caseCode || trackingCode;
+      submissionData.caseCode = userCaseCode;
+    }
+
+    const newSubmission: FormSubmission = {
+      ...initialSubObj,
+      data: submissionData,
+      linkingStatus: assignedLinkingStatus,
+      candidateUserIds: assignedCandidates,
     };
 
     setSubmissions((prev) => [newSubmission, ...prev]);
@@ -558,6 +638,50 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     }
 
     return newSubmission;
+  };
+
+  const resolveSimilarityNotification = (
+    notificationId: string,
+    action: 'confirm' | 'reject',
+    selectedCaseCode?: string
+  ) => {
+    setSimilarityNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, resolved: true } : n))
+    );
+
+    const notif = similarityNotifications.find((n) => n.id === notificationId);
+    if (!notif) return;
+
+    if (action === 'confirm' && selectedCaseCode) {
+      setSubmissions((prev) =>
+        prev.map((s) => {
+          if (s.id === notif.submissionId) {
+            return {
+              ...s,
+              linkingStatus: 'linked',
+              data: { ...s.data, caseCode: selectedCaseCode },
+              reconciledAt: new Date().toISOString(),
+              reconciledReason: `تایید انتساب دستی توسط مدیر به پرونده ${selectedCaseCode}`,
+            };
+          }
+          return s;
+        })
+      );
+    } else if (action === 'reject') {
+      setSubmissions((prev) =>
+        prev.map((s) => {
+          if (s.id === notif.submissionId) {
+            return {
+              ...s,
+              linkingStatus: 'pending_match',
+              reconciledAt: new Date().toISOString(),
+              reconciledReason: 'رد انتساب کاندیدها توسط مدیر - انتقال به صف انتظار تطابق',
+            };
+          }
+          return s;
+        })
+      );
+    }
   };
 
   const updateSubmissionStatus = (submissionId: string, newStatus: SubmissionStatus) => {
@@ -661,6 +785,8 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       value={{
         forms,
         submissions,
+        similarityNotifications,
+        resolveSimilarityNotification,
         chatMessages,
         webhookLogs,
         teamMembers,

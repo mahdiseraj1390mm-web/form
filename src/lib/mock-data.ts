@@ -1,9 +1,10 @@
 import { Form, FormSubmission } from '@/types/form';
-import { belhaghRegistrationForm, belhaghBookingForm } from './belhagh-forms';
+import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from './belhagh-forms';
 
 export const initialForms: Form[] = [
   belhaghRegistrationForm,
   belhaghBookingForm,
+  safaanAssessmentForm,
   {
     id: 'form-recruitment-01',
     title: 'فرم استخدام و جذب سرمایه انسانی',

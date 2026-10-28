@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from '@/context/form-context';
 import { 
   Layers, 
@@ -9,7 +9,12 @@ import {
   Bell, 
   Building2,
   Menu,
-  X
+  X,
+  Check,
+  UserCheck,
+  Clock,
+  Sparkles,
+  Inbox
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -27,7 +32,26 @@ export const Header: React.FC<HeaderProps> = ({
   isMobileNavOpen = false,
   onToggleMobileNav,
 }) => {
-  const { forms, activeForm, submissions } = useForm();
+  const { activeForm, similarityNotifications, resolveSimilarityNotification } = useForm();
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const pendingNotifs = similarityNotifications ? similarityNotifications.filter((n) => !n.resolved) : [];
+
+  // بستن منوی اعلان‌ها در صورت کلیک خارج از کادر
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
+      }
+    }
+    if (isNotifOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isNotifOpen]);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
@@ -90,15 +114,149 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="h-6 w-px bg-slate-200 mx-0.5 sm:mx-1 hidden sm:block" />
 
-          {/* اعلان‌ها و وضعیت */}
-          <div className="relative">
+          {/* اعلان‌ها و دراپ‌داون تطبیق هوشمند */}
+          <div className="relative" ref={notifRef}>
             <button 
-              className="p-1.5 sm:p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors relative"
-              title="اعلان‌های سیستم"
+              onClick={() => setIsNotifOpen((prev) => !prev)}
+              className="p-1.5 sm:p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors relative"
+              title="اعلان‌ها و تطبیق‌های هوشمند پرونده"
+              aria-label="اعلان‌ها"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+              {pendingNotifs.length > 0 ? (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-[10px] font-bold text-white flex items-center justify-center ring-2 ring-white animate-pulse">
+                  {pendingNotifs.length}
+                </span>
+              ) : (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+              )}
             </button>
+
+            {/* پاپ‌اور سریع و بدون حاشیه اعلان‌های تطبیق برای مدیر */}
+            {isNotifOpen && (
+              <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-[calc(100vw-24px)] max-w-[420px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden text-right animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800">تطبیق‌های هوشمند پرونده</h4>
+                      <p className="text-[10px] text-slate-500">بررسی تشابه مراجعان جدید با سوابق ارزیابی</p>
+                    </div>
+                  </div>
+                  {pendingNotifs.length > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                      {pendingNotifs.length} مورد معلق
+                    </span>
+                  )}
+                </div>
+
+                <div className="max-h-[70vh] overflow-y-auto divide-y divide-slate-100 p-2 space-y-2">
+                  {pendingNotifs.length === 0 ? (
+                    <div className="p-6 text-center space-y-2">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                        <Inbox className="w-5 h-5" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-700">هیچ مورد تطبیقی در انتظار تایید نیست</p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        پرونده‌های همتا با شباهت قطعی متصل شده‌اند و موارد مبهم در صف پردازش خودکار شبانه قرار می‌گیرند.
+                      </p>
+                    </div>
+                  ) : (
+                    pendingNotifs.map((notif) => (
+                      <div key={notif.id} className="p-3 bg-slate-50/70 hover:bg-slate-50 rounded-xl border border-slate-200/80 space-y-3 transition-colors">
+                        {/* عنوان مراجع ثبت‌نام‌شده */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                              <span className="text-xs font-extrabold text-slate-900">{notif.registrantName}</span>
+                            </div>
+                            {notif.registrantMobile && (
+                              <span className="text-[10px] text-slate-500 font-mono block mt-0.5">
+                                تلفن: {notif.registrantMobile}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            چند لحظه پیش
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200/60 leading-relaxed">
+                          ⚠️ چند پرونده با درصد شباهت یکسان شناسایی شد؛ پرونده مورد نظر را جهت انتساب انتخاب نمایید:
+                        </p>
+
+                        {/* کارت‌های کاندیداها */}
+                        <div className="space-y-2">
+                          {notif.candidates.map((cand) => (
+                            <div 
+                              key={cand.caseCode} 
+                              className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2 hover:border-blue-300 transition-all shadow-xs"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                                  <span className="text-xs font-bold text-slate-800">{cand.userName}</span>
+                                  <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1 rounded">
+                                    {cand.caseCode}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  {cand.matchPercent}٪ شباهت
+                                </span>
+                              </div>
+
+                              {/* فیلدهای منطبق و نامنطبق */}
+                              <div className="flex flex-wrap gap-1 text-[10px]">
+                                {cand.matchedFields.map((f, i) => (
+                                  <span key={i} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium border border-emerald-200/60">
+                                    ✓ {f}
+                                  </span>
+                                ))}
+                                {cand.unmatchedFields.map((f, i) => (
+                                  <span key={i} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 font-medium border border-rose-200/60">
+                                    ✕ {f}
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* دکمه تایید و انتساب 1 کلیک */}
+                              <button
+                                onClick={() => resolveSimilarityNotification(notif.id, 'confirm', cand.caseCode)}
+                                className="w-full mt-1.5 py-1.5 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>تایید و اتصال به پرونده {cand.caseCode}</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* دکمه رد همه و انتقال به صف انتظار */}
+                        <div className="pt-1 flex items-center justify-between border-t border-slate-200/60 text-xs">
+                          <button
+                            onClick={() => resolveSimilarityNotification(notif.id, 'reject')}
+                            className="w-full py-1.5 px-2 rounded-md bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors border border-slate-200/80"
+                          >
+                            <X className="w-3 h-3" />
+                            <span>هیچ‌کدام منطبق نیست (انتقال به صف انتظار شبانه)</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="p-2.5 bg-slate-50 border-t border-slate-200 text-center">
+                  <span className="text-[10px] text-slate-400">
+                    موتور پردازش شبانه آخر وقت پرونده‌های رد شده را با ثبت‌نامی‌های جدید بازبینی می‌کند.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 pr-1 sm:pr-2 border-r border-slate-200">

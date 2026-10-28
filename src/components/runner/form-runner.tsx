@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Form, FormField, FormSubmission } from '@/types/form';
+import { Form, FormField, FormSubmission, EvaluationResult } from '@/types/form';
+import { getDeviceFingerprint, getDetectedSafaCode } from '@/lib/device-fingerprint';
 import { useForm } from '@/context/form-context';
 import { 
   CheckCircle2, 
@@ -1402,7 +1403,74 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const existingCaseCode = formData.f_case_code || formData.caseCode || (typeof window !== 'undefined' ? localStorage.getItem('belhagh_current_case_code') : null);
     const newCaseCode = existingCaseCode || generateCaseCode('SP');
 
-    const sub = submitFormResponse(form.id, { ...formData, caseCode: newCaseCode }, paymentInfo, quizResult);
+    // محاسبه خودکار نتایج ارزیابی برای هر فرمی که سیستم ارزیابی تحلیلی آن فعال باشد
+    let evaluationResult: EvaluationResult | undefined = undefined;
+    if (form.evaluation?.enabled && form.evaluation.components && form.evaluation.components.length > 0) {
+      const compScores = form.evaluation.components.map((comp) => {
+        let rawSum = 0;
+        let count = 0;
+        (comp.questionFieldIds || []).forEach((fId: string) => {
+          const val = formData[fId] ?? formData[fId.replace('q_safa_', '')];
+          if (val !== undefined && val !== null && !isNaN(Number(val))) {
+            rawSum += Number(val);
+            count++;
+          }
+        });
+        const maxRaw = comp.maxRaw || ((count || (comp.questionFieldIds?.length || 3)) * (form.evaluation?.scaleMax || 5));
+        const score = maxRaw > 0 ? Math.round((rawSum / maxRaw) * 100) : 50;
+        const growthGap = Math.max(0, 100 - score);
+        let statusLabel = 'وضعیت مناسب';
+        let statusColor = '#0ea5e9';
+        if (score >= 80) {
+          statusLabel = 'وضعیت تثبیت‌شده';
+          statusColor = '#10b981';
+        } else if (score <= 45) {
+          statusLabel = 'نیازمند توجه جدی';
+          statusColor = '#ef4444';
+        }
+        return {
+          code: comp.code,
+          title: comp.title,
+          score,
+          growthGap,
+          rawSum,
+          statusLabel,
+          statusColor,
+        };
+      });
+
+      const overall = Math.round(compScores.reduce((acc, c) => acc + c.score, 0) / (compScores.length || 1));
+      const sortedByGap = [...compScores].sort((a, b) => b.growthGap - a.growthGap);
+      const topPriorities = sortedByGap.slice(0, 3).map((c) => ({
+        code: c.code,
+        title: c.title,
+        gap: c.growthGap,
+        score: c.score,
+        statusLabel: c.statusLabel,
+        statusColor: c.statusColor,
+      }));
+
+      evaluationResult = {
+        overallScore: overall,
+        isCritical: overall < 50,
+        isThriving: overall >= 80,
+        topPriorities,
+        componentScores: compScores,
+      };
+    }
+
+    // استخراج کاملاً نامحسوس شناسه دستگاه و سوابق حافظه محلی صفا در پس‌زمینه
+    const deviceFingerprint = getDeviceFingerprint();
+    const detectedSafaCode = getDetectedSafaCode() || undefined;
+
+    const sub = submitFormResponse(
+      form.id,
+      { ...formData, caseCode: newCaseCode },
+      paymentInfo,
+      quizResult,
+      evaluationResult,
+      { deviceFingerprint, detectedSafaCode }
+    );
     const finalSub: FormSubmission = {
       ...sub,
       trackingCode: newCaseCode,

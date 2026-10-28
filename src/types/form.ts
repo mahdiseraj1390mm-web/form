@@ -315,6 +315,7 @@ export interface Form {
   rules: ConditionalRule[];
   payment: PaymentSettings;
   quiz: QuizSettings;
+  evaluation?: FormEvaluationConfig;
   security: SecuritySettings;
   printTemplate: PrintTemplateSettings;
   notifications: NotificationSettings;
@@ -348,6 +349,13 @@ export interface FormSubmission {
   paymentAmount?: number;
   paymentRefId?: string;
   paymentDate?: string;
+  evaluationResult?: EvaluationResult;
+  linkingStatus?: 'linked' | 'pending_match' | 'requires_admin_resolution';
+  candidateUserIds?: string[];
+  deviceFingerprint?: string;
+  detectedSafaCode?: string;
+  reconciledAt?: string;
+  reconciledReason?: string;
   quizResult?: {
     score: number;
     maxScore: number;
@@ -360,4 +368,79 @@ export interface FormSubmission {
   createdAt: string;
   updatedAt?: string;
   comments: SubmissionComment[];
+}
+
+export interface EvaluationComponent {
+  id: string;
+  code: number;
+  title: string;
+  description?: string;
+  questionFieldIds: string[];
+  minRaw?: number;
+  maxRaw?: number;
+  group?: 'behavioral' | 'faith' | 'general';
+}
+
+export interface FormEvaluationConfig {
+  enabled: boolean;
+  chartType: 'radar' | 'bar' | 'none';
+  showGrowthPriorities: boolean;
+  showAlignmentAnalysis: boolean;
+  scaleMin: number;
+  scaleMax: number;
+  components: EvaluationComponent[];
+}
+
+export interface EvaluationComponentScore {
+  code: number;
+  title: string;
+  score: number;
+  growthGap: number;
+  rawSum: number;
+  statusLabel: string;
+  statusColor: string;
+  counselingTip?: string;
+}
+
+export interface EvaluationResult {
+  overallScore: number;
+  behaviorAvgScore?: number;
+  faithScore?: number;
+  isCritical: boolean;
+  isThriving: boolean;
+  topPriorities: Array<{
+    code: number;
+    title: string;
+    gap: number;
+    score: number;
+    statusLabel?: string;
+    statusColor?: string;
+    counselingTip?: string;
+  }>;
+  componentScores: EvaluationComponentScore[];
+  alignmentAnalysis?: {
+    type: string;
+    title: string;
+    description: string;
+  };
+}
+
+export interface SimilarityCandidateMatch {
+  userId: string;
+  caseCode: string;
+  userName: string;
+  userMobile?: string;
+  matchPercent: number;
+  matchedFields: string[];
+  unmatchedFields: string[];
+}
+
+export interface SimilarityNotification {
+  id: string;
+  submissionId: string;
+  registrantName: string;
+  registrantMobile?: string;
+  createdAt: string;
+  candidates: SimilarityCandidateMatch[];
+  resolved?: boolean;
 }

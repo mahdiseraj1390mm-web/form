@@ -43,9 +43,11 @@ import {
   Pill,
   BookOpen,
   Maximize2,
-  Columns
+  Columns,
+  Compass
 } from 'lucide-react';
 import { exportSingleClientDossierToXLSX } from '@/lib/excel-export';
+import { EvaluationReportView } from '../analytics/evaluation-report-view';
 import {
   formatPersianDateTime,
   formatPersianDateOnly,
@@ -145,6 +147,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     if (!selectedSubmission) return null;
     return forms.find((f) => f.id === selectedSubmission.formId) || null;
   }, [selectedSubmission, forms]);
+
+  const safaEvaluationSubmission = useMemo(() => {
+    return clientCase.submissions.find((s) => s.evaluationResult || s.formId === 'form-safaan-assessment');
+  }, [clientCase.submissions]);
 
   // استخراج یکپارچه داده‌های هویتی مراجع از میان تمام فرم‌های پر شده
   const combinedData = useMemo(() => {
@@ -645,7 +651,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
 
                 {/* بخش نمودارها و شاخص‌های آماری فرم (Visual Charts & Analytics) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {selectedSubmission.evaluationResult ? (
+                  <EvaluationReportView
+                    evaluation={selectedSubmission.evaluationResult}
+                    formTitle={selectedFormObj.title}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   
                   {/* نمودار حلقه‌ای درصد تکمیل داده‌ها */}
                   <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center text-center">
@@ -751,6 +763,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
 
                 </div>
+                )}
 
                 {/* نمایش مفصل و گام به گام تمام فیلدهای این فرم (Detailed Field-by-Field Breakdown) */}
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
@@ -886,6 +899,39 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             {/* ۲. نمای پیش‌فرض پرونده: تب تحلیل در یک نگاه (Overview at a glance) */}
             {currentView === 'dossier' && activeTab === 'overview' && (
               <div className="space-y-8 animate-in fade-in">
+                {/* کارت کارنامه صفا در صورت وجود */}
+                {safaEvaluationSubmission && (
+                  <div className="p-5 rounded-3xl bg-gradient-to-r from-sky-50 via-indigo-50/50 to-white border border-sky-200/90 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-11 h-11 rounded-2xl bg-sky-600 text-white flex items-center justify-center font-bold shadow-md shadow-sky-600/20 shrink-0">
+                        <Compass className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-black text-slate-900">
+                            کارنامه جامع خودسنجی صفاً متصل به پرونده
+                          </h3>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            متصل هوشمند
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          نمره کل: <strong className="text-slate-900">{toPersianDigits(safaEvaluationSubmission.evaluationResult?.overallScore || 0)}</strong> از ۱۰۰ | میانگین سلامت رفتاری: <strong className="text-slate-900">{toPersianDigits(safaEvaluationSubmission.evaluationResult?.behaviorAvgScore || 0)}</strong>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedSubmissionId(safaEvaluationSubmission.id);
+                        setCurrentView('formReport');
+                      }}
+                      className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <span>مشاهده کارنامه و نمودار رادار</span>
+                      <ArrowUpRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
                 
                 {/* کارت هوشمند تحلیل در یک نگاه برای مدیر (Smart AI & Clinical Snapshot) */}
                 <div className="bg-gradient-to-br from-white to-sky-50/50 p-6 sm:p-8 rounded-3xl border border-sky-100 shadow-sm relative overflow-hidden">
