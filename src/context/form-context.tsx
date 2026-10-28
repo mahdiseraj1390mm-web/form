@@ -212,7 +212,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-10-29-safaa-real-v4';
+      const CACHE_VERSION = 'v-2026-10-29-safaan-1063-full-v5';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');

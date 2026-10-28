@@ -159,15 +159,37 @@ export const SubmissionsHub: React.FC = () => {
   // فیلتر پرونده‌های مراجعین
   const filteredCases = useMemo(() => {
     return clientCases.filter((c) => {
-      const q = searchQuery.toLowerCase();
+      const rawQ = searchQuery.trim().toLowerCase();
+      if (!rawQ) {
+        return statusFilter === 'all' || c.overallStatus === statusFilter;
+      }
+      const toEng = (s: string) =>
+        s.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+      const qEng = toEng(rawQ);
+
+      const cCode = c.caseCode.toLowerCase();
+      const cCodeRaw = cCode.replace(/^sf-/, '').replace(/^sp/, '').replace(/^case-/, '');
       const matchesSearch =
-        c.caseCode.toLowerCase().includes(q) ||
-        c.fullName.toLowerCase().includes(q) ||
-        c.mobile.includes(q) ||
-        c.provinceCity.toLowerCase().includes(q) ||
+        cCode.includes(rawQ) ||
+        cCode.includes(qEng) ||
+        cCodeRaw.includes(qEng) ||
+        c.fullName.toLowerCase().includes(rawQ) ||
+        c.fullName.toLowerCase().includes(qEng) ||
+        c.mobile.includes(rawQ) ||
+        c.mobile.includes(qEng) ||
+        c.provinceCity.toLowerCase().includes(rawQ) ||
         c.submissions.some((s) => {
           const sName = `${s.data?.f_name || ''} ${s.data?.f_family || ''}`.trim().toLowerCase();
-          return sName.includes(q) || (s.data?.fullName && String(s.data.fullName).toLowerCase().includes(q));
+          const sCode = String(s.data?.caseCode || s.trackingCode || s.data?.user_code || s.detectedSafaCode || '').toLowerCase();
+          const sSchool = String(s.data?.school_name || s.data?.f_school_name || '').toLowerCase();
+          return (
+            sName.includes(rawQ) ||
+            sCode.includes(rawQ) ||
+            sCode.includes(qEng) ||
+            sCode.replace(/^sf-/, '').includes(qEng) ||
+            sSchool.includes(rawQ) ||
+            (s.data?.fullName && String(s.data.fullName).toLowerCase().includes(rawQ))
+          );
         });
 
       const matchesStatus = statusFilter === 'all' || c.overallStatus === statusFilter;
@@ -179,12 +201,25 @@ export const SubmissionsHub: React.FC = () => {
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((s) => {
       const matchesForm = selectedFormId === 'all' || s.formId === selectedFormId;
-      const q = searchQuery.toLowerCase();
-      const matchesSearch =
-        s.trackingCode.toLowerCase().includes(q) ||
-        JSON.stringify(s.data).toLowerCase().includes(q);
-      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+      const rawQ = searchQuery.trim().toLowerCase();
+      if (!rawQ) {
+        return matchesForm && (statusFilter === 'all' || s.status === statusFilter);
+      }
+      const toEng = (s: string) =>
+        s.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+      const qEng = toEng(rawQ);
 
+      const track = s.trackingCode.toLowerCase();
+      const dataStr = JSON.stringify(s.data).toLowerCase();
+
+      const matchesSearch =
+        track.includes(rawQ) ||
+        track.includes(qEng) ||
+        track.replace(/^sf-/, '').includes(qEng) ||
+        dataStr.includes(rawQ) ||
+        dataStr.includes(qEng);
+
+      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
       return matchesForm && matchesSearch && matchesStatus;
     });
   }, [submissions, selectedFormId, searchQuery, statusFilter]);
