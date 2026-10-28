@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reconcilePendingDossiersNightly, extractClientProfiles } from '@/lib/user-similarity';
-import { allInitialSubmissions } from '@/context/form-context';
+import { getFormSubmissionsFromDb, saveFormSubmissionToDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * کران‌جاب شبانه تطبیق هوشمند پرونده‌ها (Late-night Reconciliation Job)
- * هر شب در ساعات کم‌تردد (مثلاً ۰۲:۰۰ بامداد) جهت اتصال پرونده‌های معلق یا بررسی‌نشده اجرا می‌شود.
+ * هر شب در ساعات کم‌تردد (مثلاً ۰۲:۰۰ بامداد) جهت اتصال پرونده‌های معلق یا بررسی‌نشده به پرونده‌های صفاً اجرا می‌شود.
  */
 export async function GET(req: NextRequest) {
   try {
-    const profiles = extractClientProfiles(allInitialSubmissions);
-    const result = reconcilePendingDossiersNightly(allInitialSubmissions, profiles);
+    const liveSubmissions = await getFormSubmissionsFromDb('all');
+    const profiles = extractClientProfiles(liveSubmissions);
+    const result = reconcilePendingDossiersNightly(liveSubmissions, profiles);
+
+    // ذخیره پرونده‌های تطبیق‌یافته در دیتابیس پایدار Neon
+    for (const sub of result.updatedSubmissions) {
+      if (sub.linkingStatus === 'linked' && sub.reconciledAt) {
+        await saveFormSubmissionToDb(sub);
+      }
+    }
 
     return NextResponse.json({
       success: true,

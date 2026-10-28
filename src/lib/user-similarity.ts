@@ -97,6 +97,7 @@ export interface ClientProfileSummary {
   schoolName?: string;
   provinceCity?: string;
   birthYear?: number;
+  gender?: string;
   deviceFingerprint?: string;
   safaUserCode?: string;
   submissionsCount?: number;
@@ -145,6 +146,80 @@ export function calculateMatchScore(
     }
   } else if (subData.birth_year) {
     subBirthYear = parseInt(subData.birth_year);
+  }
+
+  // پرونده‌های سامانه صفاً در دیتابیس صفاً فاقد نام اختصاصی، شماره همراه و شناسه دستگاه بوده و بر اساس مشخصات ۴گانه ارزیابی می‌شوند:
+  const isAnonymousSafa = profile.caseCode?.startsWith('SF-') || profile.fullName?.includes('صفاً');
+
+  if (isAnonymousSafa) {
+    let demoWeight = 0;
+    let demoScore = 0;
+
+    // ۱. نام مدرسه یا مرکز معارفی (وزن: ۴۰)
+    if (subSchool && profile.schoolName) {
+      demoWeight += 40;
+      const sim = stringSimilarity(subSchool, profile.schoolName);
+      const subSchoolNorm = normalizePersianText(subSchool);
+      const profSchoolNorm = normalizePersianText(profile.schoolName);
+      if (sim >= 0.55 || subSchoolNorm.includes(profSchoolNorm) || profSchoolNorm.includes(subSchoolNorm)) {
+        demoScore += 40;
+        matchedFields.push(`نام مرکز معارفی (${profile.schoolName})`);
+      } else {
+        unmatchedFields.push('نام مدرسه معارفی');
+      }
+    }
+
+    // ۲. استان و شهر (وزن: ۲۰)
+    if (subProvince && profile.provinceCity) {
+      demoWeight += 20;
+      const sim = stringSimilarity(subProvince, profile.provinceCity);
+      const subProvNorm = normalizePersianText(subProvince);
+      const profProvNorm = normalizePersianText(profile.provinceCity);
+      if (sim >= 0.5 || subProvNorm.includes(profProvNorm) || profProvNorm.includes(subProvNorm)) {
+        demoScore += 20;
+        matchedFields.push(`استان و شهر (${profile.provinceCity})`);
+      } else {
+        unmatchedFields.push('استان و شهر');
+      }
+    }
+
+    // ۳. سال تولد دقیق (وزن: ۳۰)
+    if (subBirthYear && profile.birthYear) {
+      demoWeight += 30;
+      const diff = Math.abs(subBirthYear - profile.birthYear);
+      if (diff === 0) {
+        demoScore += 30;
+        matchedFields.push(`سال تولد دقیق (${profile.birthYear})`);
+      } else if (diff <= 1) {
+        demoScore += 18;
+        matchedFields.push(`سال تولد (${profile.birthYear} با ۱ سال اختلاف)`);
+      } else {
+        unmatchedFields.push(`سال تولد (${subBirthYear} در برابر ${profile.birthYear})`);
+      }
+    }
+
+    // ۴. جنسیت (وزن: ۱۰)
+    const subGender = subData.gender || subData.f_gender || (
+      subData.f_role_in_family?.includes('مادر') || subData.f_role_in_family?.includes('دختر') || subData.f_role_in_family?.includes('زن') ? 'خانم' :
+      subData.f_role_in_family?.includes('پدر') || subData.f_role_in_family?.includes('پسر') || subData.f_role_in_family?.includes('مرد') ? 'آقا' : undefined
+    );
+    if (subGender && profile.gender) {
+      demoWeight += 10;
+      if (subGender === profile.gender) {
+        demoScore += 10;
+        matchedFields.push(`جنسیت (${profile.gender})`);
+      } else {
+        unmatchedFields.push('جنسیت');
+      }
+    }
+
+    const demoPercent = demoWeight > 0 ? Math.round((demoScore / demoWeight) * 100) : 0;
+    return {
+      score: demoPercent,
+      matchedFields,
+      unmatchedFields,
+      isExactExplicit: demoPercent === 100,
+    };
   }
 
   let totalWeight = 0;
@@ -456,13 +531,27 @@ export function extractClientProfiles(submissions: FormSubmission[]): ClientProf
   submissions.forEach((s) => {
     const cCode = s.data?.caseCode || s.trackingCode;
     if (cCode && !profileMap.has(cCode)) {
+      let bYear = s.data?.birth_year ? parseInt(s.data.birth_year) : undefined;
+      if (!bYear && s.data?.f_birth_date) {
+        const parts = String(s.data.f_birth_date).split(/[\/\-]/);
+        if (parts.length >= 1 && parseInt(parts[0]) > 1300 && parseInt(parts[0]) < 1450) {
+          bYear = parseInt(parts[0]);
+        }
+      }
+
+      const gender = s.data?.gender || s.data?.f_gender || (
+        s.data?.f_role_in_family?.includes('مادر') || s.data?.f_role_in_family?.includes('دختر') || s.data?.f_role_in_family?.includes('زن') ? 'خانم' :
+        s.data?.f_role_in_family?.includes('پدر') || s.data?.f_role_in_family?.includes('پسر') || s.data?.f_role_in_family?.includes('مرد') ? 'آقا' : undefined
+      );
+
       profileMap.set(cCode, {
         caseCode: cCode,
         fullName: s.data?.fullName || `${s.data?.f_name || ''} ${s.data?.f_family || ''}`.trim() || '',
-        mobile: s.data?.f_mobile || s.data?.bk_mobile || '',
+        mobile: s.data?.f_mobile || s.data?.bk_mobile || s.data?.mobile || '',
         schoolName: s.data?.f_school_name || s.data?.school_name,
         provinceCity: s.data?.f_province_city || s.data?.province,
-        birthYear: s.data?.birth_year,
+        birthYear: bYear,
+        gender,
         deviceFingerprint: s.deviceFingerprint,
         safaUserCode: s.detectedSafaCode || (cCode.startsWith('SF-') ? cCode.replace('SF-', '') : undefined),
       });

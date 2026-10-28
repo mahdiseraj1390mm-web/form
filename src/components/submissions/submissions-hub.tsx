@@ -97,9 +97,25 @@ export const SubmissionsHub: React.FC = () => {
   const clientCases: ClientCaseGroup[] = useMemo(() => {
     const caseMap = new Map<string, ClientCaseGroup>();
 
+    // نگاشت شماره همراه به کد پرونده اصلی برای تجمیع ثبت‌های متناوب یک فرد با شماره یکسان
+    const mobileToPrimaryCase = new Map<string, string>();
     submissions.forEach((sub) => {
-      // استخراج کد پرونده، شماره همراه، یا نام
-      const caseCode = sub.data.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
+      const rawMobile = sub.data?.f_mobile || sub.data?.bk_mobile || sub.data?.mobile || (sub as any).mobile;
+      if (rawMobile) {
+        const clean = String(rawMobile).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[^0-9]/g, '');
+        if (clean.length >= 10 && !mobileToPrimaryCase.has(clean)) {
+          const cCode = sub.data?.caseCode || sub.trackingCode;
+          if (cCode) mobileToPrimaryCase.set(clean, cCode);
+        }
+      }
+    });
+
+    submissions.forEach((sub) => {
+      const rawMobile = sub.data?.f_mobile || sub.data?.bk_mobile || sub.data?.mobile || (sub as any).mobile;
+      const cleanMobile = rawMobile ? String(rawMobile).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[^0-9]/g, '') : '';
+
+      // استخراج کد پرونده واحد (تجمیع بر اساس شماره تماس یا کد اختصاصی)
+      const caseCode = (cleanMobile && mobileToPrimaryCase.get(cleanMobile)) || sub.data?.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
       
       const candidateName =
         sub.data.fullName ||
