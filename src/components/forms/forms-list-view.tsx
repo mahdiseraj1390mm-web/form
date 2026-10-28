@@ -20,8 +20,10 @@ import {
   BarChart3,
   FileText,
   Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
+import { exportFormSubmissionsToXLSX } from '@/lib/excel-export';
 
 interface FormsListViewProps {
   onOpenNewFormModal: () => void;
@@ -37,6 +39,24 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
   const [reportsFormId, setReportsFormId] = useState<string | null>(null);
+  const [exportingFormId, setExportingFormId] = useState<string | null>(null);
+
+  const handleExportFormExcel = async (form: Form) => {
+    const formSubs = submissions.filter((s) => s.formId === form.id);
+    if (formSubs.length === 0) {
+      alert(`هنوز پاسخی برای فرم «${form.title}» ثبت نشده است.`);
+      return;
+    }
+    try {
+      setExportingFormId(form.id);
+      await exportFormSubmissionsToXLSX(form, formSubs);
+    } catch (err) {
+      console.error('Error exporting Excel:', err);
+      alert('خطا در صدور فایل اکسل.');
+    } finally {
+      setExportingFormId(null);
+    }
+  };
 
   const handleShare = (form: Form) => {
     setSharingForm(form);
@@ -176,6 +196,17 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                   title="مشاهده گزارش‌های آماری فرم"
                 >
                   <BarChart3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleExportFormExcel(form);
+                  }}
+                  disabled={exportingFormId === form.id}
+                  className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                  title="خروجی مستقیم اکسل (XLSX) با فونت B Lotus"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                 </button>
               </div>
 

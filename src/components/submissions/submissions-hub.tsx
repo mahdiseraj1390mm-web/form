@@ -3,11 +3,14 @@
 import React, { useState, useMemo } from 'react';
 import { useForm } from '@/context/form-context';
 import { FormSubmission, SubmissionStatus, Form } from '@/types/form';
+import { ClientDossierFullview } from './client-dossier-fullview';
+import { exportClientCasesToXLSX, exportSubmissionsListToXLSX, exportFormSubmissionsToXLSX } from '@/lib/excel-export';
 import { 
   Inbox, 
   Search, 
   Filter, 
   Download, 
+  FileSpreadsheet,
   Printer, 
   CheckCircle2, 
   Clock, 
@@ -151,28 +154,37 @@ export const SubmissionsHub: React.FC = () => {
     });
   }, [submissions, selectedFormId, searchQuery, statusFilter]);
 
-  const handleExportCSV = () => {
-    if (filteredSubmissions.length === 0) return;
+  const [isExporting, setIsExporting] = useState(false);
 
-    const headers = ['کد پرونده', 'شناسه فرم', 'تاریخ ثبت', 'وضعیت', 'وضعیت پرداخت', 'مبلغ (تومان)'];
-    const rows = filteredSubmissions.map((s) => [
-      s.trackingCode,
-      s.formId,
-      formatPersianDateTime(s.createdAt),
-      statusConfigs[s.status]?.label || s.status,
-      s.paymentStatus === 'paid' ? 'پرداخت شده' : 'بدون پرداخت',
-      s.paymentAmount ? s.paymentAmount.toString() : '0',
-    ]);
-
-    const csvContent = '\uFEFF' + [headers, ...rows].map((e) => `"${e.join('","')}"`).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `cases_export_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      if (hubTab === 'cases') {
+        if (filteredCases.length === 0) {
+          alert('پرونده‌ای برای خروجی اکسل وجود ندارد.');
+          return;
+        }
+        await exportClientCasesToXLSX(filteredCases);
+      } else {
+        if (filteredSubmissions.length === 0) {
+          alert('پاسخی برای خروجی اکسل وجود ندارد.');
+          return;
+        }
+        if (selectedFormId !== 'all') {
+          const selectedForm = forms.find((f) => f.id === selectedFormId);
+          if (selectedForm) {
+            await exportFormSubmissionsToXLSX(selectedForm, filteredSubmissions);
+            return;
+          }
+        }
+        await exportSubmissionsListToXLSX(filteredSubmissions, forms);
+      }
+    } catch (err) {
+      console.error('Export Excel error:', err);
+      alert('خطا در ایجاد فایل اکسل.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleAddComment = () => {
@@ -184,7 +196,7 @@ export const SubmissionsHub: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 overscroll-contain">
+    <div className="relative flex-1 flex flex-col h-full overflow-hidden bg-slate-50 overscroll-contain">
       
       {/* سربرگ مدرن کارتابل و نوار سوییچ زبانه */}
       <div className="bg-white border-b border-slate-200/90 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-xs">
@@ -236,11 +248,13 @@ export const SubmissionsHub: React.FC = () => {
           </div>
 
           <button
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-2xs transition-colors cursor-pointer"
+            onClick={handleExportExcel}
+            disabled={isExporting}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+            title="خروجی فایل اکسل XLSX با فونت B Lotus"
           >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>خروجی اکسل</span>
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+            <span>{isExporting ? 'در حال صدور...' : 'خروجی اکسل (XLSX)'}</span>
           </button>
         </div>
 
@@ -498,147 +512,15 @@ export const SubmissionsHub: React.FC = () => {
         </div>
       )}
 
-      {/* مودال جامع مشاهده پرونده مراجع (Client Case Details Modal) */}
+      {/* نمای اختصاصی تمام‌صفحه پرونده مراجعین با تحلیل در یک نگاه، پیگیری، و گزارش نموداری فرم‌ها */}
       {activeCaseModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200 text-right">
-            
-            {/* سربرگ پرونده مراجع */}
-            <div className="p-6 bg-gradient-to-r from-sky-900 via-blue-900 to-indigo-950 text-white flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 text-white text-lg font-bold">
-                  {activeCaseModal.fullName.slice(0, 1)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-extrabold">{activeCaseModal.fullName}</h2>
-                    <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-sky-400/20 text-sky-200 border border-sky-300/30">
-                      کد پرونده: {activeCaseModal.caseCode}
-                    </span>
-                  </div>
-                  <div className="text-xs text-sky-200/80 flex items-center gap-3 mt-1">
-                    <span>شماره تماس: {toPersianDigits(activeCaseModal.mobile)}</span>
-                    <span>•</span>
-                    <span>موقعیت: {activeCaseModal.provinceCity}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                  title="چاپ پرونده"
-                >
-                  <Printer className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveCaseModal(null)}
-                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* بدنه اسکرول‌خور پرونده */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 overscroll-contain">
-              
-              {/* کادر خلاصه اطلاعات مراجع و وضعیت */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/90 text-xs">
-                <div>
-                  <span className="text-slate-400 block">تعداد فرم‌های تکمیل‌شده:</span>
-                  <span className="font-bold text-sky-800 text-sm mt-0.5 block">
-                    {toPersianDigits(activeCaseModal.totalFormsCount)} فرم و نوبت
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">مجموع پرداخت درگاه:</span>
-                  <span className="font-bold text-emerald-700 text-sm mt-0.5 block">
-                    {activeCaseModal.totalPaidAmount > 0 ? formatCurrency(activeCaseModal.totalPaidAmount, 'IRT') : 'بدون هزینه'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">تاریخ تشکیل پرونده:</span>
-                  <span className="font-bold text-slate-800 mt-0.5 block">
-                    {formatPersianDateTime(activeCaseModal.submissions[0]?.createdAt || activeCaseModal.latestDate)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block">وضعیت فعلی پرونده:</span>
-                  <span className="font-bold text-emerald-700 mt-0.5 block">
-                    {statusConfigs[activeCaseModal.overallStatus]?.label || 'فعال'}
-                  </span>
-                </div>
-              </div>
-
-              {/* لیست فرم‌ها و پاسخ‌های ثبت‌شده این مراجع */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-sky-600" />
-                  <span>فرم‌ها و پرسشنامه‌های تکمیل‌شده توسط مراجع:</span>
-                </h3>
-
-                <div className="space-y-4">
-                  {activeCaseModal.submissions.map((sub, sIdx) => {
-                    const formObj = forms.find((f) => f.id === sub.formId);
-                    return (
-                      <div key={sub.id} className="p-5 rounded-2xl border border-slate-200 bg-white shadow-2xs space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-sky-100 text-sky-800 font-bold text-xs flex items-center justify-center">
-                              {toPersianDigits(sIdx + 1)}
-                            </span>
-                            <span className="font-extrabold text-sm text-slate-900">
-                              {formObj ? formObj.title : sub.formId}
-                            </span>
-                          </div>
-                          <span className="text-xs text-slate-400 font-mono">
-                            {formatPersianDateTime(sub.createdAt)}
-                          </span>
-                        </div>
-
-                        {/* داده‌های ورودی فرم */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                          {Object.entries(sub.data).map(([key, val]) => {
-                            if (key === 'caseCode') return null;
-                            const fieldDef = formObj?.fields.find((f) => f.id === key);
-                            const label = fieldDef ? fieldDef.label : key;
-
-                            return (
-                              <div key={key} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                                <span className="text-slate-500 block mb-0.5">{label}:</span>
-                                <span className="font-bold text-slate-900">
-                                  {typeof val === 'object' ? JSON.stringify(val) : String(val)}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-            </div>
-
-            {/* پاورقی مودال */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-              <span className="text-xs text-slate-500">مرکز خدمات روانشناسی و نوبت‌دهی بالحق</span>
-              <button
-                type="button"
-                onClick={() => setActiveCaseModal(null)}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
-              >
-                بستن پنجره
-              </button>
-            </div>
-
-          </div>
-        </div>
+        <ClientDossierFullview
+          clientCase={activeCaseModal}
+          onClose={() => setActiveCaseModal(null)}
+          onStatusChange={(newStatus) => {
+            setActiveCaseModal((prev) => (prev ? { ...prev, overallStatus: newStatus } : null));
+          }}
+        />
       )}
 
       {/* مودال مشاهده رکورد تکی ارسالی */}

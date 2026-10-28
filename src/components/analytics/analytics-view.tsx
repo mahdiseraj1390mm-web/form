@@ -19,12 +19,13 @@ import {
   Hash,
   FileText,
   Download,
+  FileSpreadsheet,
   AlertTriangle,
   Users,
   List,
 } from 'lucide-react';
 import { toPersianDigits, formatCurrency, formatPersianDateTime, getFieldDisplayValue } from '@/lib/persian';
-import { exportFormSubmissionsToCSV } from '@/lib/excel-export';
+import { exportFormSubmissionsToXLSX } from '@/lib/excel-export';
 
 interface AnalyticsViewProps {
   onNavigateToRunner?: () => void;
@@ -199,13 +200,27 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
       }));
   }, [currentForm, formSubmissions]);
 
-  // قیمت برای خروجی اکسل
-  const handleExportExcel = () => {
-    if (formSubmissions.length === 0) {
-      alert('پاسخی برای خروجی اکسل وجود ندارد.');
+  // خروجی اکسل رسمی XLSX با فونت B Lotus
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    if (!currentForm) {
+      alert('لطفاً ابتدا یک فرم را انتخاب کنید.');
       return;
     }
-    exportFormSubmissionsToCSV(currentForm, formSubmissions);
+    if (formSubmissions.length === 0) {
+      alert('پاسخی برای خروجی اکسل در این فرم وجود ندارد.');
+      return;
+    }
+    try {
+      setIsExporting(true);
+      await exportFormSubmissionsToXLSX(currentForm, formSubmissions);
+    } catch (err) {
+      console.error('Export Excel error:', err);
+      alert('خطا در ایجاد فایل اکسل.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -238,6 +253,18 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </option>
             ))}
           </select>
+
+          {formSubmissions.length > 0 && (
+            <button
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+              title="خروجی فایل اکسل XLSX با فونت B Lotus"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>{isExporting ? 'در حال صدور...' : 'خروجی اکسل (XLSX)'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -578,10 +605,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                 </div>
                 <button
                   onClick={handleExportExcel}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors"
+                  disabled={isExporting}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                  title="دانلود فایل اکسل رسمی XLSX با فونت B Lotus"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>خروجی اکسل</span>
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span>{isExporting ? 'در حال تهیه اکسل...' : 'خروجی اکسل (XLSX)'}</span>
                 </button>
               </div>
 
