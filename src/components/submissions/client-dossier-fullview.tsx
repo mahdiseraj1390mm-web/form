@@ -161,6 +161,20 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     return data;
   }, [clientCase.submissions]);
 
+  // نام کامل مراجع با اولویت فیلدهای نام و نام خانوادگی
+  const displayFullName = useMemo(() => {
+    if (clientCase.fullName && clientCase.fullName !== 'مراجع مرکز بالحق') {
+      return clientCase.fullName;
+    }
+    if (combinedData.f_name || combinedData.f_family) {
+      return `${combinedData.f_name || ''} ${combinedData.f_family || ''}`.trim();
+    }
+    if (combinedData.fullName || combinedData.f_fullname) {
+      return combinedData.fullName || combinedData.f_fullname;
+    }
+    return 'مراجع مرکز بالحق';
+  }, [clientCase.fullName, combinedData]);
+
   // تحلیل هوشمند وضعیت مراجع در یک نگاه
   const smartAnalysis = useMemo(() => {
     const hasPhysicalIllness = combinedData.f_physical_illness && !['خیر', 'ندارم', 'ندارد', 'هیچ'].includes(combinedData.f_physical_illness.trim());
@@ -399,7 +413,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400 font-medium">پرونده بالحق:</span>
-              <span className="text-xs sm:text-sm font-extrabold text-slate-900">{clientCase.fullName}</span>
+              <span className="text-xs sm:text-sm font-extrabold text-slate-900">{displayFullName}</span>
               <span className="font-mono text-xs px-2.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 font-bold">
                 {clientCase.caseCode}
               </span>
@@ -489,11 +503,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               {/* نام، آواتار کوچک، کد پرونده و وضعیت */}
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-extrabold text-xs flex items-center justify-center border border-white/20 shadow-xs shrink-0">
-                  {clientCase.fullName.slice(0, 1)}
+                  {displayFullName.slice(0, 1)}
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-sm font-black tracking-tight text-white">{clientCase.fullName}</h2>
+                  <h2 className="text-sm font-black tracking-tight text-white">{displayFullName}</h2>
                   <span className="font-mono text-[11px] px-2 py-0.5 rounded-md bg-white/10 text-sky-200 border border-white/15">
                     {clientCase.caseCode}
                   </span>
@@ -1227,7 +1241,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                     <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
                       <span className="text-slate-400 block mb-1">نام و نام خانوادگی:</span>
-                      <span className="font-bold text-slate-900 text-sm">{clientCase.fullName}</span>
+                      <span className="font-bold text-slate-900 text-sm">{displayFullName}</span>
                     </div>
 
                     <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">

@@ -95,8 +95,18 @@ export const SubmissionsHub: React.FC = () => {
     submissions.forEach((sub) => {
       // استخراج کد پرونده، شماره همراه، یا نام
       const caseCode = sub.data.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
-      const fullName = sub.data.fullName || sub.data.f_fullname || 'مراجع مرکز بالحق';
-      const mobile = sub.data.f_mobile || sub.data.bk_mobile || '۰۹۱۲۰۰۰۰۰۰۰';
+      
+      const candidateName =
+        sub.data.fullName ||
+        (sub.data.f_name || sub.data.f_family ? `${sub.data.f_name || ''} ${sub.data.f_family || ''}`.trim() : '') ||
+        sub.data.f_fullname ||
+        sub.data.f_applicant_name ||
+        sub.data.q_fullname ||
+        sub.data.f_buyer_name ||
+        '';
+
+      const fullName = candidateName || 'مراجع مرکز بالحق';
+      const mobile = sub.data.f_mobile || sub.data.bk_mobile || sub.data.mobile || (sub as any).mobile || '۰۹۱۲۰۰۰۰۰۰۰';
       const provinceCity = sub.data.f_province_city || 'ثبت‌نشده';
       const roleInFamily = sub.data.f_role_in_family;
 
@@ -130,8 +140,8 @@ export const SubmissionsHub: React.FC = () => {
         if (sub.paymentStatus === 'paid') {
           existing.totalPaidAmount += (sub.paymentAmount || 0);
         }
-        if (sub.data.fullName && existing.fullName === 'مراجع مرکز بالحق') {
-          existing.fullName = sub.data.fullName;
+        if (candidateName && (existing.fullName === 'مراجع مرکز بالحق' || !existing.fullName)) {
+          existing.fullName = candidateName;
         }
       }
     });
@@ -149,7 +159,11 @@ export const SubmissionsHub: React.FC = () => {
         c.caseCode.toLowerCase().includes(q) ||
         c.fullName.toLowerCase().includes(q) ||
         c.mobile.includes(q) ||
-        c.provinceCity.toLowerCase().includes(q);
+        c.provinceCity.toLowerCase().includes(q) ||
+        c.submissions.some((s) => {
+          const sName = `${s.data?.f_name || ''} ${s.data?.f_family || ''}`.trim().toLowerCase();
+          return sName.includes(q) || (s.data?.fullName && String(s.data.fullName).toLowerCase().includes(q));
+        });
 
       const matchesStatus = statusFilter === 'all' || c.overallStatus === statusFilter;
       return matchesSearch && matchesStatus;

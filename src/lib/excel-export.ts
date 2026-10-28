@@ -201,6 +201,7 @@ export async function exportFormSubmissionsToXLSX(form: Form, submissions: FormS
   submissions.forEach((sub, index) => {
     const fullName =
       sub.data.fullName ||
+      (sub.data.f_name || sub.data.f_family ? `${sub.data.f_name || ''} ${sub.data.f_family || ''}`.trim() : '') ||
       sub.data.f_fullname ||
       sub.data.q_fullname ||
       sub.data.f_buyer_name ||
@@ -508,6 +509,7 @@ export async function exportSubmissionsListToXLSX(
     const formTitle = formMap.get(sub.formId) || 'فرم عمومی';
     const fullName =
       sub.data.fullName ||
+      (sub.data.f_name || sub.data.f_family ? `${sub.data.f_name || ''} ${sub.data.f_family || ''}`.trim() : '') ||
       sub.data.f_fullname ||
       sub.data.q_fullname ||
       sub.data.f_buyer_name ||
