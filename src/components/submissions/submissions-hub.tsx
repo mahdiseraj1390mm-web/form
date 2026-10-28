@@ -241,6 +241,26 @@ export const SubmissionsHub: React.FC = () => {
   }, [submissions, selectedFormId, searchQuery, statusFilter]);
 
   const [isExporting, setIsExporting] = useState(false);
+  const [isReconciling, setIsReconciling] = useState(false);
+
+  const handleRunReconcile = async () => {
+    try {
+      setIsReconciling(true);
+      const res = await fetch('/api/cron/reconcile');
+      const data = await res.json();
+      if (data?.success) {
+        await refreshSubmissionsFromDb('all');
+        const count = data.reconciledCount || 0;
+        alert(`پردازش تطبیق پرونده‌ها انجام شد.\nتعداد پیوندهای جدید: ${count}`);
+      } else {
+        alert(data?.error || 'خطا در اجرای فرآیند تطبیق');
+      }
+    } catch {
+      alert('خطا در ارتباط با سرور.');
+    } finally {
+      setIsReconciling(false);
+    }
+  };
 
   const handleExportExcel = async () => {
     try {
@@ -333,6 +353,16 @@ export const SubmissionsHub: React.FC = () => {
             </button>
           </div>
 
+
+          <button
+            onClick={handleRunReconcile}
+            disabled={isReconciling}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+            title="اجرای تطبیق شبانه و پیوند کارنامه‌های صفاً به پرونده‌های مراجعین"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <span>{isReconciling ? 'در حال تطبیق...' : 'تطبیق کارنامه‌های صفاً'}</span>
+          </button>
 
           <button
             onClick={handleExportExcel}
