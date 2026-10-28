@@ -552,7 +552,7 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'opt_teen_1', label: 'آقای برهانی', value: 'آقای برهانی' },
+        { id: 'opt_teen_1', label: 'آقای برهانی (بدون روز و نوبت‌دهی)', value: 'آقای برهانی' },
         { id: 'opt_teen_2', label: 'خانم شوندی', value: 'خانم شوندی' },
         { id: 'opt_teen_3', label: 'خانم راستگو', value: 'خانم راستگو' },
         { id: 'opt_teen_4', label: 'خانم انصاری', value: 'خانم انصاری' },
@@ -577,7 +577,7 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'opt_clin_torshizi', label: 'آقای ترشیزی', value: 'آقای ترشیزی' },
+        { id: 'opt_clin_torshizi', label: 'آقای دکتر ترشیزی (فعلاً بدون نوبت‌دهی)', value: 'آقای ترشیزی' },
         { id: 'opt_clin_yavari', label: 'خانم یاوری', value: 'خانم یاوری' },
         { id: 'opt_clin_rastgoo', label: 'خانم راستگو', value: 'خانم راستگو' },
         { id: 'opt_clin_golyayi', label: 'خانم گلیایی', value: 'خانم گلیایی' },
@@ -591,11 +591,11 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       options: [
-        { id: 'opt_fam_sedighi', label: 'آقای صدیقی (ازدواج و خانواده)', value: 'آقای صدیقی (ازدواج و خانواده)' },
-        { id: 'opt_fam_borhani', label: 'آقای برهانی (ازدواج و خانواده)', value: 'آقای برهانی (ازدواج و خانواده)' },
-        { id: 'opt_fam_zeynali', label: 'خانم زینلی (خانواده)', value: 'خانم زینلی (خانواده)' },
-        { id: 'opt_fam_karimi', label: 'خانم کریمی (خانواده)', value: 'خانم کریمی (خانواده)' },
-        { id: 'opt_fam_abdi', label: 'خانم عبدی (خانواده)', value: 'خانم عبدی (خانواده)' },
+        { id: 'opt_fam_sedighi', label: 'دکتر صدیقی (بدون روز و نوبت‌دهی)', value: 'آقای صدیقی (ازدواج و خانواده)' },
+        { id: 'opt_fam_borhani', label: 'آقا برهانی (بدون نوبت‌دهی)', value: 'آقای برهانی (ازدواج و خانواده)' },
+        { id: 'opt_fam_zeynali', label: 'خانم زینلی', value: 'خانم زینلی (خانواده)' },
+        { id: 'opt_fam_karimi', label: 'خانم کریمی', value: 'خانم کریمی (خانواده)' },
+        { id: 'opt_fam_abdi', label: 'خانم عبدی', value: 'خانم عبدی (خانواده)' },
       ],
     },
 
@@ -609,19 +609,19 @@ export const belhaghBookingForm: Form = {
       validations: { required: true },
       appointmentData: {
         slotDurationMinutes: 30,
-        restTimeMinutes: 5,
-        availableDays: [5], // پنجشنبه
+        restTimeMinutes: 0,
+        availableDays: [6], // جمعه
         startHour: '09:00',
         endHour: '12:00',
-        holidays: ['جمعه'],
+        holidays: [],
       },
       options: [
-        { id: 'slot_farahmandi_1', label: 'پنجشنبه - ساعت ۰۹:۰۰ الی ۰۹:۳۰', value: 'thu_0900' },
-        { id: 'slot_farahmandi_2', label: 'پنجشنبه - ساعت ۰۹:۳۰ الی ۱۰:۰۰', value: 'thu_0930' },
-        { id: 'slot_farahmandi_3', label: 'پنجشنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰', value: 'thu_1000' },
-        { id: 'slot_farahmandi_4', label: 'پنجشنبه - ساعت ۱۰:۳۰ الی ۱۱:۰۰', value: 'thu_1030' },
-        { id: 'slot_farahmandi_5', label: 'پنجشنبه - ساعت ۱۱:۰۰ الی ۱۱:۳۰', value: 'thu_1100' },
-        { id: 'slot_farahmandi_6', label: 'پنجشنبه - ساعت ۱۱:۳۰ الی ۱۲:۰۰', value: 'thu_1130' },
+        { id: 'slot_farahmandi_1', label: 'جمعه - ساعت ۰۹:۰۰ الی ۰۹:۳۰', value: 'fri_0900' },
+        { id: 'slot_farahmandi_2', label: 'جمعه - ساعت ۰۹:۳۰ الی ۱۰:۰۰', value: 'fri_0930' },
+        { id: 'slot_farahmandi_3', label: 'جمعه - ساعت ۱۰:۰۰ الی ۱۰:۳۰', value: 'fri_1000' },
+        { id: 'slot_farahmandi_4', label: 'جمعه - ساعت ۱۰:۳۰ الی ۱۱:۰۰', value: 'fri_1030' },
+        { id: 'slot_farahmandi_5', label: 'جمعه - ساعت ۱۱:۰۰ الی ۱۱:۳۰', value: 'fri_1100' },
+        { id: 'slot_farahmandi_6', label: 'جمعه - ساعت ۱۱:۳۰ الی ۱۲:۰۰', value: 'fri_1130' },
       ],
     },
     {
@@ -676,18 +676,20 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 40,
-        restTimeMinutes: 5,
-        availableDays: [2, 4, 6], // دوشنبه، چهارشنبه، جمعه
-        startHour: '17:00',
-        endHour: '19:00',
-        holidays: ['تعطیلات رسمی'],
+        slotDurationMinutes: 60,
+        restTimeMinutes: 0,
+        availableDays: [0, 2, 4], // شنبه، دوشنبه و چهارشنبه
+        startHour: '13:00',
+        endHour: '15:00',
+        holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_shavandi_c1', label: 'دوشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۰', value: 'mon_1700' },
-        { id: 'slot_shavandi_c2', label: 'دوشنبه - ساعت ۱۷:۴۵ الی ۱۸:۲۵', value: 'mon_1745' },
-        { id: 'slot_shavandi_c3', label: 'چهارشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۰', value: 'wed_1700' },
-        { id: 'slot_shavandi_c4', label: 'جمعه - ساعت ۱۰:۰۰ الی ۱۰:۴۰', value: 'fri_1000' },
+        { id: 'slot_shavandi_c1', label: 'شنبه - ساعت ۱۳:۰۰ الی ۱۴:۰۰', value: 'sat_1300' },
+        { id: 'slot_shavandi_c2', label: 'شنبه - ساعت ۱۴:۰۰ الی ۱۵:۰۰', value: 'sat_1400' },
+        { id: 'slot_shavandi_c3', label: 'دوشنبه - ساعت ۱۳:۰۰ الی ۱۴:۰۰', value: 'mon_1300' },
+        { id: 'slot_shavandi_c4', label: 'دوشنبه - ساعت ۱۴:۰۰ الی ۱۵:۰۰', value: 'mon_1400' },
+        { id: 'slot_shavandi_c5', label: 'چهارشنبه - ساعت ۱۳:۰۰ الی ۱۴:۰۰', value: 'wed_1300' },
+        { id: 'slot_shavandi_c6', label: 'چهارشنبه - ساعت ۱۴:۰۰ الی ۱۵:۰۰', value: 'wed_1400' },
       ],
     },
     {
@@ -708,17 +710,17 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 45,
-        restTimeMinutes: 10,
-        availableDays: [0], // شنبه
+        slotDurationMinutes: 60,
+        restTimeMinutes: 0,
+        availableDays: [1], // یکشنبه
         startHour: '16:00',
         endHour: '19:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_ansari_c1', label: 'شنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵', value: 'sat_1600' },
-        { id: 'slot_ansari_c2', label: 'شنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵', value: 'sat_1700' },
-        { id: 'slot_ansari_c3', label: 'شنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵', value: 'sat_1800' },
+        { id: 'slot_ansari_c1', label: 'یکشنبه - ساعت ۱۶:۰۰ الی ۱۷:۰۰', value: 'sun_1600' },
+        { id: 'slot_ansari_c2', label: 'یکشنبه - ساعت ۱۷:۰۰ الی ۱۸:۰۰', value: 'sun_1700' },
+        { id: 'slot_ansari_c3', label: 'یکشنبه - ساعت ۱۸:۰۰ الی ۱۹:۰۰', value: 'sun_1800' },
       ],
     },
     {
@@ -768,27 +770,22 @@ export const belhaghBookingForm: Form = {
       label: 'رزرو نوبت نوجوان آقای برهانی',
       stepId: 'step-4',
       gridCols: 12,
-      validations: { required: true },
+      validations: { required: false },
       appointmentData: {
         slotDurationMinutes: 30,
         restTimeMinutes: 0,
-        availableDays: [1, 3], // یکشنبه و سه‌شنبه
-        startHour: '16:00',
-        endHour: '17:00',
-        holidays: ['جمعه'],
+        availableDays: [],
+        startHour: '00:00',
+        endHour: '00:00',
+        holidays: [],
       },
-      options: [
-        { id: 'slot_borhani_t1', label: 'یکشنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰', value: 'sun_1600' },
-        { id: 'slot_borhani_t2', label: 'یکشنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰', value: 'sun_1630' },
-        { id: 'slot_borhani_t3', label: 'سه شنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰', value: 'tue_1600' },
-        { id: 'slot_borhani_t4', label: 'سه شنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰', value: 'tue_1630' },
-      ],
+      options: [],
     },
     {
       id: 'f_phone_borhani',
       type: 'alertBox',
       label: 'شماره تماس آقای علیرضا برهانی: 09120449093',
-      helpText: 'شماره تماس آقای علیرضا برهانی: ۰۹۱۲۰۴۴۹۰۹۳',
+      helpText: 'در حال حاضر در بخش نوجوان روز و نوبتی برای جناب آقای برهانی تعریف نشده است. جهت هماهنگی با شماره ۰۹۱۲۰۴۴۹۰۹۳ تماس حاصل فرمایید.',
       stepId: 'step-4',
       gridCols: 12,
       validations: { required: false },
@@ -802,17 +799,18 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 40,
-        restTimeMinutes: 5,
-        availableDays: [2, 4, 6], // دوشنبه، چهارشنبه، جمعه
-        startHour: '16:00',
-        endHour: '19:10',
-        holidays: ['تعطیلات رسمی'],
+        slotDurationMinutes: 60,
+        restTimeMinutes: 0,
+        availableDays: [1, 3], // یکشنبه و سه‌شنبه
+        startHour: '13:00',
+        endHour: '15:00',
+        holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_shavandi_t1', label: 'دوشنبه - ساعت ۱۸:۳۰ الی ۱۹:۱۰', value: 'mon_1830' },
-        { id: 'slot_shavandi_t2', label: 'چهارشنبه - ساعت ۱۸:۳۰ الی ۱۹:۱۰', value: 'wed_1830' },
-        { id: 'slot_shavandi_t3', label: 'جمعه - ساعت ۱۶:۰۰ الی ۱۶:۴۰', value: 'fri_1600' },
+        { id: 'slot_shavandi_t1', label: 'یکشنبه - ساعت ۱۳:۰۰ الی ۱۴:۰۰', value: 'sun_1300' },
+        { id: 'slot_shavandi_t2', label: 'یکشنبه - ساعت ۱۴:۰۰ الی ۱۵:۰۰', value: 'sun_1400' },
+        { id: 'slot_shavandi_t3', label: 'سه شنبه - ساعت ۱۳:۰۰ الی ۱۴:۰۰', value: 'tue_1300' },
+        { id: 'slot_shavandi_t4', label: 'سه شنبه - ساعت ۱۴:۰۰ الی ۱۵:۰۰', value: 'tue_1400' },
       ],
     },
     {
@@ -833,18 +831,18 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 40,
+        slotDurationMinutes: 60,
         restTimeMinutes: 0,
-        availableDays: [0], // شنبه
+        availableDays: [1], // یکشنبه
         startHour: '10:00',
         endHour: '14:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_rastgoo_t1', label: 'شنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۰', value: 'sat_1000' },
-        { id: 'slot_rastgoo_t2', label: 'شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۰', value: 'sat_1100' },
-        { id: 'slot_rastgoo_t3', label: 'شنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۰', value: 'sat_1200' },
-        { id: 'slot_rastgoo_t4', label: 'شنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۰', value: 'sat_1300' },
+        { id: 'slot_rastgoo_t1', label: 'یکشنبه - ساعت ۱۰:۰۰ الی ۱۱:۰۰', value: 'sun_1000' },
+        { id: 'slot_rastgoo_t2', label: 'یکشنبه - ساعت ۱۱:۰۰ الی ۱۲:۰۰', value: 'sun_1100' },
+        { id: 'slot_rastgoo_t3', label: 'یکشنبه - ساعت ۱۲:۰۰ الی ۱۳:۰۰', value: 'sun_1200' },
+        { id: 'slot_rastgoo_t4', label: 'یکشنبه - ساعت ۱۳:۰۰ الی ۱۴:۰۰', value: 'sun_1300' },
       ],
     },
     {
@@ -865,19 +863,20 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 45,
-        restTimeMinutes: 10,
-        availableDays: [2, 6], // دوشنبه و جمعه
+        slotDurationMinutes: 60,
+        restTimeMinutes: 0,
+        availableDays: [0, 3], // شنبه و سه‌شنبه
         startHour: '11:00',
         endHour: '16:00',
-        holidays: ['تعطیلات رسمی'],
+        holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_ansari_t1', label: 'دوشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', value: 'mon_1100' },
-        { id: 'slot_ansari_t2', label: 'دوشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', value: 'mon_1400' },
-        { id: 'slot_ansari_t3', label: 'دوشنبه - ساعت ۱۵:۰۰ الی ۱۵:۴۵', value: 'mon_1500' },
-        { id: 'slot_ansari_t4', label: 'جمعه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', value: 'fri_1100' },
-        { id: 'slot_ansari_t5', label: 'جمعه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', value: 'fri_1400' },
+        { id: 'slot_ansari_t1', label: 'شنبه - نوبت اول: ساعت ۱۱:۰۰ الی ۱۲:۰۰', value: 'sat_1100' },
+        { id: 'slot_ansari_t2', label: 'شنبه - نوبت دوم: ساعت ۱۴:۰۰ الی ۱۵:۰۰', value: 'sat_1400' },
+        { id: 'slot_ansari_t3', label: 'شنبه - نوبت دوم: ساعت ۱۵:۰۰ الی ۱۶:۰۰', value: 'sat_1500' },
+        { id: 'slot_ansari_t4', label: 'سه شنبه - نوبت اول: ساعت ۱۱:۰۰ الی ۱۲:۰۰', value: 'tue_1100' },
+        { id: 'slot_ansari_t5', label: 'سه شنبه - نوبت دوم: ساعت ۱۴:۰۰ الی ۱۵:۰۰', value: 'tue_1400' },
+        { id: 'slot_ansari_t6', label: 'سه شنبه - نوبت دوم: ساعت ۱۵:۰۰ الی ۱۶:۰۰', value: 'tue_1500' },
       ],
     },
     {
@@ -899,18 +898,18 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 30,
-        restTimeMinutes: 5,
-        availableDays: [2, 3], // دوشنبه و سه‌شنبه
+        slotDurationMinutes: 60,
+        restTimeMinutes: 0,
+        availableDays: [3, 4], // سه‌شنبه و چهارشنبه
         startHour: '16:00',
         endHour: '18:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_abdi_1', label: 'دوشنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰', value: 'mon_1600' },
-        { id: 'slot_abdi_2', label: 'دوشنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰', value: 'mon_1630' },
-        { id: 'slot_abdi_3', label: 'سه شنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰', value: 'tue_1600' },
-        { id: 'slot_abdi_4', label: 'سه شنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰', value: 'tue_1630' },
+        { id: 'slot_abdi_1', label: 'سه شنبه - ساعت ۱۶:۰۰ الی ۱۷:۰۰', value: 'tue_1600' },
+        { id: 'slot_abdi_2', label: 'سه شنبه - ساعت ۱۷:۰۰ الی ۱۸:۰۰', value: 'tue_1700' },
+        { id: 'slot_abdi_3', label: 'چهارشنبه - ساعت ۱۶:۰۰ الی ۱۷:۰۰', value: 'wed_1600' },
+        { id: 'slot_abdi_4', label: 'چهارشنبه - ساعت ۱۷:۰۰ الی ۱۸:۰۰', value: 'wed_1700' },
       ],
     },
     {
@@ -927,30 +926,25 @@ export const belhaghBookingForm: Form = {
     {
       id: 'f_booking_torshizi',
       type: 'appointmentBooking',
-      label: 'رزرو نوبت از آقای ترشیزی',
+      label: 'رزرو نوبت از آقای دکتر ترشیزی',
       stepId: 'step-4',
       gridCols: 12,
-      validations: { required: true },
+      validations: { required: false },
       appointmentData: {
         slotDurationMinutes: 30,
-        restTimeMinutes: 5,
-        availableDays: [1, 3], // یکشنبه و سه‌شنبه
-        startHour: '17:00',
-        endHour: '18:00',
-        holidays: ['جمعه'],
+        restTimeMinutes: 0,
+        availableDays: [],
+        startHour: '00:00',
+        endHour: '00:00',
+        holidays: [],
       },
-      options: [
-        { id: 'slot_torshizi_1', label: 'یکشنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰', value: 'sun_1700' },
-        { id: 'slot_torshizi_2', label: 'یکشنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰', value: 'sun_1730' },
-        { id: 'slot_torshizi_3', label: 'سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰', value: 'tue_1700' },
-        { id: 'slot_torshizi_4', label: 'سه شنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰', value: 'tue_1730' },
-      ],
+      options: [],
     },
     {
       id: 'f_phone_torshizi',
       type: 'alertBox',
-      label: 'شماره تماس آقای ترشیزی: 09155513734',
-      helpText: 'شماره تماس آقای ترشیزی: ۰۹۱۵۵۵۱۳۷۳۴',
+      label: 'شماره تماس جناب آقای دکتر ترشیزی: 09155513734',
+      helpText: 'در حال حاضر برای جناب آقای دکتر ترشیزی در بخش بالینی نوبتی تعریف نشده است. جهت هماهنگی با شماره ۰۹۱۵۵۵۱۳۷۳۴ تماس حاصل فرمایید.',
       stepId: 'step-4',
       gridCols: 12,
       validations: { required: false },
@@ -964,16 +958,16 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 30,
+        slotDurationMinutes: 60,
         restTimeMinutes: 0,
-        availableDays: [0, 2], // شنبه و دوشنبه
-        startHour: '10:00',
-        endHour: '10:30',
+        availableDays: [0, 3], // شنبه و سه‌شنبه
+        startHour: '11:00',
+        endHour: '14:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_yavari_1', label: 'شنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰', value: 'sat_1000' },
-        { id: 'slot_yavari_2', label: 'دوشنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰', value: 'mon_1000' },
+        { id: 'slot_yavari_1', label: 'شنبه - ساعت ۱۱:۰۰ الی ۱۲:۰۰', value: 'sat_1100' },
+        { id: 'slot_yavari_2', label: 'سه شنبه - ساعت ۱۳:۰۰ الی ۱۴:۰۰', value: 'tue_1300' },
       ],
     },
     {
@@ -994,16 +988,16 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 45,
+        slotDurationMinutes: 60,
         restTimeMinutes: 0,
-        availableDays: [0], // شنبه
+        availableDays: [1], // یکشنبه
         startHour: '18:00',
         endHour: '20:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_rastgoo_c1', label: 'شنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵', value: 'sat_1800' },
-        { id: 'slot_rastgoo_c2', label: 'شنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵', value: 'sat_1900' },
+        { id: 'slot_rastgoo_c1', label: 'یکشنبه - ساعت ۱۸:۰۰ الی ۱۹:۰۰', value: 'sun_1800' },
+        { id: 'slot_rastgoo_c2', label: 'یکشنبه - ساعت ۱۹:۰۰ الی ۲۰:۰۰', value: 'sun_1900' },
       ],
     },
     {
@@ -1024,16 +1018,15 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 45,
+        slotDurationMinutes: 60,
         restTimeMinutes: 0,
-        availableDays: [0, 2], // شنبه و دوشنبه
-        startHour: '16:00',
-        endHour: '17:00',
+        availableDays: [2], // دوشنبه
+        startHour: '11:00',
+        endHour: '12:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_golyayi_1', label: 'شنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵', value: 'sat_1600' },
-        { id: 'slot_golyayi_2', label: 'دوشنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵', value: 'mon_1600' },
+        { id: 'slot_golyayi_1', label: 'دوشنبه - ساعت ۱۱:۰۰ الی ۱۲:۰۰', value: 'mon_1100' },
       ],
     },
     {
@@ -1050,30 +1043,25 @@ export const belhaghBookingForm: Form = {
     {
       id: 'f_booking_sedighi_family',
       type: 'appointmentBooking',
-      label: 'رزرو نوبت از آقای صدیقی',
+      label: 'رزرو نوبت از آقای دکتر صدیقی',
       stepId: 'step-4',
       gridCols: 12,
-      validations: { required: true },
+      validations: { required: false },
       appointmentData: {
         slotDurationMinutes: 30,
-        restTimeMinutes: 5,
-        availableDays: [1, 3], // یکشنبه و سه‌شنبه
-        startHour: '16:00',
-        endHour: '17:00',
-        holidays: ['جمعه'],
+        restTimeMinutes: 0,
+        availableDays: [],
+        startHour: '00:00',
+        endHour: '00:00',
+        holidays: [],
       },
-      options: [
-        { id: 'slot_sedighi_1', label: 'یکشنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰', value: 'sun_1600' },
-        { id: 'slot_sedighi_2', label: 'یکشنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰', value: 'sun_1630' },
-        { id: 'slot_sedighi_3', label: 'سه شنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰', value: 'tue_1600' },
-        { id: 'slot_sedighi_4', label: 'سه شنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰', value: 'tue_1630' },
-      ],
+      options: [],
     },
     {
       id: 'f_phone_sedighi',
       type: 'alertBox',
-      label: 'شماره تماس آقای صدیقی: 09151538227',
-      helpText: 'شماره تماس آقای صدیقی: ۰۹۱۵۱۵۳۸۲۲۷',
+      label: 'شماره تماس جناب آقای دکتر صدیقی: 09151538227',
+      helpText: 'در حال حاضر در بخش ازدواج و خانواده روز و نوبتی برای جناب آقای دکتر صدیقی تعریف نشده است. جهت هماهنگی با شماره ۰۹۱۵۱۵۳۸۲۲۷ تماس حاصل فرمایید.',
       stepId: 'step-4',
       gridCols: 12,
       validations: { required: false },
@@ -1085,27 +1073,22 @@ export const belhaghBookingForm: Form = {
       label: 'رزرو نوبت خانواده و ازدواج از آقای برهانی',
       stepId: 'step-4',
       gridCols: 12,
-      validations: { required: true },
+      validations: { required: false },
       appointmentData: {
         slotDurationMinutes: 30,
-        restTimeMinutes: 5,
-        availableDays: [1, 3], // یکشنبه و سه‌شنبه
-        startHour: '17:00',
-        endHour: '18:00',
-        holidays: ['جمعه'],
+        restTimeMinutes: 0,
+        availableDays: [],
+        startHour: '00:00',
+        endHour: '00:00',
+        holidays: [],
       },
-      options: [
-        { id: 'slot_borhani_f1', label: 'یکشنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰', value: 'sun_1700' },
-        { id: 'slot_borhani_f2', label: 'یکشنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰', value: 'sun_1730' },
-        { id: 'slot_borhani_f3', label: 'سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰', value: 'tue_1700' },
-        { id: 'slot_borhani_f4', label: 'سه شنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰', value: 'tue_1730' },
-      ],
+      options: [],
     },
     {
       id: 'f_phone_borhani_family',
       type: 'alertBox',
-      label: 'شماره تماس آقای برهانی: 09120449093',
-      helpText: 'شماره تماس آقای برهانی: ۰۹۱۲۰۴۴۹۰۹۳',
+      label: 'شماره تماس جناب آقای برهانی: 09120449093',
+      helpText: 'در حال حاضر در بخش ازدواج و خانواده نوبتی برای جناب آقای برهانی تعریف نشده است. جهت هماهنگی با شماره ۰۹۱۲۰۴۴۹۰۹۳ تماس حاصل فرمایید.',
       stepId: 'step-4',
       gridCols: 12,
       validations: { required: false },
@@ -1119,15 +1102,16 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 45,
-        restTimeMinutes: 5,
-        availableDays: [2], // دوشنبه
+        slotDurationMinutes: 30,
+        restTimeMinutes: 0,
+        availableDays: [3], // سه‌شنبه
         startHour: '17:00',
         endHour: '18:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_zeynali_f1', label: 'دوشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵', value: 'mon_1700' },
+        { id: 'slot_zeynali_f1', label: 'سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰', value: 'tue_1700' },
+        { id: 'slot_zeynali_f2', label: 'سه شنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰', value: 'tue_1730' },
       ],
     },
     {
@@ -1148,18 +1132,22 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 45,
-        restTimeMinutes: 5,
-        availableDays: [0, 2], // شنبه و دوشنبه
+        slotDurationMinutes: 30,
+        restTimeMinutes: 0,
+        availableDays: [1, 3], // یکشنبه و سه‌شنبه
         startHour: '10:00',
         endHour: '12:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_karimi_1', label: 'شنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', value: 'sat_1000' },
-        { id: 'slot_karimi_2', label: 'شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', value: 'sat_1100' },
-        { id: 'slot_karimi_3', label: 'دوشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', value: 'mon_1000' },
-        { id: 'slot_karimi_4', label: 'دوشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', value: 'mon_1100' },
+        { id: 'slot_karimi_1', label: 'یکشنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰', value: 'sun_1000' },
+        { id: 'slot_karimi_2', label: 'یکشنبه - ساعت ۱۰:۳۰ الی ۱۱:۰۰', value: 'sun_1030' },
+        { id: 'slot_karimi_3', label: 'یکشنبه - ساعت ۱۱:۰۰ الی ۱۱:۳۰', value: 'sun_1100' },
+        { id: 'slot_karimi_4', label: 'یکشنبه - ساعت ۱۱:۳۰ الی ۱۲:۰۰', value: 'sun_1130' },
+        { id: 'slot_karimi_5', label: 'سه شنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰', value: 'tue_1000' },
+        { id: 'slot_karimi_6', label: 'سه شنبه - ساعت ۱۰:۳۰ الی ۱۱:۰۰', value: 'tue_1030' },
+        { id: 'slot_karimi_7', label: 'سه شنبه - ساعت ۱۱:۰۰ الی ۱۱:۳۰', value: 'tue_1100' },
+        { id: 'slot_karimi_8', label: 'سه شنبه - ساعت ۱۱:۳۰ الی ۱۲:۰۰', value: 'tue_1130' },
       ],
     },
     {
@@ -1180,19 +1168,19 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 45,
-        restTimeMinutes: 10,
-        availableDays: [3], // سه‌شنبه
+        slotDurationMinutes: 60,
+        restTimeMinutes: 0,
+        availableDays: [4], // چهارشنبه
         startHour: '08:00',
         endHour: '13:00',
         holidays: ['جمعه'],
       },
       options: [
-        { id: 'slot_abdi_f1', label: 'سه شنبه - ساعت ۰۸:۰۰ الی ۰۸:۴۵', value: 'tue_0800' },
-        { id: 'slot_abdi_f2', label: 'سه شنبه - ساعت ۰۹:۰۰ الی ۰۹:۴۵', value: 'tue_0900' },
-        { id: 'slot_abdi_f3', label: 'سه شنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', value: 'tue_1000' },
-        { id: 'slot_abdi_f4', label: 'سه شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', value: 'tue_1100' },
-        { id: 'slot_abdi_f5', label: 'سه شنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵', value: 'tue_1200' },
+        { id: 'slot_abdi_f1', label: 'چهارشنبه - ساعت ۰۸:۰۰ الی ۰۹:۰۰', value: 'wed_0800' },
+        { id: 'slot_abdi_f2', label: 'چهارشنبه - ساعت ۰۹:۰۰ الی ۱۰:۰۰', value: 'wed_0900' },
+        { id: 'slot_abdi_f3', label: 'چهارشنبه - ساعت ۱۰:۰۰ الی ۱۱:۰۰', value: 'wed_1000' },
+        { id: 'slot_abdi_f4', label: 'چهارشنبه - ساعت ۱۱:۰۰ الی ۱۲:۰۰', value: 'wed_1100' },
+        { id: 'slot_abdi_f5', label: 'چهارشنبه - ساعت ۱۲:۰۰ الی ۱۳:۰۰', value: 'wed_1200' },
       ],
     },
     {
@@ -1363,14 +1351,6 @@ export const belhaghBookingForm: Form = {
       targetFieldId: 'f_phone_rastgoo_teen',
     },
     {
-      id: 'rule_teen_borhani_booking',
-      sourceFieldId: 'f_counselor_teen',
-      operator: 'equals',
-      value: 'آقای برهانی',
-      action: 'show',
-      targetFieldId: 'f_booking_borhani_teen',
-    },
-    {
       id: 'rule_teen_borhani_phone',
       sourceFieldId: 'f_counselor_teen',
       operator: 'equals',
@@ -1408,14 +1388,6 @@ export const belhaghBookingForm: Form = {
     },
 
     // مشاوران بالینی: شروط نمایش تقویم نوبت و شماره تماس (دقیقاً مطابق عکس ۳)
-    {
-      id: 'rule_clin_torshizi_booking',
-      sourceFieldId: 'f_counselor_clinical',
-      operator: 'equals',
-      value: 'آقای ترشیزی',
-      action: 'show',
-      targetFieldId: 'f_booking_torshizi',
-    },
     {
       id: 'rule_clin_yavari_booking',
       sourceFieldId: 'f_counselor_clinical',
@@ -1463,15 +1435,6 @@ export const belhaghBookingForm: Form = {
 
     // مشاوران ازدواج و خانواده: شروط نمایش تقویم نوبت و شماره تماس (دقیقاً مطابق با تصاویر ارسالی فرم‌افزار)
     {
-      id: 'rule_fam_sedighi_booking',
-      sourceFieldId: 'f_counselor_family',
-      operator: 'equals',
-      value: 'آقای صدیقی (ازدواج و خانواده)',
-      action: 'show',
-      targetFieldId: 'f_booking_sedighi_family',
-      customDescription: 'اگر مشاوران ازدواج و خانواده: برابر با آقای صدیقی (ازدواج و خانواده) بود رزرو نوبت از آقای صدیقی آشکار شود، غیر از این شرایط پنهان شود',
-    },
-    {
       id: 'rule_fam_zeynali_booking',
       sourceFieldId: 'f_counselor_family',
       operator: 'equals',
@@ -1479,15 +1442,6 @@ export const belhaghBookingForm: Form = {
       action: 'show',
       targetFieldId: 'f_booking_zeynali_family',
       customDescription: 'اگر مشاوران ازدواج و خانواده: برابر با خانم زینلی (خانواده) بود رزرو نوبت از خانم زینلی آشکار شود، غیر از این شرایط پنهان شود',
-    },
-    {
-      id: 'rule_fam_borhani_booking',
-      sourceFieldId: 'f_counselor_family',
-      operator: 'equals',
-      value: 'آقای برهانی (ازدواج و خانواده)',
-      action: 'show',
-      targetFieldId: 'f_booking_borhani_family',
-      customDescription: 'اگر مشاوران ازدواج و خانواده: برابر با آقای برهانی (ازدواج و خانواده) بود رزرو نوبت خانواده و ازدواج از آقای برهانی آشکار شود، غیر از این شرایط پنهان شود',
     },
     {
       id: 'rule_fam_karimi_booking',

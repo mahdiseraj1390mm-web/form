@@ -5,21 +5,30 @@ export interface CounselorInfo {
 }
 
 export const COUNSELOR_MAP: Record<string, { name: string; mobile: string }> = {
+  // مشاوران کودک
   f_booking_farahmandi: { name: 'جناب آقای یاسر فرهمندی', mobile: '09364280322' },
   f_booking_teymourian: { name: 'سرکار خانم تیموریان', mobile: '09140288938' },
+  f_booking_zeynali_child: { name: 'سرکار خانم زینلی', mobile: '09379709635' },
   f_booking_shavandi_child: { name: 'سرکار خانم شوندی', mobile: '09127944985' },
   f_booking_ansari_child: { name: 'سرکار خانم انصاری', mobile: '09122301387' },
-  f_booking_zeynali_child: { name: 'سرکار خانم زینلی', mobile: '09379709635' },
-  f_booking_borhani_teen: { name: 'جناب آقای علیرضا برهانی', mobile: '09120449093' },
+
+  // مشاوران نوجوان
+  f_booking_borhani_teen: { name: 'جناب آقای برهانی', mobile: '09120449093' },
   f_booking_shavandi_teen: { name: 'سرکار خانم شوندی', mobile: '09127944985' },
   f_booking_rastgoo_teen: { name: 'سرکار خانم راستگو', mobile: '09123069447' },
-  f_booking_ansari_teen: { name: 'سرکار خانم نوشین انصاری', mobile: '09122301387' },
+  f_booking_ansari_teen: { name: 'سرکار خانم انصاری', mobile: '09122301387' },
+
+  // مشاور تحصیلی
   f_booking_abdi_education: { name: 'جناب آقای عبدی', mobile: '09127853843' },
-  f_booking_torshizi: { name: 'جناب آقای ترشیزی', mobile: '09155513734' },
+
+  // مشاوران بالینی
+  f_booking_torshizi: { name: 'جناب آقای دکتر ترشیزی', mobile: '09155513734' },
   f_booking_yavari: { name: 'سرکار خانم یاوری', mobile: '09307556919' },
   f_booking_rastgoo_clinical: { name: 'سرکار خانم راستگو', mobile: '09123069447' },
   f_booking_golyayi_clinical: { name: 'سرکار خانم گلیایی', mobile: '09125140551' },
-  f_booking_sedighi_family: { name: 'جناب آقای صدیقی', mobile: '09151538227' },
+
+  // مشاوران ازدواج و خانواده
+  f_booking_sedighi_family: { name: 'جناب آقای دکتر صدیقی', mobile: '09151538227' },
   f_booking_borhani_family: { name: 'جناب آقای برهانی', mobile: '09120449093' },
   f_booking_zeynali_family: { name: 'سرکار خانم زینلی', mobile: '09379709635' },
   f_booking_karimi_family: { name: 'سرکار خانم کریمی', mobile: '09192180481' },
@@ -149,15 +158,16 @@ export function extractBookingDetails(formData: Record<string, any>) {
       'فرهمندی': { name: 'جناب آقای یاسر فرهمندی', mobile: '09364280322' },
       'تیموریان': { name: 'سرکار خانم تیموریان', mobile: '09140288938' },
       'شوندی': { name: 'سرکار خانم شوندی', mobile: '09127944985' },
-      'انصاری': { name: 'سرکار خانم نوشین انصاری', mobile: '09122301387' },
+      'انصاری': { name: 'سرکار خانم انصاری', mobile: '09122301387' },
       'زینلی': { name: 'سرکار خانم زینلی', mobile: '09379709635' },
-      'برهانی': { name: 'جناب آقای علیرضا برهانی', mobile: '09120449093' },
+      'برهانی': { name: 'جناب آقای برهانی', mobile: '09120449093' },
       'راستگو': { name: 'سرکار خانم راستگو', mobile: '09123069447' },
-      'عبدی': { name: 'جناب آقای عبدی', mobile: '09127853843' },
-      'ترشیزی': { name: 'جناب آقای ترشیزی', mobile: '09155513734' },
+      'خانم عبدی': { name: 'سرکار خانم عبدی', mobile: '09192886258' },
+      'آقای عبدی': { name: 'جناب آقای عبدی', mobile: '09127853843' },
+      'ترشیزی': { name: 'جناب آقای دکتر ترشیزی', mobile: '09155513734' },
       'یاوری': { name: 'سرکار خانم یاوری', mobile: '09307556919' },
       'گلیایی': { name: 'سرکار خانم گلیایی', mobile: '09125140551' },
-      'صدیقی': { name: 'جناب آقای صدیقی', mobile: '09151538227' },
+      'صدیقی': { name: 'جناب آقای دکتر صدیقی', mobile: '09151538227' },
       'کریمی': { name: 'سرکار خانم کریمی', mobile: '09192180481' },
     };
 
