@@ -9,10 +9,6 @@ import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
 import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
 
 export const allInitialSubmissions: FormSubmission[] = [
-  ...initialSubmissions,
-  ...quizSubmissions,
-  ...recruitmentSubmissions,
-  ...orderSubmissions,
   ...safaanInitialSubmissions,
 ];
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
@@ -216,10 +212,11 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-10-29-clean-real-db';
+      const CACHE_VERSION = 'v-2026-10-29-safaa-real-v4';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');
+        localStorage.removeItem('formafzar_submissions');
         localStorage.removeItem('belhagh_active_case_data');
         localStorage.setItem('formafzar_cache_ver', CACHE_VERSION);
       }
@@ -271,8 +268,16 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         try {
           const parsed = JSON.parse(storedSubmissions);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            const existingIds = new Set(parsed.map((s: any) => s.id));
-            const merged = [...parsed];
+            // پالایش قطعی هرگونه داده فیک و تستی قدیمی
+            const cleanParsed = parsed.filter(
+              (s: any) =>
+                !s.id?.startsWith('sub-bh-') &&
+                !s.id?.startsWith('sub-qz-') &&
+                !s.id?.startsWith('sub-rc-') &&
+                !s.id?.startsWith('sub-ord-')
+            );
+            const existingIds = new Set(cleanParsed.map((s: any) => s.id));
+            const merged = [...cleanParsed];
             allInitialSubmissions.forEach((s) => {
               if (!existingIds.has(s.id)) merged.push(s);
             });
@@ -752,13 +757,19 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       if (!data?.submissions || !Array.isArray(data.submissions)) return;
       const dbSubmissions: FormSubmission[] = data.submissions;
       setSubmissions((prev) => {
-        const existingIds = new Set(prev.map((s) => s.id));
-        const merged = [...prev];
+        const cleanPrev = prev.filter(
+          (s) =>
+            !s.id.startsWith('sub-bh-') &&
+            !s.id.startsWith('sub-qz-') &&
+            !s.id.startsWith('sub-rc-') &&
+            !s.id.startsWith('sub-ord-')
+        );
+        const existingIds = new Set(cleanPrev.map((s) => s.id));
+        const merged = [...cleanPrev];
         dbSubmissions.forEach((s) => {
           if (!existingIds.has(s.id)) {
             merged.push(s);
           } else {
-            // به‌روزرسانی وضعیت با داده‌های پایگاه‌داده
             const idx = merged.findIndex((m) => m.id === s.id);
             if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
           }
