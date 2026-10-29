@@ -926,6 +926,15 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         }
       } catch (err) {}
     }
+
+    // در فرم ثبت‌نام اولیه، پاکسازی هرگونه کد پرونده قدیمی یا منسوخ با پیشوند BH-
+    if (typeof window !== 'undefined' && (form.id === 'form-belhagh-registration' || form.slug === 'zexuz')) {
+      const curStored = localStorage.getItem('belhagh_current_case_code');
+      if (curStored && (curStored.startsWith('BH-') || curStored.includes('-'))) {
+        localStorage.removeItem('belhagh_current_case_code');
+        localStorage.removeItem('belhagh_active_case_data');
+      }
+    }
     setInternalPageIndex(0);
     setErrors({});
     setOtpVerified(false);
@@ -1616,9 +1625,28 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         }
       : undefined;
 
-    // ایجاد یا حفظ کد پرونده اختصاصی (مثلاً SP849201)
-    const existingCaseCode = formData.f_case_code || formData.caseCode || (typeof window !== 'undefined' ? localStorage.getItem('belhagh_current_case_code') : null);
-    const newCaseCode = existingCaseCode || generateCaseCode('SP');
+    // ایجاد یا حفظ کد پرونده اختصاصی (فرمت استاندارد SP + ۶ رقم، مثلاً SP849201)
+    const isRegistrationForm = form.id === 'form-belhagh-registration' || form.slug === 'zexuz';
+    let newCaseCode: string;
+
+    if (isRegistrationForm) {
+      // فرم ثبت‌نام اولیه همواره یک پرونده جدید ایجاد می‌کند و باید حتماً کد تازه با پیشوند SP تولید کند
+      newCaseCode = generateCaseCode('SP');
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('belhagh_current_case_code', newCaseCode);
+        } catch (err) {}
+      }
+    } else {
+      // در سایر فرم‌ها (نظیر نوبت‌دهی) از کد پرونده موجود یا ذخیره‌شده معتبر استفاده می‌شود
+      const rawStoredCode = typeof window !== 'undefined' ? localStorage.getItem('belhagh_current_case_code') : null;
+      const cleanStoredCode = rawStoredCode && !rawStoredCode.startsWith('BH-') && !rawStoredCode.includes('-') ? rawStoredCode : null;
+      const cleanFormCode = formData.f_case_code || formData.caseCode;
+      const validFormCode = cleanFormCode && !cleanFormCode.startsWith('BH-') && !cleanFormCode.includes('-') ? cleanFormCode : null;
+
+      const existingCaseCode = validFormCode || cleanStoredCode;
+      newCaseCode = existingCaseCode || generateCaseCode('SP');
+    }
 
     // محاسبه خودکار نتایج ارزیابی برای هر فرمی که سیستم ارزیابی تحلیلی آن فعال باشد
     let evaluationResult: EvaluationResult | undefined = undefined;
@@ -1691,6 +1719,10 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const finalSub: FormSubmission = {
       ...sub,
       trackingCode: newCaseCode,
+      data: {
+        ...sub.data,
+        caseCode: newCaseCode,
+      },
     };
 
     setSubmittedResult(finalSub);

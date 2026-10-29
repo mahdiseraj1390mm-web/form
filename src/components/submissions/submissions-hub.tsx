@@ -103,9 +103,14 @@ export const SubmissionsHub: React.FC = () => {
       const rawMobile = sub.data?.f_mobile || sub.data?.bk_mobile || sub.data?.mobile || (sub as any).mobile;
       if (rawMobile) {
         const clean = String(rawMobile).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[^0-9]/g, '');
-        if (clean.length >= 10 && !mobileToPrimaryCase.has(clean)) {
+        if (clean.length >= 10) {
           const cCode = sub.data?.caseCode || sub.trackingCode;
-          if (cCode) mobileToPrimaryCase.set(clean, cCode);
+          if (cCode) {
+            const current = mobileToPrimaryCase.get(clean);
+            if (!current || (!cCode.startsWith('BH-') && current.startsWith('BH-'))) {
+              mobileToPrimaryCase.set(clean, cCode);
+            }
+          }
         }
       }
     });

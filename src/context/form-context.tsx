@@ -212,13 +212,20 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-10-29-safaan-1063-reconciled-v9';
+      const CACHE_VERSION = 'v-2026-10-29-safaan-1063-sp-clean-v11';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');
         localStorage.removeItem('formafzar_submissions');
         localStorage.removeItem('belhagh_active_case_data');
+        localStorage.removeItem('belhagh_current_case_code');
         localStorage.setItem('formafzar_cache_ver', CACHE_VERSION);
+      }
+      // پاکسازی کدهای منسوخ با پیشوند BH- از حافظه مرورگر
+      const curStoredCase = localStorage.getItem('belhagh_current_case_code');
+      if (curStoredCase && (curStoredCase.startsWith('BH-') || curStoredCase.includes('-'))) {
+        localStorage.removeItem('belhagh_current_case_code');
+        localStorage.removeItem('belhagh_active_case_data');
       }
       const storedForms = localStorage.getItem('formafzar_forms');
       const storedSubmissions = localStorage.getItem('formafzar_submissions');
@@ -625,7 +632,9 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       assignedLinkingStatus = simDecision.status;
 
       if (simDecision.status === 'linked' && simDecision.matchedCaseCode) {
-        submissionData.caseCode = simDecision.matchedCaseCode;
+        if (!simDecision.matchedCaseCode.startsWith('BH-') && !simDecision.matchedCaseCode.includes('-')) {
+          submissionData.caseCode = simDecision.matchedCaseCode;
+        }
       } else if (simDecision.status === 'requires_admin_resolution' && simDecision.notification) {
         setSimilarityNotifications((prev) => [simDecision.notification!, ...prev]);
         assignedCandidates = simDecision.notification.candidates.map((c) => c.caseCode);
@@ -634,8 +643,13 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
     // ۳. اگر ثبت‌نام جدید است، بررسی و الحاق پرونده‌های معلق صفا به این کاربر جدید
     if (formId === 'form-belhagh-registration') {
-      const userCaseCode = submissionData.caseCode || trackingCode;
-      submissionData.caseCode = userCaseCode;
+      const isLegacyCode = (code?: string) => !code || code.startsWith('BH-') || code.includes('-');
+      const candidateCode = !isLegacyCode(submissionData.caseCode)
+        ? submissionData.caseCode
+        : !isLegacyCode(data.caseCode)
+          ? data.caseCode
+          : trackingCode;
+      submissionData.caseCode = candidateCode;
     }
 
     const newSubmission: FormSubmission = {
