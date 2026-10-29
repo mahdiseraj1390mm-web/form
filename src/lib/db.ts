@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { Pool } from 'pg';
 import { FormSubmission } from '@/types/form';
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
 import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
@@ -7,43 +7,83 @@ import path from 'path';
 
 const connectionString =
   process.env.DATABASE_URL ||
-  'postgresql://neondb_owner:npg_hbad8wm9oYIT@ep-flat-band-b70xzvhu-pooler.c-13.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require';
+  'postgresql://belhagh:belhagh@2026!secure@127.0.0.1:5432/belhagh_db';
 
-export const sql = neon(connectionString);
+declare global {
+  // eslint-disable-next-line no-var
+  var __belhagh_pg_pool: Pool | undefined;
+}
+
+const isLocal =
+  connectionString.includes('localhost') ||
+  connectionString.includes('127.0.0.1') ||
+  connectionString.includes('192.168.');
+
+export const pool: Pool =
+  global.__belhagh_pg_pool ||
+  new Pool({
+    connectionString,
+    ssl: isLocal ? false : { rejectUnauthorized: false },
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  global.__belhagh_pg_pool = pool;
+}
 
 const LOCAL_SUBMISSIONS_FILE = path.join(process.cwd(), 'data', 'submissions.json');
 
-// سیستم مدارشکن هوشمند (Circuit Breaker) برای جلوگیری از معطلی در صورت تکمیل کوتای پلن رایگان Neon (خطای 402)
-let quotaExceededUntil = 0;
-
-async function executeNeonQueryWithTimeout(queryText: string, params: any[]): Promise<any> {
-  const now = Date.now();
-  if (now < quotaExceededUntil) {
-    throw new Error('Neon DB quota exceeded (circuit breaker active)');
-  }
-
+async function executeDbQueryWithTimeout(queryText: string, params: any[] = []): Promise<any> {
   let timer: any;
   const timeoutPromise = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error('Neon DB timeout')), 2000);
+    timer = setTimeout(() => reject(new Error('PostgreSQL DB query timeout')), 5000);
   });
 
   try {
     const res = await Promise.race([
-      (sql as any).query(queryText, params),
+      pool.query(queryText, params),
       timeoutPromise,
     ]);
-    return res;
+    return (res as any).rows;
   } catch (err: any) {
-    const msg = String(err?.message || '');
-    if (msg.includes('402') || msg.includes('quota') || msg.includes('exceeded') || msg.includes('timeout')) {
-      quotaExceededUntil = Date.now() + 5 * 60 * 1000; // ۵ دقیقه توقف تلاش مجدد
-      console.warn('⚡ Neon DB quota limit or timeout reached. Activated circuit breaker for 5 minutes.');
-    }
+    console.warn('DB query error:', err?.message || err);
     throw err;
   } finally {
     clearTimeout(timer);
   }
 }
+
+/**
+ * تابع کوئری sql با پشتیبانی دوگانه:
+ * ۱. تگ تمپلیت لیترال: sql`SELECT * FROM table WHERE id = ${val}`
+ * ۲. متد سنتی: (sql as any).query(queryText, params)
+ */
+export async function sql(strings: TemplateStringsArray | string, ...values: any[]): Promise<any> {
+  if (typeof strings === 'string') {
+    return executeDbQueryWithTimeout(strings, values[0] || []);
+  }
+
+  let queryText = '';
+  const queryParams: any[] = [];
+  for (let i = 0; i < strings.length; i++) {
+    queryText += strings[i];
+    if (i < values.length) {
+      queryParams.push(values[i]);
+      queryText += `$${queryParams.length}`;
+    }
+  }
+
+  return executeDbQueryWithTimeout(queryText, queryParams);
+}
+
+(sql as any).query = async (queryText: string, params: any[] = []) => {
+  return executeDbQueryWithTimeout(queryText, params);
+};
+
+// نگهداری سازگاری کامل با کدهای قبلی
+const executeNeonQueryWithTimeout = executeDbQueryWithTimeout;
 
 export interface CaseRecord {
   id: number;
@@ -73,7 +113,7 @@ export function normalizeMobile(phone: string): string {
 }
 
 /**
- * خواندن پاسخ‌ها از فایل محلی پایدار در صورت عدم دسترسی یا خطای کوتای Neon
+ * خواندن پاسخ‌ها از فایل محلی پایدار در صورت عدم دسترسی به دیتابیس
  */
 function readLocalSubmissions(): FormSubmission[] {
   try {
@@ -104,7 +144,7 @@ function writeLocalSubmissions(subs: FormSubmission[]): void {
 }
 
 /**
- * جستجوی پرونده بر اساس شماره موبایل در دیتابیس Neon (با فال‌بک فایل محلی)
+ * جستجوی پرونده بر اساس شماره موبایل در دیتابیس (با فال‌بک فایل محلی)
  */
 export async function getCaseByMobile(mobile: string): Promise<CaseRecord | null> {
   const clean = normalizeMobile(mobile);
@@ -275,7 +315,7 @@ export async function createCaseRecord(
     );
     if (rows && rows[0]) newRecord.id = rows[0].id;
   } catch (err) {
-    // نادیده گرفتن خطای دیتابیس خارجی
+    // نادیده گرفتن خطای دیتابیس
   }
 
   // ثبت در جدول form_submissions و فایل محلی
@@ -328,7 +368,7 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
     console.warn('Local file save warning:', e);
   }
 
-  // ۲. ارسال موازی به سرور دیتابیس ابری Neon (در صورت عدم فعال بودن مدارشکن)
+  // ۲. ارسال به پایگاه‌داده PostgreSQL
   try {
     await executeNeonQueryWithTimeout(
       `INSERT INTO form_submissions (id, form_id, tracking_code, mobile, data, status, payment_status, payment_amount, payment_ref_id, created_at)
@@ -360,7 +400,7 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
  * استخراج همه پاسخ‌های فرم‌ها همراه با پشتیبانی از فیلتر فرم، جستجو و انعطاف‌پذیری ۱۰۰٪
  */
 export async function getFormSubmissionsFromDb(formId?: string, search?: string): Promise<FormSubmission[]> {
-  // الف) تلاش برای واکشی آنلاین از سرور Neon
+  // الف) تلاش برای واکشی از پایگاه‌داده PostgreSQL
   try {
     const isFiltered = formId && formId !== 'all';
     let query = isFiltered
@@ -410,10 +450,10 @@ export async function getFormSubmissionsFromDb(formId?: string, search?: string)
       });
     }
   } catch (err: any) {
-    // خطا در دیتابیس ابری (مثلاً سقف مصرف یا قطعی موقت)، فال‌بک شفاف به دیتاست محلی
+    // در صورت خطا در دیتابیس، فال‌بک شفاف به مخزن محلی
   }
 
-  // ب) در صورت اختلال ارتباطی یا تکمیل ظرفیت پلن رایگان Neon، بدون معطلی و وقفه از مخزن فایل محلی خوانده می‌شود
+  // ب) در صورت اختلال، بدون معطلی و وقفه از مخزن فایل محلی خوانده می‌شود
   const local = readLocalSubmissions();
   let result = local;
 
