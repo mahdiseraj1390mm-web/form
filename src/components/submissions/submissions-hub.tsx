@@ -251,7 +251,8 @@ export const SubmissionsHub: React.FC = () => {
       if (data?.success) {
         await refreshSubmissionsFromDb('all');
         const count = data.reconciledCount || 0;
-        alert(`پردازش تطبیق پرونده‌ها انجام شد.\nتعداد پیوندهای جدید: ${count}`);
+        const details = Array.isArray(data.logs) && data.logs.length > 0 ? `\n\nجزئیات:\n${data.logs.join('\n')}` : '';
+        alert(`پردازش تطبیق پرونده‌ها انجام شد.\nتعداد پیوندهای برقرارشده: ${count}${details}`);
       } else {
         alert(data?.error || 'خطا در اجرای فرآیند تطبیق');
       }

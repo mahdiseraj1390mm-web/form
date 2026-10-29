@@ -343,6 +343,7 @@ export interface FormSubmission {
   id: string;
   formId: string;
   trackingCode: string;
+  mobile?: string;
   data: Record<string, any>;
   status: SubmissionStatus;
   paymentStatus?: 'none' | 'pending' | 'paid' | 'failed';
