@@ -6,9 +6,11 @@ import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } fr
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
 import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib/additional-mock-submissions';
 import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
+import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
 import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
 
 export const allInitialSubmissions: FormSubmission[] = [
+  ...belhaghInitialSubmissions,
   ...safaanInitialSubmissions,
 ];
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
@@ -212,7 +214,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-10-29-safaan-1063-sp-clean-v11';
+      const CACHE_VERSION = 'v-2026-10-29-safaan-1071-sp-v12';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');
@@ -310,23 +312,15 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     }
     setIsInitialized(true);
 
-    // همگام‌سازی کلیه پاسخ‌های فرم از Neon DB با هر بار بارگذاری صفحه ادمین
+    // همگام‌سازی کلیه پاسخ‌های فرم از پایگاه‌داده سرور با هر بار بارگذاری صفحه ادمین
     fetch('/api/cases?formId=all', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
-          setSubmissions((prev) => {
-            const existingIds = new Set(prev.map((s) => s.id));
-            const merged = [...prev];
-            data.submissions.forEach((s: FormSubmission) => {
-              if (!existingIds.has(s.id)) merged.push(s);
-              else {
-                const idx = merged.findIndex((m) => m.id === s.id);
-                if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
-              }
-            });
-            return merged;
-          });
+          setSubmissions(data.submissions);
+          try {
+            localStorage.setItem('formafzar_submissions', JSON.stringify(data.submissions));
+          } catch {}
         }
       })
       .catch((err) => console.warn('Could not load submissions from DB:', err));
@@ -770,6 +764,13 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (!data?.submissions || !Array.isArray(data.submissions)) return;
       const dbSubmissions: FormSubmission[] = data.submissions;
+      if (formId === 'all' || !formId) {
+        setSubmissions(dbSubmissions);
+        try {
+          localStorage.setItem('formafzar_submissions', JSON.stringify(dbSubmissions));
+        } catch {}
+        return;
+      }
       setSubmissions((prev) => {
         const cleanPrev = prev.filter(
           (s) =>

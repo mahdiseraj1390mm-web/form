@@ -34,6 +34,7 @@ import {
   Sparkles,
   Layers,
   ArrowUpRight,
+  RefreshCw,
   X
 } from 'lucide-react';
 import { formatPersianDateTime, formatCurrency, toPersianDigits, getFieldDisplayValue } from '@/lib/persian';
@@ -177,39 +178,50 @@ export const SubmissionsHub: React.FC = () => {
     );
   }, [submissions, forms]);
 
+function normalizeSearchText(str: string): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/[\u200B-\u200D\uFEFF\u200C]/g, ' ')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
   // فیلتر پرونده‌های مراجعین
   const filteredCases = useMemo(() => {
     return clientCases.filter((c) => {
-      const rawQ = searchQuery.trim().toLowerCase();
-      if (!rawQ) {
+      const q = normalizeSearchText(searchQuery);
+      if (!q) {
         return statusFilter === 'all' || c.overallStatus === statusFilter;
       }
-      const toEng = (s: string) =>
-        s.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
-      const qEng = toEng(rawQ);
+      const strippedQ = q.replace(/^(sf|sp|case)-/i, '').replace(/^(sf|sp|case)/i, '');
 
-      const cCode = c.caseCode.toLowerCase();
-      const cCodeRaw = cCode.replace(/^sf-/, '').replace(/^sp/, '').replace(/^case-/, '');
+      const cCode = normalizeSearchText(c.caseCode);
+      const cName = normalizeSearchText(c.fullName);
+      const cMob = normalizeSearchText(c.mobile);
+      const cProv = normalizeSearchText(c.provinceCity);
+
       const matchesSearch =
-        cCode.includes(rawQ) ||
-        cCode.includes(qEng) ||
-        cCodeRaw.includes(qEng) ||
-        c.fullName.toLowerCase().includes(rawQ) ||
-        c.fullName.toLowerCase().includes(qEng) ||
-        c.mobile.includes(rawQ) ||
-        c.mobile.includes(qEng) ||
-        c.provinceCity.toLowerCase().includes(rawQ) ||
+        cCode.includes(q) ||
+        (strippedQ.length > 0 && cCode.includes(strippedQ)) ||
+        cName.includes(q) ||
+        cMob.includes(q) ||
+        cProv.includes(q) ||
         c.submissions.some((s) => {
-          const sName = `${s.data?.f_name || ''} ${s.data?.f_family || ''}`.trim().toLowerCase();
-          const sCode = String(s.data?.caseCode || s.trackingCode || s.data?.user_code || s.detectedSafaCode || '').toLowerCase();
-          const sSchool = String(s.data?.school_name || s.data?.f_school_name || '').toLowerCase();
+          const sName = normalizeSearchText(`${s.data?.f_name || ''} ${s.data?.f_family || ''} ${s.data?.fullName || ''}`);
+          const sCode = normalizeSearchText(String(s.data?.caseCode || s.trackingCode || s.data?.user_code || s.detectedSafaCode || ''));
+          const sSchool = normalizeSearchText(String(s.data?.school_name || s.data?.f_school_name || ''));
+          const sMob = normalizeSearchText(String(s.data?.f_mobile || s.data?.mobile || s.mobile || ''));
           return (
-            sName.includes(rawQ) ||
-            sCode.includes(rawQ) ||
-            sCode.includes(qEng) ||
-            sCode.replace(/^sf-/, '').includes(qEng) ||
-            sSchool.includes(rawQ) ||
-            (s.data?.fullName && String(s.data.fullName).toLowerCase().includes(rawQ))
+            sName.includes(q) ||
+            sCode.includes(q) ||
+            (strippedQ.length > 0 && sCode.includes(strippedQ)) ||
+            sSchool.includes(q) ||
+            sMob.includes(q)
           );
         });
 
@@ -222,23 +234,21 @@ export const SubmissionsHub: React.FC = () => {
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((s) => {
       const matchesForm = selectedFormId === 'all' || s.formId === selectedFormId;
-      const rawQ = searchQuery.trim().toLowerCase();
-      if (!rawQ) {
+      const q = normalizeSearchText(searchQuery);
+      if (!q) {
         return matchesForm && (statusFilter === 'all' || s.status === statusFilter);
       }
-      const toEng = (s: string) =>
-        s.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
-      const qEng = toEng(rawQ);
+      const strippedQ = q.replace(/^(sf|sp|case)-/i, '').replace(/^(sf|sp|case)/i, '');
 
-      const track = s.trackingCode.toLowerCase();
-      const dataStr = JSON.stringify(s.data).toLowerCase();
+      const track = normalizeSearchText(s.trackingCode);
+      const dataStr = normalizeSearchText(JSON.stringify(s.data));
+      const sMob = normalizeSearchText(String(s.mobile || s.data?.f_mobile || s.data?.mobile || ''));
 
       const matchesSearch =
-        track.includes(rawQ) ||
-        track.includes(qEng) ||
-        track.replace(/^sf-/, '').includes(qEng) ||
-        dataStr.includes(rawQ) ||
-        dataStr.includes(qEng);
+        track.includes(q) ||
+        (strippedQ.length > 0 && track.includes(strippedQ)) ||
+        dataStr.includes(q) ||
+        sMob.includes(q);
 
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
       return matchesForm && matchesSearch && matchesStatus;
@@ -359,6 +369,14 @@ export const SubmissionsHub: React.FC = () => {
             </button>
           </div>
 
+          <button
+            onClick={() => refreshSubmissionsFromDb('all')}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl shadow-2xs transition-colors cursor-pointer"
+            title="به‌روزرسانی و دریافت آخرین اطلاعات از سرور"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-sky-600" />
+            <span>تازه‌سازی</span>
+          </button>
 
           <button
             onClick={handleRunReconcile}

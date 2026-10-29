@@ -1,5 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { FormSubmission } from '@/types/form';
+import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
+import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
 import fs from 'fs';
 import path from 'path';
 
@@ -77,12 +79,15 @@ function readLocalSubmissions(): FormSubmission[] {
   try {
     if (fs.existsSync(LOCAL_SUBMISSIONS_FILE)) {
       const content = fs.readFileSync(LOCAL_SUBMISSIONS_FILE, 'utf8');
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
     }
   } catch (err) {
     console.warn('Error reading local submissions file:', err);
   }
-  return [];
+  return [...belhaghInitialSubmissions, ...safaanInitialSubmissions];
 }
 
 /**
