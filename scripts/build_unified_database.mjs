@@ -211,6 +211,28 @@ const clientRegistrations = [
       f_birth_date: '1398/10/08',
       caseCode: 'SP142610'
     }
+  },
+  // Ali Hosseini
+  {
+    id: 'sub-case-SP642819',
+    formId: 'form-belhagh-registration',
+    trackingCode: 'SP642819',
+    mobile: '09121112233',
+    status: 'new',
+    createdAt: '2026-10-29T02:00:00.000Z',
+    data: {
+      f_name: 'علی',
+      f_family: 'حسینی',
+      fullName: 'علی حسینی',
+      f_mobile: '09121112233',
+      f_birth_date: '1370/01/01',
+      f_school_name: 'مدرسه معارفی',
+      f_province_city: 'تهران - تهران',
+      f_role_in_family: 'پدر',
+      f_marital_status: 'متأهل',
+      f_ebadollah_member: 'بله',
+      caseCode: 'SP642819'
+    }
   }
 ];
 
