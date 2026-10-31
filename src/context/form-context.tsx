@@ -5,13 +5,11 @@ import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus, Eva
 import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
 import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib/additional-mock-submissions';
-import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
 import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
 
 export const allInitialSubmissions: FormSubmission[] = [
   ...belhaghInitialSubmissions,
-  ...safaanInitialSubmissions,
 ];
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';

@@ -6,18 +6,64 @@ import { useAdminAuth } from '@/context/admin-auth-context';
 import { AdminLoginView } from '@/components/auth/admin-login-view';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
-import { DashboardView } from '@/components/dashboard/dashboard-view';
-import { FormsListView } from '@/components/forms/forms-list-view';
-import { Studio } from '@/components/builder/studio';
-import { FormRunner } from '@/components/runner/form-runner';
-import { SubmissionsHub } from '@/components/submissions/submissions-hub';
-import { AnalyticsView } from '@/components/analytics/analytics-view';
-import { TemplatesView } from '@/components/templates/templates-view';
-import { SystemSettingsView } from '@/components/settings/system-settings-view';
-import { MediaManagerView } from '@/components/media/media-manager-view';
-import { AdminChatInboxView } from '@/components/chat/admin-chat-inbox-view';
-import { NewFormModal } from '@/components/modals/new-form-modal';
+import dynamic from 'next/dynamic';
 import { Layers } from 'lucide-react';
+
+function ViewSkeleton() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-pulse">
+      <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-3">
+        <Layers className="w-5 h-5 animate-spin" />
+      </div>
+      <p className="text-xs text-slate-500 font-medium">در حال بارگذاری بخش مورد نظر...</p>
+    </div>
+  );
+}
+
+const DashboardView = dynamic(
+  () => import('@/components/dashboard/dashboard-view').then((m) => m.DashboardView),
+  { loading: () => <ViewSkeleton /> }
+);
+const FormsListView = dynamic(
+  () => import('@/components/forms/forms-list-view').then((m) => m.FormsListView),
+  { loading: () => <ViewSkeleton /> }
+);
+const Studio = dynamic(
+  () => import('@/components/builder/studio').then((m) => m.Studio),
+  { loading: () => <ViewSkeleton /> }
+);
+const FormRunner = dynamic(
+  () => import('@/components/runner/form-runner').then((m) => m.FormRunner),
+  { loading: () => <ViewSkeleton /> }
+);
+const SubmissionsHub = dynamic(
+  () => import('@/components/submissions/submissions-hub').then((m) => m.SubmissionsHub),
+  { loading: () => <ViewSkeleton /> }
+);
+const AnalyticsView = dynamic(
+  () => import('@/components/analytics/analytics-view').then((m) => m.AnalyticsView),
+  { loading: () => <ViewSkeleton /> }
+);
+const TemplatesView = dynamic(
+  () => import('@/components/templates/templates-view').then((m) => m.TemplatesView),
+  { loading: () => <ViewSkeleton /> }
+);
+const SystemSettingsView = dynamic(
+  () => import('@/components/settings/system-settings-view').then((m) => m.SystemSettingsView),
+  { loading: () => <ViewSkeleton /> }
+);
+const MediaManagerView = dynamic(
+  () => import('@/components/media/media-manager-view').then((m) => m.MediaManagerView),
+  { loading: () => <ViewSkeleton /> }
+);
+const AdminChatInboxView = dynamic(
+  () => import('@/components/chat/admin-chat-inbox-view').then((m) => m.AdminChatInboxView),
+  { loading: () => <ViewSkeleton /> }
+);
+const NewFormModal = dynamic(
+  () => import('@/components/modals/new-form-modal').then((m) => m.NewFormModal),
+  { ssr: false }
+);
 
 export default function AppHome() {
   const { isAuthenticated, isLoading } = useAdminAuth();
