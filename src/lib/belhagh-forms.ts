@@ -608,11 +608,14 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 30,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [6], // جمعه
         startHour: '09:00',
         endHour: '12:00',
+        daySchedules: {
+          6: { enabled: true, periods: [{ startHour: '09:00', endHour: '12:00' }] },
+        },
         holidays: [],
       },
       options: [
@@ -639,11 +642,14 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 30,
-        restTimeMinutes: 5,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [4], // چهارشنبه
         startHour: '10:00',
         endHour: '13:00',
+        daySchedules: {
+          4: { enabled: true, periods: [{ startHour: '10:00', endHour: '13:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -670,11 +676,16 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [0, 2, 4], // شنبه، دوشنبه و چهارشنبه
         startHour: '13:00',
         endHour: '15:00',
+        daySchedules: {
+          0: { enabled: true, periods: [{ startHour: '13:00', endHour: '15:00' }] },
+          2: { enabled: true, periods: [{ startHour: '13:00', endHour: '15:00' }] },
+          4: { enabled: true, periods: [{ startHour: '13:00', endHour: '15:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -704,11 +715,14 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [1], // یکشنبه
         startHour: '16:00',
         endHour: '19:00',
+        daySchedules: {
+          1: { enabled: true, periods: [{ startHour: '16:00', endHour: '19:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -740,6 +754,9 @@ export const belhaghBookingForm: Form = {
         availableDays: [5], // پنجشنبه
         startHour: '09:00',
         endHour: '11:00',
+        daySchedules: {
+          5: { enabled: true, periods: [{ startHour: '09:00', endHour: '11:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -771,6 +788,11 @@ export const belhaghBookingForm: Form = {
         availableDays: [0, 1, 2], // شنبه تا دوشنبه
         startHour: '14:00',
         endHour: '15:00',
+        daySchedules: {
+          0: { enabled: true, periods: [{ startHour: '14:00', endHour: '15:00' }] },
+          1: { enabled: true, periods: [{ startHour: '14:00', endHour: '15:00' }] },
+          2: { enabled: true, periods: [{ startHour: '14:00', endHour: '15:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -797,11 +819,15 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [1, 3], // یکشنبه و سه‌شنبه
         startHour: '13:00',
         endHour: '15:00',
+        daySchedules: {
+          1: { enabled: true, periods: [{ startHour: '13:00', endHour: '15:00' }] },
+          3: { enabled: true, periods: [{ startHour: '13:00', endHour: '15:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -829,11 +855,14 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [1], // یکشنبه
         startHour: '10:00',
         endHour: '14:00',
+        daySchedules: {
+          1: { enabled: true, periods: [{ startHour: '10:00', endHour: '14:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -861,11 +890,27 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [0, 3], // شنبه و سه‌شنبه
         startHour: '11:00',
         endHour: '16:00',
+        daySchedules: {
+          0: {
+            enabled: true,
+            periods: [
+              { startHour: '11:00', endHour: '11:45' },
+              { startHour: '14:00', endHour: '15:45' },
+            ],
+          },
+          3: {
+            enabled: true,
+            periods: [
+              { startHour: '11:00', endHour: '11:45' },
+              { startHour: '14:00', endHour: '15:45' },
+            ],
+          },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -896,11 +941,15 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [3, 4], // سه‌شنبه و چهارشنبه
         startHour: '16:00',
         endHour: '18:00',
+        daySchedules: {
+          3: { enabled: true, periods: [{ startHour: '16:00', endHour: '18:00' }] },
+          4: { enabled: true, periods: [{ startHour: '16:00', endHour: '18:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -956,11 +1005,15 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [0, 3], // شنبه و سه‌شنبه
         startHour: '11:00',
         endHour: '14:00',
+        daySchedules: {
+          0: { enabled: true, periods: [{ startHour: '11:00', endHour: '11:45' }] },
+          3: { enabled: true, periods: [{ startHour: '13:00', endHour: '13:45' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -986,11 +1039,14 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [1], // یکشنبه
         startHour: '18:00',
         endHour: '20:00',
+        daySchedules: {
+          1: { enabled: true, periods: [{ startHour: '18:00', endHour: '20:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -1016,11 +1072,14 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [2], // دوشنبه
         startHour: '11:00',
         endHour: '12:00',
+        daySchedules: {
+          2: { enabled: true, periods: [{ startHour: '11:00', endHour: '11:45' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -1046,11 +1105,12 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: false },
       appointmentData: {
-        slotDurationMinutes: 30,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [],
         startHour: '00:00',
         endHour: '00:00',
+        daySchedules: {},
         holidays: [],
       },
       options: [],
@@ -1078,6 +1138,11 @@ export const belhaghBookingForm: Form = {
         availableDays: [0, 1, 2], // شنبه تا دوشنبه
         startHour: '18:00',
         endHour: '20:00',
+        daySchedules: {
+          0: { enabled: true, periods: [{ startHour: '18:00', endHour: '20:00' }] },
+          1: { enabled: true, periods: [{ startHour: '18:00', endHour: '20:00' }] },
+          2: { enabled: true, periods: [{ startHour: '18:00', endHour: '20:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -1107,11 +1172,14 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 30,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [3], // سه‌شنبه
         startHour: '17:00',
         endHour: '18:00',
+        daySchedules: {
+          3: { enabled: true, periods: [{ startHour: '17:00', endHour: '17:45' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -1136,11 +1204,15 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 30,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [1, 3], // یکشنبه و سه‌شنبه
         startHour: '10:00',
         endHour: '12:00',
+        daySchedules: {
+          1: { enabled: true, periods: [{ startHour: '10:00', endHour: '12:00' }] },
+          3: { enabled: true, periods: [{ startHour: '10:00', endHour: '12:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [
@@ -1168,11 +1240,14 @@ export const belhaghBookingForm: Form = {
       gridCols: 12,
       validations: { required: true },
       appointmentData: {
-        slotDurationMinutes: 60,
-        restTimeMinutes: 0,
+        slotDurationMinutes: 45,
+        restTimeMinutes: 15,
         availableDays: [4], // چهارشنبه
         startHour: '08:00',
         endHour: '13:00',
+        daySchedules: {
+          4: { enabled: true, periods: [{ startHour: '08:00', endHour: '13:00' }] },
+        },
         holidays: ['جمعه'],
       },
       options: [

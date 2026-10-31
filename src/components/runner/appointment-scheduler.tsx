@@ -35,8 +35,41 @@ const WEEK_DAYS = [
   { index: 6, name: 'جمعه' },
 ];
 
-const normalizeDayName = (str: string) => 
+export const normalizeDayName = (str: string) => 
   str.replace(/\u200c/g, '').replace(/[\s\-_]/g, '').trim();
+
+/**
+ * تشخیص دقیق تعلق داشتن یک عنوان نوبت/گزینه به یک روز خاص هفته
+ * (جلوگیری از باگ تداخل کلمه «شنبه» با «یکشنبه»، «دوشنبه»، «سه‌شنبه»، «چهارشنبه» و «پنج‌شنبه»)
+ */
+export const isOptionForDay = (optionLabel: string, dayIndex: number): boolean => {
+  const norm = normalizeDayName(optionLabel);
+  switch (dayIndex) {
+    case 0: // شنبه (نباید شامل یک، دو، سه، چهار یا پنج باشد)
+      return (
+        norm.includes('شنبه') &&
+        !norm.includes('یک') &&
+        !norm.includes('دو') &&
+        !norm.includes('سه') &&
+        !norm.includes('چهار') &&
+        !norm.includes('پنج')
+      );
+    case 1: // یکشنبه
+      return norm.includes('یکشنبه');
+    case 2: // دوشنبه
+      return norm.includes('دوشنبه');
+    case 3: // سه‌شنبه
+      return norm.includes('سهشنبه');
+    case 4: // چهارشنبه
+      return norm.includes('چهارشنبه');
+    case 5: // پنج‌شنبه
+      return norm.includes('پنجشنبه');
+    case 6: // جمعه
+      return norm.includes('جمعه');
+    default:
+      return false;
+  }
+};
 
 export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   field,
@@ -59,16 +92,13 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     if (field.options && field.options.length > 0) {
       const detectedDays = new Set<number>();
       field.options.forEach((opt) => {
-        const text = normalizeDayName(opt.label);
-        if (text.includes('شنبه') && !text.includes('یک') && !text.includes('دو') && !text.includes('سه') && !text.includes('چهار') && !text.includes('پنج')) detectedDays.add(0);
-        if (text.includes('یکشنبه')) detectedDays.add(1);
-        if (text.includes('دوشنبه')) detectedDays.add(2);
-        if (text.includes('سهشنبه')) detectedDays.add(3);
-        if (text.includes('چهارشنبه')) detectedDays.add(4);
-        if (text.includes('پنجشنبه')) detectedDays.add(5);
-        if (text.includes('جمعه')) detectedDays.add(6);
+        for (let d = 0; d < 7; d++) {
+          if (isOptionForDay(opt.label, d)) {
+            detectedDays.add(d);
+          }
+        }
       });
-      if (detectedDays.size > 0) return Array.from(detectedDays);
+      if (detectedDays.size > 0) return Array.from(detectedDays).sort((a, b) => a - b);
     }
     return [0, 1, 2, 3, 4]; // پیش‌فرض شنبه تا چهارشنبه
   }, [appointmentConfig, field.options]);
@@ -77,11 +107,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   const initialDay = availableDays.length > 0 ? availableDays[0] : 0;
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(initialDay);
 
-  // فهرست نوبت‌های رزرو شده در پایگاه‌داده جهت جلوگیری از رزرو مجدد در همان زمان
+  // فهرست نوبت‌های رزرو شده اختصاصی همین مشاور در پایگاه‌داده
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch('/api/cases?action=booked_slots&formId=form-belhagh-booking')
+    const counselorParam = field.id ? `&counselorField=${encodeURIComponent(field.id)}` : '';
+    fetch(`/api/cases?action=booked_slots&formId=form-belhagh-booking${counselorParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.success && Array.isArray(data.bookedSlots)) {
@@ -91,12 +122,76 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       .catch((err) => console.warn('Fetch booked slots error:', err));
   }, [field.id]);
 
-  // تغییر روز فعال هنگام تغییر مشاور یا فیلد
+  // ریست روز فعال به اولین روز کاری مشاور جدید هنگام تغییر مشاور یا فیلد
+  useEffect(() => {
+    if (availableDays.length > 0) {
+      setSelectedDayIndex(availableDays[0]);
+    }
+  }, [field.id]);
+
   useEffect(() => {
     if (availableDays.length > 0 && !availableDays.includes(selectedDayIndex)) {
       setSelectedDayIndex(availableDays[0]);
     }
-  }, [availableDays, field.id]);
+  }, [availableDays, selectedDayIndex]);
+
+  // محاسبه دقیق ساعات کاری هر روز مشخص به صورت هوشمند
+  const getDayHoursDisplay = (dayIndex: number): string => {
+    // ۱. بررسی daySchedules در صورت تعریف شدن برای این روز خاص
+    const daySchedule = appointmentConfig?.daySchedules?.[dayIndex];
+    if (daySchedule?.periods && daySchedule.periods.length > 0) {
+      if (daySchedule.periods.length === 1) {
+        const p = daySchedule.periods[0];
+        return `از ${toPersianDigits(p.startHour)} تا ${toPersianDigits(p.endHour)}`;
+      }
+      return daySchedule.periods
+        .map((p, idx) => `نوبت ${toPersianDigits(idx + 1)}: ${toPersianDigits(p.startHour)} تا ${toPersianDigits(p.endHour)}`)
+        .join(' و ');
+    }
+
+    // ۲. استخراج نوبت‌ها و ساعات واقعی از گزینه‌های همان روز
+    if (field.options && field.options.length > 0) {
+      const dayOpts = field.options.filter((opt) => isOptionForDay(opt.label, dayIndex));
+      if (dayOpts.length > 0) {
+        const shiftsMap = new Map<string, string[]>();
+        dayOpts.forEach((opt) => {
+          const shiftMatch = opt.label.match(/(نوبت\s+(?:اول|دوم|سوم|چهارم|[\d\u06F0-\u06F9]+))/);
+          const shiftName = shiftMatch ? shiftMatch[1] : 'default';
+          const timeMatch = opt.label.match(/(?:ساعت\s*)?([۰-۹\d]{1,2}:[۰-۹\d]{2})\s*الی\s*([۰-۹\d]{1,2}:[۰-۹\d]{2})/);
+          if (timeMatch) {
+            const times = shiftsMap.get(shiftName) || [];
+            times.push(timeMatch[1], timeMatch[2]);
+            shiftsMap.set(shiftName, times);
+          }
+        });
+
+        if (shiftsMap.size > 0) {
+          const parts: string[] = [];
+          shiftsMap.forEach((times, shiftName) => {
+            if (times.length >= 2) {
+              const start = times[0];
+              const end = times[times.length - 1];
+              if (shiftName !== 'default') {
+                parts.push(`${shiftName}: ${toPersianDigits(start)} تا ${toPersianDigits(end)}`);
+              } else {
+                parts.push(`از ${toPersianDigits(start)} تا ${toPersianDigits(end)}`);
+              }
+            }
+          });
+          if (parts.length > 0) {
+            return parts.join(' و ');
+          }
+        }
+      }
+    }
+
+    // ۳. در غیر این صورت بازه کلی مشاور
+    if (appointmentConfig?.startHour && appointmentConfig?.endHour) {
+      return `از ${toPersianDigits(appointmentConfig.startHour)} تا ${toPersianDigits(appointmentConfig.endHour)}`;
+    }
+
+    return '';
+  };
 
   // لیست روزهای کاری و تعطیل مشاور جهت نمایش شفاف به کاربر
   const workingDaysList = useMemo(() => {
@@ -112,12 +207,9 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     const currentDay = WEEK_DAYS[selectedDayIndex];
     if (!currentDay) return [];
 
-    const normCurrentDayName = normalizeDayName(currentDay.name);
-
-    // اولویت با گزینه‌های از پیش تعیین‌شده متناظر با این روز است
+    // اولویت با گزینه‌های از پیش تعیین‌شده دقیقاً متناظر با این روز خاص هفته است
     const matchingOptions = (field.options || []).filter((opt) => {
-      const normOpt = normalizeDayName(opt.label);
-      return normOpt.includes(normCurrentDayName);
+      return isOptionForDay(opt.label, selectedDayIndex);
     });
 
     if (matchingOptions.length > 0) {
@@ -125,7 +217,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         const slotLabel = o.label.trim();
         const slotVal = (o.value || o.id || '').trim();
         const isTaken = bookedSlots.some(
-          (b) => b === slotLabel || b === slotVal || b.includes(slotLabel) || slotLabel.includes(b)
+          (b) => b === slotLabel || b === slotVal || (b.includes(currentDay.name) && (b.includes(slotLabel) || slotLabel.includes(b)))
         );
         const shiftMatch = slotLabel.match(/(نوبت\s+(?:اول|دوم|سوم|چهارم|[\d\u06F0-\u06F9]+))/);
 
@@ -144,14 +236,16 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       return [];
     }
 
-    // بر اساس ساعات کاری و استراحت محاسبه کن
+    // بر اساس ساعات کاری و استراحت تفکیک‌شده محاسبه کن
     const dayConfig = appointmentConfig?.daySchedules?.[selectedDayIndex];
     const periods = (dayConfig?.periods && dayConfig.periods.length > 0)
       ? dayConfig.periods
-      : [{
-          startHour: appointmentConfig?.startHour || '09:00',
-          endHour: appointmentConfig?.endHour || '17:00',
-        }];
+      : (appointmentConfig?.startHour && appointmentConfig?.endHour)
+      ? [{
+          startHour: appointmentConfig.startHour,
+          endHour: appointmentConfig.endHour,
+        }]
+      : [];
 
     const slots: Array<{ id: string; label: string; time: string; shiftName?: string; available: boolean }> = [];
 
@@ -180,7 +274,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         const optId = `slot_${selectedDayIndex}_${pIdx}_${currentMin}`;
 
         const isTaken = bookedSlots.some(
-          (b) => b === fullLabel || b === optId || b.includes(timeRange)
+          (b) => b === fullLabel || b === optId || (b.includes(currentDay.name) && b.includes(timeRange))
         );
 
         slots.push({
@@ -237,26 +331,21 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
               <CalendarCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>روزهای کاری مشاور:</span>
             </span>
-            <div className="flex flex-wrap items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1.5">
               {workingDaysList.map((day) => {
-                const daySchedule = appointmentConfig?.daySchedules?.[day.index];
-                const periods = (daySchedule?.periods && daySchedule.periods.length > 0)
-                  ? daySchedule.periods
-                  : (appointmentConfig?.startHour && appointmentConfig?.endHour)
-                  ? [{ startHour: appointmentConfig.startHour, endHour: appointmentConfig.endHour }]
-                  : [];
-
-                const hoursLabel = periods.length > 0
-                  ? ` (${periods.map((p) => `از ${toPersianDigits(p.startHour)} تا ${toPersianDigits(p.endHour)}`).join(' و ')})`
-                  : '';
+                const hoursLabel = getDayHoursDisplay(day.index);
 
                 return (
                   <span 
                     key={day.index} 
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-[11px]"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/90 font-bold text-[11px] shadow-xs"
                   >
-                    <span>{day.name}</span>
-                    {hoursLabel && <span className="text-[10px] text-emerald-700 font-normal">{hoursLabel}</span>}
+                    <span className="font-extrabold">{day.name}</span>
+                    {hoursLabel && (
+                      <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-100/80 px-1.5 py-0.5 rounded">
+                        ({hoursLabel})
+                      </span>
+                    )}
                   </span>
                 );
               })}

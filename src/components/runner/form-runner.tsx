@@ -1202,7 +1202,18 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   }, []);
 
   const handleFieldChange = (fieldId: string, val: any) => {
-    setFormData((prev) => ({ ...prev, [fieldId]: val }));
+    setFormData((prev) => {
+      const next = { ...prev, [fieldId]: val };
+      // اگر موضوع یا مشاور تغییر کرد، نوبت‌های قبلی رزرو شده سایر مشاوران را پاکسازی کن
+      if (fieldId === 'f_topic' || fieldId.startsWith('f_counselor_')) {
+        Object.keys(next).forEach((k) => {
+          if (k.startsWith('f_booking_')) {
+            delete next[k];
+          }
+        });
+      }
+      return next;
+    });
     if (errors[fieldId]) {
       setErrors((prev) => {
         const cp = { ...prev };
@@ -3297,6 +3308,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   </div>
                 ) : field.type === 'appointmentBooking' ? (
                   <AppointmentScheduler
+                    key={field.id}
                     field={field}
                     value={formData[field.id]}
                     onChange={(val) => handleFieldChange(field.id, val)}

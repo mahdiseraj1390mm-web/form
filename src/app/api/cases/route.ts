@@ -19,14 +19,21 @@ export async function GET(req: NextRequest) {
     // دریافت تمامی نوبت‌های از قبل رزرو شده جهت جلوگیری از ثبت تکراری نوبت در یک زمان
     if (action === 'booked_slots') {
       const targetFormId = formId || 'form-belhagh-booking';
+      const counselorField = searchParams.get('counselorField');
       const submissions = await getFormSubmissionsFromDb(targetFormId);
       const bookedSlots: string[] = [];
 
       submissions.forEach((s) => {
         if (s.data && typeof s.data === 'object') {
           Object.entries(s.data).forEach(([key, val]) => {
-            if (key.startsWith('f_booking_') && val && typeof val === 'string') {
-              bookedSlots.push(val.trim());
+            if (val && typeof val === 'string') {
+              if (counselorField) {
+                if (key === counselorField) {
+                  bookedSlots.push(val.trim());
+                }
+              } else if (key.startsWith('f_booking_')) {
+                bookedSlots.push(val.trim());
+              }
             }
           });
         }
