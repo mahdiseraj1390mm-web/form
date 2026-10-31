@@ -282,15 +282,6 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     return 'مراجع محترم مرکز بالحق';
   }, [clientCase.fullName, combinedData]);
 
-  // حروف اختصاری آواتار مراجع بر اساس نام واقعی
-  const avatarInitials = useMemo(() => {
-    const clean = displayFullName.trim();
-    const parts = clean.split(/\s+/);
-    if (parts.length >= 2) {
-      return `${parts[0][0]}‌${parts[parts.length - 1][0]}`;
-    }
-    return clean.slice(0, 2);
-  }, [displayFullName]);
 
   // نقش در خانواده بر اساس پاسخ واقعی مراجع
   const roleInFamily = useMemo(() => {
@@ -817,61 +808,6 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           </div>
         </div>
 
-        {/* کارت سرمه‌ای هویت مراجع (Hero Section) با داده‌های واقعی */}
-        <section className="overflow-hidden rounded-[24px] bg-[#173f6b] p-6 text-white shadow-[0_18px_45px_rgba(23,63,107,.18)]">
-          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
-            <div className="flex items-center gap-5">
-              <div className="grid size-20 shrink-0 place-items-center rounded-[24px] bg-white/12 text-2xl font-black ring-1 ring-white/15">
-                {avatarInitials}
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-2xl font-black">{displayFullName}</h2>
-                  <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium">
-                    {roleInFamily}
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-blue-100 font-medium">
-                  <span>کد پرونده: {toPersianDigits(clientCase.caseCode)}</span>
-                  <span className="flex items-center gap-1.5 font-mono">
-                    <Phone className="size-3.5" />
-                    {toPersianDigits(clientCase.mobile)}
-                  </span>
-                  <span>
-                    {clientCase.provinceCity && clientCase.provinceCity !== 'ثبت‌نشده'
-                      ? clientCase.provinceCity
-                      : combinedData.f_province_city || combinedData.province || 'ثبت‌نشده'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2.5 lg:min-w-[430px]">
-              <div className="rounded-2xl bg-white/10 p-4">
-                <div className="text-xl font-black font-mono">
-                  {toPersianDigits(clientCase.totalFormsCount)}
-                </div>
-                <div className="mt-1 text-[11px] text-blue-100">فرم تکمیل‌شده</div>
-              </div>
-              <div className="rounded-2xl bg-white/10 p-4">
-                <div className="text-xl font-black font-mono">
-                  {toPersianDigits(appointments.length)}
-                </div>
-                <div className="mt-1 text-[11px] text-blue-100">جلسه مشاوره</div>
-              </div>
-              <div className="rounded-2xl bg-emerald-400/15 p-4">
-                <div className="text-xl font-black font-mono">
-                  {clientCase.totalPaidAmount > 0
-                    ? clientCase.totalPaidAmount >= 1000000
-                      ? `${toPersianDigits((clientCase.totalPaidAmount / 1000000).toFixed(1))} م`
-                      : formatCurrency(clientCase.totalPaidAmount, 'IRT')
-                    : 'بدون هزینه'}
-                </div>
-                <div className="mt-1 text-[11px] text-emerald-100">مجموع پرداختی</div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* نوار زبانه‌های ناوبری ۵ گانه */}
         <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xs">

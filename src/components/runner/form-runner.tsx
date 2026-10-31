@@ -1114,8 +1114,12 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   }, [form.payment, formData, form.fields]);
 
-  // ارزیابی شروط منطقی (نمایش/مخفی‌سازی فیلدها)
-  const isFieldVisible = (fieldId: string): boolean => {
+  // ارزیابی شروط منطقی (نمایش/مخفی‌سازی فیلدها) به‌صورت سلسله‌مراتبی و وابسته به نمایش فیلد والد
+  const isFieldVisible = (fieldId: string, visited: Set<string> = new Set()): boolean => {
+    if (visited.has(fieldId)) return false;
+    const nextVisited = new Set(visited);
+    nextVisited.add(fieldId);
+
     const matchingRules = form.rules.filter(
       (r) =>
         r.targetFieldId === fieldId ||
@@ -1124,7 +1128,12 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     );
     if (matchingRules.length === 0) return true;
 
-    const evalCondition = (rule: any) => {
+    const evalCondition = (rule: any): boolean => {
+      // اگر فیلد منبع شرط (والد) خودش در حال حاضر مخفی باشد، شرط آن نمی‌تواند برقرار شود
+      if (rule.sourceFieldId && !isFieldVisible(rule.sourceFieldId, nextVisited)) {
+        return false;
+      }
+
       const sourceVal = formData[rule.sourceFieldId];
       const sourceField = form.fields.find((f) => f.id === rule.sourceFieldId);
       const selectedOption = sourceField?.options?.find(
@@ -1170,7 +1179,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         case 'notEquals':
           return !checkValMatch(sourceVal, rule.value);
         case 'contains':
-          return sourceVal && String(sourceVal).includes(rule.value);
+          return !!sourceVal && String(sourceVal).includes(rule.value);
         case 'isEmpty':
           return !sourceVal || sourceVal === '';
         case 'isNotEmpty':
@@ -1204,23 +1213,50 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   const handleFieldChange = (fieldId: string, val: any) => {
     setFormData((prev) => {
       const next = { ...prev, [fieldId]: val };
-      // اگر موضوع یا مشاور تغییر کرد، نوبت‌های قبلی رزرو شده سایر مشاوران را پاکسازی کن
-      if (fieldId === 'f_topic' || fieldId.startsWith('f_counselor_')) {
+
+      // اگر موضوع مراجعه تغییر کرد، انتخاب‌های کلیه مشاوران، نوبت‌ها و تلفن‌ها را پاکسازی کن
+      if (fieldId === 'f_topic') {
         Object.keys(next).forEach((k) => {
-          if (k.startsWith('f_booking_')) {
+          if (k.startsWith('f_counselor_') || k.startsWith('f_booking_') || k.startsWith('f_phone_')) {
             delete next[k];
           }
         });
       }
+
+      // اگر مشاور تغییر کرد، نوبت‌های قبلی، تلفن‌ها و سایر مشاوران را پاکسازی کن
+      if (fieldId.startsWith('f_counselor_')) {
+        Object.keys(next).forEach((k) => {
+          if (k.startsWith('f_counselor_') && k !== fieldId) {
+            delete next[k];
+          }
+          if (k.startsWith('f_booking_') || k.startsWith('f_phone_')) {
+            delete next[k];
+          }
+        });
+      }
+
       return next;
     });
-    if (errors[fieldId]) {
-      setErrors((prev) => {
-        const cp = { ...prev };
+
+    setErrors((prev) => {
+      const cp = { ...prev };
+      if (fieldId === 'f_topic') {
+        Object.keys(cp).forEach((k) => {
+          if (k.startsWith('f_counselor_') || k.startsWith('f_booking_') || k.startsWith('f_phone_') || k === 'f_topic') {
+            delete cp[k];
+          }
+        });
+      } else if (fieldId.startsWith('f_counselor_')) {
+        Object.keys(cp).forEach((k) => {
+          if (k.startsWith('f_booking_') || k.startsWith('f_phone_') || (k.startsWith('f_counselor_') && k !== fieldId) || k === fieldId) {
+            delete cp[k];
+          }
+        });
+      } else if (cp[fieldId]) {
         delete cp[fieldId];
-        return cp;
-      });
-    }
+      }
+      return cp;
+    });
   };
 
   // مدیریت رسم امضای دیجیتال روی Canvas
@@ -1560,27 +1596,29 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     // بررسی رزرو نبودن نوبت انتخابی در فرم نوبت‌دهی (جلوگیری از ثبت نوبت تکراری در همان زمان)
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
       try {
-        const checkRes = await fetch('/api/cases?action=booked_slots&formId=form-belhagh-booking');
-        const checkData = await checkRes.json();
-        if (checkData.success && Array.isArray(checkData.bookedSlots)) {
-          let selectedSlotVal = '';
-          let bookingFieldKey = '';
-          for (const key of Object.keys(formData)) {
-            if (key.startsWith('f_booking_') && formData[key]) {
-              selectedSlotVal = String(formData[key]).trim();
-              bookingFieldKey = key;
-              break;
-            }
+        let selectedSlotVal = '';
+        let bookingFieldKey = '';
+        for (const key of Object.keys(formData)) {
+          if (key.startsWith('f_booking_') && formData[key] && isFieldVisible(key)) {
+            selectedSlotVal = String(formData[key]).trim();
+            bookingFieldKey = key;
+            break;
           }
+        }
 
-          if (selectedSlotVal && checkData.bookedSlots.some((b: string) => b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal))) {
-            setErrors((prev) => ({
-              ...prev,
-              [bookingFieldKey]: '⚠️ این نوبت قبلاً توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
-            }));
-            const el = document.getElementById(`field-${bookingFieldKey}`);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
+        if (bookingFieldKey && selectedSlotVal) {
+          const checkRes = await fetch(`/api/cases?action=booked_slots&formId=form-belhagh-booking&counselorField=${encodeURIComponent(bookingFieldKey)}`);
+          const checkData = await checkRes.json();
+          if (checkData.success && Array.isArray(checkData.bookedSlots)) {
+            if (checkData.bookedSlots.some((b: string) => b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal))) {
+              setErrors((prev) => ({
+                ...prev,
+                [bookingFieldKey]: '⚠️ این نوبت قبلاً توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
+              }));
+              const el = document.getElementById(`field-${bookingFieldKey}`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              return;
+            }
           }
         }
       } catch (e) {
@@ -1719,9 +1757,19 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const deviceFingerprint = getDeviceFingerprint();
     const detectedSafaCode = getDetectedSafaCode() || undefined;
 
+    // پاکسازی فیلدهای نامرئی از داده‌های ثبت فرم تا مقادیر مشاور یا فیلدهای قبلی حذف شده ارسال نشوند
+    const cleanFormData: Record<string, any> = {};
+    Object.keys(formData).forEach((k) => {
+      const fieldDef = form.fields.find((f) => f.id === k);
+      if (fieldDef && !isFieldVisible(fieldDef.id)) {
+        return;
+      }
+      cleanFormData[k] = formData[k];
+    });
+
     const sub = submitFormResponse(
       form.id,
-      { ...formData, caseCode: newCaseCode },
+      { ...cleanFormData, caseCode: newCaseCode },
       paymentInfo,
       quizResult,
       evaluationResult,
@@ -1741,7 +1789,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     // ۱. ارسال پیامک کد پرونده پس از ثبت نام مراجع (مطابق پترن عکس ۳)
     if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
-      const clientMobile = formData.f_mobile || formData.mobile;
+      const clientMobile = cleanFormData.f_mobile || cleanFormData.mobile;
       if (clientMobile) {
         fetch('/api/sms/send', {
           method: 'POST',
@@ -1757,7 +1805,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     // ثبت یا نگهداری دائم پرونده در دیتابیس ابری Neon PostgreSQL
     if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
-      const clientMobile = formData.f_mobile || formData.mobile;
+      const clientMobile = cleanFormData.f_mobile || cleanFormData.mobile;
       if (clientMobile) {
         fetch('/api/cases', {
           method: 'POST',
@@ -1766,7 +1814,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             action: 'register_case',
             caseCode: newCaseCode,
             mobile: clientMobile,
-            data: formData,
+            data: cleanFormData,
           }),
         }).catch((err) => console.warn('Case DB save error:', err));
       }
@@ -1784,7 +1832,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     // ۲ و ۳. ارسال پیامک تایید نوبت برای مراجع و مشاور (فرم نوبت‌دهی 3uu4z)
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-      const booking = extractBookingDetails({ ...formData, ...finalSub.data });
+      const booking = extractBookingDetails({ ...cleanFormData, ...finalSub.data });
       fetch('/api/sms/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
