@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { FormProvider } from '@/context/form-context';
+import { AdminAuthProvider } from '@/context/admin-auth-context';
 
 export const metadata: Metadata = {
   title: 'سامانه خدمات روانشناسی بالحق',
@@ -28,9 +29,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-full flex flex-col font-['Vazirmatn',system-ui,sans-serif] bg-slate-50 text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
-        <FormProvider>
-          {children}
-        </FormProvider>
+        <AdminAuthProvider>
+          <FormProvider>
+            {children}
+          </FormProvider>
+        </AdminAuthProvider>
       </body>
     </html>
   );

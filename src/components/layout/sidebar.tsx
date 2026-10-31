@@ -9,11 +9,13 @@ import {
   Settings, 
   Sparkles, 
   Eye, 
-  FileCheck,
-  FolderKanban,
-  X
+  FileCheck, 
+  FolderKanban, 
+  X,
+  LogOut
 } from 'lucide-react';
 import { useForm } from '@/context/form-context';
+import { useAdminAuth } from '@/context/admin-auth-context';
 import { toPersianDigits } from '@/lib/persian';
 
 interface SidebarProps {
@@ -30,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile
 }) => {
   const { forms, submissions, activeForm } = useForm();
+  const { logout } = useAdminAuth();
 
   const totalSubmissions = submissions.length;
 
@@ -176,6 +179,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-emerald-600 font-medium">پایدار ۱۰۰٪</span>
         </div>
       </div>
+
+      {/* دکمه خروج سریع از پنل مدیریت */}
+      <button
+        onClick={async () => {
+          if (onCloseMobile) onCloseMobile();
+          await logout();
+        }}
+        className="w-full mt-2 py-2 px-3 rounded-lg text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+        title="خروج از حساب مدیریت"
+      >
+        <LogOut className="w-3.5 h-3.5" />
+        <span>خروج از حساب مدیریت</span>
+      </button>
     </div>
   );
 

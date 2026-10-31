@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { useForm } from '@/context/form-context';
+import { useAdminAuth } from '@/context/admin-auth-context';
+import { AdminLoginView } from '@/components/auth/admin-login-view';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
@@ -15,8 +17,10 @@ import { SystemSettingsView } from '@/components/settings/system-settings-view';
 import { MediaManagerView } from '@/components/media/media-manager-view';
 import { AdminChatInboxView } from '@/components/chat/admin-chat-inbox-view';
 import { NewFormModal } from '@/components/modals/new-form-modal';
+import { Layers } from 'lucide-react';
 
 export default function AppHome() {
+  const { isAuthenticated, isLoading } = useAdminAuth();
   const { forms, activeForm, setActiveForm, getFormById } = useForm();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isNewFormModalOpen, setIsNewFormModalOpen] = useState(false);
@@ -43,6 +47,23 @@ export default function AppHome() {
       setCurrentTab('runner');
     }
   };
+
+  // وضعیت بارگذاری اولیه احراز هویت
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center mb-4 animate-pulse">
+          <Layers className="w-6 h-6 animate-spin" />
+        </div>
+        <p className="text-xs text-slate-400 font-medium">در حال بررسی مجوزهای دسترسی مدیریت...</p>
+      </div>
+    );
+  }
+
+  // در صورتی که کاربر وارد نشده باشد، فرم ورود نمایش داده می‌شود
+  if (!isAuthenticated) {
+    return <AdminLoginView />;
+  }
 
   return (
     <div className="h-screen h-[100dvh] flex flex-col bg-slate-50 text-slate-900 overflow-hidden">

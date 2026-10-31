@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from '@/context/form-context';
+import { useAdminAuth } from '@/context/admin-auth-context';
 import { 
   Layers, 
   PlusCircle, 
@@ -14,7 +15,11 @@ import {
   UserCheck,
   Clock,
   Sparkles,
-  Inbox
+  Inbox,
+  LogOut,
+  ChevronDown,
+  User as UserIcon,
+  ShieldCheck
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -33,25 +38,31 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleMobileNav,
 }) => {
   const { activeForm, similarityNotifications, resolveSimilarityNotification } = useForm();
+  const { currentUser, logout } = useAdminAuth();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const pendingNotifs = similarityNotifications ? similarityNotifications.filter((n) => !n.resolved) : [];
 
-  // بستن منوی اعلان‌ها در صورت کلیک خارج از کادر
+  // بستن منوها در صورت کلیک خارج از کادر
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setIsNotifOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     }
-    if (isNotifOpen) {
+    if (isNotifOpen || isUserMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isNotifOpen]);
+  }, [isNotifOpen, isUserMenuOpen]);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
@@ -259,10 +270,61 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2 pr-1 sm:pr-2 border-r border-slate-200">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs ring-2 ring-slate-100 shrink-0">
-              مدیر
-            </div>
+          {/* پروفایل مدیر و منوی خروج */}
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              className="flex items-center gap-1.5 sm:gap-2 pr-1 sm:pr-2 border-r border-slate-200 hover:opacity-80 transition-opacity focus:outline-none cursor-pointer"
+              title="حساب کاربری مدیریت"
+              aria-label="منوی حساب کاربری"
+            >
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs ring-2 ring-slate-100 shadow-sm shrink-0">
+                مدیر
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-500 hidden sm:block transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isUserMenuOpen && (
+              <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden text-right animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="p-3.5 bg-slate-50 border-b border-slate-200">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                      مدیر
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-slate-900 truncate">
+                        {currentUser?.name || 'مدیر ارشد سامانه'}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        admin (آنلاین)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-1.5 space-y-1">
+                  <div className="px-3 py-2 text-[11px] text-slate-500 bg-slate-50/60 rounded-lg flex items-center justify-between">
+                    <span>سطح دسترسی:</span>
+                    <span className="font-bold text-slate-700 flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                      مدیر کل (Super Admin)
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      setIsUserMenuOpen(false);
+                      await logout();
+                    }}
+                    className="w-full px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-500" />
+                    <span>خروج از پنل مدیریت</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
