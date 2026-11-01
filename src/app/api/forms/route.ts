@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { initialForms } from '@/lib/mock-data';
 import { Form } from '@/types/form';
+import { getFormsFromDb, saveFormsToPostgres } from '@/lib/db';
 
 const DB_PATH = path.join(process.cwd(), 'data', 'forms.json');
 
@@ -12,6 +13,17 @@ function sanitizeForms(rawForms: Form[]): Form[] {
 }
 
 async function loadFormsFromDb(): Promise<Form[]> {
+  // ۱. اولویت نخست: واکشی از پایگاه‌داده سرور PostgreSQL
+  try {
+    const pgForms = await getFormsFromDb();
+    if (pgForms && Array.isArray(pgForms) && pgForms.length > 0) {
+      return sanitizeForms(pgForms);
+    }
+  } catch (e) {
+    console.warn('PostgreSQL fetch forms error:', e);
+  }
+
+  // ۲. اولویت دوم: بارگذاری از مخزن پایدار سرور
   try {
     const dataDir = path.join(process.cwd(), 'data');
     await fs.mkdir(dataDir, { recursive: true });
@@ -20,6 +32,7 @@ async function loadFormsFromDb(): Promise<Form[]> {
       const content = await fs.readFile(DB_PATH, 'utf8');
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        saveFormsToPostgres(parsed).catch(() => {});
         return sanitizeForms(parsed);
       }
     } catch {
@@ -28,6 +41,7 @@ async function loadFormsFromDb(): Promise<Form[]> {
 
     const cleanInitial = sanitizeForms(initialForms);
     await fs.writeFile(DB_PATH, JSON.stringify(cleanInitial, null, 2), 'utf8');
+    saveFormsToPostgres(cleanInitial).catch(() => {});
     return cleanInitial;
   } catch (err) {
     console.error('Error loading forms from DB:', err);
@@ -36,9 +50,22 @@ async function loadFormsFromDb(): Promise<Form[]> {
 }
 
 async function saveFormsToDb(forms: Form[]): Promise<void> {
-  const dataDir = path.join(process.cwd(), 'data');
-  await fs.mkdir(dataDir, { recursive: true });
-  await fs.writeFile(DB_PATH, JSON.stringify(sanitizeForms(forms), null, 2), 'utf8');
+  const sanitized = sanitizeForms(forms);
+  // ذخیره در مخزن محلی
+  try {
+    const dataDir = path.join(process.cwd(), 'data');
+    await fs.mkdir(dataDir, { recursive: true });
+    await fs.writeFile(DB_PATH, JSON.stringify(sanitized, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('Error saving forms to local file:', err);
+  }
+
+  // ذخیره در پایگاه‌داده سرور PostgreSQL
+  try {
+    await saveFormsToPostgres(sanitized);
+  } catch (err) {
+    console.warn('Error saving forms to PostgreSQL:', err);
+  }
 }
 
 export async function GET() {

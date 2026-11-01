@@ -1120,6 +1120,27 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const nextVisited = new Set(visited);
     nextVisited.add(fieldId);
 
+    // در سامانه نوبت‌دهی بالحق، فیلدهای مشاوران و رزرواسیون و تلفن‌ها تا پیش از انتخاب موضوع هرگز نباید نمایش داده شوند
+    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+      if (fieldId.startsWith('f_counselor_') || fieldId.startsWith('f_booking_') || fieldId.startsWith('f_phone_')) {
+        const curTopic = formData['f_topic'];
+        if (!curTopic || curTopic === 'انتخاب کنید' || String(curTopic).trim() === '') {
+          return false;
+        }
+      }
+      if (fieldId.startsWith('f_booking_') || fieldId.startsWith('f_phone_')) {
+        const hasRule = form.rules.some(
+          (r) =>
+            r.targetFieldId === fieldId ||
+            r.additionalTargetFieldId === fieldId ||
+            r.targetFieldIds?.includes(fieldId)
+        );
+        if (!hasRule) {
+          return false;
+        }
+      }
+    }
+
     const matchingRules = form.rules.filter(
       (r) =>
         r.targetFieldId === fieldId ||

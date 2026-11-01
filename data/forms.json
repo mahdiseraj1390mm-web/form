@@ -10,7 +10,7 @@
     "submissionCount": 142,
     "viewCount": 1850,
     "createdAt": "2026-03-01T08:00:00Z",
-    "updatedAt": "2026-10-26T01:31:57.843Z",
+    "updatedAt": "2026-04-15T12:00:00Z",
     "steps": [
       {
         "id": "step-1",
@@ -278,33 +278,36 @@
         "id": "f_physical_illness",
         "type": "textarea",
         "label": "آیا سابقه بیماری جسمی دارید؟",
-        "placeholder": "توضیح بفرمائید",
+        "placeholder": "توضیح بفرمائید (در صورت عدم سابقه بنویسید «ندارم»)",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
-          "required": false
+          "required": true,
+          "customErrorMessage": "تکمیل سابقه بیماری جسمی الزامی است (در صورت عدم سابقه بنویسید «ندارم»)"
         }
       },
       {
         "id": "f_mental_illness",
         "type": "textarea",
         "label": "آیا سابقه بیماری روانی دارید؟",
-        "placeholder": "توضیح بفرمائید",
+        "placeholder": "توضیح بفرمائید (در صورت عدم سابقه بنویسید «ندارم»)",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
-          "required": false
+          "required": true,
+          "customErrorMessage": "تکمیل سابقه بیماری روحی/روانی الزامی است (در صورت عدم سابقه بنویسید «ندارم»)"
         }
       },
       {
         "id": "f_medications",
         "type": "textarea",
         "label": "داروهایی که مصرف کرده اید را بفرمائید",
-        "placeholder": "توضیح بفرمائید",
+        "placeholder": "توضیح بفرمائید (در صورت عدم مصرف بنویسید «ندارم»)",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
-          "required": false
+          "required": true,
+          "customErrorMessage": "تکمیل بخش داروهای مصرفی الزامی است (در صورت عدم مصرف بنویسید «ندارم»)"
         }
       }
     ],
@@ -416,9 +419,9 @@
       "showPortalGate": true,
       "portalTitle": "مرکز خدمات روانشناسی بالحق",
       "portalSubtitle": "سامانه مشاوره تلفنی و پرونده مراجعین",
+      "portalHeroImage": "/images/belhagh-hero.png",
       "showPortalHeroImage": true,
-      "liveChatEnabled": true,
-      "portalHeroImage": "/images/belhagh-hero.png"
+      "liveChatEnabled": true
     },
     "theme": {
       "themeId": "belhagh_official",
@@ -514,7 +517,7 @@
           "f_phone_zeynali_family",
           "f_phone_borhani",
           "f_phone_borhani_family",
-          "f_phone_rastgoo",
+          "f_phone_rastgoo_teen",
           "f_phone_rastgoo_clin",
           "f_phone_abdi",
           "f_phone_torshizi",
@@ -786,7 +789,7 @@
         "options": [
           {
             "id": "opt_clin_torshizi",
-            "label": "آقای ترشیزی",
+            "label": "آقای دکتر ترشیزی (فعلاً بدون نوبت‌دهی)",
             "value": "آقای ترشیزی"
           },
           {
@@ -818,27 +821,27 @@
         "options": [
           {
             "id": "opt_fam_sedighi",
-            "label": "آقای صدیقی (ازدواج و خانواده)",
+            "label": "دکتر صدیقی (بدون روز و نوبت‌دهی)",
             "value": "آقای صدیقی (ازدواج و خانواده)"
           },
           {
             "id": "opt_fam_borhani",
-            "label": "آقای برهانی (ازدواج و خانواده)",
+            "label": "آقا برهانی",
             "value": "آقای برهانی (ازدواج و خانواده)"
           },
           {
             "id": "opt_fam_zeynali",
-            "label": "خانم زینلی (خانواده)",
+            "label": "خانم زینلی",
             "value": "خانم زینلی (خانواده)"
           },
           {
             "id": "opt_fam_karimi",
-            "label": "خانم کریمی (خانواده)",
+            "label": "خانم کریمی",
             "value": "خانم کریمی (خانواده)"
           },
           {
             "id": "opt_fam_abdi",
-            "label": "خانم عبدی (خانواده)",
+            "label": "خانم عبدی",
             "value": "خانم عبدی (خانواده)"
           }
         ]
@@ -853,47 +856,41 @@
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 30,
-          "restTimeMinutes": 5,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
-            5
+            6
           ],
           "startHour": "09:00",
           "endHour": "12:00",
-          "holidays": [
-            "جمعه"
-          ]
+          "daySchedules": {
+            "6": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "09:00",
+                  "endHour": "12:00"
+                }
+              ]
+            }
+          },
+          "holidays": []
         },
         "options": [
           {
             "id": "slot_farahmandi_1",
-            "label": "پنجشنبه - ساعت ۰۹:۰۰ الی ۰۹:۳۰",
-            "value": "thu_0900"
+            "label": "جمعه - ساعت ۰۹:۰۰ الی ۰۹:۴۵",
+            "value": "fri_0900"
           },
           {
             "id": "slot_farahmandi_2",
-            "label": "پنجشنبه - ساعت ۰۹:۳۰ الی ۱۰:۰۰",
-            "value": "thu_0930"
+            "label": "جمعه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
+            "value": "fri_1000"
           },
           {
             "id": "slot_farahmandi_3",
-            "label": "پنجشنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰",
-            "value": "thu_1000"
-          },
-          {
-            "id": "slot_farahmandi_4",
-            "label": "پنجشنبه - ساعت ۱۰:۳۰ الی ۱۱:۰۰",
-            "value": "thu_1030"
-          },
-          {
-            "id": "slot_farahmandi_5",
-            "label": "پنجشنبه - ساعت ۱۱:۰۰ الی ۱۱:۳۰",
-            "value": "thu_1100"
-          },
-          {
-            "id": "slot_farahmandi_6",
-            "label": "پنجشنبه - ساعت ۱۱:۳۰ الی ۱۲:۰۰",
-            "value": "thu_1130"
+            "label": "جمعه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "fri_1100"
           }
         ]
       },
@@ -918,13 +915,24 @@
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 30,
-          "restTimeMinutes": 5,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
             4
           ],
           "startHour": "10:00",
           "endHour": "13:00",
+          "daySchedules": {
+            "4": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "10:00",
+                  "endHour": "13:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -932,33 +940,18 @@
         "options": [
           {
             "id": "slot_teymourian_1",
-            "label": "چهارشنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰",
+            "label": "چهارشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
             "value": "wed_1000"
           },
           {
             "id": "slot_teymourian_2",
-            "label": "چهارشنبه - ساعت ۱۰:۳۰ الی ۱۱:۰۰",
-            "value": "wed_1030"
-          },
-          {
-            "id": "slot_teymourian_3",
-            "label": "چهارشنبه - ساعت ۱۱:۰۰ الی ۱۱:۳۰",
+            "label": "چهارشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
             "value": "wed_1100"
           },
           {
-            "id": "slot_teymourian_4",
-            "label": "چهارشنبه - ساعت ۱۱:۳۰ الی ۱۲:۰۰",
-            "value": "wed_1130"
-          },
-          {
-            "id": "slot_teymourian_5",
-            "label": "چهارشنبه - ساعت ۱۲:۰۰ الی ۱۲:۳۰",
+            "id": "slot_teymourian_3",
+            "label": "چهارشنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵",
             "value": "wed_1200"
-          },
-          {
-            "id": "slot_teymourian_6",
-            "label": "چهارشنبه - ساعت ۱۲:۳۰ الی ۱۳:۰۰",
-            "value": "wed_1230"
           }
         ]
       },
@@ -983,39 +976,78 @@
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 40,
-          "restTimeMinutes": 5,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
+            0,
             2,
-            4,
-            6
+            4
           ],
-          "startHour": "17:00",
-          "endHour": "19:00",
+          "startHour": "13:00",
+          "endHour": "15:00",
+          "daySchedules": {
+            "0": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "13:00",
+                  "endHour": "15:00"
+                }
+              ]
+            },
+            "2": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "13:00",
+                  "endHour": "15:00"
+                }
+              ]
+            },
+            "4": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "13:00",
+                  "endHour": "15:00"
+                }
+              ]
+            }
+          },
           "holidays": [
-            "تعطیلات رسمی"
+            "جمعه"
           ]
         },
         "options": [
           {
             "id": "slot_shavandi_c1",
-            "label": "دوشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۰",
-            "value": "mon_1700"
+            "label": "شنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵",
+            "value": "sat_1300"
           },
           {
             "id": "slot_shavandi_c2",
-            "label": "دوشنبه - ساعت ۱۷:۴۵ الی ۱۸:۲۵",
-            "value": "mon_1745"
+            "label": "شنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "sat_1400"
           },
           {
             "id": "slot_shavandi_c3",
-            "label": "چهارشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۰",
-            "value": "wed_1700"
+            "label": "دوشنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵",
+            "value": "mon_1300"
           },
           {
             "id": "slot_shavandi_c4",
-            "label": "جمعه - ساعت ۱۰:۰۰ الی ۱۰:۴۰",
-            "value": "fri_1000"
+            "label": "دوشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "mon_1400"
+          },
+          {
+            "id": "slot_shavandi_c5",
+            "label": "چهارشنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵",
+            "value": "wed_1300"
+          },
+          {
+            "id": "slot_shavandi_c6",
+            "label": "چهارشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "wed_1400"
           }
         ]
       },
@@ -1041,12 +1073,23 @@
         },
         "appointmentData": {
           "slotDurationMinutes": 45,
-          "restTimeMinutes": 10,
+          "restTimeMinutes": 15,
           "availableDays": [
-            0
+            1
           ],
           "startHour": "16:00",
           "endHour": "19:00",
+          "daySchedules": {
+            "1": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "16:00",
+                  "endHour": "19:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1054,18 +1097,18 @@
         "options": [
           {
             "id": "slot_ansari_c1",
-            "label": "شنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵",
-            "value": "sat_1600"
+            "label": "یکشنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵",
+            "value": "sun_1600"
           },
           {
             "id": "slot_ansari_c2",
-            "label": "شنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵",
-            "value": "sat_1700"
+            "label": "یکشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵",
+            "value": "sun_1700"
           },
           {
             "id": "slot_ansari_c3",
-            "label": "شنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵",
-            "value": "sat_1800"
+            "label": "یکشنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵",
+            "value": "sun_1800"
           }
         ]
       },
@@ -1097,6 +1140,17 @@
           ],
           "startHour": "09:00",
           "endHour": "11:00",
+          "daySchedules": {
+            "5": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "09:00",
+                  "endHour": "11:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1128,21 +1182,51 @@
       {
         "id": "f_booking_borhani_teen",
         "type": "appointmentBooking",
-        "label": "رزرو نوبت نوجوان آقای برهانی",
+        "label": "رزرو نوبت نوجوان از آقای برهانی",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 30,
-          "restTimeMinutes": 0,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
+            0,
             1,
-            3
+            2
           ],
-          "startHour": "16:00",
-          "endHour": "17:00",
+          "startHour": "14:00",
+          "endHour": "15:00",
+          "daySchedules": {
+            "0": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "14:00",
+                  "endHour": "15:00"
+                }
+              ]
+            },
+            "1": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "14:00",
+                  "endHour": "15:00"
+                }
+              ]
+            },
+            "2": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "14:00",
+                  "endHour": "15:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1150,23 +1234,18 @@
         "options": [
           {
             "id": "slot_borhani_t1",
-            "label": "یکشنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰",
-            "value": "sun_1600"
+            "label": "شنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "sat_1400"
           },
           {
             "id": "slot_borhani_t2",
-            "label": "یکشنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰",
-            "value": "sun_1630"
+            "label": "یکشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "sun_1400"
           },
           {
             "id": "slot_borhani_t3",
-            "label": "سه شنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰",
-            "value": "tue_1600"
-          },
-          {
-            "id": "slot_borhani_t4",
-            "label": "سه شنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰",
-            "value": "tue_1630"
+            "label": "دوشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "mon_1400"
           }
         ]
       },
@@ -1174,7 +1253,7 @@
         "id": "f_phone_borhani",
         "type": "alertBox",
         "label": "شماره تماس آقای علیرضا برهانی: 09120449093",
-        "helpText": "شماره تماس آقای علیرضا برهانی: ۰۹۱۲۰۴۴۹۰۹۳",
+        "helpText": "روزهای نوبت‌دهی نوجوان: شنبه تا دوشنبه ساعت ۱۴:۰۰ الی ۱۵:۰۰ (یک نوبت ۴۵ دقیقه‌ای) | شماره تماس: ۰۹۱۲۰۴۴۹۰۹۳",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
@@ -1191,34 +1270,58 @@
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 40,
-          "restTimeMinutes": 5,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
-            2,
-            4,
-            6
+            1,
+            3
           ],
-          "startHour": "16:00",
-          "endHour": "19:10",
+          "startHour": "13:00",
+          "endHour": "15:00",
+          "daySchedules": {
+            "1": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "13:00",
+                  "endHour": "15:00"
+                }
+              ]
+            },
+            "3": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "13:00",
+                  "endHour": "15:00"
+                }
+              ]
+            }
+          },
           "holidays": [
-            "تعطیلات رسمی"
+            "جمعه"
           ]
         },
         "options": [
           {
             "id": "slot_shavandi_t1",
-            "label": "دوشنبه - ساعت ۱۸:۳۰ الی ۱۹:۱۰",
-            "value": "mon_1830"
+            "label": "یکشنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵",
+            "value": "sun_1300"
           },
           {
             "id": "slot_shavandi_t2",
-            "label": "چهارشنبه - ساعت ۱۸:۳۰ الی ۱۹:۱۰",
-            "value": "wed_1830"
+            "label": "یکشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "sun_1400"
           },
           {
             "id": "slot_shavandi_t3",
-            "label": "جمعه - ساعت ۱۶:۰۰ الی ۱۶:۴۰",
-            "value": "fri_1600"
+            "label": "سه شنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵",
+            "value": "tue_1300"
+          },
+          {
+            "id": "slot_shavandi_t4",
+            "label": "سه شنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "tue_1400"
           }
         ]
       },
@@ -1243,13 +1346,24 @@
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 40,
-          "restTimeMinutes": 0,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
-            0
+            1
           ],
           "startHour": "10:00",
           "endHour": "14:00",
+          "daySchedules": {
+            "1": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "10:00",
+                  "endHour": "14:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1257,23 +1371,23 @@
         "options": [
           {
             "id": "slot_rastgoo_t1",
-            "label": "شنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۰",
-            "value": "sat_1000"
+            "label": "یکشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
+            "value": "sun_1000"
           },
           {
             "id": "slot_rastgoo_t2",
-            "label": "شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۰",
-            "value": "sat_1100"
+            "label": "یکشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "sun_1100"
           },
           {
             "id": "slot_rastgoo_t3",
-            "label": "شنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۰",
-            "value": "sat_1200"
+            "label": "یکشنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵",
+            "value": "sun_1200"
           },
           {
             "id": "slot_rastgoo_t4",
-            "label": "شنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۰",
-            "value": "sat_1300"
+            "label": "یکشنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵",
+            "value": "sun_1300"
           }
         ]
       },
@@ -1299,42 +1413,75 @@
         },
         "appointmentData": {
           "slotDurationMinutes": 45,
-          "restTimeMinutes": 10,
+          "restTimeMinutes": 15,
           "availableDays": [
-            2,
-            6
+            0,
+            3
           ],
           "startHour": "11:00",
           "endHour": "16:00",
+          "daySchedules": {
+            "0": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "11:00",
+                  "endHour": "11:45"
+                },
+                {
+                  "startHour": "14:00",
+                  "endHour": "15:45"
+                }
+              ]
+            },
+            "3": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "11:00",
+                  "endHour": "11:45"
+                },
+                {
+                  "startHour": "14:00",
+                  "endHour": "15:45"
+                }
+              ]
+            }
+          },
           "holidays": [
-            "تعطیلات رسمی"
+            "جمعه"
           ]
         },
         "options": [
           {
             "id": "slot_ansari_t1",
-            "label": "دوشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
-            "value": "mon_1100"
+            "label": "شنبه - نوبت اول: ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "sat_1100"
           },
           {
             "id": "slot_ansari_t2",
-            "label": "دوشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
-            "value": "mon_1400"
+            "label": "شنبه - نوبت دوم: ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "sat_1400"
           },
           {
             "id": "slot_ansari_t3",
-            "label": "دوشنبه - ساعت ۱۵:۰۰ الی ۱۵:۴۵",
-            "value": "mon_1500"
+            "label": "شنبه - نوبت دوم: ساعت ۱۵:۰۰ الی ۱۵:۴۵",
+            "value": "sat_1500"
           },
           {
             "id": "slot_ansari_t4",
-            "label": "جمعه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
-            "value": "fri_1100"
+            "label": "سه شنبه - نوبت اول: ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "tue_1100"
           },
           {
             "id": "slot_ansari_t5",
-            "label": "جمعه - ساعت ۱۴:۰۰ الی ۱۴:۴۵",
-            "value": "fri_1400"
+            "label": "سه شنبه - نوبت دوم: ساعت ۱۴:۰۰ الی ۱۴:۴۵",
+            "value": "tue_1400"
+          },
+          {
+            "id": "slot_ansari_t6",
+            "label": "سه شنبه - نوبت دوم: ساعت ۱۵:۰۰ الی ۱۵:۴۵",
+            "value": "tue_1500"
           }
         ]
       },
@@ -1359,14 +1506,34 @@
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 30,
-          "restTimeMinutes": 5,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
-            2,
-            3
+            3,
+            4
           ],
           "startHour": "16:00",
           "endHour": "18:00",
+          "daySchedules": {
+            "3": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "16:00",
+                  "endHour": "18:00"
+                }
+              ]
+            },
+            "4": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "16:00",
+                  "endHour": "18:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1374,23 +1541,23 @@
         "options": [
           {
             "id": "slot_abdi_1",
-            "label": "دوشنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰",
-            "value": "mon_1600"
-          },
-          {
-            "id": "slot_abdi_2",
-            "label": "دوشنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰",
-            "value": "mon_1630"
-          },
-          {
-            "id": "slot_abdi_3",
-            "label": "سه شنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰",
+            "label": "سه شنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵",
             "value": "tue_1600"
           },
           {
+            "id": "slot_abdi_2",
+            "label": "سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵",
+            "value": "tue_1700"
+          },
+          {
+            "id": "slot_abdi_3",
+            "label": "چهارشنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵",
+            "value": "wed_1600"
+          },
+          {
             "id": "slot_abdi_4",
-            "label": "سه شنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰",
-            "value": "tue_1630"
+            "label": "چهارشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵",
+            "value": "wed_1700"
           }
         ]
       },
@@ -1408,53 +1575,27 @@
       {
         "id": "f_booking_torshizi",
         "type": "appointmentBooking",
-        "label": "رزرو نوبت از آقای ترشیزی",
+        "label": "رزرو نوبت از آقای دکتر ترشیزی",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
-          "required": true
+          "required": false
         },
         "appointmentData": {
           "slotDurationMinutes": 30,
-          "restTimeMinutes": 5,
-          "availableDays": [
-            1,
-            3
-          ],
-          "startHour": "17:00",
-          "endHour": "18:00",
-          "holidays": [
-            "جمعه"
-          ]
+          "restTimeMinutes": 0,
+          "availableDays": [],
+          "startHour": "00:00",
+          "endHour": "00:00",
+          "holidays": []
         },
-        "options": [
-          {
-            "id": "slot_torshizi_1",
-            "label": "یکشنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰",
-            "value": "sun_1700"
-          },
-          {
-            "id": "slot_torshizi_2",
-            "label": "یکشنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰",
-            "value": "sun_1730"
-          },
-          {
-            "id": "slot_torshizi_3",
-            "label": "سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰",
-            "value": "tue_1700"
-          },
-          {
-            "id": "slot_torshizi_4",
-            "label": "سه شنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰",
-            "value": "tue_1730"
-          }
-        ]
+        "options": []
       },
       {
         "id": "f_phone_torshizi",
         "type": "alertBox",
-        "label": "شماره تماس آقای ترشیزی: 09155513734",
-        "helpText": "شماره تماس آقای ترشیزی: ۰۹۱۵۵۵۱۳۷۳۴",
+        "label": "شماره تماس جناب آقای دکتر ترشیزی: 09155513734",
+        "helpText": "در حال حاضر برای جناب آقای دکتر ترشیزی در بخش بالینی نوبتی تعریف نشده است. جهت هماهنگی با شماره ۰۹۱۵۵۵۱۳۷۳۴ تماس حاصل فرمایید.",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
@@ -1471,14 +1612,34 @@
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 30,
-          "restTimeMinutes": 0,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
             0,
-            2
+            3
           ],
-          "startHour": "10:00",
-          "endHour": "10:30",
+          "startHour": "11:00",
+          "endHour": "14:00",
+          "daySchedules": {
+            "0": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "11:00",
+                  "endHour": "11:45"
+                }
+              ]
+            },
+            "3": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "13:00",
+                  "endHour": "13:45"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1486,13 +1647,13 @@
         "options": [
           {
             "id": "slot_yavari_1",
-            "label": "شنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰",
-            "value": "sat_1000"
+            "label": "شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "sat_1100"
           },
           {
             "id": "slot_yavari_2",
-            "label": "دوشنبه - ساعت ۱۰:۰۰ الی ۱۰:۳۰",
-            "value": "mon_1000"
+            "label": "سه شنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵",
+            "value": "tue_1300"
           }
         ]
       },
@@ -1518,12 +1679,23 @@
         },
         "appointmentData": {
           "slotDurationMinutes": 45,
-          "restTimeMinutes": 0,
+          "restTimeMinutes": 15,
           "availableDays": [
-            0
+            1
           ],
           "startHour": "18:00",
           "endHour": "20:00",
+          "daySchedules": {
+            "1": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "18:00",
+                  "endHour": "20:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1531,13 +1703,13 @@
         "options": [
           {
             "id": "slot_rastgoo_c1",
-            "label": "شنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵",
-            "value": "sat_1800"
+            "label": "یکشنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵",
+            "value": "sun_1800"
           },
           {
             "id": "slot_rastgoo_c2",
-            "label": "شنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵",
-            "value": "sat_1900"
+            "label": "یکشنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵",
+            "value": "sun_1900"
           }
         ]
       },
@@ -1563,13 +1735,23 @@
         },
         "appointmentData": {
           "slotDurationMinutes": 45,
-          "restTimeMinutes": 0,
+          "restTimeMinutes": 15,
           "availableDays": [
-            0,
             2
           ],
-          "startHour": "16:00",
-          "endHour": "17:00",
+          "startHour": "11:00",
+          "endHour": "12:00",
+          "daySchedules": {
+            "2": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "11:00",
+                  "endHour": "11:45"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1577,13 +1759,8 @@
         "options": [
           {
             "id": "slot_golyayi_1",
-            "label": "شنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵",
-            "value": "sat_1600"
-          },
-          {
-            "id": "slot_golyayi_2",
-            "label": "دوشنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵",
-            "value": "mon_1600"
+            "label": "دوشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "mon_1100"
           }
         ]
       },
@@ -1601,53 +1778,28 @@
       {
         "id": "f_booking_sedighi_family",
         "type": "appointmentBooking",
-        "label": "رزرو نوبت از آقای صدیقی",
+        "label": "رزرو نوبت از آقای دکتر صدیقی",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
-          "required": true
+          "required": false
         },
         "appointmentData": {
-          "slotDurationMinutes": 30,
-          "restTimeMinutes": 5,
-          "availableDays": [
-            1,
-            3
-          ],
-          "startHour": "16:00",
-          "endHour": "17:00",
-          "holidays": [
-            "جمعه"
-          ]
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
+          "availableDays": [],
+          "startHour": "00:00",
+          "endHour": "00:00",
+          "daySchedules": {},
+          "holidays": []
         },
-        "options": [
-          {
-            "id": "slot_sedighi_1",
-            "label": "یکشنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰",
-            "value": "sun_1600"
-          },
-          {
-            "id": "slot_sedighi_2",
-            "label": "یکشنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰",
-            "value": "sun_1630"
-          },
-          {
-            "id": "slot_sedighi_3",
-            "label": "سه شنبه - ساعت ۱۶:۰۰ الی ۱۶:۳۰",
-            "value": "tue_1600"
-          },
-          {
-            "id": "slot_sedighi_4",
-            "label": "سه شنبه - ساعت ۱۶:۳۰ الی ۱۷:۰۰",
-            "value": "tue_1630"
-          }
-        ]
+        "options": []
       },
       {
         "id": "f_phone_sedighi",
         "type": "alertBox",
-        "label": "شماره تماس آقای صدیقی: 09151538227",
-        "helpText": "شماره تماس آقای صدیقی: ۰۹۱۵۱۵۳۸۲۲۷",
+        "label": "شماره تماس جناب آقای دکتر صدیقی: 09151538227",
+        "helpText": "در حال حاضر در بخش ازدواج و خانواده روز و نوبتی برای جناب آقای دکتر صدیقی تعریف نشده است. جهت هماهنگی با شماره ۰۹۱۵۱۵۳۸۲۲۷ تماس حاصل فرمایید.",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
@@ -1664,14 +1816,44 @@
           "required": true
         },
         "appointmentData": {
-          "slotDurationMinutes": 30,
-          "restTimeMinutes": 5,
+          "slotDurationMinutes": 45,
+          "restTimeMinutes": 15,
           "availableDays": [
+            0,
             1,
-            3
+            2
           ],
-          "startHour": "17:00",
-          "endHour": "18:00",
+          "startHour": "18:00",
+          "endHour": "20:00",
+          "daySchedules": {
+            "0": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "18:00",
+                  "endHour": "20:00"
+                }
+              ]
+            },
+            "1": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "18:00",
+                  "endHour": "20:00"
+                }
+              ]
+            },
+            "2": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "18:00",
+                  "endHour": "20:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1679,31 +1861,41 @@
         "options": [
           {
             "id": "slot_borhani_f1",
-            "label": "یکشنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰",
-            "value": "sun_1700"
+            "label": "شنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵",
+            "value": "sat_1800"
           },
           {
             "id": "slot_borhani_f2",
-            "label": "یکشنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰",
-            "value": "sun_1730"
+            "label": "شنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵",
+            "value": "sat_1900"
           },
           {
             "id": "slot_borhani_f3",
-            "label": "سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۳۰",
-            "value": "tue_1700"
+            "label": "یکشنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵",
+            "value": "sun_1800"
           },
           {
             "id": "slot_borhani_f4",
-            "label": "سه شنبه - ساعت ۱۷:۳۰ الی ۱۸:۰۰",
-            "value": "tue_1730"
+            "label": "یکشنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵",
+            "value": "sun_1900"
+          },
+          {
+            "id": "slot_borhani_f5",
+            "label": "دوشنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵",
+            "value": "mon_1800"
+          },
+          {
+            "id": "slot_borhani_f6",
+            "label": "دوشنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵",
+            "value": "mon_1900"
           }
         ]
       },
       {
         "id": "f_phone_borhani_family",
         "type": "alertBox",
-        "label": "شماره تماس آقای برهانی: 09120449093",
-        "helpText": "شماره تماس آقای برهانی: ۰۹۱۲۰۴۴۹۰۹۳",
+        "label": "شماره تماس جناب آقای برهانی: 09120449093",
+        "helpText": "روزهای نوبت‌دهی خانواده: شنبه تا دوشنبه ساعت ۱۸:۰۰ الی ۲۰:۰۰ (دو نوبت ۴۵ دقیقه‌ای) | شماره تماس: ۰۹۱۲۰۴۴۹۰۹۳",
         "stepId": "step-4",
         "gridCols": 12,
         "validations": {
@@ -1721,12 +1913,23 @@
         },
         "appointmentData": {
           "slotDurationMinutes": 45,
-          "restTimeMinutes": 5,
+          "restTimeMinutes": 15,
           "availableDays": [
-            2
+            3
           ],
           "startHour": "17:00",
           "endHour": "18:00",
+          "daySchedules": {
+            "3": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "17:00",
+                  "endHour": "17:45"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1734,8 +1937,8 @@
         "options": [
           {
             "id": "slot_zeynali_f1",
-            "label": "دوشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵",
-            "value": "mon_1700"
+            "label": "سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵",
+            "value": "tue_1700"
           }
         ]
       },
@@ -1761,13 +1964,33 @@
         },
         "appointmentData": {
           "slotDurationMinutes": 45,
-          "restTimeMinutes": 5,
+          "restTimeMinutes": 15,
           "availableDays": [
-            0,
-            2
+            1,
+            3
           ],
           "startHour": "10:00",
           "endHour": "12:00",
+          "daySchedules": {
+            "1": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "10:00",
+                  "endHour": "12:00"
+                }
+              ]
+            },
+            "3": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "10:00",
+                  "endHour": "12:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1775,23 +1998,23 @@
         "options": [
           {
             "id": "slot_karimi_1",
-            "label": "شنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
-            "value": "sat_1000"
+            "label": "یکشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
+            "value": "sun_1000"
           },
           {
             "id": "slot_karimi_2",
-            "label": "شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
-            "value": "sat_1100"
+            "label": "یکشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "sun_1100"
           },
           {
             "id": "slot_karimi_3",
-            "label": "دوشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
-            "value": "mon_1000"
+            "label": "سه شنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
+            "value": "tue_1000"
           },
           {
             "id": "slot_karimi_4",
-            "label": "دوشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
-            "value": "mon_1100"
+            "label": "سه شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "tue_1100"
           }
         ]
       },
@@ -1817,12 +2040,23 @@
         },
         "appointmentData": {
           "slotDurationMinutes": 45,
-          "restTimeMinutes": 10,
+          "restTimeMinutes": 15,
           "availableDays": [
-            3
+            4
           ],
           "startHour": "08:00",
           "endHour": "13:00",
+          "daySchedules": {
+            "4": {
+              "enabled": true,
+              "periods": [
+                {
+                  "startHour": "08:00",
+                  "endHour": "13:00"
+                }
+              ]
+            }
+          },
           "holidays": [
             "جمعه"
           ]
@@ -1830,28 +2064,28 @@
         "options": [
           {
             "id": "slot_abdi_f1",
-            "label": "سه شنبه - ساعت ۰۸:۰۰ الی ۰۸:۴۵",
-            "value": "tue_0800"
+            "label": "چهارشنبه - ساعت ۰۸:۰۰ الی ۰۸:۴۵",
+            "value": "wed_0800"
           },
           {
             "id": "slot_abdi_f2",
-            "label": "سه شنبه - ساعت ۰۹:۰۰ الی ۰۹:۴۵",
-            "value": "tue_0900"
+            "label": "چهارشنبه - ساعت ۰۹:۰۰ الی ۰۹:۴۵",
+            "value": "wed_0900"
           },
           {
             "id": "slot_abdi_f3",
-            "label": "سه شنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
-            "value": "tue_1000"
+            "label": "چهارشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵",
+            "value": "wed_1000"
           },
           {
             "id": "slot_abdi_f4",
-            "label": "سه شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
-            "value": "tue_1100"
+            "label": "چهارشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵",
+            "value": "wed_1100"
           },
           {
             "id": "slot_abdi_f5",
-            "label": "سه شنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵",
-            "value": "tue_1200"
+            "label": "چهارشنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵",
+            "value": "wed_1200"
           }
         ]
       },
@@ -2035,20 +2269,17 @@
         "targetFieldId": "f_phone_rastgoo_teen"
       },
       {
-        "id": "rule_teen_borhani_booking",
+        "id": "rule_teen_borhani",
         "sourceFieldId": "f_counselor_teen",
         "operator": "equals",
         "value": "آقای برهانی",
         "action": "show",
-        "targetFieldId": "f_booking_borhani_teen"
-      },
-      {
-        "id": "rule_teen_borhani_phone",
-        "sourceFieldId": "f_counselor_teen",
-        "operator": "equals",
-        "value": "آقای برهانی",
-        "action": "show",
-        "targetFieldId": "f_phone_borhani"
+        "targetFieldId": "f_booking_borhani_teen",
+        "additionalTargetFieldId": "f_phone_borhani",
+        "targetFieldIds": [
+          "f_booking_borhani_teen",
+          "f_phone_borhani"
+        ]
       },
       {
         "id": "rule_teen_ansari",
@@ -2080,14 +2311,6 @@
         "targetFieldId": "f_phone_abdi"
       },
       {
-        "id": "rule_clin_torshizi_booking",
-        "sourceFieldId": "f_counselor_clinical",
-        "operator": "equals",
-        "value": "آقای ترشیزی",
-        "action": "show",
-        "targetFieldId": "f_booking_torshizi"
-      },
-      {
         "id": "rule_clin_yavari_booking",
         "sourceFieldId": "f_counselor_clinical",
         "operator": "equals",
@@ -2096,12 +2319,18 @@
         "targetFieldId": "f_booking_yavari"
       },
       {
-        "id": "rule_clin_torshizi_phone",
+        "id": "rule_clin_torshizi",
         "sourceFieldId": "f_counselor_clinical",
         "operator": "equals",
         "value": "آقای ترشیزی",
         "action": "show",
-        "targetFieldId": "f_phone_torshizi"
+        "targetFieldId": "f_booking_torshizi",
+        "additionalTargetFieldId": "f_phone_torshizi",
+        "targetFieldIds": [
+          "f_booking_torshizi",
+          "f_phone_torshizi"
+        ],
+        "customDescription": "اگر مشاوران بالینی برابر با آقای ترشیزی بود تقویم نوبت و شماره تماس آقای دکتر ترشیزی آشکار شود، غیر از این شرایط پنهان شود"
       },
       {
         "id": "rule_clin_yavari_phone",
@@ -2138,13 +2367,17 @@
         ]
       },
       {
-        "id": "rule_fam_sedighi_booking",
+        "id": "rule_fam_borhani",
         "sourceFieldId": "f_counselor_family",
         "operator": "equals",
-        "value": "آقای صدیقی (ازدواج و خانواده)",
+        "value": "آقای برهانی (ازدواج و خانواده)",
         "action": "show",
-        "targetFieldId": "f_booking_sedighi_family",
-        "customDescription": "اگر مشاوران ازدواج و خانواده: برابر با آقای صدیقی (ازدواج و خانواده) بود رزرو نوبت از آقای صدیقی آشکار شود، غیر از این شرایط پنهان شود"
+        "targetFieldId": "f_booking_borhani_family",
+        "additionalTargetFieldId": "f_phone_borhani_family",
+        "targetFieldIds": [
+          "f_booking_borhani_family",
+          "f_phone_borhani_family"
+        ]
       },
       {
         "id": "rule_fam_zeynali_booking",
@@ -2156,15 +2389,6 @@
         "customDescription": "اگر مشاوران ازدواج و خانواده: برابر با خانم زینلی (خانواده) بود رزرو نوبت از خانم زینلی آشکار شود، غیر از این شرایط پنهان شود"
       },
       {
-        "id": "rule_fam_borhani_booking",
-        "sourceFieldId": "f_counselor_family",
-        "operator": "equals",
-        "value": "آقای برهانی (ازدواج و خانواده)",
-        "action": "show",
-        "targetFieldId": "f_booking_borhani_family",
-        "customDescription": "اگر مشاوران ازدواج و خانواده: برابر با آقای برهانی (ازدواج و خانواده) بود رزرو نوبت خانواده و ازدواج از آقای برهانی آشکار شود، غیر از این شرایط پنهان شود"
-      },
-      {
         "id": "rule_fam_karimi_booking",
         "sourceFieldId": "f_counselor_family",
         "operator": "equals",
@@ -2174,13 +2398,18 @@
         "customDescription": "اگر مشاوران ازدواج و خانواده: برابر با خانم کریمی (خانواده) بود رزرو نوبت از خانم کریمی آشکار شود، غیر از این شرایط پنهان شود"
       },
       {
-        "id": "rule_fam_sedighi_phone",
+        "id": "rule_fam_sedighi",
         "sourceFieldId": "f_counselor_family",
         "operator": "equals",
         "value": "آقای صدیقی (ازدواج و خانواده)",
         "action": "show",
-        "targetFieldId": "f_phone_sedighi",
-        "customDescription": "اگر مشاوران ازدواج و خانواده: برابر با آقای صدیقی (ازدواج و خانواده) بود شماره تماس آقای صدیقی: 09151538227 آشکار شود، غیر از این شرایط پنهان شود"
+        "targetFieldId": "f_booking_sedighi_family",
+        "additionalTargetFieldId": "f_phone_sedighi",
+        "targetFieldIds": [
+          "f_booking_sedighi_family",
+          "f_phone_sedighi"
+        ],
+        "customDescription": "اگر مشاوران ازدواج و خانواده: برابر با آقای صدیقی (ازدواج و خانواده) بود تقویم نوبت و شماره تماس آقای صدیقی: 09151538227 آشکار شود، غیر از این شرایط پنهان شود"
       },
       {
         "id": "rule_fam_borhani_phone",
@@ -2271,9 +2500,9 @@
       "showPortalGate": true,
       "portalTitle": "مرکز خدمات روانشناسی بالحق",
       "portalSubtitle": "سامانه مشاوره تلفنی و پرونده مراجعین",
+      "portalHeroImage": "/images/belhagh-hero.png",
       "showPortalHeroImage": true,
-      "liveChatEnabled": true,
-      "portalHeroImage": "/images/belhagh-hero.png"
+      "liveChatEnabled": true
     },
     "theme": {
       "themeId": "belhagh_official",
@@ -5947,7 +6176,7 @@
     "id": "form-booking-04",
     "title": "سامانه نوبت‌دهی و رزرو وقت مشاوره تخصصی",
     "slug": "appointment-booking",
-    "description": "انتخاب سانس زمانی آزاد، جلوگیری از رزرو همزمان، ثبت مشخصات و دریافت پیامک یادآوری",
+    "description": "انتخاب نوبت زمانی آزاد (نوبت‌های باقی‌مانده)، جلوگیری از رزرو همزمان، ثبت مشخصات و دریافت پیامک یادآوری",
     "category": "نوبت‌دهی و رزرو",
     "mode": "classic",
     "status": "published",
@@ -6007,7 +6236,7 @@
       {
         "id": "bk_date_time",
         "type": "appointmentBooking",
-        "label": "انتخاب سانس و زمان مراجعه",
+        "label": "انتخاب نوبت و زمان مراجعه (نوبت‌های باقی‌مانده)",
         "gridCols": 12,
         "validations": {
           "required": true

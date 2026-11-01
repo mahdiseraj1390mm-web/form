@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { FormSubmission } from '@/types/form';
+import { Form, FormSubmission } from '@/types/form';
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
 import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
 import fs from 'fs';
@@ -490,3 +490,61 @@ export async function getFormSubmissionsFromDb(formId?: string, search?: string)
 
   return result;
 }
+
+/**
+ * دریافت لیست فرم‌ها از جدول forms در پایگاه داده PostgreSQL
+ */
+export async function getFormsFromDb(): Promise<Form[] | null> {
+  try {
+    await executeDbQueryWithTimeout(`
+      CREATE TABLE IF NOT EXISTS forms (
+        id VARCHAR(255) PRIMARY KEY,
+        slug VARCHAR(255),
+        title TEXT,
+        data JSONB,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    const rows = await executeDbQueryWithTimeout(`SELECT data FROM forms ORDER BY id`);
+    if (rows && rows.length > 0) {
+      return rows.map((r: any) => (typeof r.data === 'string' ? JSON.parse(r.data) : r.data));
+    }
+  } catch (err: any) {
+    console.warn('PostgreSQL getFormsFromDb warning:', err?.message || err);
+  }
+  return null;
+}
+
+/**
+ * ذخیره یا به‌روزرسانی فرم‌ها در جدول forms در پایگاه داده PostgreSQL
+ */
+export async function saveFormsToPostgres(forms: Form[]): Promise<void> {
+  try {
+    await executeDbQueryWithTimeout(`
+      CREATE TABLE IF NOT EXISTS forms (
+        id VARCHAR(255) PRIMARY KEY,
+        slug VARCHAR(255),
+        title TEXT,
+        data JSONB,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    for (const form of forms) {
+      await executeDbQueryWithTimeout(
+        `INSERT INTO forms (id, slug, title, data, updated_at)
+         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO UPDATE SET
+           slug = EXCLUDED.slug,
+           title = EXCLUDED.title,
+           data = EXCLUDED.data,
+           updated_at = CURRENT_TIMESTAMP`,
+        [form.id, form.slug, form.title, JSON.stringify(form)]
+      );
+    }
+  } catch (err: any) {
+    console.warn('PostgreSQL saveFormsToPostgres warning:', err?.message || err);
+  }
+}
+

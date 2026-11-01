@@ -17,6 +17,7 @@ import {
 import { BuilderCanvas } from './builder-canvas';
 import { WidgetPalette, widgetDefinitions } from './widget-palette';
 import { FieldEditorDrawer } from './field-editor-drawer';
+import { LogicBuilder } from './logic-builder';
 import { SettingsTab } from './settings-tab';
 import { ThemeTab } from './theme-tab';
 import { ShareTab } from './share-tab';
@@ -30,8 +31,8 @@ interface StudioProps {
 export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
   const { activeForm, updateForm, forms, setActiveForm } = useForm();
   
-  // ۵ تب اصلی سامانه فرم‌افزار مطابق اسکرین‌شات‌های ارسالی کاربر
-  const [activeMainTab, setActiveMainTab] = useState<'design' | 'settings' | 'theme' | 'share' | 'integrations'>('design');
+  // تب‌های اصلی سامانه فرم‌افزار و مدیریت بدون کدنویسی شروط
+  const [activeMainTab, setActiveMainTab] = useState<'design' | 'logic' | 'settings' | 'theme' | 'share' | 'integrations'>('design');
   
   const [editingField, setEditingField] = useState<FormField | null>(null);
   const [showPalette, setShowPalette] = useState(true);
@@ -132,6 +133,7 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
 
   const mainTabs = [
     { id: 'design', label: 'طراحی' },
+    { id: 'logic', label: 'شروط و منطق فرم' },
     { id: 'settings', label: 'تنظیمات' },
     { id: 'theme', label: 'قالب' },
     { id: 'share', label: 'اشتراک‌گذاری' },
@@ -302,7 +304,17 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
           </>
         )}
 
-        {/* ۲: تب تنظیمات (Settings - اسکرین‌شات ۲ فرم‌افزار) */}
+        {/* ۲: تب شروط و منطق فرم (Logic Builder) - مدیریت بصری و بدون کدنویسی تمام شروط فرم */}
+        {activeMainTab === 'logic' && (
+          <div className="flex-1 flex flex-col h-full overflow-y-auto bg-slate-50">
+            <LogicBuilder 
+              form={activeForm} 
+              onUpdateForm={(updated) => updateForm(activeForm.id, updated)} 
+            />
+          </div>
+        )}
+
+        {/* ۳: تب تنظیمات (Settings - اسکرین‌شات ۲ فرم‌افزار) */}
         {activeMainTab === 'settings' && (
           <SettingsTab 
             form={activeForm} 
