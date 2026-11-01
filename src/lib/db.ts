@@ -1,4 +1,4 @@
-import { Pool } from '@neondatabase/serverless';
+import { Pool } from 'pg';
 import { FormSubmission } from '@/types/form';
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
 import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
