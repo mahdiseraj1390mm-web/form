@@ -1,25 +1,114 @@
 'use client';
 
-import React, { useMemo, Suspense } from 'react';
+import React, { useMemo, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from '@/context/form-context';
 import { ClientDossierFullview, ClientCaseGroup } from '@/components/submissions/client-dossier-fullview';
 import { Layers, FileQuestion, ArrowRight } from 'lucide-react';
+import { FormSubmission } from '@/types/form';
 
 function DossierContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const caseCodeParam = searchParams.get('case') || searchParams.get('code');
   const { submissions } = useForm();
-  const [mounted, setMounted] = React.useState(false);
+  
+  const [apiFetchedCase, setApiFetchedCase] = useState<ClientCaseGroup | null>(null);
+  const [isSearchingApi, setIsSearchingApi] = useState<boolean>(false);
 
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  // واکشی مستقیم از سرور در صورتی که پرونده در حافظه اولیه کلاینت یافت نشد
+  useEffect(() => {
+    if (!caseCodeParam) return;
+    const cleanParam = caseCodeParam.trim();
+
+    // بررسی اولیه در سابمیشن‌های موجود
+    const existsLocally = submissions.some((s) => {
+      const cCode = s.data?.caseCode || s.trackingCode || s.id;
+      const mob = s.data?.f_mobile || s.data?.bk_mobile || s.mobile;
+      return (
+        cCode?.toLowerCase() === cleanParam.toLowerCase() ||
+        s.trackingCode?.toLowerCase() === cleanParam.toLowerCase() ||
+        s.id === cleanParam ||
+        (mob && String(mob).includes(cleanParam))
+      );
+    });
+
+    if (existsLocally) {
+      setApiFetchedCase(null);
+      return;
+    }
+
+    // استعلام مستقیم از API سرور
+    let isCancelled = false;
+    setIsSearchingApi(true);
+
+    const lookupCase = async () => {
+      try {
+        let res = await fetch(`/api/cases?code=${encodeURIComponent(cleanParam)}`);
+        let json = await res.json();
+
+        if (!json.found) {
+          res = await fetch(`/api/cases?mobile=${encodeURIComponent(cleanParam)}`);
+          json = await res.json();
+        }
+
+        if (json.found && json.caseRecord && !isCancelled) {
+          const rec = json.caseRecord;
+          const cCode = rec.case_code;
+          const fullName = `${rec.first_name || ''} ${rec.last_name || ''}`.trim() || rec.data?.fullName || 'مراجع مرکز بالحق';
+          const recMobile = rec.mobile || rec.data?.f_mobile || 'ثبت‌نشده';
+          const recLocation = (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || 'ثبت‌نشده');
+
+          const subItem: FormSubmission = {
+            id: `case-${rec.id}`,
+            formId: 'form-belhagh-registration',
+            trackingCode: cCode,
+            status: 'approved',
+            createdAt: rec.created_at || new Date().toISOString(),
+            comments: [],
+            data: {
+              ...rec.data,
+              caseCode: cCode,
+              fullName,
+              f_name: rec.first_name || '',
+              f_family: rec.last_name || '',
+              f_mobile: recMobile,
+              f_province_city: recLocation,
+            },
+          };
+
+          setApiFetchedCase({
+            caseCode: cCode,
+            fullName,
+            mobile: recMobile,
+            provinceCity: recLocation,
+            submissions: [subItem],
+            formTitles: ['form-belhagh-registration'],
+            totalFormsCount: 1,
+            latestDate: rec.created_at || new Date().toISOString(),
+            overallStatus: 'approved',
+            totalPaidAmount: 0,
+            roleInFamily: rec.data?.f_role_in_family || 'عضو خانواده',
+          });
+        }
+      } catch (e) {
+        console.warn('API dossier lookup error:', e);
+      } finally {
+        if (!isCancelled) setIsSearchingApi(false);
+      }
+    };
+
+    lookupCase();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [caseCodeParam, submissions]);
 
   // گروه‌بندی خودکار پاسخ‌های ثبت‌شده جهت استخراج پرونده واقعی
   const targetCase: ClientCaseGroup | null = useMemo(() => {
-    if (!mounted || submissions.length === 0) return null;
+    if (apiFetchedCase) return apiFetchedCase;
+    if (submissions.length === 0) return null;
 
     // ۱. جستجوی سابمیشن منطبق با کد پرونده، کد پیگیری یا شماره تماس
     let matchSub = caseCodeParam
@@ -79,14 +168,14 @@ function DossierContent() {
       totalPaidAmount: totalPaid,
       roleInFamily: matchSub.data?.f_role_in_family || 'عضو خانواده',
     };
-  }, [caseCodeParam, submissions, mounted]);
+  }, [caseCodeParam, submissions, apiFetchedCase]);
 
-  if (!mounted) {
+  if (isSearchingApi) {
     return (
       <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center">
         <div className="flex items-center gap-2 text-slate-500 font-bold text-sm">
           <Layers className="size-5 animate-spin text-[#173f6b]" />
-          <span>در حال بارگذاری پرونده مراجع...</span>
+          <span>در حال استعلام پرونده مراجع از سرور...</span>
         </div>
       </div>
     );
