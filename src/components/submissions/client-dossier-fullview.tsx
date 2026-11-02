@@ -295,6 +295,78 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     return 'عضو خانواده';
   }, [combinedData, clientCase.roleInFamily]);
 
+  // تفکیک ۳ گانه فرم‌های تکمیل‌شده مراجع برای تب فرم‌ها و آزمون‌ها:
+  // ۱. ستون پرسشنامه‌ها (صفا و آزمون‌های بالینی)
+  // ۲. ستون نوبت‌های مشاوره (جلسات و سامانه‌های نوبت‌دهی)
+  // ۳. کادر ثبت‌نام (فرم پذیرش و مشخصات فردی اولیه)
+  const { questionnaireSubs, bookingSubs, registrationSubs, otherSubs } = useMemo(() => {
+    const qList: FormSubmission[] = [];
+    const bList: FormSubmission[] = [];
+    const rList: FormSubmission[] = [];
+    const oList: FormSubmission[] = [];
+
+    clientCase.submissions.forEach((sub) => {
+      const fObj = forms.find((f) => f.id === sub.formId);
+      const id = (sub.formId || '').toLowerCase();
+      const slug = (fObj?.slug || '').toLowerCase();
+      const title = (fObj?.title || '').toLowerCase();
+      const cat = (fObj?.category || '').toLowerCase();
+      const hasBookingData = Boolean(
+        sub.data?.f_booking_date ||
+        sub.data?.f_booking_datetime ||
+        sub.data?.f_booking_counselor ||
+        sub.data?.f_counselor
+      );
+
+      // ۱. پرسشنامه‌ها و آزمون‌ها
+      if (
+        id.includes('safaan') ||
+        slug.includes('safaan') ||
+        id.includes('assessment') ||
+        id.includes('quiz') ||
+        title.includes('پرسشنامه') ||
+        title.includes('صفا') ||
+        title.includes('آزمون') ||
+        cat.includes('آزمون') ||
+        cat.includes('پرسشنامه')
+      ) {
+        qList.push(sub);
+      }
+      // ۲. نوبت‌های مشاوره
+      else if (
+        id.includes('booking') ||
+        slug === '3uu4z' ||
+        hasBookingData ||
+        title.includes('نوبت') ||
+        title.includes('رزرو') ||
+        title.includes('جلسه') ||
+        cat.includes('نوبت') ||
+        cat.includes('مشاوره')
+      ) {
+        bList.push(sub);
+      }
+      // ۳. ثبت‌نام و تشکیل پرونده
+      else if (
+        id.includes('registration') ||
+        slug === 'zexuz' ||
+        title.includes('ثبت نام') ||
+        title.includes('پذیرش') ||
+        cat.includes('ثبت نام')
+      ) {
+        rList.push(sub);
+      } else {
+        oList.push(sub);
+      }
+    });
+
+    return {
+      questionnaireSubs: qList,
+      bookingSubs: bList,
+      registrationSubs: rList,
+      otherSubs: oList,
+    };
+  }, [clientCase.submissions, forms]);
+
   // استیت مدیریت نوبت‌ها: استخراج ۱۰۰٪ واقعی از ارسالی‌های پایگاه‌داده و جلسات ذخیره‌شده
   const storageKey = `belhagh_real_sessions_v3_${clientCase.caseCode}`;
 
@@ -1338,89 +1410,361 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           </div>
         )}
 
-        {/* ۳. تب فرم‌ها و آزمون‌ها (Forms Tab) */}
+        {/* ۳. تب فرم‌ها و آزمون‌ها (Forms Tab) - تفکیک ۳ قسمتی زیر هم: ۱. پرسشنامه‌ها ۲. نوبت‌های مشاوره ۳. کادر ثبت‌نام */}
         {currentView === 'dossier' && activeTab === 'forms' && (
-          <div className="space-y-6 animate-in fade-in">
-            <div className="flex items-center justify-between">
+          <div className="space-y-8 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200/80 gap-3">
               <div>
                 <h3 className="text-base font-black text-slate-900">
-                  تمام فرم‌ها و پرسشنامه‌های تکمیل‌شده توسط مراجع
+                  فرم‌ها و پرسشنامه‌های تکمیل‌شده توسط مراجع
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  برای مشاهده تحلیل تفکیکی و گزارش نموداری هر فرم، روی دکمه «مشاهده گزارش نموداری و مفصل» کلیک کنید.
+                  تفکیک ۳ قسمتی پرونده: پرسشنامه‌ها، نوبت‌های مشاوره و کادر ثبت‌نام
                 </p>
               </div>
 
-              <span className="text-xs font-bold px-3 py-1 bg-blue-50 text-[#173f6b] rounded-full font-mono">
-                {toPersianDigits(clientCase.submissions.length)} فرم در پرونده
+              <span className="text-xs font-bold px-3 py-1 bg-blue-50 text-[#173f6b] rounded-full font-mono self-start sm:self-auto border border-blue-200/60">
+                مجموع {toPersianDigits(clientCase.submissions.length)} فرم در پرونده
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {clientCase.submissions.map((sub, sIdx) => {
-                const formObj = forms.find((f) => f.id === sub.formId);
-                const formTitle = formObj ? formObj.title : sub.formId;
-                const st = statusConfigs[sub.status] || statusConfigs.new;
-
-                return (
-                  <div
-                    key={sub.id}
-                    className="bg-white rounded-3xl border border-slate-200/90 hover:border-blue-400 shadow-2xs hover:shadow-md transition-all p-6 flex flex-col justify-between space-y-5"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#173f6b] flex items-center justify-center font-bold text-base border border-blue-100 shrink-0">
-                          <FileText className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <span className="text-[11px] font-bold text-[#173f6b] block">
-                            فرم مرحله {toPersianDigits(sIdx + 1)}
-                          </span>
-                          <h4 className="text-sm font-extrabold text-slate-900 leading-snug">
-                            {formTitle}
-                          </h4>
-                        </div>
-                      </div>
-
-                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
-                        {st.label}
+            {/* سه ستون موازی: ۱. ستون پرسشنامه‌ها ۲. ستون نوبت‌های مشاوره ۳. کادر ثبت‌نام */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              {/* ستون اول (سمت راست در RTL): ستون پرسشنامه‌ها */}
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b-2 border-indigo-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200/80 shrink-0">
+                      <HelpCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-indigo-950">
+                        ستون پرسشنامه‌ها
+                      </h4>
+                      <span className="text-[10px] text-slate-400 block">
+                        آزمون صفا و پرسشنامه‌های بالینی
                       </span>
                     </div>
-
-                    <div className="bg-slate-50 p-4 rounded-2xl space-y-2.5 text-xs border border-slate-100">
-                      <div className="flex items-center justify-between text-slate-500 pb-2 border-b border-slate-200/60">
-                        <span>کد پیگیری فرم:</span>
-                        <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-slate-500 pb-2 border-b border-slate-200/60">
-                        <span>تاریخ و ساعت ثبت:</span>
-                        <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-slate-500">
-                        <span>وضعیت پرداخت درگاه:</span>
-                        <span className="font-bold text-emerald-700">
-                          {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setSelectedSubmissionId(sub.id);
-                        setCurrentView('formReport');
-                      }}
-                      className="w-full py-3 bg-[#173f6b] hover:bg-[#123357] text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 group"
-                    >
-                      <BarChart3 className="w-4 h-4 text-blue-200 group-hover:scale-110 transition-transform" />
-                      <span>مشاهده گزارش نموداری و مفصل این فرم</span>
-                      <ChevronRight className="w-4 h-4 rotate-180" />
-                    </button>
                   </div>
-                );
-              })}
+
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
+                    {toPersianDigits(questionnaireSubs.length)}
+                  </span>
+                </div>
+
+                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
+                <div className="flex flex-col space-y-3.5">
+                  {questionnaireSubs.length === 0 ? (
+                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                      پرسشنامه‌ای ثبت نشده است
+                    </div>
+                  ) : (
+                    questionnaireSubs.map((sub) => {
+                      const formObj = forms.find((f) => f.id === sub.formId);
+                      const formTitle = formObj ? formObj.title : sub.formId;
+                      const st = statusConfigs[sub.status] || statusConfigs.new;
+
+                      return (
+                        <div
+                          key={sub.id}
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-indigo-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold text-indigo-700 block mb-0.5">
+                                پرسشنامه بالینی
+                              </span>
+                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                                {formTitle}
+                              </h5>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                              {st.label}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">کد پیگیری:</span>
+                              <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">تاریخ ثبت:</span>
+                              <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="font-bold text-emerald-700">
+                                {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setSelectedSubmissionId(sub.id);
+                              setCurrentView('formReport');
+                            }}
+                            className="w-full py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 text-indigo-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش و تحلیل</span>
+                            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* ستون دوم (وسط در RTL): ستون نوبت‌های مشاوره */}
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b-2 border-sky-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center font-bold border border-sky-200/80 shrink-0">
+                      <CalendarCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-sky-950">
+                        ستون نوبت‌های مشاوره
+                      </h4>
+                      <span className="text-[10px] text-slate-400 block">
+                        جلسات و رزرو نوبت تلفنی
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-sky-50 text-sky-800 border border-sky-200">
+                    {toPersianDigits(bookingSubs.length)}
+                  </span>
+                </div>
+
+                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
+                <div className="flex flex-col space-y-3.5">
+                  {bookingSubs.length === 0 ? (
+                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                      نوبت مشاوره‌ای ثبت نشده است
+                    </div>
+                  ) : (
+                    bookingSubs.map((sub) => {
+                      const formObj = forms.find((f) => f.id === sub.formId);
+                      const formTitle = formObj ? formObj.title : sub.formId;
+                      const st = statusConfigs[sub.status] || statusConfigs.new;
+
+                      return (
+                        <div
+                          key={sub.id}
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-sky-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold text-sky-700 block mb-0.5">
+                                سامانه نوبت‌دهی
+                              </span>
+                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                                {formTitle}
+                              </h5>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                              {st.label}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">کد پیگیری:</span>
+                              <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">تاریخ ثبت:</span>
+                              <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="font-bold text-emerald-700">
+                                {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setSelectedSubmissionId(sub.id);
+                              setCurrentView('formReport');
+                            }}
+                            className="w-full py-2 bg-[#173f6b] hover:bg-[#123357] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 text-blue-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش و تحلیل</span>
+                            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* ستون سوم (سمت چپ در RTL): کادر ثبت‌نام */}
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b-2 border-emerald-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold border border-emerald-200/80 shrink-0">
+                      <BadgeCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-emerald-950">
+                        کادر ثبت‌نام
+                      </h4>
+                      <span className="text-[10px] text-slate-400 block">
+                        پذیرش و مشخصات فردی مراجع
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    {toPersianDigits(registrationSubs.length)}
+                  </span>
+                </div>
+
+                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
+                <div className="flex flex-col space-y-3.5">
+                  {registrationSubs.length === 0 ? (
+                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                      فرم ثبت‌نام اولیه‌ای یافت نشد
+                    </div>
+                  ) : (
+                    registrationSubs.map((sub) => {
+                      const formObj = forms.find((f) => f.id === sub.formId);
+                      const formTitle = formObj ? formObj.title : sub.formId;
+                      const st = statusConfigs[sub.status] || statusConfigs.new;
+
+                      return (
+                        <div
+                          key={sub.id}
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold text-emerald-700 block mb-0.5">
+                                ثبت‌نام و تشکیل پرونده
+                              </span>
+                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                                {formTitle}
+                              </h5>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                              {st.label}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">کد پیگیری:</span>
+                              <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">تاریخ ثبت:</span>
+                              <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="font-bold text-emerald-700">
+                                {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setSelectedSubmissionId(sub.id);
+                              setCurrentView('formReport');
+                            }}
+                            className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 text-emerald-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش و تحلیل</span>
+                            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             </div>
+
+            {/* در صورت وجود سایر فرم‌ها (کاملاً عمودی) */}
+            {otherSubs.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <h4 className="text-sm font-black text-slate-800">
+                    سایر فرم‌های پرونده
+                  </h4>
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700">
+                    {toPersianDigits(otherSubs.length)} فرم
+                  </span>
+                </div>
+                <div className="flex flex-col space-y-3.5">
+                  {otherSubs.map((sub) => {
+                    const formObj = forms.find((f) => f.id === sub.formId);
+                    const formTitle = formObj ? formObj.title : sub.formId;
+                    const st = statusConfigs[sub.status] || statusConfigs.new;
+
+                    return (
+                      <div
+                        key={sub.id}
+                        className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-400 shadow-2xs hover:shadow-sm transition-all p-5 flex flex-col space-y-4"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-base border border-slate-200 shrink-0">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-black text-slate-900 leading-snug">
+                                {formTitle}
+                              </h4>
+                            </div>
+                          </div>
+
+                          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border self-start sm:self-auto shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                            {st.label}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3.5 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border border-slate-100">
+                          <div className="flex items-center justify-between sm:justify-start sm:gap-2 text-slate-500">
+                            <span>کد پیگیری فرم:</span>
+                            <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between sm:justify-start sm:gap-2 text-slate-500">
+                            <span>تاریخ و ساعت ثبت:</span>
+                            <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-1">
+                          <button
+                            onClick={() => {
+                              setSelectedSubmissionId(sub.id);
+                              setCurrentView('formReport');
+                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 group"
+                          >
+                            <BarChart3 className="w-4 h-4 text-slate-300 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش نموداری و مفصل این فرم</span>
+                            <ChevronRight className="w-4 h-4 rotate-180" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
