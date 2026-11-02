@@ -32,7 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile
 }) => {
   const { forms, submissions, activeForm } = useForm();
-  const { logout } = useAdminAuth();
+  const { currentUser, logout } = useAdminAuth();
+  const isCounselor = currentUser?.role === 'counselor' || currentUser?.role === 'reviewer';
 
   const totalSubmissions = submissions.length;
 
@@ -42,12 +43,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'داشبورد مدیریت',
       icon: LayoutDashboard,
       badge: null,
+      counselorAllowed: false,
     },
     {
       id: 'forms',
-      label: 'فرم‌های من',
+      label: 'فرم‌ها و پرسشنامه‌ها',
       icon: FolderKanban,
       badge: toPersianDigits(forms.length),
+      counselorAllowed: false,
     },
     {
       id: 'builder',
@@ -55,48 +58,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: PenTool,
       badge: activeForm ? 'فعال' : null,
       highlight: true,
+      counselorAllowed: false,
     },
     {
       id: 'runner',
       label: 'پیش‌نمایش فرم زنده',
       icon: Eye,
       badge: null,
+      counselorAllowed: false,
     },
     {
       id: 'submissions',
-      label: 'بانک ارسالی‌ها و کارتابل',
+      label: 'پرونده مراجعین',
       icon: Inbox,
       badge: toPersianDigits(totalSubmissions),
+      counselorAllowed: true,
     },
     {
       id: 'media',
       label: 'مرکز اسناد و فایل‌های پیوست',
       icon: FileCheck,
       badge: null,
+      counselorAllowed: false,
     },
     {
       id: 'chat',
-      label: 'گفتگوی آنلاین با کاربران',
+      label: 'گفتگوی آنلاین با مراجعین',
       icon: Sparkles,
       badge: 'زنده',
+      counselorAllowed: false,
     },
     {
       id: 'analytics',
-      label: 'تحلیل آماری و نمودارها',
+      label: 'آمارها و تحلیل‌های بالینی',
       icon: BarChart3,
       badge: null,
+      counselorAllowed: false,
     },
     {
       id: 'templates',
-      label: 'قالب‌های آماده آماده',
+      label: 'قالب‌های آماده فرم',
       icon: Sparkles,
       badge: '۴ قالب',
+      counselorAllowed: false,
     },
     {
       id: 'settings',
       label: 'تنظیمات و وب‌هوک‌ها',
       icon: Settings,
       badge: null,
+      counselorAllowed: false,
     },
   ];
 
@@ -134,21 +145,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
+            const isDisabled = isCounselor && !item.counselorAllowed;
+
             return (
               <button
                 key={item.id}
-                onClick={() => handleSelectTab(item.id)}
+                onClick={() => !isDisabled && handleSelectTab(item.id)}
+                disabled={isDisabled}
+                title={isDisabled ? 'دسترسی فقط ویژه مدیر ارشد سامانه' : item.label}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                  isActive
-                    ? 'bg-slate-900 text-white font-semibold shadow-sm'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200'
+                  isDisabled
+                    ? 'opacity-40 text-slate-400 cursor-not-allowed bg-transparent'
+                    : isActive
+                    ? 'bg-slate-900 text-white font-semibold shadow-sm cursor-pointer'
+                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 cursor-pointer'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : isDisabled ? 'text-slate-300' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </div>
-                {item.badge && (
+                {item.badge && !isDisabled && (
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                       isActive

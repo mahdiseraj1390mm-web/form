@@ -330,7 +330,7 @@ function normalizeSearchText(str: string): string {
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-                کارتابل مراجعین و بانک ارسالی‌ها
+                کارتابل پرونده‌های مراجعین
               </h1>
               <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200/60">
                 {toPersianDigits(clientCases.length)} پرونده فعال
