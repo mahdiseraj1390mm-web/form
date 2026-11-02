@@ -4,6 +4,7 @@ import React from 'react';
 import { EvaluationResult, Form } from '@/types/form';
 import { SvgRadarChart } from './radar-chart';
 import { toPersianDigits } from '@/lib/persian';
+import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
   TrendingUp,
   Award,
@@ -157,40 +158,55 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
             </p>
 
             <div className="space-y-3.5">
-              {evaluation.topPriorities.slice(0, 3).map((item, idx) => (
-                <div
-                  key={item.code}
-                  className="p-4 rounded-2xl bg-gradient-to-l from-slate-50 to-amber-50/30 border border-amber-200/60 shadow-2xs"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-amber-500 text-white text-xs font-black flex items-center justify-center shrink-0">
-                        {toPersianDigits(idx + 1)}
-                      </span>
-                      <span className="font-extrabold text-xs sm:text-sm text-slate-900">
-                        مؤلفه {toPersianDigits(item.code)}: {item.title}
+              {evaluation.topPriorities.slice(0, 3).map((item, idx) => {
+                const itemColor = getSemanticColorByPercentage(item.score);
+                const priorityLabels = ['اولویت اول (بحرانی)', 'اولویت دوم (هشدار)', 'اولویت سوم (رشد)'];
+                return (
+                  <div
+                    key={item.code}
+                    className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-lg ${itemColor.dotBg} text-white text-xs font-black flex items-center justify-center shrink-0`}>
+                          {toPersianDigits(idx + 1)}
+                        </span>
+                        <span className="font-extrabold text-xs sm:text-sm text-slate-900">
+                          مؤلفه {toPersianDigits(item.code)}: {item.title}
+                        </span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${itemColor.badgeBg} ${itemColor.textColor} ${itemColor.badgeBorder}`}>
+                          {priorityLabels[idx] || itemColor.shortLabel}
+                        </span>
+                      </div>
+
+                      <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border ${itemColor.badgeBg} ${itemColor.textColor} ${itemColor.badgeBorder}`}>
+                        فاصله: {toPersianDigits(item.gap)}%
                       </span>
                     </div>
 
-                    <span className="text-xs font-mono font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">
-                      فاصله: {toPersianDigits(item.gap)}%
-                    </span>
-                  </div>
-
-                  {item.counselingTip ? (
-                    <p className="text-[11px] text-slate-600 leading-relaxed pr-8 border-r-2 border-amber-300 mt-1.5">
-                      💡 <strong>راهکار پیشنهادی:</strong> {item.counselingTip}
-                    </p>
-                  ) : (
-                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-2">
+                    {/* میله پیشرفت با رنگ‌بندی ۴ گانه متوالی (قرمز، نارنجی، آبی، سبز) */}
+                    <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden my-2">
                       <div
-                        className="bg-amber-500 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, item.score)}%` }}
+                        className={`h-full ${itemColor.bgBar} rounded-full transition-all duration-500`}
+                        style={{
+                          width: `${Math.min(100, Math.max(Number(item.score) || 0, 0))}%`,
+                          backgroundColor: itemColor.hex,
+                        }}
+                        title={`نمره مؤلفه: ${toPersianDigits(item.score)}٪`}
                       />
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {item.counselingTip && (
+                      <p
+                        className="text-[11px] text-slate-600 leading-relaxed pr-3 border-r-2 mt-2"
+                        style={{ borderColor: itemColor.hex }}
+                      >
+                        💡 <strong>راهکار پیشنهادی:</strong> {item.counselingTip}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -210,11 +226,13 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
       </div>
 
       {/* جدول تفکیکی تمام ۱۷ مؤلفه */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-          <span className="text-sm font-extrabold text-slate-900">
-            جدول نمرات تفکیکی تمامی مؤلفه‌ها
-          </span>
+      <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-extrabold text-slate-900">
+              جدول نمرات تفکیکی تمامی مؤلفه‌ها
+            </span>
+          </div>
           <span className="text-xs text-slate-400">
             مجموع {toPersianDigits(evaluation.componentScores.length)} مؤلفه ارزیابی‌شده
           </span>
@@ -233,33 +251,42 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {evaluation.componentScores.map((c) => (
-                <tr key={c.code} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-2.5 px-3 font-mono text-slate-400">{toPersianDigits(c.code)}</td>
-                  <td className="py-2.5 px-3 font-bold text-slate-900">{c.title}</td>
-                  <td className="py-2.5 px-3 text-center font-mono">{toPersianDigits(c.rawSum)}</td>
-                  <td className="py-2.5 px-3 text-center">
-                    <span className="font-mono font-black text-slate-900 text-sm">
-                      {toPersianDigits(c.score)}%
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-center font-mono text-amber-700">
-                    {toPersianDigits(c.growthGap)}%
-                  </td>
-                  <td className="py-2.5 px-3 text-center">
-                    <span
-                      className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold"
-                      style={{
-                        backgroundColor: `${c.statusColor}18`,
-                        color: c.statusColor,
-                        border: `1px solid ${c.statusColor}40`,
-                      }}
-                    >
-                      {c.statusLabel}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {evaluation.componentScores.map((c) => {
+                const scColor = getSemanticColorByPercentage(c.score);
+                return (
+                  <tr key={c.code} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-2.5 px-3 font-mono text-slate-400">{toPersianDigits(c.code)}</td>
+                    <td className="py-2.5 px-3 font-bold text-slate-900">{c.title}</td>
+                    <td className="py-2.5 px-3 text-center font-mono">{toPersianDigits(c.rawSum)}</td>
+                    <td className="py-2.5 px-3 text-center">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <span className="font-mono font-black text-slate-900 text-xs">
+                          {toPersianDigits(c.score)}%
+                        </span>
+                        <div className="w-20 bg-slate-200 h-2 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${scColor.bgBar} rounded-full transition-all duration-500`}
+                            style={{
+                              width: `${Math.min(100, Math.max(Number(c.score) || 0, 0))}%`,
+                              backgroundColor: scColor.hex,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3 text-center font-mono text-amber-700">
+                      {toPersianDigits(c.growthGap)}%
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${scColor.badgeBg} ${scColor.textColor} ${scColor.badgeBorder}`}
+                      >
+                        {scColor.shortLabel}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -23,9 +23,12 @@ import {
   AlertTriangle,
   Users,
   List,
+  BarChart2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { toPersianDigits, formatCurrency, formatPersianDateTime, getFieldDisplayValue } from '@/lib/persian';
 import { exportFormSubmissionsToXLSX } from '@/lib/excel-export';
+import { getSemanticColorByPercentage, getFourColorByIndex } from '@/lib/chart-colors';
 
 interface AnalyticsViewProps {
   onNavigateToRunner?: () => void;
@@ -38,6 +41,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
   // فیلترهای انتخابی جهت تحلیل فیلد به فیلد
   const [selectedChoiceFieldId, setSelectedChoiceFieldId] = useState<string>('');
   const [selectedNumericFieldId, setSelectedNumericFieldId] = useState<string>('');
+
+  // حالت‌های رنگ‌بندی ۴گانه معنایی (قرمز، نارنجی، آبی، سبز) و چیدمان نمودار میله‌ای
+  const [chartColorSchemeMode, setChartColorSchemeMode] = useState<'threshold' | 'sequential'>('sequential');
+  const [chartOrientation, setChartOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
 
   const currentForm = forms.find((f) => f.id === selectedFormId) || forms[0];
 
@@ -346,56 +353,201 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
           </div>
 
-          {/* بخش ۱: توزیع آماری گزینه‌های فیلدهای انتخابی (Option Distribution) */}
+          {/* بخش ۱: توزیع آماری گزینه‌های فیلدهای انتخابی با رنگ‌بندی ۴گانه معنایی (قرمز، نارنجی، آبی، سبز) */}
           {choiceFields.length > 0 && (
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
-                <div className="flex items-center gap-2">
-                  <PieChart className="w-5 h-5 text-indigo-600" />
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center shadow-2xs">
+                    <BarChart3 className="w-5 h-5 text-blue-700" />
+                  </div>
                   <div>
-                    <h2 className="text-sm font-bold text-slate-900">نمودار فراوانی و تفکیک پاسخ‌های گزینه‌ای</h2>
-                    <span className="text-[11px] text-slate-500">درصد و تعداد دقیق انتخاب هر یک از گزینه‌ها</span>
+                    <h2 className="text-sm font-bold text-slate-900">نمودار میله‌ای فراوانی گزینه‌ها</h2>
+                    <span className="text-[11px] text-slate-500">
+                      تفکیک آماری و درصد پاسخ‌ها (قرمز، نارنجی، آبی، سبز)
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">فیلد مورد بررسی:</span>
-                  <select
-                    value={activeChoiceField?.id}
-                    onChange={(e) => setSelectedChoiceFieldId(e.target.value)}
-                    className="text-xs font-bold text-slate-800 border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white"
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                    <span className="text-xs text-slate-500 px-2 font-medium">فیلد:</span>
+                    <select
+                      value={activeChoiceField?.id}
+                      onChange={(e) => setSelectedChoiceFieldId(e.target.value)}
+                      className="text-xs font-bold text-slate-800 border-0 rounded-lg px-2.5 py-1.5 bg-white shadow-2xs focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      {choiceFields.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* نوار کنترل تنظیمات نمودار: انتخاب حالت رنگ‌بندی و نوع جهت‌گیری */}
+              <div className="flex items-center justify-end gap-2 p-2 bg-slate-50/70 rounded-xl border border-slate-100">
+                {/* دکمه سوییچ مدل رنگ‌بندی */}
+                <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setChartColorSchemeMode('threshold')}
+                    className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                      chartColorSchemeMode === 'threshold'
+                        ? 'bg-[#173f6b] text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="رنگ‌بندی بر اساس بازه درصد پاسخ‌ها"
                   >
-                    {choiceFields.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.label}
-                      </option>
-                    ))}
-                  </select>
+                    سطح درصدی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartColorSchemeMode('sequential')}
+                    className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                      chartColorSchemeMode === 'sequential'
+                        ? 'bg-[#173f6b] text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="رنگ‌بندی ۴ گانه ترتیبی گزینه‌ها (قرمز، نارنجی، آبی، سبز)"
+                  >
+                    تفکیک گزینه‌ها
+                  </button>
+                </div>
+
+                {/* دکمه سوییچ افقی / ستونی */}
+                <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setChartOrientation('horizontal')}
+                    className={`px-2 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                      chartOrientation === 'horizontal'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="نمودار میله‌ای افقی"
+                  >
+                    افقی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartOrientation('vertical')}
+                    className={`px-2 py-1 rounded-md font-bold transition-all cursor-pointer ${
+                      chartOrientation === 'vertical'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                    title="نمودار میله‌ای ستونی (عمودی)"
+                  >
+                    عمودی
+                  </button>
                 </div>
               </div>
 
-              {/* نمودار میله‌ای افقی تفکیک گزینه‌ها */}
-              <div className="space-y-4 text-xs">
-                {optionDistribution.map((opt) => (
-                  <div key={opt.id} className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-800">{opt.label}</span>
-                      <div className="flex items-center gap-2 font-mono">
-                        <span className="text-slate-500 text-[11px]">{toPersianDigits(opt.count)} نفر</span>
-                        <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                          {toPersianDigits(opt.percentage)}٪
-                        </span>
+              {/* حالت ۱: نمودار میله‌ای افقی تفکیک گزینه‌ها */}
+              {chartOrientation === 'horizontal' && (
+                <div className="space-y-4 text-xs pt-1">
+                  {optionDistribution.map((opt, idx) => {
+                    const colorConfig =
+                      chartColorSchemeMode === 'threshold'
+                        ? getSemanticColorByPercentage(opt.percentage)
+                        : getFourColorByIndex(idx);
+
+                    return (
+                      <div key={opt.id} className="space-y-1.5 group">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${colorConfig.dotBg} shrink-0 ring-2 ${colorConfig.ringColor}`} />
+                            <span className="font-semibold text-slate-800">{opt.label}</span>
+                            {chartColorSchemeMode === 'threshold' && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${colorConfig.badgeBg} ${colorConfig.textColor} ${colorConfig.badgeBorder}`}>
+                                {colorConfig.shortLabel}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 font-mono">
+                            <span className="text-slate-500 text-[11px]">{toPersianDigits(opt.count)} نفر</span>
+                            <span className={`font-bold px-2 py-0.5 rounded border ${colorConfig.badgeBg} ${colorConfig.textColor} ${colorConfig.badgeBorder}`}>
+                              {toPersianDigits(opt.percentage)}٪
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${colorConfig.bgBar} rounded-full transition-all duration-500`}
+                            style={{
+                              width: `${Math.min(100, Math.max(Number(opt.percentage) || 0, 0))}%`,
+                              backgroundColor: colorConfig.hex,
+                            }}
+                          />
+                        </div>
                       </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* حالت ۲: نمودار میله‌ای عمودی (ستونی) تفکیک گزینه‌ها */}
+              {chartOrientation === 'vertical' && (
+                <div className="pt-4">
+                  <div className="relative h-64 border-b border-r border-slate-200 bg-gradient-to-t from-slate-50/50 to-white rounded-xl p-4 flex items-end justify-around gap-2 sm:gap-6 overflow-x-auto">
+                    {/* خطوط راهنمای محور افقی (گرید درصدی) */}
+                    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
+                      {[100, 75, 50, 25, 0].map((level) => (
+                        <div key={level} className="border-b border-dashed border-slate-200/80 w-full flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                          <span>{toPersianDigits(level)}٪</span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                      <div
-                        className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.max(opt.percentage, 1)}%` }}
-                      />
-                    </div>
+
+                    {/* ستون‌های عمودی */}
+                    {optionDistribution.map((opt, idx) => {
+                      const colorConfig =
+                        chartColorSchemeMode === 'threshold'
+                          ? getSemanticColorByPercentage(opt.percentage)
+                          : getFourColorByIndex(idx);
+
+                      return (
+                        <div
+                          key={opt.id}
+                          className="relative z-10 flex flex-col items-center justify-end h-full w-20 sm:w-24 group"
+                        >
+                          {/* برچسب درصد در بالای میله */}
+                          <div className={`mb-1.5 px-1.5 py-0.5 rounded text-[11px] font-mono font-black border ${colorConfig.badgeBg} ${colorConfig.textColor} ${colorConfig.badgeBorder} shadow-2xs group-hover:scale-110 transition-transform`}>
+                            {toPersianDigits(opt.percentage)}٪
+                          </div>
+
+                          {/* میله ستونی عمودی */}
+                          <div className="w-10 sm:w-12 bg-slate-200 rounded-t-xl overflow-hidden flex flex-col justify-end h-full max-h-[175px]">
+                            <div
+                              className={`w-full ${colorConfig.bgBar} rounded-t-lg transition-all duration-500 shadow-xs`}
+                              style={{
+                                height: `${Math.min(100, Math.max(Number(opt.percentage) || 0, 2))}%`,
+                                backgroundColor: colorConfig.hex,
+                              }}
+                              title={`${opt.label}: ${toPersianDigits(opt.percentage)}٪ (${toPersianDigits(opt.count)} نفر)`}
+                            />
+                          </div>
+
+                          {/* برچسب گزینه و تعداد در پایین */}
+                          <div className="mt-2 text-center w-full">
+                            <span className="block text-[11px] font-bold text-slate-800 truncate" title={opt.label}>
+                              {opt.label}
+                            </span>
+                            <span className="block text-[10px] text-slate-400 font-mono">
+                              {toPersianDigits(opt.count)} نفر
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -555,42 +707,48 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                 <h2 className="text-sm font-bold text-amber-900">بیشترین پاسخ‌های مشابه (تکرار شده)</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {similarAnswers.map((sa, idx) => (
-                  <div key={`${sa.fieldId}-${sa.value}`} className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
-                        #{toPersianDigits(idx + 1)}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        {toPersianDigits(sa.count)} بار
-                      </span>
-                    </div>
-                    <div className="space-y-1 text-xs">
-                      <div>
-                        <span className="text-slate-500 block">فیلد:</span>
-                        <span className="font-bold text-slate-900">{sa.fieldLabel}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 block">مقدار تکراری:</span>
-                        <span className="font-bold text-slate-900 truncate max-w-xs" title={sa.value}>
-                          {sa.value}
+                {similarAnswers.map((sa, idx) => {
+                  const saColor = getSemanticColorByPercentage(sa.percentage);
+                  return (
+                    <div key={`${sa.fieldId}-${sa.value}`} className={`p-4 rounded-xl border ${saColor.badgeBg} ${saColor.badgeBorder}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${saColor.textColor} ${saColor.badgeBg} ${saColor.badgeBorder}`}>
+                          #{toPersianDigits(idx + 1)} - {saColor.shortLabel}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {toPersianDigits(sa.count)} بار
                         </span>
                       </div>
-                      <div>
-                        <span className="text-slate-500 block">نرخ تکرار:</span>
-                        <span className="font-bold text-amber-800">
-                          {toPersianDigits(sa.percentage)}٪ از ارسالی‌ها
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-1">
-                        <div
-                          className="bg-amber-500 h-full rounded-full"
-                          style={{ width: `${Math.max(sa.percentage, 1)}%` }}
-                        />
+                      <div className="space-y-1 text-xs">
+                        <div>
+                          <span className="text-slate-500 block">فیلد:</span>
+                          <span className="font-bold text-slate-900">{sa.fieldLabel}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">مقدار تکراری:</span>
+                          <span className="font-bold text-slate-900 truncate max-w-xs" title={sa.value}>
+                            {sa.value}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">نرخ تکرار:</span>
+                          <span className={`font-bold ${saColor.textColor}`}>
+                            {toPersianDigits(sa.percentage)}٪ از ارسالی‌ها
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-1">
+                          <div
+                            className={`h-full ${saColor.bgBar} rounded-full transition-all duration-500`}
+                            style={{
+                              width: `${Math.min(100, Math.max(Number(sa.percentage) || 0, 0))}%`,
+                              backgroundColor: saColor.hex,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

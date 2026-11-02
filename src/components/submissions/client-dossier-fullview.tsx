@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { exportSingleClientDossierToXLSX } from '@/lib/excel-export';
 import { EvaluationReportView } from '../analytics/evaluation-report-view';
+import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
   formatPersianDateTime,
   formatPersianDateOnly,
@@ -1145,16 +1146,21 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           : 'فاقد کارنامه'}
                       </span>
                     </div>
-                    <div className="mt-3 h-1.5 rounded-full bg-emerald-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                        style={{
-                          width: safaEvaluationSubmission?.evaluationResult?.overallScore
-                            ? `${safaEvaluationSubmission.evaluationResult.overallScore}%`
-                            : '0%',
-                        }}
-                      />
-                    </div>
+                    {(() => {
+                      const overallScore = safaEvaluationSubmission?.evaluationResult?.overallScore || 0;
+                      const safaColor = getSemanticColorByPercentage(overallScore);
+                      return (
+                        <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${safaColor.bgBar} transition-all duration-700 shadow-2xs`}
+                            style={{
+                              width: `${Math.min(100, Math.max(Number(overallScore) || 0, 0))}%`,
+                              backgroundColor: safaColor.hex,
+                            }}
+                          />
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* شاخص ۲: پایش سلامت پزشکی و دارویی */}
@@ -1178,13 +1184,23 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           : 'بدون بیماری حاد'}
                       </span>
                     </div>
-                    <div className="mt-3 h-1.5 rounded-full bg-blue-100 overflow-hidden">
+                    <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${
+                        className={`h-full rounded-full transition-all duration-700 ${
                           smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
-                            ? 'bg-amber-500 w-[60%]'
-                            : 'bg-emerald-500 w-[100%]'
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
                         }`}
+                        style={{
+                          width:
+                            smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
+                              ? '60%'
+                              : '100%',
+                          backgroundColor:
+                            smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
+                              ? '#f59e0b'
+                              : '#059669',
+                        }}
                       />
                     </div>
                   </div>
@@ -1196,16 +1212,29 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       <span className="text-xl font-black text-indigo-700 font-mono">
                         %{toPersianDigits(profileCompletionRate)}
                       </span>
-                      <span className="rounded-full bg-indigo-100 px-2 py-1 text-[9px] font-bold text-indigo-700">
-                        {profileCompletionRate >= 80 ? 'تکمیل مناسب' : 'نقص اطلاعات'}
-                      </span>
+                      {(() => {
+                        const profColor = getSemanticColorByPercentage(profileCompletionRate);
+                        return (
+                          <span className={`rounded-full px-2 py-1 text-[9px] font-bold border ${profColor.badgeBg} ${profColor.textColor} ${profColor.badgeBorder}`}>
+                            {profColor.shortLabel} ({profileCompletionRate >= 80 ? 'مناسب' : 'نقص اطلاعات'})
+                          </span>
+                        );
+                      })()}
                     </div>
-                    <div className="mt-3 h-1.5 rounded-full bg-indigo-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-indigo-500 transition-all duration-500"
-                        style={{ width: `${profileCompletionRate}%` }}
-                      />
-                    </div>
+                    {(() => {
+                      const profColor = getSemanticColorByPercentage(profileCompletionRate);
+                      return (
+                        <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${profColor.bgBar} transition-all duration-700 shadow-2xs`}
+                            style={{
+                              width: `${Math.min(100, Math.max(Number(profileCompletionRate) || 0, 0))}%`,
+                              backgroundColor: profColor.hex,
+                            }}
+                          />
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </article>
@@ -1913,10 +1942,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       </div>
                     </div>
 
-                    {/* ۲. نمودارهای میله‌ای ابعاد و شاخص‌های کیفی فرم */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs lg:col-span-2 flex flex-col justify-between">
+                    {/* ۲. نمودارهای میله‌ای ابعاد و شاخص‌های کیفی فرم با رنگ‌بندی ۴ گانه معنایی */}
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs lg:col-span-2 flex flex-col justify-between space-y-4">
                       <div>
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-3 gap-2">
                           <span className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
                             <TrendingUp className="w-4 h-4 text-[#173f6b]" />
                             <span>تحلیل ابعاد کیفی، اعتبارسنجی و تطابق مراجع</span>
@@ -1925,22 +1954,34 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                         </div>
 
                         <div className="space-y-4">
-                          {formAnalytics.dimensions.map((dim, idx) => (
-                            <div key={idx} className="space-y-1.5">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-bold text-slate-700">{dim.name}</span>
-                                <span className="font-mono font-extrabold text-slate-900">
-                                  %{toPersianDigits(dim.score)}
-                                </span>
+                          {formAnalytics.dimensions.map((dim, idx) => {
+                            const dimColor = getSemanticColorByPercentage(dim.score);
+                            return (
+                              <div key={idx} className="space-y-1.5 group">
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${dimColor.dotBg} shrink-0 ring-2 ${dimColor.ringColor}`} />
+                                    <span className="font-bold text-slate-800">{dim.name}</span>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${dimColor.badgeBg} ${dimColor.textColor} ${dimColor.badgeBorder}`}>
+                                      {dimColor.shortLabel}
+                                    </span>
+                                  </div>
+                                  <span className={`font-mono font-extrabold text-xs px-2 py-0.5 rounded border ${dimColor.badgeBg} ${dimColor.textColor} ${dimColor.badgeBorder}`}>
+                                    %{toPersianDigits(dim.score)}
+                                  </span>
+                                </div>
+                                <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full ${dimColor.bgBar} rounded-full transition-all duration-500`}
+                                    style={{
+                                      width: `${Math.min(100, Math.max(Number(dim.score) || 0, 0))}%`,
+                                      backgroundColor: dimColor.hex,
+                                    }}
+                                  />
+                                </div>
                               </div>
-                              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full ${dim.color} rounded-full transition-all duration-700`}
-                                  style={{ width: `${dim.score}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 
