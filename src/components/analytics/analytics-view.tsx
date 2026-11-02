@@ -27,7 +27,6 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { toPersianDigits, formatCurrency, formatPersianDateTime, getFieldDisplayValue } from '@/lib/persian';
-import { exportFormSubmissionsToXLSX } from '@/lib/excel-export';
 import { getSemanticColorByPercentage, getFourColorByIndex } from '@/lib/chart-colors';
 
 interface AnalyticsViewProps {
@@ -221,6 +220,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     }
     try {
       setIsExporting(true);
+      const { exportFormSubmissionsToXLSX } = await import('@/lib/excel-export');
       await exportFormSubmissionsToXLSX(currentForm, formSubmissions);
     } catch (err) {
       console.error('Export Excel error:', err);

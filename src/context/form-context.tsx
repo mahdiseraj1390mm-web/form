@@ -310,18 +310,18 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     }
     setIsInitialized(true);
 
-    // همگام‌سازی کلیه پاسخ‌های فرم از پایگاه‌داده سرور با هر بار بارگذاری صفحه ادمین
-    fetch('/api/cases?formId=all', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
-          setSubmissions(data.submissions);
-          try {
-            localStorage.setItem('formafzar_submissions', JSON.stringify(data.submissions));
-          } catch {}
-        }
-      })
-      .catch((err) => console.warn('Could not load submissions from DB:', err));
+    // همگام‌سازی کلیه پاسخ‌های فرم از پایگاه‌داده سرور صرفاً برای پنل‌های ادمین و بدون اتلاف پهنای باند مراجعین
+    const isPublicFormRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/form/');
+    if (!isPublicFormRoute) {
+      fetch('/api/cases?formId=all', { cache: 'no-store' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
+            setSubmissions(data.submissions);
+          }
+        })
+        .catch((err) => console.warn('Could not load submissions from DB:', err));
+    }
 
     // همگام‌سازی از پایگاه‌داده سرور تا تمامی کاربران و دستگاه‌ها آخرین فرم‌ها و بنرها را مشاهده کنند (بدون کش)
     fetch(`/api/forms?_nocache=${Date.now()}`, { cache: 'no-store', headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' } })
@@ -764,9 +764,6 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       const dbSubmissions: FormSubmission[] = data.submissions;
       if (formId === 'all' || !formId) {
         setSubmissions(dbSubmissions);
-        try {
-          localStorage.setItem('formafzar_submissions', JSON.stringify(dbSubmissions));
-        } catch {}
         return;
       }
       setSubmissions((prev) => {

@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm } from '@/context/form-context';
 import { FormSubmission, SubmissionStatus, Form } from '@/types/form';
 import { ClientDossierFullview } from './client-dossier-fullview';
-import { exportClientCasesToXLSX, exportSubmissionsListToXLSX, exportFormSubmissionsToXLSX } from '@/lib/excel-export';
 import { 
   Inbox, 
   Search, 
@@ -63,7 +62,7 @@ export const SubmissionsHub: React.FC = () => {
     // ۲. به‌روزرسانی خودکار در پس‌زمینه هر ۱۵ ثانیه بدون نیاز به هیچ کلیک
     const interval = setInterval(() => {
       refreshSubmissionsFromDb('all');
-    }, 15000);
+    }, 45000);
 
     // ۳. دریافت آخرین اطلاعات به محض بازگشت کاربر به تب مرورگر
     const handleFocus = () => {
@@ -281,6 +280,7 @@ function normalizeSearchText(str: string): string {
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
+      const { exportClientCasesToXLSX, exportSubmissionsListToXLSX, exportFormSubmissionsToXLSX } = await import('@/lib/excel-export');
       if (hubTab === 'cases') {
         if (filteredCases.length === 0) {
           alert('پرونده‌ای برای خروجی اکسل وجود ندارد.');

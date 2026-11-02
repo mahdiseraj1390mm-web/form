@@ -137,7 +137,7 @@ function writeLocalSubmissions(subs: FormSubmission[]): void {
   try {
     const dir = path.dirname(LOCAL_SUBMISSIONS_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(LOCAL_SUBMISSIONS_FILE, JSON.stringify(subs, null, 2), 'utf8');
+    fs.writeFileSync(LOCAL_SUBMISSIONS_FILE, JSON.stringify(subs), 'utf8');
   } catch (err) {
     console.warn('Error writing local submissions file:', err);
   }

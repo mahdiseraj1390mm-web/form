@@ -23,7 +23,6 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
-import { exportFormSubmissionsToXLSX } from '@/lib/excel-export';
 
 interface FormsListViewProps {
   onOpenNewFormModal: () => void;
@@ -49,6 +48,7 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
     }
     try {
       setExportingFormId(form.id);
+      const { exportFormSubmissionsToXLSX } = await import('@/lib/excel-export');
       await exportFormSubmissionsToXLSX(form, formSubs);
     } catch (err) {
       console.error('Error exporting Excel:', err);

@@ -44,7 +44,6 @@ import {
   Search,
   Plus,
 } from 'lucide-react';
-import { exportSingleClientDossierToXLSX } from '@/lib/excel-export';
 import { EvaluationReportView } from '../analytics/evaluation-report-view';
 import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
@@ -517,6 +516,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const handleExportClientExcel = async () => {
     try {
       setIsExportingExcel(true);
+      const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
       await exportSingleClientDossierToXLSX(clientCase, forms);
     } catch (err) {
       console.error('Error exporting client dossier Excel:', err);

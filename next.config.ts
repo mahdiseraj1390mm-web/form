@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  compress: true,
+  poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
   turbopack: {
     rules: {
       "*.css": {
@@ -11,12 +16,13 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // ۱. جلوگیری از کش شدن پاسخ‌های API تا داده‌ها همواره به‌روز و لحظه‌ای باشند
       {
-        source: "/:path*",
+        source: "/api/:path*",
         headers: [
           {
             key: "Cache-Control",
-            value: "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+            value: "no-store, no-cache, must-revalidate, max-age=0",
           },
           {
             key: "Pragma",
