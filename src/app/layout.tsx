@@ -6,7 +6,7 @@ import { AdminAuthProvider } from '@/context/admin-auth-context';
 
 const vazirmatn = Vazirmatn({
   subsets: ['arabic', 'latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
   display: 'swap',
   variable: '--font-vazirmatn',
 });
@@ -30,8 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fa" dir="rtl" className={`h-full ${vazirmatn.variable}`}>
-      <body className="min-h-full flex flex-col font-['Vazirmatn',system-ui,sans-serif] bg-slate-50 text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
+    <html lang="fa" dir="rtl" className={`h-full ${vazirmatn.variable} ${vazirmatn.className}`}>
+      <body className={`min-h-full flex flex-col ${vazirmatn.className} bg-slate-50 text-slate-900 antialiased selection:bg-blue-600 selection:text-white`}>
         <AdminAuthProvider>
           <FormProvider>
             {children}

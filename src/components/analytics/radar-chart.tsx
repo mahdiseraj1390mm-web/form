@@ -109,8 +109,8 @@ export const SvgRadarChart: React.FC<SvgRadarChartProps> = ({
                 y={center - r + 11}
                 fill="#94a3b8"
                 fontSize="9"
-                fontFamily="sans-serif"
-                className="font-mono font-medium"
+                fontFamily="var(--font-vazirmatn), Vazirmatn, sans-serif"
+                className="font-medium"
               >
                 {toPersianDigits(lvl)}
               </text>
@@ -170,6 +170,7 @@ export const SvgRadarChart: React.FC<SvgRadarChartProps> = ({
                 textAnchor={lbl.textAnchor}
                 fontSize={isHovered ? '11.5' : '10'}
                 fontWeight={isHovered ? '800' : '600'}
+                fontFamily="var(--font-vazirmatn), Vazirmatn, sans-serif"
                 fill={isHovered ? '#0284c7' : '#334155'}
                 className="transition-colors duration-200 select-none font-sans"
               >

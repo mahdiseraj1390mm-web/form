@@ -352,7 +352,7 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
     vazirmatn: 'font-sans',
     iranyekan: 'font-sans',
     shabnam: 'font-sans',
-    system: 'font-mono',
+    system: 'font-sans',
   }[theme?.fontFamily || 'vazirmatn'];
 
   return (

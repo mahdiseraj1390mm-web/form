@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-vazirmatn), 'Vazirmatn', system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-vazirmatn), 'Vazirmatn', monospace;
+}
+
 @layer base {
   :root {
     --background: #f8fafc;
@@ -39,15 +44,41 @@ html {
   text-align: right;
   scroll-behavior: smooth;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-family: var(--font-vazirmatn), 'Vazirmatn', system-ui, -apple-system, sans-serif;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: 'Vazirmatn', 'IRANSans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Tahoma, sans-serif;
+  font-family: var(--font-vazirmatn), 'Vazirmatn', system-ui, -apple-system, sans-serif;
   letter-spacing: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* تضمین اعمال فونت یکپارچه وزیر متن بر تمام عناصر تعاملی، ورودی‌ها، دکمه‌ها و جداول */
+*,
+*::before,
+*::after,
+input,
+button,
+select,
+textarea,
+table,
+th,
+td {
+  font-family: var(--font-vazirmatn), 'Vazirmatn', system-ui, -apple-system, sans-serif;
+}
+
+/* اعداد و کدهای هم‌عرض با همان فونت وزیر متن و بدون جابجایی کاراکتر */
+.font-mono,
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-vazirmatn), 'Vazirmatn', monospace !important;
+  font-feature-settings: "tnum" on, "cv02", "cv03", "cv04", "cv11";
+  font-variant-numeric: tabular-nums;
 }
 
 /* اعداد استاندارد با فونت هم‌عرض در جداول و گزارش‌ها */
