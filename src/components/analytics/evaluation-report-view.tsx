@@ -174,9 +174,6 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
                         <span className="font-extrabold text-xs sm:text-sm text-slate-900">
                           مؤلفه {toPersianDigits(item.code)}: {item.title}
                         </span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${itemColor.badgeBg} ${itemColor.textColor} ${itemColor.badgeBorder}`}>
-                          {priorityLabels[idx] || itemColor.shortLabel}
-                        </span>
                       </div>
 
                       <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-md border ${itemColor.badgeBg} ${itemColor.textColor} ${itemColor.badgeBorder}`}>

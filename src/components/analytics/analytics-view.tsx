@@ -157,6 +157,37 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     return { clientCases: allClients, topClients: top10, bookingBreakdown: bBreakdown, totalBookings: bookingsSum };
   }, [filteredSubmissions]);
 
+  const sessionDistributionItems = useMemo(() => {
+    const singleCount = bookingBreakdown.single || 112;
+    const twoToThreeCount = bookingBreakdown.twoToThree || 74;
+    const fourToFiveCount = bookingBreakdown.fourToFive || 31;
+    const sixPlusCount = bookingBreakdown.sixPlus || 18;
+    const totalCount = singleCount + twoToThreeCount + fourToFiveCount + sixPlusCount || 1;
+
+    return [
+      { 
+        label: 'مراجعین تک‌جلسه‌ای (نوبت اولیه و پذیرش)', 
+        count: singleCount, 
+        pct: Math.round((singleCount / totalCount) * 100) 
+      },
+      { 
+        label: 'مراجعین ۲ تا ۳ جلسه (فرآیند درمان)', 
+        count: twoToThreeCount, 
+        pct: Math.round((twoToThreeCount / totalCount) * 100) 
+      },
+      { 
+        label: 'مراجعین ۴ تا ۵ جلسه (مداخله جامع)', 
+        count: fourToFiveCount, 
+        pct: Math.round((fourToFiveCount / totalCount) * 100) 
+      },
+      { 
+        label: 'بیش از ۶ جلسه (مراجعین مداوم و ویژه)', 
+        count: sixPlusCount, 
+        pct: Math.round((sixPlusCount / totalCount) * 100) 
+      },
+    ];
+  }, [bookingBreakdown]);
+
   // ۲. توزیع شهرها و استان‌ها
   const cityDistribution = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -586,30 +617,31 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </p>
 
               <div className="space-y-3.5 pt-1">
-                {[
-                  { label: 'مراجعین تک‌جلسه‌ای (نوبت اولیه)', count: bookingBreakdown.single || 112, color: '#0284c7', pct: 45 },
-                  { label: 'مراجعین ۲ تا ۳ جلسه (فرآیند درمان)', count: bookingBreakdown.twoToThree || 74, color: '#059669', pct: 32 },
-                  { label: 'مراجعین ۴ تا ۵ جلسه (مداخله جامع)', count: bookingBreakdown.fourToFive || 31, color: '#d97706', pct: 15 },
-                  { label: 'بیش از ۶ جلسه (مراجعین مداوم و ویژه)', count: bookingBreakdown.sixPlus || 18, color: '#dc2626', pct: 8 },
-                ].map((item, i) => (
-                  <div key={i} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-800">{item.label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(item.count)} نفر</span>
-                        <span className="font-bold font-mono px-1.5 py-0.5 rounded-md text-[10px] bg-slate-100 text-slate-700">
-                          {toPersianDigits(item.pct)}٪
-                        </span>
+                {sessionDistributionItems.map((item) => {
+                  const sc = getSemanticColorByPercentage(item.pct);
+                  return (
+                    <div key={item.label} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-2 ${sc.ringColor}`} />
+                          <span className="font-bold text-slate-800">{item.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(item.count)} نفر</span>
+                          <span className={`font-bold font-mono text-xs px-2 py-0.5 rounded border ${sc.badgeBg} ${sc.textColor} ${sc.badgeBorder}`}>
+                            {toPersianDigits(item.pct)}٪
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${item.pct}%`, backgroundColor: sc.hex }} 
+                        />
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500" 
-                        style={{ width: `${item.pct}%`, backgroundColor: item.color }} 
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -688,28 +720,31 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </div>
 
               <div className="space-y-3 pt-1">
-                {cityDistribution.map((item, idx) => (
-                  <div key={item.name} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getFourColorByIndex(idx).hex }} />
-                        {item.name}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(item.count)} پرونده</span>
-                        <span className="font-bold font-mono text-[11px] text-slate-900">
-                          {toPersianDigits(item.percentage)}٪
-                        </span>
+                {cityDistribution.map((item) => {
+                  const sc = getSemanticColorByPercentage(item.percentage);
+                  return (
+                    <div key={item.name} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-2 ${sc.ringColor}`} />
+                          <span className="font-bold text-slate-800">{item.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(item.count)} پرونده</span>
+                          <span className={`font-bold font-mono text-xs px-2 py-0.5 rounded border ${sc.badgeBg} ${sc.textColor} ${sc.badgeBorder}`}>
+                            {toPersianDigits(item.percentage)}٪
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${item.percentage}%`, backgroundColor: sc.hex }} 
+                        />
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500" 
-                        style={{ width: `${item.percentage}%`, backgroundColor: getFourColorByIndex(idx).hex }} 
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -732,32 +767,36 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </p>
 
               <div className="space-y-3.5 pt-1">
-                {familySizeDistribution.map((fam, idx) => (
-                  <div key={fam.label} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-800">{fam.label}</span>
-                        {fam.isMode && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800">
-                            قالب مراجعین
+                {familySizeDistribution.map((fam) => {
+                  const sc = getSemanticColorByPercentage(fam.pct);
+                  return (
+                    <div key={fam.label} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-2 ${sc.ringColor}`} />
+                          <span className="font-bold text-slate-800">{fam.label}</span>
+                          {fam.isMode && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              بُعد غالب
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(fam.count)} خانوار</span>
+                          <span className={`font-bold font-mono text-xs px-2 py-0.5 rounded border ${sc.badgeBg} ${sc.textColor} ${sc.badgeBorder}`}>
+                            {toPersianDigits(fam.pct)}٪
                           </span>
-                        )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(fam.count)} خانوار</span>
-                        <span className="font-bold font-mono text-[11px] text-slate-900">
-                          {toPersianDigits(fam.pct)}٪
-                        </span>
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${fam.pct}%`, backgroundColor: sc.hex }} 
+                        />
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500" 
-                        style={{ width: `${fam.pct}%`, backgroundColor: fam.isMode ? '#059669' : getFourColorByIndex(idx).hex }} 
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -781,30 +820,36 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </div>
 
               <div className="space-y-3.5 pt-1">
-                {ageDistribution.map((item, idx) => (
-                  <div key={item.label} className="p-3 bg-slate-50/70 rounded-xl border border-slate-100 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-slate-800">{item.label}</span>
-                        {item.tag && (
-                          <span className="mr-2 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
-                            {item.tag}
+                {ageDistribution.map((item) => {
+                  const sc = getSemanticColorByPercentage(item.pct);
+                  return (
+                    <div key={item.label} className="p-3 bg-slate-50/70 rounded-xl border border-slate-100 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-2 ${sc.ringColor}`} />
+                          <span className="font-bold text-slate-800">{item.label}</span>
+                          {item.tag && (
+                            <span className="mr-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                              {item.tag}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(item.count)} نفر</span>
+                          <span className={`font-bold font-mono text-xs px-2 py-0.5 rounded border ${sc.badgeBg} ${sc.textColor} ${sc.badgeBorder}`}>
+                            {toPersianDigits(item.pct)}٪
                           </span>
-                        )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(item.count)} نفر</span>
-                        <span className="font-bold font-mono text-xs text-slate-900">{toPersianDigits(item.pct)}٪</span>
+                      <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${item.pct}%`, backgroundColor: sc.hex }} 
+                        />
                       </div>
                     </div>
-                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500" 
-                        style={{ width: `${item.pct}%`, backgroundColor: item.color }} 
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -821,17 +866,26 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </div>
 
               <div className="grid grid-cols-3 gap-3 pt-1">
-                {maritalDistribution.map((m) => (
-                  <div key={m.label} className="p-4 rounded-xl border border-slate-100 bg-slate-50 text-center space-y-1">
-                    <span className="text-xs font-extrabold text-slate-700 block">{m.label}</span>
-                    <div className="text-2xl font-black font-mono" style={{ color: m.color }}>
-                      {toPersianDigits(m.pct)}٪
+                {maritalDistribution.map((m) => {
+                  const sc = getSemanticColorByPercentage(m.pct);
+                  return (
+                    <div 
+                      key={m.label} 
+                      className={`p-4 rounded-xl border ${sc.badgeBorder} ${sc.badgeBg} text-center space-y-1.5`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-1 ${sc.ringColor}`} />
+                        <span className="text-xs font-extrabold text-slate-800">{m.label}</span>
+                      </div>
+                      <div className="text-2xl font-black font-mono" style={{ color: sc.hex }}>
+                        {toPersianDigits(m.pct)}٪
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-mono text-center">
+                        ({toPersianDigits(m.count)} نفر)
+                      </div>
                     </div>
-                    <span className="text-[10px] text-slate-500 font-mono block">
-                      {toPersianDigits(m.count)} نفر
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* ترکیب اعضای ثبت‌نامی در خانواده */}
@@ -840,14 +894,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   نقش فرد ثبت‌نام‌کننده در خانواده:
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {genderStats.roles.map((r) => (
-                    <div key={r.label} className="p-2.5 bg-white rounded-lg border border-slate-200 text-center">
-                      <span className="text-[11px] text-slate-600 block">{r.label}</span>
-                      <span className="text-xs font-bold text-slate-900 font-mono block mt-0.5">
-                        {toPersianDigits(r.pct)}٪
-                      </span>
-                    </div>
-                  ))}
+                  {genderStats.roles.map((r) => {
+                    const sc = getSemanticColorByPercentage(r.pct);
+                    return (
+                      <div key={r.label} className={`p-2.5 rounded-lg border ${sc.badgeBorder} ${sc.badgeBg} text-center space-y-1`}>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-700 font-bold">{r.label}</span>
+                        </div>
+                        <div className="text-xs font-black font-mono" style={{ color: sc.hex }}>
+                          {toPersianDigits(r.pct)}٪
+                        </div>
+                        <div className="w-full bg-white/80 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${r.pct}%`, backgroundColor: sc.hex }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -872,28 +937,33 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </div>
 
               <div className="space-y-3 pt-1">
-                {counselorRanking.slice(0, 6).map((c, idx) => (
-                  <div key={c.name} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-slate-800">{c.name}</span>
-                        <span className="text-[10px] text-slate-400 mr-1.5">({c.specialty})</span>
+                {counselorRanking.slice(0, 6).map((c, idx) => {
+                  const sc = getSemanticColorByPercentage(c.percentage);
+                  return (
+                    <div key={c.name} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-2 ${sc.ringColor}`} />
+                          <span className="font-mono text-slate-400 font-bold text-[11px]">{toPersianDigits(idx + 1)}.</span>
+                          <span className="font-bold text-slate-800">{c.name}</span>
+                          <span className="text-[10px] text-slate-400 mr-1.5">({c.specialty})</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(c.count)} جلسه</span>
+                          <span className={`font-bold font-mono text-xs px-2 py-0.5 rounded border ${sc.badgeBg} ${sc.textColor} ${sc.badgeBorder}`}>
+                            {toPersianDigits(c.percentage)}٪
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(c.count)} جلسه</span>
-                        <span className="font-bold font-mono text-[11px] text-slate-900">
-                          {toPersianDigits(c.percentage)}٪
-                        </span>
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${c.percentage}%`, backgroundColor: sc.hex }} 
+                        />
                       </div>
                     </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500" 
-                        style={{ width: `${c.percentage}%`, backgroundColor: getFourColorByIndex(idx).hex }} 
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -916,20 +986,30 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </p>
 
               <div className="space-y-2.5 pt-1">
-                {clinicalDimensionsSummary.slice(0, 6).map((dim) => (
-                  <div key={dim.name} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-                    <span className="font-bold text-slate-800">{dim.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-black text-slate-800">{toPersianDigits(dim.score)}٪</span>
-                      <span 
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-md text-white"
-                        style={{ backgroundColor: dim.color }}
-                      >
-                        {dim.status}
-                      </span>
+                {clinicalDimensionsSummary.slice(0, 6).map((dim) => {
+                  const sc = getSemanticColorByPercentage(dim.score);
+                  return (
+                    <div key={dim.name} className="space-y-1.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-2 ${sc.ringColor}`} />
+                          <span className="font-bold text-slate-800">{dim.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-mono font-black text-xs px-2 py-0.5 rounded border ${sc.badgeBg} ${sc.textColor} ${sc.badgeBorder}`}>
+                            {toPersianDigits(dim.score)}٪
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${dim.score}%`, backgroundColor: sc.hex }} 
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -1028,24 +1108,26 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   </div>
 
                   <div className="space-y-3 pt-2">
-                    {optionDistribution.map((opt, idx) => {
-                      const color = getFourColorByIndex(idx).hex;
+                    {optionDistribution.map((opt) => {
+                      const sc = getSemanticColorByPercentage(opt.percentage);
                       return (
                         <div key={opt.id} className="space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-slate-800 flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                              {opt.label}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-2 ${sc.ringColor}`} />
+                              <span className="font-bold text-slate-800">{opt.label}</span>
+                            </div>
                             <div className="flex items-center gap-2">
                               <span className="font-mono text-slate-500 text-[11px]">{toPersianDigits(opt.count)} نفر</span>
-                              <span className="font-bold font-mono text-xs text-slate-900">{toPersianDigits(opt.percentage)}٪</span>
+                              <span className={`font-bold font-mono text-xs px-2 py-0.5 rounded border ${sc.badgeBg} ${sc.textColor} ${sc.badgeBorder}`}>
+                                {toPersianDigits(opt.percentage)}٪
+                              </span>
                             </div>
                           </div>
                           <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                             <div 
                               className="h-full rounded-full transition-all duration-500" 
-                              style={{ width: `${opt.percentage}%`, backgroundColor: color }} 
+                              style={{ width: `${opt.percentage}%`, backgroundColor: sc.hex }} 
                             />
                           </div>
                         </div>
