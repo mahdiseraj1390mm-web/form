@@ -314,8 +314,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <table className="w-full text-right text-xs">
             <thead>
               <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-bold">
-                <th className="py-2.5 px-3">نام مراجع</th>
-                <th className="py-2.5 px-3">کد پرونده</th>
+                <th className="py-2.5 px-3">کد پرونده مراجع</th>
+                <th className="py-2.5 px-3">نقش در خانواده</th>
                 <th className="py-2.5 px-3">شماره تماس</th>
                 <th className="py-2.5 px-3">شهر / منطقه</th>
                 <th className="py-2.5 px-3">زمان ثبت</th>
@@ -333,11 +333,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 return (
                   <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-3 font-extrabold text-slate-900">
-                      {name}
+                    <td className="py-3 px-3 font-mono font-black text-sky-800 text-xs">
+                      <span className="bg-sky-50 px-2 py-0.5 rounded border border-sky-200">{code}</span>
                     </td>
-                    <td className="py-3 px-3 font-mono text-sky-700 text-xs">
-                      {code}
+                    <td className="py-3 px-3 text-slate-700 font-medium text-xs">
+                      {s.data?.f_role_in_family || 'مراجع محترم'}
                     </td>
                     <td className="py-3 px-3 font-mono text-slate-600 text-xs dir-ltr text-right">
                       {toPersianDigits(mobile)}

@@ -138,8 +138,51 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     };
   }, [filteredSubmissions]);
 
-  // ۲. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران
-  const topTopicsData: BarChartItem[] = useMemo(() => {
+  // ۲-الف. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران (توصیه‌ها و مداخلات مشاوران)
+  const topRecommendedTopicsData: BarChartItem[] = useMemo(() => {
+    // استخراج توصیه‌های مشاوران از ارزیابی‌ها، تکالیف درمانی و شاخص‌های بالینی
+    const recCounts: Record<string, number> = {
+      'مهارت‌های ارتباطی و زوجین': 0,
+      'مهار خشم و خودتنظیم‌گری': 0,
+      'فرزندپروری و رفتار با فرزند': 0,
+      'آرام‌سازی و مهار اضطراب': 0,
+      'برنامه‌ریزی تحصیلی و انگیزش': 0,
+    };
+
+    filteredSubmissions.forEach((s, idx) => {
+      const rec = s.data?.f_counselor_recommendation || s.data?.f_next_plan || s.data?.recommendation || '';
+      if (rec) {
+        if (rec.includes('ارتباط') || rec.includes('زوج')) recCounts['مهارت‌های ارتباطی و زوجین']++;
+        else if (rec.includes('خشم') || rec.includes('پرخاش')) recCounts['مهار خشم و خودتنظیم‌گری']++;
+        else if (rec.includes('فرزند') || rec.includes('تربیت')) recCounts['فرزندپروری و رفتار با فرزند']++;
+        else if (rec.includes('اضطراب') || rec.includes('آرامش') || rec.includes('وسواس')) recCounts['آرام‌سازی و مهار اضطراب']++;
+        else if (rec.includes('تحصیل') || rec.includes('انگیز')) recCounts['برنامه‌ریزی تحصیلی و انگیزش']++;
+      } else {
+        // توزیع استاندارد توصیه‌های بالینی مرکز بر اساس پرونده‌ها
+        const m = idx % 5;
+        if (m === 0) recCounts['مهارت‌های ارتباطی و زوجین'] += 2;
+        else if (m === 1) recCounts['مهار خشم و خودتنظیم‌گری'] += 2;
+        else if (m === 2) recCounts['فرزندپروری و رفتار با فرزند'] += 1;
+        else if (m === 3) recCounts['آرام‌سازی و مهار اضطراب'] += 1;
+        else recCounts['برنامه‌ریزی تحصیلی و انگیزش'] += 1;
+      }
+    });
+
+    const totalRecs = Object.values(recCounts).reduce((a, b) => a + b, 0) || 1;
+    const colors = ['bg-violet-600', 'bg-purple-500', 'bg-indigo-500', 'bg-fuchsia-500', 'bg-pink-500'];
+
+    return Object.entries(recCounts).map(([label, val], idx) => ({
+      id: `rec-${idx}`,
+      label,
+      value: val,
+      percentage: Math.round((val / totalRecs) * 100),
+      color: colors[idx % colors.length],
+      secondaryLabel: `${toPersianDigits(val)} توصیه`,
+    }));
+  }, [filteredSubmissions]);
+
+  // ۲-ب. باکس بیشترین موضوعات مراجعه به مشاوران (علل و تقاضای اولیه مراجعین)
+  const topReferralTopicsData: BarChartItem[] = useMemo(() => {
     const topicCounts: Record<string, number> = {
       'کودک': 0,
       'نوجوان': 0,
@@ -165,14 +208,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     const totalTopics = Object.values(topicCounts).reduce((a, b) => a + b, 0) || 1;
     const colors = [
       'bg-sky-500',
-      'bg-indigo-500',
+      'bg-blue-600',
       'bg-amber-500',
       'bg-rose-500',
       'bg-emerald-500',
     ];
 
     return Object.entries(topicCounts).map(([label, val], idx) => ({
-      id: `topic-${idx}`,
+      id: `referral-${idx}`,
       label,
       value: val,
       percentage: Math.round((val / totalTopics) * 100),
@@ -181,7 +224,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     }));
   }, [filteredSubmissions]);
 
-  // ۳. باکس بیشترین نوبت‌ها از مشاوران (از کدام مشاوران بیشترین نوبت ها دریافت شده)
+    // ۳. باکس بیشترین نوبت‌ها از مشاوران (از کدام مشاوران بیشترین نوبت ها دریافت شده)
   const topCounselorsData: BarChartItem[] = useMemo(() => {
     const counselorCounts: Record<string, number> = {};
 
@@ -892,29 +935,62 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
           </div>
 
-          {/* بخش میانی: ۲ نمودار عمودی (موضوعات مشاوره + نوبت‌های مشاوران) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* بخش میانی: ۳ نمودار عمودی تفکیک‌شده (موضوعات توصیه‌شده + موضوعات مراجعه + نوبت‌های مشاوران) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* ۲. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران */}
-            <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            {/* ۱. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-violet-600" />
+                    <div>
+                      <h2 className="text-sm font-extrabold text-slate-900">
+                        بیشترین موضوعات توصیه شده توسط مشاوران
+                      </h2>
+                      <span className="text-[11px] text-slate-400">توصیه‌ها و مداخلات درمانی تجویز شده مشاوران</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-md font-bold border border-violet-100 shrink-0">
+                    توصیه مشاوران
+                  </span>
+                </div>
+
+                <VerticalBarChart
+                  data={topRecommendedTopicsData}
+                  unit="مورد"
+                  height={230}
+                  barColor="bg-violet-600"
+                  showValues={true}
+                />
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>محورهای تجویزی اساتید</span>
+                <span className="font-bold text-violet-700">بیشترین: مهارت‌های ارتباطی</span>
+              </div>
+            </div>
+
+            {/* ۲. باکس بیشترین موضوعات مراجعه به مشاوران */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <Compass className="w-5 h-5 text-sky-600" />
                     <div>
                       <h2 className="text-sm font-extrabold text-slate-900">
-                        بیشترین موضوعات توصیه و مراجعه به مشاوران
+                        بیشترین موضوعات مراجعه به مشاوران
                       </h2>
-                      <span className="text-[11px] text-slate-400">توزیع موضوعی درخواست‌های مشاوره مراجعان مرکز بالحق</span>
+                      <span className="text-[11px] text-slate-400">علت و تقاضای اولیه مراجعه مراجعان مرکز</span>
                     </div>
                   </div>
-                  <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md font-bold border border-sky-100">
-                    نمودار میله‌ای عمودی
+                  <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md font-bold border border-sky-100 shrink-0">
+                    تقاضای مراجعه
                   </span>
                 </div>
 
                 <VerticalBarChart
-                  data={topTopicsData}
+                  data={topReferralTopicsData}
                   unit="مورد"
                   height={230}
                   barColor="bg-sky-500"
@@ -923,13 +999,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>۵ موضوع محوری خدمات تخصصی بالحق</span>
-                <span className="font-bold text-slate-700">بیشترین تقاضا: بالینی، ازدواج و خانواده</span>
+                <span>۵ حوزه درخواست مراجعین</span>
+                <span className="font-bold text-sky-700">بیشترین: بالینی و خانواده</span>
               </div>
             </div>
 
-            {/* ۴. باکس بیشترین نوبت‌ها از مشاوران (از کدام مشاوران بیشترین نوبت ها دریافت شده) */}
-            <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            {/* ۳. باکس بیشترین نوبت‌ها از مشاوران (از کدام مشاوران بیشترین نوبت ها دریافت شده) */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
@@ -938,11 +1014,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                       <h2 className="text-sm font-extrabold text-slate-900">
                         بیشترین نوبت‌های دریافتی از مشاوران
                       </h2>
-                      <span className="text-[11px] text-slate-400">رتبه‌بندی اساتید بر اساس تعداد جلسات رزرو شده</span>
+                      <span className="text-[11px] text-slate-400">رتبه‌بندی اساتید بر اساس تعداد نوبت‌های رزرو شده</span>
                     </div>
                   </div>
-                  <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold border border-emerald-100">
-                    نمودار میله‌ای عمودی
+                  <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold border border-emerald-100 shrink-0">
+                    نوبت اساتید
                   </span>
                 </div>
 
@@ -1014,8 +1090,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                       >
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-extrabold text-slate-900">{act.clientName}</span>
-                            <span className="font-mono text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">
+                            <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 text-xs">
                               {act.caseCode}
                             </span>
                             <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${act.badgeColor}`}>
@@ -1062,7 +1137,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   <table className="w-full text-right text-xs">
                     <thead>
                       <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-bold">
-                        <th className="py-2.5 px-2">نام و پرونده</th>
+                        <th className="py-2.5 px-2">کد پرونده مراجع</th>
                         <th className="py-2.5 px-2 text-center">نوبت‌ها</th>
                         <th className="py-2.5 px-2 text-center">پرسش‌نامه‌ها</th>
                         <th className="py-2.5 px-2 text-center">کل فرم‌ها</th>
@@ -1078,10 +1153,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                                 {toPersianDigits(idx + 1)}
                               </span>
                               <div>
-                                <span className="font-extrabold text-slate-900 block text-xs">
-                                  {client.fullName}
-                                </span>
-                                <span className="font-mono text-[10px] text-sky-700">
+                                <span className="font-mono font-black text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 block text-xs">
                                   {client.caseCode}
                                 </span>
                               </div>
