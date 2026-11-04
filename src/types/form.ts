@@ -368,7 +368,7 @@ export interface FormSubmission {
   userAgent?: string;
   createdAt: string;
   updatedAt?: string;
-  comments: SubmissionComment[];
+  comments?: SubmissionComment[];
 }
 
 export interface EvaluationComponent {

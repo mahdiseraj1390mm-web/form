@@ -8,9 +8,10 @@ import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
 import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
 
-export const allInitialSubmissions: FormSubmission[] = [
-  ...belhaghInitialSubmissions,
-];
+export const allInitialSubmissions: FormSubmission[] = belhaghInitialSubmissions.map((s) => ({
+  ...s,
+  comments: Array.isArray(s.comments) ? s.comments : [],
+}));
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 
@@ -288,7 +289,12 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
             allInitialSubmissions.forEach((s) => {
               if (!existingIds.has(s.id)) merged.push(s);
             });
-            setSubmissions(merged);
+            setSubmissions(
+              merged.map((s: any) => ({
+                ...s,
+                comments: Array.isArray(s.comments) ? s.comments : [],
+              }))
+            );
           } else {
             setSubmissions(allInitialSubmissions);
           }
@@ -317,7 +323,12 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         .then((res) => res.json())
         .then((data) => {
           if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
-            setSubmissions(data.submissions);
+            setSubmissions(
+              data.submissions.map((s: any) => ({
+                ...s,
+                comments: Array.isArray(s.comments) ? s.comments : [],
+              }))
+            );
           }
         })
         .catch((err) => console.warn('Could not load submissions from DB:', err));
@@ -733,26 +744,65 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     authorRole: string,
     content: string
   ) => {
-    setSubmissions((prev) =>
-      prev.map((s) => {
-        if (s.id === submissionId) {
-          return {
-            ...s,
-            comments: [
-              ...s.comments,
-              {
-                id: `c-${Date.now()}`,
-                authorName,
-                authorRole,
-                content,
-                createdAt: new Date().toISOString(),
-              },
-            ],
-          };
-        }
-        return s;
-      })
-    );
+    let updatedTarget: FormSubmission | null = null;
+    const newComment = {
+      id: `c-${Date.now()}`,
+      authorName,
+      authorRole,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+
+    setSubmissions((prev) => {
+      const matchIndex = prev.findIndex(
+        (s) =>
+          s.id === submissionId ||
+          s.trackingCode === submissionId ||
+          s.data?.caseCode === submissionId
+      );
+
+      if (matchIndex !== -1) {
+        return prev.map((s, idx) => {
+          if (idx === matchIndex) {
+            const currentComments = Array.isArray(s.comments) ? s.comments : [];
+            const updated = {
+              ...s,
+              comments: [...currentComments, newComment],
+            };
+            updatedTarget = updated;
+            return updated;
+          }
+          return s;
+        });
+      }
+
+      // در صورتی که سابمیشن از قبل در استیت اولیه کلاینت موجود نبود (مانند موارد استعلام مستقیم از API)
+      const newSub: FormSubmission = {
+        id: submissionId,
+        formId: 'form-belhagh-registration',
+        trackingCode: submissionId,
+        status: 'approved',
+        createdAt: new Date().toISOString(),
+        comments: [newComment],
+        data: { caseCode: submissionId },
+      };
+      updatedTarget = newSub;
+      return [newSub, ...prev];
+    });
+
+    // ذخیره و همگام‌سازی فوری در سرور و پایگاه‌داده
+    setTimeout(() => {
+      if (updatedTarget) {
+        fetch('/api/cases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'save_submission',
+            submission: updatedTarget,
+          }),
+        }).catch((err) => console.warn('Comment sync DB warning:', err));
+      }
+    }, 50);
   };
 
   const getSubmissionsByFormId = (formId: string) => submissions.filter((s) => s.formId === formId);
@@ -765,7 +815,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) return;
       const data = await res.json();
       if (!data?.submissions || !Array.isArray(data.submissions)) return;
-      const dbSubmissions: FormSubmission[] = data.submissions;
+      const dbSubmissions: FormSubmission[] = data.submissions.map((s: any) => ({
+        ...s,
+        comments: Array.isArray(s.comments) ? s.comments : [],
+      }));
       if (formId === 'all' || !formId) {
         setSubmissions(dbSubmissions);
         return;
@@ -788,7 +841,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
             if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
           }
         });
-        return merged;
+        return merged.map((s) => ({
+          ...s,
+          comments: Array.isArray(s.comments) ? s.comments : [],
+        }));
       });
     } catch (err) {
       console.warn('refreshSubmissionsFromDb error:', err);

@@ -107,7 +107,16 @@ function DossierContent() {
 
   // گروه‌بندی خودکار پاسخ‌های ثبت‌شده جهت استخراج پرونده واقعی
   const targetCase: ClientCaseGroup | null = useMemo(() => {
-    if (apiFetchedCase) return apiFetchedCase;
+    if (apiFetchedCase) {
+      const updatedSubs = apiFetchedCase.submissions.map((s) => {
+        const live = submissions.find((sub) => sub.id === s.id);
+        return live || s;
+      });
+      return {
+        ...apiFetchedCase,
+        submissions: updatedSubs,
+      };
+    }
     if (submissions.length === 0) return null;
 
     // ۱. جستجوی سابمیشن منطبق با کد پرونده، کد پیگیری یا شماره تماس

@@ -45,6 +45,8 @@ import {
   Plus,
 } from 'lucide-react';
 import { EvaluationReportView } from '../analytics/evaluation-report-view';
+import { VerticalBarChart } from '../analytics/vertical-bar-chart';
+import { PointLineChart } from '../analytics/point-line-chart';
 import { ClientStatisticalAnalysisTab } from './client-statistical-analysis-tab';
 import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
@@ -219,13 +221,46 @@ function Stat({
   );
 }
 
+function cleanPhone(phone?: string) {
+  if (!phone) return '';
+  const digits = toEnglishDigits(String(phone)).replace(/[^0-9]/g, '');
+  if (digits.startsWith('98') && digits.length === 12) return '0' + digits.slice(2);
+  if (!digits.startsWith('0') && digits.length === 10) return '0' + digits;
+  return digits;
+}
+
 export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   clientCase,
   onClose,
   onStatusChange,
 }) => {
-  const { forms, updateSubmissionStatus, addSubmissionComment } = useForm();
+  const { forms, submissions, updateSubmissionStatus, addSubmissionComment } = useForm();
   const { currentUser } = useAdminAuth();
+
+  // دریافت پیوسته و بلادرنگ سابمیشن‌های پرونده از کانتکست عمومی (جهت نمایش بلادرنگ پیام‌ها، یادداشت‌ها و پیگیری‌ها بدون نیاز به رفرش)
+  const currentSubmissions = useMemo(() => {
+    const targetIds = new Set(clientCase.submissions.map((s) => s.id));
+    const cleanCaseCode = (clientCase.caseCode || '').toLowerCase().trim();
+    const cleanMobile = cleanPhone(clientCase.mobile);
+
+    const updatedFromContext = clientCase.submissions.map((sub) => {
+      const live = submissions.find(
+        (s) => s.id === sub.id || (sub.trackingCode && s.trackingCode === sub.trackingCode)
+      );
+      return live || sub;
+    });
+
+    const extraFromContext = submissions.filter((s) => {
+      if (targetIds.has(s.id)) return false;
+      const sCode = (s.data?.caseCode || s.trackingCode || '').toLowerCase().trim();
+      if (cleanCaseCode && sCode === cleanCaseCode) return true;
+      const sMob = cleanPhone(s.mobile || s.data?.f_mobile || s.data?.bk_mobile || '');
+      if (cleanMobile && sMob && sMob === cleanMobile) return true;
+      return false;
+    });
+
+    return [...updatedFromContext, ...extraFromContext];
+  }, [submissions, clientCase]);
 
   // نام و نقش واقعی کاربر ادمین جاری در سامانه
   const adminName = currentUser?.name || 'مدیر مرکز';
@@ -264,11 +299,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   // استخراج یکپارچه داده‌های هویتی مراجع از میان تمام فرم‌های پر شده در دیتابیس
   const combinedData = useMemo(() => {
     const data: Record<string, any> = {};
-    clientCase.submissions.forEach((sub) => {
+    currentSubmissions.forEach((sub) => {
       Object.assign(data, sub.data);
     });
     return data;
-  }, [clientCase.submissions]);
+  }, [currentSubmissions]);
 
   // نام کامل مراجع از روی داده‌های واقعی ثبت‌نام
   const displayFullName = useMemo(() => {
@@ -307,7 +342,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     const rList: FormSubmission[] = [];
     const oList: FormSubmission[] = [];
 
-    clientCase.submissions.forEach((sub) => {
+    currentSubmissions.forEach((sub) => {
       const fObj = forms.find((f) => f.id === sub.formId);
       const id = (sub.formId || '').toLowerCase();
       const slug = (fObj?.slug || '').toLowerCase();
@@ -367,7 +402,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       registrationSubs: rList,
       otherSubs: oList,
     };
-  }, [clientCase.submissions, forms]);
+  }, [currentSubmissions, forms]);
 
   // استیت مدیریت نوبت‌ها: استخراج ۱۰۰٪ واقعی از ارسالی‌های پایگاه‌داده و جلسات ذخیره‌شده
   const storageKey = `belhagh_real_sessions_v3_${clientCase.caseCode}`;
@@ -396,7 +431,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   }, []);
 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    const fromSubs = extractRealAppointmentsFromSubmissions(clientCase.submissions);
+    const fromSubs = extractRealAppointmentsFromSubmissions(currentSubmissions);
 
     // بررسی ذخیره‌ساز محلی پرونده (برای گزارش‌های بالینی ثبت‌شده یا جلسات دستی افزوده شده توسط مدیر)
     if (typeof window !== 'undefined') {
@@ -514,7 +549,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     }
 
     if (!bYear) {
-      for (const sub of clientCase.submissions) {
+      for (const sub of currentSubmissions) {
         if (sub.data?.birth_year) {
           const parsed = parseInt(toEnglishDigits(String(sub.data.birth_year)));
           if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
@@ -541,7 +576,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     }
 
     return 'ثبت‌نشده';
-  }, [combinedData, clientCase.submissions]);
+  }, [combinedData, currentSubmissions]);
 
   // وضعیت تاهل
   const maritalStatusDisplay = useMemo(() => {
@@ -668,7 +703,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       }
     });
 
-    clientCase.submissions.forEach((sub) => {
+    currentSubmissions.forEach((sub) => {
       const d = sub.data || {};
       const t = d.f_counseling_subject || d.f_topic || d.f_consultation_type || d.consultationSubject || d.topic;
       if (t && typeof t === 'string' && t.trim()) {
@@ -686,7 +721,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     }
 
     return list;
-  }, [appointments, clientCase.submissions]);
+  }, [appointments, currentSubmissions]);
 
   // مشاورانی که مراجع با آن‌ها جلسه داشته است
   const consultantsAttended = useMemo(() => {
@@ -702,7 +737,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       }
     });
 
-    clientCase.submissions.forEach((sub) => {
+    currentSubmissions.forEach((sub) => {
       const d = sub.data || {};
       const cName = d.f_booking_counselor || d.f_counselor || d.f_counselor_name || d.counselorName;
       if (cName && typeof cName === 'string' && cName.trim()) {
@@ -711,7 +746,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     });
 
     return Array.from(cSet);
-  }, [appointments, clientCase.submissions]);
+  }, [appointments, currentSubmissions]);
 
   const openReportModal = (appointment: Appointment) => {
     setEditing(appointment);
@@ -759,7 +794,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     );
 
     // ثبت لاگ پیگیری ذیل همین گزارش جلسه به صورت خودکار
-    const targetSubId = clientCase.submissions[0]?.id;
+    const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
     if (targetSubId) {
       addSubmissionComment(
         targetSubId,
@@ -819,9 +854,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   // دریافت فرم و ارسالی انتخاب شده جهت نمایش گزارش نموداری
   const selectedSubmission = useMemo(() => {
-    if (!selectedSubmissionId) return clientCase.submissions[0] || null;
-    return clientCase.submissions.find((s) => s.id === selectedSubmissionId) || clientCase.submissions[0] || null;
-  }, [clientCase.submissions, selectedSubmissionId]);
+    if (!selectedSubmissionId) return currentSubmissions[0] || null;
+    return currentSubmissions.find((s) => s.id === selectedSubmissionId) || currentSubmissions[0] || null;
+  }, [currentSubmissions, selectedSubmissionId]);
 
   const selectedFormObj = useMemo(() => {
     if (!selectedSubmission) return null;
@@ -840,8 +875,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   // آزمون واقعی خودسنجی صفاً متصل به پرونده
   const safaEvaluationSubmission = useMemo(() => {
-    return clientCase.submissions.find((s) => s.evaluationResult || s.formId === 'form-safaan-assessment');
-  }, [clientCase.submissions]);
+    return currentSubmissions.find((s) => s.evaluationResult || s.formId === 'form-safaan-assessment');
+  }, [currentSubmissions]);
 
   // تحلیل هوشمند داده‌های واقعی پزشکی و سلامت
   const smartAnalysis = useMemo(() => {
@@ -865,7 +900,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   // محاسبه پویای سابقه پرونده (فاصله زمانی بین اولین ثبت‌نام و امروز)
   const dossierAgeText = useMemo(() => {
     const firstDateStr =
-      clientCase.submissions[clientCase.submissions.length - 1]?.createdAt || clientCase.latestDate;
+      currentSubmissions[currentSubmissions.length - 1]?.createdAt || clientCase.latestDate;
     if (!firstDateStr) return 'جدید';
     const firstDate = new Date(firstDateStr).getTime();
     const now = Date.now();
@@ -876,7 +911,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     if (diffMonths < 12) return `${toPersianDigits(diffMonths)} ماه`;
     const diffYears = Math.floor(diffMonths / 12);
     return `${toPersianDigits(diffYears)} سال`;
-  }, [clientCase.submissions, clientCase.latestDate]);
+  }, [currentSubmissions, clientCase.latestDate]);
 
   // تجمیع نظرات و پیگیری‌های واقعی ثبت شده در پرونده
   const allFollowupComments = useMemo(() => {
@@ -890,11 +925,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       createdAt: string;
     }> = [];
 
-    clientCase.submissions.forEach((sub) => {
+    currentSubmissions.forEach((sub) => {
       const formObj = forms.find((f) => f.id === sub.formId);
       const fTitle = formObj ? formObj.title : 'فرم ثبت‌شده';
 
-      (sub.comments || []).forEach((c) => {
+      (Array.isArray(sub.comments) ? sub.comments : []).forEach((c) => {
         list.push({
           id: c.id,
           submissionId: sub.id,
@@ -908,14 +943,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     });
 
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [clientCase.submissions, forms]);
+  }, [currentSubmissions, forms]);
 
   // نرخ واقعی تکمیل اطلاعات پرونده (محاسبه از کل فیلدهای ارسالی)
   const profileCompletionRate = useMemo(() => {
     let totalFields = 0;
     let filledFields = 0;
 
-    clientCase.submissions.forEach((sub) => {
+    currentSubmissions.forEach((sub) => {
       const formObj = forms.find((f) => f.id === sub.formId);
       if (formObj?.fields) {
         formObj.fields
@@ -932,7 +967,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
     if (totalFields === 0) return 90;
     return Math.round((filledFields / totalFields) * 100);
-  }, [clientCase.submissions, forms]);
+  }, [currentSubmissions, forms]);
 
   // ثبت پیگیری جدید برای مراجع
   const handleAddFollowup = () => {
@@ -948,7 +983,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     }[newFollowupType];
 
     const contentWithPrefix = `${typePrefix}${newFollowupText.trim()}`;
-    const targetSubId = clientCase.submissions[0]?.id;
+    const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
 
     if (targetSubId) {
       addSubmissionComment(targetSubId, adminName, adminRole, contentWithPrefix);
@@ -961,7 +996,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   // تغییر وضعیت پرونده
   const handleUpdateStatus = (newSt: SubmissionStatus) => {
     setCurrentStatus(newSt);
-    clientCase.submissions.forEach((sub) => {
+    currentSubmissions.forEach((sub) => {
       updateSubmissionStatus(sub.id, newSt);
     });
     if (onStatusChange) {
@@ -1618,14 +1653,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       const overallScore = safaEvaluationSubmission?.evaluationResult?.overallScore || 0;
                       const safaColor = getSemanticColorByPercentage(overallScore);
                       return (
-                        <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${safaColor.bgBar} transition-all duration-700 shadow-2xs`}
-                            style={{
-                              width: `${Math.min(100, Math.max(Number(overallScore) || 0, 0))}%`,
-                              backgroundColor: safaColor.hex,
-                            }}
-                          />
+                        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                          <span>شاخص ارزیابی:</span>
+                          <span className="font-black" style={{ color: safaColor.hex }}>
+                            %{toPersianDigits(overallScore)}
+                          </span>
                         </div>
                       );
                     })()}
@@ -1652,24 +1684,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           : 'بدون بیماری حاد'}
                       </span>
                     </div>
-                    <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${
-                          smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
-                            ? 'bg-amber-500'
-                            : 'bg-emerald-500'
-                        }`}
-                        style={{
-                          width:
-                            smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
-                              ? '60%'
-                              : '100%',
-                          backgroundColor:
-                            smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
-                              ? '#f59e0b'
-                              : '#059669',
-                        }}
-                      />
+                    <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                      <span>تراز پایش:</span>
+                      <span className="font-black text-blue-700">
+                        %{toPersianDigits(smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication ? 60 : 100)}
+                      </span>
                     </div>
                   </div>
 
@@ -1689,21 +1708,47 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                         );
                       })()}
                     </div>
-                    {(() => {
-                      const profColor = getSemanticColorByPercentage(profileCompletionRate);
-                      return (
-                        <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${profColor.bgBar} transition-all duration-700 shadow-2xs`}
-                            style={{
-                              width: `${Math.min(100, Math.max(Number(profileCompletionRate) || 0, 0))}%`,
-                              backgroundColor: profColor.hex,
-                            }}
-                          />
-                        </div>
-                      );
-                    })()}
+                    <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                      <span>پوشش فیلدها:</span>
+                      <span className="font-black text-indigo-700">
+                        %{toPersianDigits(profileCompletionRate)}
+                      </span>
+                    </div>
                   </div>
+                </div>
+
+                {/* مقایسه میله‌ای عمودی شاخص‌های سه‌گانه پرونده مراجع */}
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                  <VerticalBarChart
+                    data={[
+                      {
+                        label: 'خودسنجی صفاً',
+                        value: Number(safaEvaluationSubmission?.evaluationResult?.overallScore || 0),
+                        percentage: Number(safaEvaluationSubmission?.evaluationResult?.overallScore || 0),
+                        color: getSemanticColorByPercentage(Number(safaEvaluationSubmission?.evaluationResult?.overallScore || 0)).hex,
+                        secondaryLabel: safaEvaluationSubmission?.evaluationResult ? 'کارنامه ثبت‌شده' : 'فاقد کارنامه',
+                      },
+                      {
+                        label: 'تراز سلامت',
+                        value: smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication ? 60 : 100,
+                        percentage: smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication ? 60 : 100,
+                        color: smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication ? '#f59e0b' : '#059669',
+                        secondaryLabel: smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication ? 'دارای سابقه' : 'پایدار',
+                      },
+                      {
+                        label: 'تکمیل پرونده',
+                        value: profileCompletionRate,
+                        percentage: profileCompletionRate,
+                        color: getSemanticColorByPercentage(profileCompletionRate).hex,
+                        secondaryLabel: `${toPersianDigits(profileCompletionRate)}٪ تکمیل`,
+                      },
+                    ]}
+                    unit="٪"
+                    maxScale={100}
+                    height={180}
+                    showValues={true}
+                    badgeText="نمودار میله‌ای عمودی مقایسه شاخص‌ها"
+                  />
                 </div>
               </article>
 
@@ -1952,7 +1997,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </div>
 
               <span className="text-xs font-bold px-3 py-1 bg-blue-50 text-[#173f6b] rounded-full font-mono self-start sm:self-auto border border-blue-200/60">
-                مجموع {toPersianDigits(clientCase.submissions.length)} فرم در پرونده
+                مجموع {toPersianDigits(currentSubmissions.length)} فرم در پرونده
               </span>
             </div>
 
@@ -2316,7 +2361,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-bold text-[#173f6b] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200 font-mono">
-                      فرم مرحله {toPersianDigits(clientCase.submissions.findIndex((s) => s.id === selectedSubmission.id) + 1 || 1)}
+                      فرم مرحله {toPersianDigits(currentSubmissions.findIndex((s) => s.id === selectedSubmission?.id) + 1 || 1)}
                     </span>
                     <h3 className="text-base font-black text-slate-900">
                       گزارش و تحلیل: {selectedFormObj?.title || 'فرم مراجع'}
@@ -2350,12 +2395,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* نوار جابجایی سریع بین فرم‌های مراجع */}
-            {clientCase.submissions.length > 1 && (
+            {currentSubmissions.length > 1 && (
               <div className="flex items-center gap-2 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs overflow-x-auto">
                 <span className="text-xs font-bold text-slate-400 mr-2 shrink-0">
                   انتخاب سریع فرم:
                 </span>
-                {clientCase.submissions.map((sub, sIdx) => {
+                {currentSubmissions.map((sub, sIdx) => {
                   const fObj = forms.find((f) => f.id === sub.formId);
                   const isSel = sub.id === selectedSubmission.id;
                   return (
@@ -2452,32 +2497,24 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           <span className="text-[11px] text-slate-400">محاسبه هوشمند بر پایه پاسخ‌های فرم</span>
                         </div>
 
-                        <div className="space-y-4">
-                          {formAnalytics.dimensions.map((dim, idx) => {
-                            const dimColor = getSemanticColorByPercentage(dim.score);
-                            return (
-                              <div key={idx} className="space-y-1.5 group">
-                                <div className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <span className={`w-2.5 h-2.5 rounded-full ${dimColor.dotBg} shrink-0 ring-2 ${dimColor.ringColor}`} />
-                                    <span className="font-bold text-slate-800">{dim.name}</span>
-                                  </div>
-                                  <span className={`font-mono font-extrabold text-xs px-2 py-0.5 rounded border ${dimColor.badgeBg} ${dimColor.textColor} ${dimColor.badgeBorder}`}>
-                                    %{toPersianDigits(dim.score)}
-                                  </span>
-                                </div>
-                                <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full ${dimColor.bgBar} rounded-full transition-all duration-500`}
-                                    style={{
-                                      width: `${Math.min(100, Math.max(Number(dim.score) || 0, 0))}%`,
-                                      backgroundColor: dimColor.hex,
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <div className="pt-2">
+                          <VerticalBarChart
+                            data={formAnalytics.dimensions.map((dim) => {
+                              const dimColor = getSemanticColorByPercentage(dim.score);
+                              return {
+                                label: dim.name,
+                                value: dim.score,
+                                percentage: dim.score,
+                                color: dimColor.hex,
+                                secondaryLabel: `${toPersianDigits(dim.score)}٪`,
+                              };
+                            })}
+                            unit="٪"
+                            maxScale={100}
+                            height={220}
+                            showValues={true}
+                            badgeText="نمودار میله‌ای عمودی ابعاد"
+                          />
                         </div>
                       </div>
 
@@ -2665,7 +2702,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <span>یادداشت‌ها و نظرات کارشناسی روی این فرم:</span>
               </h4>
 
-              {selectedSubmission.comments && selectedSubmission.comments.length > 0 && (
+              {Array.isArray(selectedSubmission.comments) && selectedSubmission.comments.length > 0 && (
                 <div className="space-y-2.5 pb-2">
                   {selectedSubmission.comments.map((comment) => (
                     <div
@@ -2915,12 +2952,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </div>
 
               <div className="divide-y divide-slate-100 text-xs">
-                {clientCase.submissions.filter((s) => s.paymentAmount && s.paymentAmount > 0).length === 0 ? (
+                {currentSubmissions.filter((s) => s.paymentAmount && s.paymentAmount > 0).length === 0 ? (
                   <div className="p-8 text-center text-slate-400">
                     هیچ تراکنش پرداختی برای این پرونده ثبت نشده است.
                   </div>
                 ) : (
-                  clientCase.submissions
+                  currentSubmissions
                     .filter((s) => s.paymentAmount && s.paymentAmount > 0)
                     .map((s) => (
                       <div key={s.id} className="p-5 flex items-center justify-between gap-4">

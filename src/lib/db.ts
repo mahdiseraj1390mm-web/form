@@ -121,13 +121,19 @@ function readLocalSubmissions(): FormSubmission[] {
       const content = fs.readFileSync(LOCAL_SUBMISSIONS_FILE, 'utf8');
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((s: any) => ({
+          ...s,
+          comments: Array.isArray(s.comments) ? s.comments : (Array.isArray(s.data?.comments) ? s.data.comments : []),
+        }));
       }
     }
   } catch (err) {
     console.warn('Error reading local submissions file:', err);
   }
-  return [...belhaghInitialSubmissions, ...safaanInitialSubmissions];
+  return [...belhaghInitialSubmissions, ...safaanInitialSubmissions].map((s: any) => ({
+    ...s,
+    comments: Array.isArray(s.comments) ? s.comments : [],
+  }));
 }
 
 /**
@@ -346,6 +352,25 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
     ? (cCode.startsWith('sub-case-') ? cCode : `sub-case-${cCode}`)
     : sub.id;
 
+  const commentsList = Array.isArray(sub.comments)
+    ? sub.comments
+    : (Array.isArray(sub.data?.comments) ? sub.data.comments : []);
+
+  const updatedSub: FormSubmission = {
+    ...sub,
+    id: canonicalId,
+    mobile: mobile || sub.mobile,
+    data: {
+      ...(sub.data || {}),
+      caseCode: cCode,
+      fullName: sub.data?.fullName || sub.data?.f_fullname || `${sub.data?.f_name || ''} ${sub.data?.f_family || ''}`.trim(),
+      evaluationResult: sub.evaluationResult || sub.data?.evaluationResult,
+      comments: commentsList,
+    },
+    evaluationResult: sub.evaluationResult || sub.data?.evaluationResult,
+    comments: commentsList,
+  };
+
   // ۱. ذخیره بی‌درنگ در مخزن محلی مطمئن
   try {
     const local = readLocalSubmissions();
@@ -354,19 +379,6 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
       s.id === sub.id ||
       (isReg && ((cCode && (s.trackingCode === cCode || s.data?.caseCode === cCode)) || (mobile && (s.mobile === mobile || s.data?.f_mobile === mobile))))
     );
-    const updatedSub: FormSubmission = {
-      ...sub,
-      id: canonicalId,
-      mobile: mobile || sub.mobile,
-      data: {
-        ...(sub.data || {}),
-        caseCode: cCode,
-        fullName: sub.data?.fullName || sub.data?.f_fullname || `${sub.data?.f_name || ''} ${sub.data?.f_family || ''}`.trim(),
-        evaluationResult: sub.evaluationResult || sub.data?.evaluationResult,
-      },
-      evaluationResult: sub.evaluationResult || sub.data?.evaluationResult,
-      comments: sub.comments || [],
-    };
 
     if (idx !== -1) {
       local[idx] = { ...local[idx], ...updatedSub, data: { ...local[idx].data, ...updatedSub.data } };
@@ -409,7 +421,7 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
         sub.formId,
         cCode || sub.trackingCode || null,
         mobile || null,
-        JSON.stringify(sub.data || {}),
+        JSON.stringify(updatedSub.data || {}),
         sub.status || 'new',
         sub.paymentStatus || 'none',
         sub.paymentAmount || null,

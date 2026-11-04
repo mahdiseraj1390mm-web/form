@@ -255,6 +255,21 @@ function normalizeSearchText(str: string): string {
   }, [submissions, selectedFormId, searchQuery, statusFilter]);
 
   const [isExporting, setIsExporting] = useState(false);
+  const liveActiveCase = useMemo(() => {
+    if (!activeCaseModal) return null;
+    return (
+      clientCases.find(
+        (c) =>
+          c.caseCode === activeCaseModal.caseCode ||
+          (c.mobile && activeCaseModal.mobile && c.mobile === activeCaseModal.mobile)
+      ) || activeCaseModal
+    );
+  }, [clientCases, activeCaseModal]);
+
+  const liveActiveSubmission = useMemo(() => {
+    if (!activeSubmissionModal) return null;
+    return submissions.find((s) => s.id === activeSubmissionModal.id) || activeSubmissionModal;
+  }, [submissions, activeSubmissionModal]);
   const [isReconciling, setIsReconciling] = useState(false);
 
   const handleRunReconcile = async () => {
@@ -310,10 +325,11 @@ function normalizeSearchText(str: string): string {
   };
 
   const handleAddComment = () => {
-    if (!activeSubmissionModal || !newCommentText.trim()) return;
-    addSubmissionComment(activeSubmissionModal.id, 'مدیر سیستم', 'سرپرست پذیرش بالحق', newCommentText.trim());
+    const target = liveActiveSubmission || activeSubmissionModal;
+    if (!target || !newCommentText.trim()) return;
+    addSubmissionComment(target.id, 'مدیر سیستم', 'سرپرست پذیرش بالحق', newCommentText.trim());
     setNewCommentText('');
-    const updated = submissions.find((s) => s.id === activeSubmissionModal.id);
+    const updated = submissions.find((s) => s.id === target.id);
     if (updated) setActiveSubmissionModal(updated);
   };
 
@@ -654,9 +670,9 @@ function normalizeSearchText(str: string): string {
       )}
 
       {/* نمای اختصاصی تمام‌صفحه پرونده مراجعین با تحلیل در یک نگاه، پیگیری، و گزارش نموداری فرم‌ها */}
-      {activeCaseModal && (
+      {activeCaseModal && liveActiveCase && (
         <ClientDossierFullview
-          clientCase={activeCaseModal}
+          clientCase={liveActiveCase}
           onClose={() => setActiveCaseModal(null)}
           onStatusChange={(newStatus) => {
             setActiveCaseModal((prev) => (prev ? { ...prev, overallStatus: newStatus } : null));

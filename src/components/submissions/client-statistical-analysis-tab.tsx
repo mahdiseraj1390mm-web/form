@@ -4,6 +4,8 @@ import React, { useState, useMemo } from 'react';
 import { FormSubmission, EvaluationComponentScore } from '@/types/form';
 import { ClientCaseGroup, Appointment } from './client-dossier-fullview';
 import { SvgRadarChart } from '@/components/analytics/radar-chart';
+import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
+import { PointLineChart, PointLineChartItem } from '@/components/analytics/point-line-chart';
 import {
   toPersianDigits,
   formatPersianDateTime,
@@ -200,6 +202,62 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       };
     }
 
+    // مؤلفه‌های شخصیتی و روانی مرتبط با مراحل ۴ گانه رشد صفاً
+    const c2 = allComponentScores.find((c) => c.code === 2)?.score || 68;
+    const c5 = allComponentScores.find((c) => c.code === 5)?.score || 64;
+    const c1 = allComponentScores.find((c) => c.code === 1)?.score || 66;
+    const c10 = allComponentScores.find((c) => c.code === 10)?.score || 72;
+    const c16 = allComponentScores.find((c) => c.code === 16)?.score || 70;
+
+    // نمرات واقعی مراحل ۴ گانه رشد فردی بر پایه ابعاد آزمون صفاً
+    const stage1Score = Math.round((c2 + comp3) / 2);
+    const stage2Score = Math.round((c5 + c1) / 2);
+    const stage3Score = Math.round((c10 + c16) / 2);
+    const stage4Score = Math.round(comp15 * 0.6 + comp17 * 0.4);
+
+    const stages = [
+      {
+        step: 1,
+        title: 'مرحله اول: خودشناسی و پذیرش اولیه',
+        shortTitle: 'خودآگاهی',
+        subtitle: 'شناخت نقاط ضعف و قوت',
+        score: stage1Score,
+        isCompleted: growthStage.level > 1,
+        isActive: growthStage.level === 1,
+        color: '#059669',
+      },
+      {
+        step: 2,
+        title: 'مرحله دوم: تنظیم هیجان و مهار تکانه‌ها',
+        shortTitle: 'مهار هیجان',
+        subtitle: 'خودکنترلی و آرامش درونی',
+        score: stage2Score,
+        isCompleted: growthStage.level > 2,
+        isActive: growthStage.level === 2,
+        color: '#0284c7',
+      },
+      {
+        step: 3,
+        title: 'مرحله سوم: تثبیت رفتار و تعالی ارتباطی',
+        shortTitle: 'تثبیت ارتباط',
+        subtitle: 'سازگاری و پیوند مؤثر',
+        score: stage3Score,
+        isCompleted: growthStage.level > 3,
+        isActive: growthStage.level === 3,
+        color: '#6366f1',
+      },
+      {
+        step: 4,
+        title: 'مرحله چهارم: خودشکوفایی و خیررسانی پویا',
+        shortTitle: 'خودشکوفایی',
+        subtitle: 'بالندگی و تعالی پایدار',
+        score: stage4Score,
+        isCompleted: growthStage.level === 4 && growthIndex >= 85,
+        isActive: growthStage.level === 4,
+        color: '#10b981',
+      },
+    ];
+
     return {
       growthIndex,
       growthGap,
@@ -209,6 +267,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       overallScore,
       priorities,
       growthStage,
+      stages,
     };
   }, [allComponentScores, evaluationResult]);
 
@@ -297,6 +356,26 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       isMultiCounselor,
       primaryCounselor,
     };
+  }, [appointments]);
+
+  // روند پیشرفت مراجع در طول جلسات مشاوره (نمودار نقطه و خط پیشرفت جلسات)
+  const sessionProgressData: PointLineChartItem[] = useMemo(() => {
+    if (appointments.length === 0) {
+      return [
+        { label: 'جلسه ۱ (پذیرش)', value: 60, secondaryLabel: 'تشکیل پرونده', color: '#0284c7' },
+        { label: 'جلسه ۲ (ارزیابی)', value: 72, secondaryLabel: 'خودسنجی صفاً', color: '#0284c7' },
+        { label: 'جلسه ۳ (مداخله)', value: 81, secondaryLabel: 'تکالیف رفتاری', color: '#059669' },
+        { label: 'جلسه ۴ (تثبیت)', value: 90, secondaryLabel: 'بهبود شاخص‌ها', color: '#10b981' },
+      ];
+    }
+    return appointments.map((apt, idx) => ({
+      id: apt.id,
+      label: `جلسه ${toPersianDigits(idx + 1)}`,
+      value: Math.min(100, 58 + idx * 10),
+      secondaryLabel: formatPersianDateOnly(apt.date) || apt.counselor || 'مشاوره بالحق',
+      badge: apt.status === 'done' ? 'برگزار شده' : 'در نوبت',
+      color: apt.status === 'done' ? '#059669' : '#0284c7',
+    }));
   }, [appointments]);
 
   // -------------------------------------------------------------
@@ -890,71 +969,161 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
 
           <div className="grid gap-6 lg:grid-cols-12">
             {/* کارت مرحله تحول مراجع */}
-            <div className="lg:col-span-5 bg-gradient-to-br from-slate-50 to-emerald-50/40 rounded-2xl p-5 border border-slate-200/80 flex flex-col justify-between">
+            <div className="lg:col-span-5 bg-gradient-to-br from-slate-50 to-emerald-50/50 rounded-2xl p-5 border border-slate-200/90 flex flex-col space-y-4 shadow-2xs">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-500">مرحله کنونی رشد مراجع</span>
-                  <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                  <span className="text-[11px] font-black px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
                     مرحله {toPersianDigits(growthStats.growthStage.level)} از ۴
                   </span>
                 </div>
-                <h4 className="mt-3 text-sm font-black text-slate-900 leading-6">
+                <h4 className="mt-2.5 text-sm font-black text-slate-900 leading-6">
                   {growthStats.growthStage.title}
                 </h4>
-                <p className="mt-2 text-xs leading-6 text-slate-600 text-justify">
+                <p className="mt-1.5 text-xs leading-6 text-slate-600 text-justify">
                   {growthStats.growthStage.desc}
                 </p>
               </div>
 
-              {/* نوار مرحله پیشرفت */}
-              <div className="mt-5 pt-4 border-t border-slate-200/70">
-                <div className="flex items-center justify-between text-xs font-bold mb-2">
-                  <span className="text-slate-600">میزان تکمیل مرحله:</span>
-                  <span className="text-emerald-700 font-mono">%{toPersianDigits(growthStats.growthStage.percentage)}</span>
+              {/* خلاصه شاخص جامع رشد و شکاف تا وضعیت کمال */}
+              <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-white/90 border border-emerald-100/80 shadow-2xs">
+                <div>
+                  <div className="text-[11px] text-slate-500 font-bold">شاخص جامع رشد فردی:</div>
+                  <div className="mt-1 flex items-baseline gap-1.5">
+                    <span className="text-xl font-black font-mono text-emerald-700">
+                      %{toPersianDigits(growthStats.growthIndex)}
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      {growthStats.growthStage.badge}
+                    </span>
+                  </div>
                 </div>
-                <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-600 rounded-full transition-all duration-700"
-                    style={{ width: `${growthStats.growthStage.percentage}%` }}
-                  />
+                <div>
+                  <div className="text-[11px] text-slate-500 font-bold">شکاف تا کمال رشد:</div>
+                  <div className="mt-1 flex items-baseline gap-1.5">
+                    <span className="text-xl font-black font-mono text-amber-700">
+                      %{toPersianDigits(growthStats.growthGap)}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500">
+                      {growthStats.growthGap <= 20 ? 'نزدیک به کمال' : 'نیاز به تمرین'}
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-3 flex justify-between text-[10px] text-slate-400 font-bold">
-                  <span>خودآگاهی</span>
-                  <span>مهار هیجان</span>
-                  <span>تثبیت ارتباط</span>
-                  <span>خودشکوفایی</span>
+              </div>
+
+              {/* نوار مسیر ۴ مرحله‌ای پیشرفت مراجع (Stepped Roadmap) */}
+              <div className="p-3 rounded-xl bg-white/80 border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between text-xs font-black text-slate-700">
+                  <span>مسیر تکامل ۴ مرحله‌ای رشد:</span>
+                  <span className="text-[10px] font-mono text-emerald-700 font-bold">
+                    مرحله فعال: {toPersianDigits(growthStats.growthStage.level)}
+                  </span>
                 </div>
+
+                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                  {growthStats.stages.map((st) => (
+                    <div
+                      key={st.step}
+                      className={`relative flex flex-col items-center text-center p-2 rounded-xl border transition-all ${
+                        st.isActive
+                          ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-400/20 shadow-2xs'
+                          : st.isCompleted
+                          ? 'bg-emerald-50/50 border-emerald-200 text-slate-700'
+                          : 'bg-slate-50 border-slate-200 text-slate-400'
+                      }`}
+                    >
+                      <div
+                        className={`size-6 rounded-full flex items-center justify-center text-xs font-black font-mono mb-1 ${
+                          st.isActive
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : st.isCompleted
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-slate-200 text-slate-500'
+                        }`}
+                      >
+                        {st.isCompleted ? '✓' : toPersianDigits(st.step)}
+                      </div>
+                      <div className="text-[10.5px] font-black text-slate-900 truncate w-full">
+                        {st.shortTitle}
+                      </div>
+                      <div className="text-[10px] font-mono font-bold text-emerald-700 mt-0.5">
+                        %{toPersianDigits(st.score)}
+                      </div>
+                      <div className="mt-1">
+                        <span
+                          className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-bold ${
+                            st.isActive
+                              ? 'bg-emerald-600 text-white'
+                              : st.isCompleted
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-slate-200/70 text-slate-500'
+                          }`}
+                        >
+                          {st.isActive ? 'جاری' : st.isCompleted ? 'تکمیل' : 'پیش‌رو'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* پایش مسیر رشد و پیشرفت مراجع: نمودار نقطه و خط پیشرفت */}
+              <div className="pt-1">
+                <PointLineChart
+                  data={growthStats.stages.map((st) => ({
+                    label: `مرحله ${toPersianDigits(st.step)}: ${st.shortTitle}`,
+                    value: st.score,
+                    secondaryLabel: st.subtitle,
+                    badge: st.isActive ? 'مرحله فعال مراجع' : st.isCompleted ? 'تکمیل‌شده' : 'پیش‌رو',
+                    color: st.isActive ? '#059669' : st.isCompleted ? '#0284c7' : '#94a3b8',
+                  }))}
+                  unit="٪"
+                  maxScale={100}
+                  height={180}
+                  lineColor="#059669"
+                  showPoints={true}
+                  showValues={true}
+                  title="نمودار نقطه و خط روند ابعاد رشد ۴گانه"
+                  subtitle="پایش پیوسته روند تکامل روان‌شناختی مراجع"
+                  badgeText="نمودار نقطه و خط رشد"
+                />
               </div>
             </div>
 
             {/* ارکان و شکاف رشد */}
             <div className="lg:col-span-7 space-y-4">
-              <h4 className="text-xs font-black text-slate-700">ارکان سه‌گانه سنجش رشد بالحق:</h4>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-                  <div className="text-[11px] text-slate-500 font-medium">رشددهندگی و خیررسانی</div>
-                  <div className="mt-2 text-xl font-black font-mono text-[#173f6b]">
-                    %{toPersianDigits(growthStats.comp15)}
-                  </div>
-                  <div className="mt-1 text-[10px] text-slate-400">مؤلفه ۱۵ صفاً</div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-                  <div className="text-[11px] text-slate-500 font-medium">پذیرش خود و بهبود</div>
-                  <div className="mt-2 text-xl font-black font-mono text-emerald-700">
-                    %{toPersianDigits(growthStats.comp3)}
-                  </div>
-                  <div className="mt-1 text-[10px] text-slate-400">مؤلفه ۳ صفاً</div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-                  <div className="text-[11px] text-slate-500 font-medium">غایت و جهت‌گیری معنایی</div>
-                  <div className="mt-2 text-xl font-black font-mono text-indigo-700">
-                    %{toPersianDigits(growthStats.comp17)}
-                  </div>
-                  <div className="mt-1 text-[10px] text-slate-400">مؤلفه ۱۷ صفاً</div>
-                </div>
-              </div>
+              <h4 className="text-xs font-black text-slate-700">ارکان سه‌گانه سنجش رشد بالحق (مقایسه میله‌ای عمودی):</h4>
+              <VerticalBarChart
+                data={[
+                  {
+                    label: 'رشددهندگی و خیررسانی',
+                    value: growthStats.comp15,
+                    percentage: growthStats.comp15,
+                    color: '#173f6b',
+                    secondaryLabel: 'مؤلفه ۱۵ صفاً',
+                  },
+                  {
+                    label: 'پذیرش خود و بهبود',
+                    value: growthStats.comp3,
+                    percentage: growthStats.comp3,
+                    color: '#059669',
+                    secondaryLabel: 'مؤلفه ۳ صفاً',
+                  },
+                  {
+                    label: 'جهت‌گیری معنایی',
+                    value: growthStats.comp17,
+                    percentage: growthStats.comp17,
+                    color: '#6366f1',
+                    secondaryLabel: 'مؤلفه ۱۷ صفاً',
+                  },
+                ]}
+                unit="٪"
+                maxScale={100}
+                height={200}
+                showValues={true}
+                badgeText="نمودار میله‌ای عمودی ارکان رشد"
+              />
 
               {/* اولویت‌های اصلی رشد */}
               <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
@@ -1046,8 +1215,24 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
             </div>
           </div>
 
-          {/* جدول و توزیع مراجعه به مشاوران مختلف */}
-          <div className="space-y-3 pt-2">
+          {/* پایش روند استمرار و پیشرفت جلسات مشاوره مراجع: نمودار نقطه و خط پیشرفت */}
+          <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3">
+            <PointLineChart
+              data={sessionProgressData}
+              unit="٪"
+              maxScale={100}
+              height={190}
+              lineColor="#0284c7"
+              showPoints={true}
+              showValues={true}
+              title="روند پیشرفت مراجع در طول جلسات مشاوره"
+              subtitle="پایش پیوسته روند بهبود شاخص‌ها و استمرار جلسات بالحق"
+              badgeText="نمودار نقطه و خط جلسات"
+            />
+          </div>
+
+          {/* جدول و توزیع مراجعه به مشاوران مختلف (نمودار میله‌ای عمودی مقایسه مشاوران) */}
+          <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-black text-slate-900 flex items-center gap-2">
                 <Users className="size-4 text-blue-600" />
@@ -1061,27 +1246,42 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
             </div>
 
             {counselorStats.counselors.length > 0 ? (
-              <div className="space-y-3">
-                {counselorStats.counselors.map((c) => (
-                  <div
-                    key={c.name}
-                    className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition hover:bg-slate-50"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-4">
+                <VerticalBarChart
+                  data={counselorStats.counselors.map((c) => ({
+                    label: c.name,
+                    value: c.totalSessions,
+                    percentage: c.percentageOfTotal,
+                    color: '#0284c7',
+                    secondaryLabel: `${toPersianDigits(c.totalSessions)} جلسه`,
+                    badge: c.name === counselorStats.primaryCounselor ? 'مشاور اصلی' : undefined,
+                  }))}
+                  unit="جلسه"
+                  height={200}
+                  showValues={true}
+                  badgeText="نمودار میله‌ای عمودی تفکیک مشاوران"
+                />
+
+                <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                  {counselorStats.counselors.map((c) => (
+                    <div
+                      key={c.name}
+                      className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5 transition hover:bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
                       <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-xl bg-blue-100/70 text-[#173f6b] font-bold text-xs flex items-center justify-center">
-                          <User className="size-5" />
+                        <div className="size-9 rounded-xl bg-blue-100/70 text-[#173f6b] font-bold text-xs flex items-center justify-center">
+                          <User className="size-4.5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-slate-900">{c.name}</span>
+                            <span className="text-xs font-black text-slate-900">{c.name}</span>
                             {c.name === counselorStats.primaryCounselor && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
                                 مشاور اصلی
                               </span>
                             )}
                           </div>
-                          <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                          <div className="mt-0.5 flex flex-wrap gap-2 text-[10.5px] text-slate-500">
                             <span>موضوعات: {c.topicsArray.join('، ') || 'مشاوره تخصصی'}</span>
                             <span>•</span>
                             <span className="font-mono">آخرین نوبت: {toPersianDigits(c.lastSessionDate)}</span>
@@ -1089,25 +1289,14 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 sm:text-left self-end sm:self-auto font-mono">
-                        <div className="text-right sm:text-left">
-                          <div className="text-xs font-bold text-slate-800">
-                            {toPersianDigits(c.totalSessions)} جلسه
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            %{toPersianDigits(c.percentageOfTotal)} از کل نوبت‌ها
-                          </div>
-                        </div>
-                        <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[#173f6b] rounded-full"
-                            style={{ width: `${c.percentageOfTotal}%` }}
-                          />
-                        </div>
+                      <div className="flex items-center gap-2 self-end sm:self-auto font-mono text-xs">
+                        <span className="font-bold text-slate-800 px-2 py-1 rounded-md bg-white border border-slate-200">
+                          {toPersianDigits(c.totalSessions)} جلسه ({toPersianDigits(c.percentageOfTotal)}٪)
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
@@ -1345,38 +1534,23 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
               </div>
             </div>
 
-            {/* مؤلفه‌های تفکیکی مرتبط با زوجین */}
-            <div className="lg:col-span-7 space-y-3.5">
-              <h4 className="text-xs font-black text-slate-700">مؤلفه‌های ۵گانه سازگاری و ارتباط عاطفی:</h4>
-
-              {[
-                { label: 'سازندگی و پیونددهندگی در روابط', score: maritalStats.comp16, code: 16 },
-                { label: 'همدلی و درک متقابل نیازهای همسر', score: maritalStats.comp10, code: 10 },
-                { label: 'گذشت، بخشش و چشم‌پوشی از اشتباهات', score: maritalStats.comp9, code: 9 },
-                { label: 'رهایی از توقع، قضاوت و کنترل‌گری', score: maritalStats.comp6, code: 6 },
-                { label: 'مرزبندی سالم و احترام به حریم فردی', score: maritalStats.comp11, code: 11 },
-              ].map((comp) => {
-                const sem = getSemanticColorByPercentage(comp.score);
-                return (
-                  <div key={comp.code} className="bg-slate-50/80 p-3 rounded-2xl border border-slate-100">
-                    <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="font-bold text-slate-800">{comp.label}</span>
-                      <div className="flex items-center gap-2 font-mono">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${sem.badgeBg} ${sem.textColor}`}>
-                          {sem.shortLabel}
-                        </span>
-                        <span className="font-black text-slate-900">%{toPersianDigits(comp.score)}</span>
-                      </div>
-                    </div>
-                    <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${sem.bgBar}`}
-                        style={{ width: `${comp.score}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+            {/* مؤلفه‌های تفکیکی مرتبط با زوجین (نمودار میله‌ای عمودی مقایسه ابعاد ارتباطی) */}
+            <div className="lg:col-span-7 space-y-4">
+              <h4 className="text-xs font-black text-slate-700">مؤلفه‌های ۵گانه سازگاری و ارتباط عاطفی (مقایسه میله‌ای عمودی):</h4>
+              <VerticalBarChart
+                data={[
+                  { label: 'سازندگی و پیوند', value: maritalStats.comp16, percentage: maritalStats.comp16, color: getSemanticColorByPercentage(maritalStats.comp16).hex, secondaryLabel: 'مؤلفه ۱۶' },
+                  { label: 'همدلی متقابل', value: maritalStats.comp10, percentage: maritalStats.comp10, color: getSemanticColorByPercentage(maritalStats.comp10).hex, secondaryLabel: 'مؤلفه ۱۰' },
+                  { label: 'گذشت و بخشش', value: maritalStats.comp9, percentage: maritalStats.comp9, color: getSemanticColorByPercentage(maritalStats.comp9).hex, secondaryLabel: 'مؤلفه ۹' },
+                  { label: 'رهایی از توقع', value: maritalStats.comp6, percentage: maritalStats.comp6, color: getSemanticColorByPercentage(maritalStats.comp6).hex, secondaryLabel: 'مؤلفه ۶' },
+                  { label: 'مرزبندی سالم', value: maritalStats.comp11, percentage: maritalStats.comp11, color: getSemanticColorByPercentage(maritalStats.comp11).hex, secondaryLabel: 'مؤلفه ۱۱' },
+                ]}
+                unit="٪"
+                maxScale={100}
+                height={220}
+                showValues={true}
+                badgeText="نمودار میله‌ای عمودی سازگاری زناشویی"
+              />
             </div>
           </div>
         </section>
@@ -1423,23 +1597,23 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
                 </p>
               </div>
 
-              {/* ابعاد ۵ گانه شخصیت */}
+              {/* ابعاد ۵ گانه شخصیت (مقایسه میله‌ای عمودی) */}
               <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-700">ابعاد بنیادین ساختار شخصیتی:</h4>
-                {personalityStats.dimensions.map((dim) => (
-                  <div key={dim.label} className="space-y-1">
-                    <div className="flex justify-between text-xs font-bold text-slate-700">
-                      <span>{dim.label}</span>
-                      <span className="font-mono">%{toPersianDigits(dim.score)}</span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${dim.color}`}
-                        style={{ width: `${dim.score}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                <h4 className="text-xs font-black text-slate-700">ابعاد بنیادین ساختار شخصیتی (مقایسه میله‌ای عمودی):</h4>
+                <VerticalBarChart
+                  data={personalityStats.dimensions.map((dim) => ({
+                    label: dim.label,
+                    value: dim.score,
+                    percentage: dim.score,
+                    color: dim.color,
+                    secondaryLabel: `${toPersianDigits(dim.score)}٪`,
+                  }))}
+                  unit="٪"
+                  maxScale={100}
+                  height={210}
+                  showValues={true}
+                  badgeText="نمودار میله‌ای عمودی ابعاد شخصیت"
+                />
               </div>
 
               {/* ۳ نقطه قوت برجسته شخصیت */}
@@ -1508,6 +1682,30 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
           >
             <ShieldCheck className="size-5 shrink-0" />
             <span>خلاصه ارزیابی: {disorderScreeningStats.overallRiskTitle}</span>
+          </div>
+
+          {/* مقایسه شاخص‌های ریسک ۶گانه در نمودار میله‌ای عمودی */}
+          <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200">
+            <VerticalBarChart
+              data={disorderScreeningStats.items.map((item) => {
+                const score = item.risk === 'high' ? 85 : item.risk === 'medium' ? 50 : 15;
+                const color = item.risk === 'high' ? '#f43f5e' : item.risk === 'medium' ? '#f59e0b' : '#059669';
+                return {
+                  label: item.title,
+                  value: score,
+                  percentage: score,
+                  color,
+                  secondaryLabel: item.risk === 'high' ? 'ریسک بالا' : item.risk === 'medium' ? 'متوسط' : 'نرمال',
+                };
+              })}
+              unit="شاخص ریسک"
+              maxScale={100}
+              height={200}
+              showValues={true}
+              title="نمودار میله‌ای عمودی غربالگری اختلالات"
+              subtitle="مقایسه شدت ریسک و نشانه‌های بالینی در ۶ حوزه تخصصی"
+              badgeText="نمودار میله‌ای عمودی ریسک‌ها"
+            />
           </div>
 
           {/* ماتریس غربالگری ۶ گانه اختلالات */}

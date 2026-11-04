@@ -127,6 +127,7 @@ export const SmsSettingsTab: React.FC = () => {
       }));
     } finally {
       setTestingKey(null);
+      loadData();
     }
   };
 
