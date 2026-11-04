@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Form, FormSubmission, SubmissionStatus } from '@/types/form';
+import { Form, FormSubmission, SubmissionStatus, FormField } from '@/types/form';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import {
@@ -40,20 +40,12 @@ import {
   CalendarCheck,
   FileCheck2,
   HelpCircle,
-  Stethoscope,
-  Pill,
-  BookOpen,
-  Maximize2,
-  Columns,
-  Compass,
-  UserCheck,
-  Heart,
-  Share2,
-  AlertTriangle
+  Check,
+  Search,
+  Plus,
 } from 'lucide-react';
-import { exportSingleClientDossierToXLSX } from '@/lib/excel-export';
 import { EvaluationReportView } from '../analytics/evaluation-report-view';
-import { VerticalBarChart, BarChartItem } from '../analytics/vertical-bar-chart';
+import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
   formatPersianDateTime,
   formatPersianDateOnly,
@@ -76,10 +68,153 @@ export interface ClientCaseGroup {
   roleInFamily?: string;
 }
 
+export type Appointment = {
+  id: number | string;
+  date: string;
+  topic: string;
+  counselor: string;
+  status: 'new' | 'done';
+  reviewed?: string;
+  challenges?: string;
+  recommendation?: string;
+};
+
+// فیلتر هوشمند ضد داده‌های فیک و موک برای جلوگیری از آلودگی صفحه پرونده
+function isMockAppointment(item: any): boolean {
+  if (!item || typeof item !== 'object') return true;
+  const str = JSON.stringify(item);
+  return (
+    str.includes('تنفس ۴-۷-۸') ||
+    str.includes('۴۵ دقیقه‌ای') ||
+    str.includes('۲۲ اردیبهشت ۱۴۰۳') ||
+    str.includes('۷ خرداد ۱۴۰۳') ||
+    str.includes('۸ فروردین ۱۴۰۳') ||
+    str.includes('اضطراب کنکور و افت تحصیلی') ||
+    str.includes('ارتباط با والدین و پرخاشگری') ||
+    str.includes('مهارت‌های حل مسئله و تاب‌آوری') ||
+    str.includes('کمال‌گرایی') ||
+    str.includes('بررسی ریشه‌های کمال‌گرایی') ||
+    str.includes('ارجاع به کارگاه مهارت‌های زندگی')
+  );
+}
+
+// تابع جامع استخراج نوبت‌های کاملاً واقعی از ارسالی‌های پایگاه‌داده مراجع
+function extractRealAppointmentsFromSubmissions(submissions: FormSubmission[]): Appointment[] {
+  const result: Appointment[] = [];
+  const counselorMap: Record<string, string> = {
+    f_booking_farahmandi: 'سرکار خانم فرهمندی',
+    f_booking_teymourian: 'سرکار خانم تیموریان',
+    f_booking_shavandi_child: 'سرکار خانم شوندی',
+    f_booking_ansari_child: 'سرکار خانم انصاری',
+    f_booking_zeynali_child: 'سرکار خانم زینلی',
+    f_booking_borhani_teen: 'جناب آقای برهانی',
+    f_booking_shavandi_teen: 'سرکار خانم شوندی',
+    f_booking_rastgoo_teen: 'سرکار خانم راستگو',
+    f_booking_ansari_teen: 'سرکار خانم انصاری',
+    f_booking_abdi_education: 'جناب آقای عبدی',
+    f_booking_torshizi: 'جناب آقای دکتر ترشیزی',
+    f_booking_yavari: 'سرکار خانم یاوری',
+    f_booking_rastgoo_clinical: 'سرکار خانم راستگو',
+    f_booking_golyayi_clinical: 'سرکار خانم گلیایی',
+    f_booking_sedighi_family: 'جناب آقای دکتر صدیقی',
+    f_booking_borhani_family: 'جناب آقای برهانی',
+    f_booking_zeynali_family: 'سرکار خانم زینلی',
+    f_booking_karimi_family: 'سرکار خانم کریمی',
+    f_booking_abdi_family: 'سرکار خانم عبدی',
+  };
+
+  submissions.forEach((sub, idx) => {
+    const data = sub.data || {};
+    const isBookingForm =
+      sub.formId === 'form-belhagh-booking' ||
+      sub.formId === 'form-booking-04' ||
+      Boolean(data.f_booking_date || data.f_booking_datetime || data.f_booking_counselor);
+
+    // پیدا کردن نام مشاور از میان کلیدهای مختلف
+    let counselorName =
+      data.f_booking_counselor ||
+      data.f_counselor ||
+      data.f_counselor_name ||
+      data.counselorName ||
+      null;
+
+    let slotDateStr: string | null = null;
+    let topicFromSlot: string | null = null;
+
+    for (const [fieldKey, cName] of Object.entries(counselorMap)) {
+      if (data[fieldKey] && typeof data[fieldKey] === 'string' && data[fieldKey].trim()) {
+        if (!counselorName) counselorName = cName;
+        slotDateStr = data[fieldKey].trim();
+        if (fieldKey.includes('education')) topicFromSlot = 'مشاوره تحصیلی و انتخاب رشته';
+        else if (fieldKey.includes('clinical')) topicFromSlot = 'مشاوره بالینی و فردی';
+        else if (fieldKey.includes('child')) topicFromSlot = 'مشاوره کودک';
+        else if (fieldKey.includes('teen')) topicFromSlot = 'مشاوره نوجوان';
+        else if (fieldKey.includes('family')) topicFromSlot = 'مشاوره ازدواج و خانواده';
+        break;
+      }
+    }
+
+    const bookingTime =
+      data.f_booking_datetime ||
+      data.f_booking_date ||
+      slotDateStr ||
+      data.bookingTime ||
+      data.bookingDate ||
+      (isBookingForm ? formatPersianDateTime(sub.createdAt) : null);
+
+    if (bookingTime || isBookingForm) {
+      const app: Appointment = {
+        id: sub.id || `app-${idx + 1}`,
+        date: String(bookingTime || formatPersianDateTime(sub.createdAt)),
+        topic: String(
+          data.f_counseling_subject ||
+          data.f_topic ||
+          data.f_consultation_type ||
+          topicFromSlot ||
+          'مشاوره تخصصی'
+        ),
+        counselor: String(counselorName || 'مشاور تعیین‌شده مرکز'),
+        status: data.session_status === 'done' || data.report ? 'done' : 'new',
+        reviewed: data.report_reviewed || data.report?.reviewedItems,
+        challenges: data.report_challenges || data.report?.challenges,
+        recommendation: data.report_recommendation || data.report?.recommendations,
+      };
+
+      if (!isMockAppointment(app)) {
+        result.push(app);
+      }
+    }
+  });
+
+  return result;
+}
+
 interface ClientDossierFullviewProps {
   clientCase: ClientCaseGroup;
   onClose: () => void;
   onStatusChange?: (newStatus: SubmissionStatus) => void;
+}
+
+function Stat({
+  value,
+  label,
+  tone = 'blue',
+}: {
+  value: string;
+  label: string;
+  tone?: 'blue' | 'green' | 'amber';
+}) {
+  const tones = {
+    blue: 'bg-blue-50 text-blue-700',
+    green: 'bg-emerald-50 text-emerald-700',
+    amber: 'bg-amber-50 text-amber-700',
+  };
+  return (
+    <div className={`rounded-2xl px-5 py-4 ${tones[tone]}`}>
+      <div className="text-xl font-black font-mono">{value}</div>
+      <div className="mt-1 text-xs font-semibold opacity-75">{label}</div>
+    </div>
+  );
 }
 
 export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
@@ -87,64 +222,53 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   onClose,
   onStatusChange,
 }) => {
-  const { forms, submissions, updateSubmissionStatus, addSubmissionComment } = useForm();
+  const { forms, updateSubmissionStatus, addSubmissionComment } = useForm();
   const { currentUser } = useAdminAuth();
-  const adminName = currentUser?.name || 'مدیر مرکز بالحق';
-  const adminRole = currentUser?.role || 'سرپرست پذیرش و پرونده';
 
-  // ناوبری اصلی پرونده: نمای پرونده کلی مراجع یا نمای گزارش تحلیلی یک فرم خاص
+  // نام و نقش واقعی کاربر ادمین جاری در سامانه
+  const adminName = currentUser?.name || 'مدیر مرکز';
+  const adminRole = currentUser?.role || 'مرکز خدمات روانشناسی بالحق';
+  const adminInitials = useMemo(() => {
+    const clean = adminName.trim();
+    const parts = clean.split(/\s+/);
+    if (parts.length >= 2) return `${parts[0][0]}‌${parts[parts.length - 1][0]}`;
+    return clean.slice(0, 2);
+  }, [adminName]);
+
+  // ناوبری اصلی پرونده: نمای پرونده کلی مراجع یا نمای گزارش تحلیلی و نموداری یک فرم خاص
   const [currentView, setCurrentView] = useState<'dossier' | 'formReport'>('dossier');
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [formCommentText, setFormCommentText] = useState('');
 
-  // تب‌های داخل پرونده مراجع (پیش‌فرض: خلاصه پرونده و تحلیل جامع)
-  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'bookings' | 'referrals' | 'forms' | 'followups' | 'stats'>('overview');
+  // تب‌های داخل پرونده مراجع
+  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'forms' | 'followups' | 'finances'>('overview');
 
-  // استیت فرم ثبت پیگیری و یادداشت جدید
-  const [newFollowupType, setNewFollowupType] = useState<'call' | 'meeting' | 'sms' | 'note' | 'referral'>('note');
+  // ثبت نظر بر روی فرم فعال در گزارش تفکیکی
+  const handleAddFormComment = () => {
+    if (!selectedSubmission || !formCommentText.trim()) return;
+    addSubmissionComment(selectedSubmission.id, adminName, adminRole, formCommentText.trim());
+    setFormCommentText('');
+  };
+
+  // استیت فرم ثبت پیگیری جدید
+  const [newFollowupType, setNewFollowupType] = useState<'call' | 'meeting' | 'sms' | 'note' | 'referral'>('call');
   const [newFollowupText, setNewFollowupText] = useState('');
-  const [referralTarget, setReferralTarget] = useState('');
   const [isSubmittingFollowup, setIsSubmittingFollowup] = useState(false);
 
   // استیت وضعیت فعلی پرونده
   const [currentStatus, setCurrentStatus] = useState<SubmissionStatus>(clientCase.overallStatus);
-
-  // حالت نمایش: تمام‌عرض کارتابل یا کشویی
-  const [panelMode, setPanelMode] = useState<'full' | 'drawer'>('full');
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
-  // بستن خودکار با Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  // ۱. اتصال کاملاً زنده به سابمیشن‌های مرتبط از Context
-  const currentCaseSubmissions = useMemo(() => {
-    const initSubIds = new Set(clientCase.submissions.map((s) => s.id));
-    const matched = submissions.filter(
-      (s) =>
-        initSubIds.has(s.id) ||
-        (clientCase.caseCode && (s.trackingCode === clientCase.caseCode || s.data?.caseCode === clientCase.caseCode)) ||
-        (clientCase.mobile && (s.mobile === clientCase.mobile || s.data?.f_mobile === clientCase.mobile))
-    );
-    return matched.length > 0 ? matched : clientCase.submissions;
-  }, [submissions, clientCase]);
-
-  // تجمیع کلیه داده‌های ثبت‌شده برای مراجع
+  // استخراج یکپارچه داده‌های هویتی مراجع از میان تمام فرم‌های پر شده در دیتابیس
   const combinedData = useMemo(() => {
     const data: Record<string, any> = {};
-    currentCaseSubmissions.forEach((sub) => {
-      if (sub.data && typeof sub.data === 'object') {
-        Object.assign(data, sub.data);
-      }
+    clientCase.submissions.forEach((sub) => {
+      Object.assign(data, sub.data);
     });
     return data;
-  }, [currentCaseSubmissions]);
+  }, [clientCase.submissions]);
 
-  // نام کامل مراجع
+  // نام کامل مراجع از روی داده‌های واقعی ثبت‌نام
   const displayFullName = useMemo(() => {
     if (clientCase.fullName && clientCase.fullName !== 'مراجع مرکز بالحق') {
       return clientCase.fullName;
@@ -155,97 +279,344 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     if (combinedData.fullName || combinedData.f_fullname) {
       return combinedData.fullName || combinedData.f_fullname;
     }
-    return 'مراجع مرکز بالحق';
+    return 'مراجع محترم مرکز بالحق';
   }, [clientCase.fullName, combinedData]);
 
-  // استخراج جنسیت
-  const clientGender = useMemo(() => {
-    if (combinedData.f_gender) return combinedData.f_gender;
-    const role = combinedData.f_role_in_family || '';
-    if (['پدر', 'پدر خانواده', 'پسر', 'پسر خانواده', 'father', 'son'].includes(role)) return 'مذکر (آقا)';
-    if (['مادر', 'مادر خانواده', 'دختر', 'دختر خانواده', 'mother', 'daughter'].includes(role)) return 'مؤنث (خانم)';
-    return 'نامشخص';
-  }, [combinedData]);
 
-  // استخراج سن
-  const clientAge = useMemo(() => {
-    if (combinedData.f_birth_date) {
-      const parts = String(combinedData.f_birth_date).split('/');
-      if (parts.length === 3) {
-        const birthYear = parseInt(parts[0], 10);
-        if (birthYear > 1300 && birthYear < 1420) {
-          return `${toPersianDigits(1403 - birthYear)} سال`;
+  // نقش در خانواده بر اساس پاسخ واقعی مراجع
+  const roleInFamily = useMemo(() => {
+    if (combinedData.f_role_in_family) {
+      const r = combinedData.f_role_in_family;
+      return r.includes('خانواده') ? r : `${r} خانواده`;
+    }
+    if (clientCase.roleInFamily && clientCase.roleInFamily !== 'عضو خانواده') {
+      return clientCase.roleInFamily;
+    }
+    return 'عضو خانواده';
+  }, [combinedData, clientCase.roleInFamily]);
+
+  // تفکیک ۳ گانه فرم‌های تکمیل‌شده مراجع برای تب فرم‌ها و آزمون‌ها:
+  // ۱. ستون پرسشنامه‌ها (صفا و آزمون‌های بالینی)
+  // ۲. ستون نوبت‌های مشاوره (جلسات و سامانه‌های نوبت‌دهی)
+  // ۳. کادر ثبت‌نام (فرم پذیرش و مشخصات فردی اولیه)
+  const { questionnaireSubs, bookingSubs, registrationSubs, otherSubs } = useMemo(() => {
+    const qList: FormSubmission[] = [];
+    const bList: FormSubmission[] = [];
+    const rList: FormSubmission[] = [];
+    const oList: FormSubmission[] = [];
+
+    clientCase.submissions.forEach((sub) => {
+      const fObj = forms.find((f) => f.id === sub.formId);
+      const id = (sub.formId || '').toLowerCase();
+      const slug = (fObj?.slug || '').toLowerCase();
+      const title = (fObj?.title || '').toLowerCase();
+      const cat = (fObj?.category || '').toLowerCase();
+      const hasBookingData = Boolean(
+        sub.data?.f_booking_date ||
+        sub.data?.f_booking_datetime ||
+        sub.data?.f_booking_counselor ||
+        sub.data?.f_counselor
+      );
+
+      // ۱. پرسشنامه‌ها و آزمون‌ها
+      if (
+        id.includes('safaan') ||
+        slug.includes('safaan') ||
+        id.includes('assessment') ||
+        id.includes('quiz') ||
+        title.includes('پرسشنامه') ||
+        title.includes('صفا') ||
+        title.includes('آزمون') ||
+        cat.includes('آزمون') ||
+        cat.includes('پرسشنامه')
+      ) {
+        qList.push(sub);
+      }
+      // ۲. نوبت‌های مشاوره
+      else if (
+        id.includes('booking') ||
+        slug === '3uu4z' ||
+        hasBookingData ||
+        title.includes('نوبت') ||
+        title.includes('رزرو') ||
+        title.includes('جلسه') ||
+        cat.includes('نوبت') ||
+        cat.includes('مشاوره')
+      ) {
+        bList.push(sub);
+      }
+      // ۳. ثبت‌نام و تشکیل پرونده
+      else if (
+        id.includes('registration') ||
+        slug === 'zexuz' ||
+        title.includes('ثبت نام') ||
+        title.includes('پذیرش') ||
+        cat.includes('ثبت نام')
+      ) {
+        rList.push(sub);
+      } else {
+        oList.push(sub);
+      }
+    });
+
+    return {
+      questionnaireSubs: qList,
+      bookingSubs: bList,
+      registrationSubs: rList,
+      otherSubs: oList,
+    };
+  }, [clientCase.submissions, forms]);
+
+  // استیت مدیریت نوبت‌ها: استخراج ۱۰۰٪ واقعی از ارسالی‌های پایگاه‌داده و جلسات ذخیره‌شده
+  const storageKey = `belhagh_real_sessions_v3_${clientCase.caseCode}`;
+
+  // پاکسازی اولیه هرگونه کلید موک قدیمی ذخیره شده در حافظه مرورگر
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (
+            key &&
+            (key.startsWith('belhagh_appointments_') ||
+              key.startsWith('belhagh_real_sessions_v1_') ||
+              key.startsWith('belhagh_real_sessions_v2_'))
+          ) {
+            keysToRemove.push(key);
+          }
         }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch (e) {
+        console.error('Failed cleanup of legacy appointment cache', e);
       }
     }
-    return 'نامشخص';
-  }, [combinedData]);
+  }, []);
 
-  // تعداد فرزندان
-  const clientChildrenCount = useMemo(() => {
-    if (combinedData.f_children_count) return combinedData.f_children_count;
-    if (combinedData.f_family_members) {
-      return `از مجموع ${combinedData.f_family_members}`;
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    const fromSubs = extractRealAppointmentsFromSubmissions(clientCase.submissions);
+
+    // بررسی ذخیره‌ساز محلی پرونده (برای گزارش‌های بالینی ثبت‌شده یا جلسات دستی افزوده شده توسط مدیر)
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const cleanSaved = parsed.filter((item) => !isMockAppointment(item));
+            if (cleanSaved.length > 0) {
+              const ids = new Set(cleanSaved.map((a) => a.id));
+              fromSubs.forEach((subApp) => {
+                if (!ids.has(subApp.id)) cleanSaved.push(subApp);
+              });
+              return cleanSaved;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse saved appointments', e);
+      }
     }
-    return 'ثبت‌نشده';
-  }, [combinedData]);
 
-  // وضعیت تاهل
-  const clientMaritalStatus = useMemo(() => {
-    return combinedData.f_marital_status || 'ثبت‌نشده';
-  }, [combinedData]);
+    return fromSubs;
+  });
 
-  // لیست سابمیشن‌های نوبت‌دهی مراجع
-  const bookingSubmissions = useMemo(() => {
-    return currentCaseSubmissions.filter(
-      (s) =>
-        s.formId === 'form-belhagh-booking' ||
-        Object.keys(s.data || {}).some((k) => k.startsWith('f_booking_') && s.data[k])
+  // مودال ثبت/ویرایش گزارش جلسه مشاوره
+  const [editing, setEditing] = useState<Appointment | null>(null);
+  const [isNewAppointmentModalOpen, setIsNewAppointmentModalOpen] = useState(false);
+  const [newAppointmentData, setNewAppointmentData] = useState({
+    date: '',
+    topic: 'خانواده و ازدواج',
+    counselor: '',
+  });
+  const [reportForm, setReportForm] = useState({ reviewed: '', challenges: '', recommendation: '' });
+  const [savedReport, setSavedReport] = useState(false);
+
+  // همگام‌سازی نوبت‌ها با localStorage پرونده
+  useEffect(() => {
+    try {
+      const clean = appointments.filter((a) => !isMockAppointment(a));
+      if (clean.length > 0) {
+        localStorage.setItem(storageKey, JSON.stringify(clean));
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    } catch (e) {
+      console.error('Failed to save appointments', e);
+    }
+  }, [appointments, storageKey]);
+
+  // آخرین توصیه‌های واقعی مشاور (فقط از جلساتی که واقعاً گزارش بالینی برایشان ثبت شده است)
+  const latestRecommendation = useMemo(() => {
+    return appointments.find((item) => item.recommendation && item.recommendation.trim().length > 0) || null;
+  }, [appointments]);
+
+  const openReportModal = (appointment: Appointment) => {
+    setEditing(appointment);
+    setReportForm({
+      reviewed: appointment.reviewed ?? '',
+      challenges: appointment.challenges ?? '',
+      recommendation: appointment.recommendation ?? '',
+    });
+    setSavedReport(false);
+  };
+
+  const handleCreateAppointment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAppointmentData.date.trim()) {
+      alert('لطفاً تاریخ و ساعت نوبت را وارد فرمایید.');
+      return;
+    }
+
+    const newApp: Appointment = {
+      id: `app-custom-${Date.now()}`,
+      date: newAppointmentData.date.trim(),
+      topic: newAppointmentData.topic,
+      counselor: newAppointmentData.counselor.trim() || 'مشاور مرکز بالحق',
+      status: 'new',
+    };
+
+    setAppointments((prev) => [newApp, ...prev]);
+    setIsNewAppointmentModalOpen(false);
+    setNewAppointmentData({ date: '', topic: 'خانواده و ازدواج', counselor: '' });
+  };
+
+  const submitReport = () => {
+    if (!editing || !reportForm.reviewed.trim() || !reportForm.challenges.trim() || !reportForm.recommendation.trim()) return;
+
+    setAppointments((current) =>
+      current.map((item) =>
+        item.id === editing.id
+          ? {
+              ...item,
+              ...reportForm,
+              status: 'done',
+            }
+          : item
+      )
     );
-  }, [currentCaseSubmissions]);
 
-  // تاریخ اولین و آخرین نوبت
-  const firstBookingDate = useMemo(() => {
-    if (bookingSubmissions.length > 0) {
-      const sorted = [...bookingSubmissions].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      return formatPersianDateOnly(sorted[0].createdAt);
+    // ثبت لاگ پیگیری ذیل همین گزارش جلسه به صورت خودکار
+    const targetSubId = clientCase.submissions[0]?.id;
+    if (targetSubId) {
+      addSubmissionComment(
+        targetSubId,
+        editing.counselor || 'مشاور مرکز بالحق',
+        'مشاور ارشد پرونده',
+        `🤝 ثبت گزارش جلسه مشاوره (${editing.topic} - ${editing.date.split('،')[0]}): ${reportForm.recommendation.trim()}`
+      );
     }
-    return formatPersianDateOnly(clientCase.submissions[0]?.createdAt || clientCase.latestDate);
-  }, [bookingSubmissions, clientCase]);
 
-  const latestBookingDate = useMemo(() => {
-    if (bookingSubmissions.length > 0) {
-      const sorted = [...bookingSubmissions].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return formatPersianDateOnly(sorted[sorted.length - 1].createdAt);
+    setSavedReport(true);
+    window.setTimeout(() => {
+      setEditing(null);
+    }, 900);
+  };
+
+  const handleExportClientExcel = async () => {
+    try {
+      setIsExportingExcel(true);
+      const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
+      await exportSingleClientDossierToXLSX(clientCase, forms);
+    } catch (err) {
+      console.error('Error exporting client dossier Excel:', err);
+      alert('خطا در صدور فایل اکسل پرونده.');
+    } finally {
+      setIsExportingExcel(false);
     }
-    return formatPersianDateOnly(clientCase.latestDate);
-  }, [bookingSubmissions, clientCase]);
+  };
 
-  // موضوعات اصلی مراجعه
-  const mainTopicsList = useMemo(() => {
-    const set = new Set<string>();
-    currentCaseSubmissions.forEach((s) => {
-      const t = s.data?.f_topic || s.data?.f_counseling_subject;
-      if (t) set.add(t);
-    });
-    return Array.from(set);
-  }, [currentCaseSubmissions]);
-
-  // اساتید مشاور طرف مراجعه
-  const counselorsList = useMemo(() => {
-    const set = new Set<string>();
-    currentCaseSubmissions.forEach((s) => {
-      if (s.data?.f_counselor) set.add(s.data.f_counselor);
-      for (const k of Object.keys(s.data || {})) {
-        if (k.startsWith('f_counselor_') && s.data[k]) {
-          set.add(s.data[k]);
+  // بستن با کلید Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (editing) {
+          setEditing(null);
+        } else if (isNewAppointmentModalOpen) {
+          setIsNewAppointmentModalOpen(false);
+        } else {
+          onClose();
         }
       }
-    });
-    return Array.from(set);
-  }, [currentCaseSubmissions]);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, editing, isNewAppointmentModalOpen]);
 
-  // تجمیع نظرات، لاگ‌ها، پیگیری‌ها و ارجاعات مراجع
+  // وضعیت‌های پرونده
+  const statusConfigs: Record<
+    SubmissionStatus,
+    { label: string; color: string; bg: string; border: string; ring: string }
+  > = {
+    new: { label: 'جدید', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', ring: 'ring-blue-200' },
+    reviewing: { label: 'در حال بررسی', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', ring: 'ring-amber-200' },
+    approved: { label: 'تأیید شده', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
+    rejected: { label: 'نیازمند اقدام', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-200' },
+    archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200', ring: 'ring-slate-200' },
+  };
+
+  // دریافت فرم و ارسالی انتخاب شده جهت نمایش گزارش نموداری
+  const selectedSubmission = useMemo(() => {
+    if (!selectedSubmissionId) return clientCase.submissions[0] || null;
+    return clientCase.submissions.find((s) => s.id === selectedSubmissionId) || clientCase.submissions[0] || null;
+  }, [clientCase.submissions, selectedSubmissionId]);
+
+  const selectedFormObj = useMemo(() => {
+    if (!selectedSubmission) return null;
+    const found = forms.find((f) => f.id === selectedSubmission.formId);
+    if (found) return found;
+    return {
+      id: selectedSubmission.formId,
+      title: 'فرم تکمیل‌شده مراجع',
+      fields: Object.keys(selectedSubmission.data || {}).map((k) => ({
+        id: k,
+        label: k,
+        type: 'text',
+      })),
+    } as any;
+  }, [selectedSubmission, forms]);
+
+  // آزمون واقعی خودسنجی صفاً متصل به پرونده
+  const safaEvaluationSubmission = useMemo(() => {
+    return clientCase.submissions.find((s) => s.evaluationResult || s.formId === 'form-safaan-assessment');
+  }, [clientCase.submissions]);
+
+  // تحلیل هوشمند داده‌های واقعی پزشکی و سلامت
+  const smartAnalysis = useMemo(() => {
+    const hasPhysicalIllness =
+      combinedData.f_physical_illness &&
+      !['خیر', 'ندارم', 'ندارد', 'هیچ'].includes(combinedData.f_physical_illness.trim());
+    const hasMentalIllness =
+      combinedData.f_mental_illness &&
+      !['خیر', 'ندارم', 'ندارد', 'هیچ'].includes(combinedData.f_mental_illness.trim());
+    const hasMedication =
+      combinedData.f_medications &&
+      !['ندارد', 'خیر', 'هیچ'].includes(combinedData.f_medications.trim());
+
+    return {
+      hasPhysicalIllness,
+      hasMentalIllness,
+      hasMedication,
+    };
+  }, [combinedData]);
+
+  // محاسبه پویای سابقه پرونده (فاصله زمانی بین اولین ثبت‌نام و امروز)
+  const dossierAgeText = useMemo(() => {
+    const firstDateStr =
+      clientCase.submissions[clientCase.submissions.length - 1]?.createdAt || clientCase.latestDate;
+    if (!firstDateStr) return 'جدید';
+    const firstDate = new Date(firstDateStr).getTime();
+    const now = Date.now();
+    const diffDays = Math.max(0, Math.floor((now - firstDate) / (1000 * 60 * 60 * 24)));
+    if (diffDays === 0) return 'امروز';
+    if (diffDays < 30) return `${toPersianDigits(diffDays)} روز`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths < 12) return `${toPersianDigits(diffMonths)} ماه`;
+    const diffYears = Math.floor(diffMonths / 12);
+    return `${toPersianDigits(diffYears)} سال`;
+  }, [clientCase.submissions, clientCase.latestDate]);
+
+  // تجمیع نظرات و پیگیری‌های واقعی ثبت شده در پرونده
   const allFollowupComments = useMemo(() => {
     const list: Array<{
       id: string;
@@ -255,15 +626,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       authorRole: string;
       content: string;
       createdAt: string;
-      isReferral?: boolean;
     }> = [];
 
-    currentCaseSubmissions.forEach((sub) => {
+    clientCase.submissions.forEach((sub) => {
       const formObj = forms.find((f) => f.id === sub.formId);
       const fTitle = formObj ? formObj.title : 'فرم ثبت‌شده';
 
       (sub.comments || []).forEach((c) => {
-        const isRef = c.content.includes('ارجاع تخصصی') || c.content.includes('🔄 ارجاع');
         list.push({
           id: c.id,
           submissionId: sub.id,
@@ -272,1265 +641,1989 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           authorRole: c.authorRole,
           content: c.content,
           createdAt: c.createdAt,
-          isReferral: isRef,
         });
       });
     });
 
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [currentCaseSubmissions, forms]);
+  }, [clientCase.submissions, forms]);
 
-  // لیست ارجاعات تخصصی
-  const referralsList = useMemo(() => {
-    return allFollowupComments.filter((c) => c.isReferral);
-  }, [allFollowupComments]);
+  // نرخ واقعی تکمیل اطلاعات پرونده (محاسبه از کل فیلدهای ارسالی)
+  const profileCompletionRate = useMemo(() => {
+    let totalFields = 0;
+    let filledFields = 0;
 
-  // آخرین توصیه مشاور
-  const latestCounselorRecommendation = useMemo(() => {
-    if (allFollowupComments.length > 0) {
-      return allFollowupComments[0].content;
-    }
-    return 'هنوز توصیه‌ای ثبت نشده است (در انتظار جلسه مشاوره اولیه)';
-  }, [allFollowupComments]);
-
-  // سابمیشن آزمون خودسنجی صفان در صورت وجود
-  const safaEvaluationSubmission = useMemo(() => {
-    return currentCaseSubmissions.find((s) => s.evaluationResult || s.formId === 'form-safaan-assessment');
-  }, [currentCaseSubmissions]);
-
-  // وضعیت سلامت جسمی و روانی
-  const healthStatus = useMemo(() => {
-    const phys = combinedData.f_physical_illness || 'ندارم';
-    const ment = combinedData.f_mental_illness || 'ندارم';
-    const meds = combinedData.f_medications || 'ندارم';
-
-    const hasPhys = phys && !['خیر', 'ندارم', 'ندارد', 'هیچ'].includes(phys.trim());
-    const hasMent = ment && !['خیر', 'ندارم', 'ندارد', 'هیچ'].includes(ment.trim());
-    const hasMeds = meds && !['خیر', 'ندارم', 'ندارد', 'هیچ'].includes(meds.trim());
-
-    return { phys, ment, meds, hasPhys, hasMent, hasMeds };
-  }, [combinedData]);
-
-  // داده‌های آماری جهت نمودار میله‌ای عمودی مراجع
-  const clientDimensionsBarData: BarChartItem[] = useMemo(() => {
-    const overallScore = safaEvaluationSubmission?.evaluationResult?.overallScore || 78;
-    const healthScore = (healthStatus.hasMent || healthStatus.hasMeds) ? 65 : 92;
-    const commitmentScore = bookingSubmissions.length > 0 ? 95 : 80;
-    const familyScore = combinedData.f_role_in_family ? 90 : 75;
-    const growthGap = 100 - overallScore;
-
-    return [
-      { id: 'dim-growth', label: 'شاخص رشد فردی', value: overallScore, percentage: overallScore, color: 'bg-sky-600', secondaryLabel: 'نمره ارزیابی' },
-      { id: 'dim-health', label: 'سلامت و تاب‌آوری', value: healthScore, percentage: healthScore, color: healthScore < 70 ? 'bg-amber-500' : 'bg-emerald-600', secondaryLabel: 'پایش بالینی' },
-      { id: 'dim-commit', label: 'تعهد حضور و پیگیری', value: commitmentScore, percentage: commitmentScore, color: 'bg-indigo-600', secondaryLabel: 'نظم مراجع' },
-      { id: 'dim-family', label: 'همبستگی خانوادگی', value: familyScore, percentage: familyScore, color: 'bg-teal-600', secondaryLabel: 'پایداری ساختار' },
-      { id: 'dim-gap', label: 'پتانسیل ارتقاء (Gap)', value: growthGap, percentage: growthGap, color: 'bg-rose-500', secondaryLabel: 'فاصله رشد' },
-    ];
-  }, [safaEvaluationSubmission, healthStatus, bookingSubmissions, combinedData]);
-
-  // توزیع مراجعات بین مشاوران به صورت نمودار میله‌ای عمودی
-  const counselorsBarData: BarChartItem[] = useMemo(() => {
-    const counselorCount: Record<string, number> = {};
-    bookingSubmissions.forEach((sub) => {
-      let cName = sub.data?.f_counselor;
-      if (!cName) {
-        for (const k of Object.keys(sub.data || {})) {
-          if (k.startsWith('f_counselor_') && sub.data[k]) {
-            cName = sub.data[k];
-            break;
-          }
-        }
-      }
-      if (cName) {
-        const clean = cName.replace(/^(آقای|خانم|دکتر)\s+/, '').replace(/\s*\(.*?\)/, '').trim();
-        counselorCount[clean] = (counselorCount[clean] || 0) + 1;
+    clientCase.submissions.forEach((sub) => {
+      const formObj = forms.find((f) => f.id === sub.formId);
+      if (formObj?.fields) {
+        formObj.fields
+          .filter((f) => !['sectionDivider', 'alertBox'].includes(f.type))
+          .forEach((field) => {
+            totalFields++;
+            const val = sub.data?.[field.id];
+            if (val !== undefined && val !== null && val !== '') {
+              filledFields++;
+            }
+          });
       }
     });
 
-    const total = Object.values(counselorCount).reduce((a, b) => a + b, 0) || 1;
-    const colors = ['bg-sky-600', 'bg-emerald-600', 'bg-violet-600', 'bg-amber-500'];
-
-    return Object.entries(counselorCount).map(([cName, count], idx) => ({
-      id: `c-bar-${idx}`,
-      label: `استاد ${cName}`,
-      value: count,
-      percentage: Math.round((count / total) * 100),
-      color: colors[idx % colors.length],
-      secondaryLabel: `${toPersianDigits(count)} جلسه`,
-    }));
-  }, [bookingSubmissions]);
+    if (totalFields === 0) return 90;
+    return Math.round((filledFields / totalFields) * 100);
+  }, [clientCase.submissions, forms]);
 
   // ثبت پیگیری جدید برای مراجع
   const handleAddFollowup = () => {
     if (!newFollowupText.trim()) return;
     setIsSubmittingFollowup(true);
 
-    let contentWithPrefix = '';
-    if (newFollowupType === 'referral') {
-      contentWithPrefix = `🔄 ارجاع تخصصی: [مقصد: ${referralTarget || 'مشاور همکار / روانپزشک'}] - ${newFollowupText.trim()}`;
-    } else {
-      const typePrefix = {
-        call: '📞 تماس تلفنی: ',
-        meeting: '🤝 جلسه مشاوره / حضوری: ',
-        sms: '💬 پیامک ارسالی: ',
-        note: '📝 یادداشت بالینی و توصیه مدیر: ',
-        referral: '🔄 ارجاع تخصصی: ',
-      }[newFollowupType];
-      contentWithPrefix = `${typePrefix}${newFollowupText.trim()}`;
-    }
+    const typePrefix = {
+      call: '📞 تماس تلفنی: ',
+      meeting: '🤝 جلسه حضوری/مشاوره: ',
+      sms: '💬 پیامک ارسالی: ',
+      note: '📝 یادداشت محرمانه مدیر: ',
+      referral: '🔄 ارجاع تخصصی: ',
+    }[newFollowupType];
 
-    const targetSubId = currentCaseSubmissions[0]?.id;
+    const contentWithPrefix = `${typePrefix}${newFollowupText.trim()}`;
+    const targetSubId = clientCase.submissions[0]?.id;
+
     if (targetSubId) {
       addSubmissionComment(targetSubId, adminName, adminRole, contentWithPrefix);
     }
 
     setNewFollowupText('');
-    setReferralTarget('');
     setIsSubmittingFollowup(false);
   };
 
   // تغییر وضعیت پرونده
   const handleUpdateStatus = (newSt: SubmissionStatus) => {
     setCurrentStatus(newSt);
-    currentCaseSubmissions.forEach((sub) => {
+    clientCase.submissions.forEach((sub) => {
       updateSubmissionStatus(sub.id, newSt);
     });
-    if (onStatusChange) onStatusChange(newSt);
-  };
-
-  // خروجی فایل اکسل
-  const handleExportClientExcel = async () => {
-    try {
-      setIsExportingExcel(true);
-      await exportSingleClientDossierToXLSX(clientCase, forms);
-    } catch (err) {
-      console.error('Error exporting Excel:', err);
-      alert('خطا در صدور فایل اکسل پرونده.');
-    } finally {
-      setIsExportingExcel(false);
+    if (onStatusChange) {
+      onStatusChange(newSt);
     }
   };
 
-  // انتخاب فرم و سابمیشن فعال برای نمای گزارش تحلیلی فرم
-  const selectedSubmission = useMemo(() => {
-    if (!selectedSubmissionId) return currentCaseSubmissions[0] || null;
-    return currentCaseSubmissions.find((s) => s.id === selectedSubmissionId) || currentCaseSubmissions[0] || null;
-  }, [currentCaseSubmissions, selectedSubmissionId]);
+  // محاسبه آمار و تحلیل نموداری فرم انتخاب شده
+  const formAnalytics = useMemo(() => {
+    if (!selectedSubmission || !selectedFormObj) return null;
 
-  const selectedFormObj = useMemo(() => {
-    if (!selectedSubmission) return null;
-    return forms.find((f) => f.id === selectedSubmission.formId) || null;
-  }, [selectedSubmission, forms]);
+    const fields = selectedFormObj.fields || [];
+    const dataKeys = Object.keys(selectedSubmission.data || {});
+    const totalFields = fields.filter((f: any) => !['sectionDivider', 'alertBox'].includes(f.type)).length || Math.max(dataKeys.length, 1);
 
-  const statusConfigs: Record<SubmissionStatus, { label: string; color: string; bg: string; border: string }> = {
-    new: { label: 'جدید / نیاز به بررسی', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
-    reviewing: { label: 'در حال بررسی و مشاوره', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
-    approved: { label: 'تأیید شده / فعال', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-    rejected: { label: 'رد شده / عدم پذیرش', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
-    archived: { label: 'بایگانی پرونده', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
-  };
+    let filledCount = 0;
+    if (fields.length > 0) {
+      fields.forEach((f: any) => {
+        const val = selectedSubmission.data?.[f.id];
+        if (val !== undefined && val !== null && val !== '') {
+          filledCount++;
+        }
+      });
+    } else {
+      filledCount = dataKeys.filter(
+        (k) =>
+          selectedSubmission.data?.[k] !== undefined &&
+          selectedSubmission.data?.[k] !== null &&
+          selectedSubmission.data?.[k] !== ''
+      ).length;
+    }
+
+    const completionRate = Math.min(100, Math.max(0, Math.round((filledCount / totalFields) * 100)));
+    const choiceFieldsCount = fields.filter((f: any) => ['select', 'radio', 'checkbox'].includes(f.type)).length;
+    const textFieldsCount = fields.filter((f: any) => ['text', 'textarea', 'persianOnlyText'].includes(f.type)).length || filledCount;
+
+    const identityScore = selectedSubmission.data?.f_mobile || selectedSubmission.data?.mobile ? 100 : 70;
+    const familyScore = selectedSubmission.data?.f_role_in_family ? 95 : 80;
+    const healthScore = smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness ? 65 : 95;
+    const commitmentScore = selectedSubmission.paymentStatus === 'paid' ? 100 : 85;
+
+    return {
+      totalFields,
+      filledCount,
+      completionRate,
+      choiceFieldsCount,
+      textFieldsCount,
+      dimensions: [
+        { name: 'صحت اطلاعات هویتی و تماس', score: identityScore, color: 'bg-sky-500' },
+        { name: 'شفافیت ساختار خانوادگی و معارفی', score: familyScore, color: 'bg-indigo-500' },
+        {
+          name: 'وضعیت سلامت و تاب‌آوری مراجع',
+          score: healthScore,
+          color: healthScore < 70 ? 'bg-amber-500' : 'bg-emerald-500',
+        },
+        { name: 'تعهد زمانی و پیگیری نوبت‌ها', score: commitmentScore, color: 'bg-teal-500' },
+      ],
+    };
+  }, [selectedSubmission, selectedFormObj, smartAnalysis]);
+
+  const newAppointmentsCount = useMemo(() => {
+    return appointments.filter((a) => a.status === 'new').length;
+  }, [appointments]);
 
   return (
-    <div
-      className={`absolute inset-0 z-30 flex justify-start overflow-hidden ${
-        panelMode === 'drawer' ? 'bg-slate-900/30 backdrop-blur-2xs' : 'bg-slate-100'
-      }`}
-    >
-      {/* در حالت کشویی کلیک روی پس‌زمینه پنل را می‌بندد */}
-      {panelMode === 'drawer' && (
-        <div
-          onClick={onClose}
-          className="absolute inset-0 cursor-pointer -z-10 no-print"
-          title="بستن پنجره"
-        />
-      )}
-
-      {/* پنل اصلی پرونده مراجع */}
-      <div
-        className={`h-full bg-slate-100 flex flex-col overflow-hidden text-right transition-all duration-300 ${
-          panelMode === 'drawer'
-            ? 'w-full lg:w-[70%] xl:w-[65%] shadow-2xl border-r border-slate-300'
-            : 'w-full shadow-none'
-        }`}
-      >
-        
-        {/* ۱. نوار ناوبری ارشد بالای صفحه (Header) */}
-        <div className="bg-white border-b border-slate-200/90 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4 shrink-0 shadow-2xs no-print">
-          
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={onClose}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-              title="بازگشت به جدول کارتابل"
-            >
-              <ArrowRight className="w-4 h-4 text-slate-500" />
-              <span>بازگشت به کارتابل</span>
-            </button>
-
-            <span className="text-slate-300">/</span>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-medium">پرونده بالحق:</span>
-              <span className="text-xs sm:text-sm font-black text-slate-900">{displayFullName}</span>
-              <span className="font-mono text-xs px-2.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 font-black">
-                {clientCase.caseCode}
-              </span>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f5f7fa] text-slate-800" dir="rtl">
+      {/* سربرگ ناوبری سراسری برند بالحق */}
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur shadow-2xs">
+        <div className="mx-auto flex max-w-[1480px] items-center justify-between gap-6 px-4 sm:px-6 py-3.5">
+          <div className="flex items-center gap-3.5">
+            <div className="grid size-11 place-items-center rounded-2xl bg-[#173f6b] text-base font-black text-white shadow-sm">
+              بـ
             </div>
-
-            {currentView === 'formReport' && selectedFormObj && (
-              <>
-                <span className="text-slate-300">/</span>
-                <div className="flex items-center gap-1.5 bg-indigo-50 text-indigo-800 px-3 py-1 rounded-xl text-xs font-bold border border-indigo-200">
-                  <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>گزارش تحلیلی: {selectedFormObj.title}</span>
-                </div>
-              </>
-            )}
+            <div>
+              <div className="text-sm font-black text-[#173f6b]">مرکز خدمات روانشناسی بالحق</div>
+              <div className="mt-0.5 text-[11px] text-slate-400">سامانه یکپارچه مدیریت مراجعان</div>
+            </div>
           </div>
 
-          {/* ابزارها و دکمه‌های اقدام */}
-          <div className="flex items-center gap-2">
-            
-            {/* انتخاب وضعیت پرونده */}
-            <select
-              value={currentStatus}
-              onChange={(e) => handleUpdateStatus(e.target.value as SubmissionStatus)}
-              className={`text-xs font-bold px-3 py-1.5 rounded-xl border cursor-pointer focus:ring-2 focus:ring-sky-500/20 ${statusConfigs[currentStatus].bg} ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border}`}
-            >
-              <option value="new">جدید / نیاز به بررسی</option>
-              <option value="reviewing">در حال بررسی و مشاوره</option>
-              <option value="approved">تأیید شده / فعال</option>
-              <option value="rejected">رد شده / عدم پذیرش</option>
-              <option value="archived">بایگانی پرونده</option>
-            </select>
+          <div className="hidden w-full max-w-md items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 lg:flex">
+            <Search className="size-4 text-slate-400" />
+            <input
+              type="text"
+              readOnly
+              value={`پرونده فعال: ${clientCase.caseCode} - ${displayFullName}`}
+              className="w-full bg-transparent text-xs text-slate-600 focus:outline-none cursor-default"
+            />
+          </div>
 
-            {/* سوییچ نمایش کشویی / تمام‌صفحه */}
+          <div className="flex items-center gap-3">
+            <div className="text-left hidden sm:block">
+              <div className="text-xs font-bold text-slate-900">{adminName}</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">{adminRole}</div>
+            </div>
+            <div className="grid size-10 place-items-center rounded-full bg-sky-100 text-sm font-black text-sky-700">
+              {adminInitials}
+            </div>
             <button
-              onClick={() => setPanelMode((p) => (p === 'full' ? 'drawer' : 'full'))}
-              className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer hidden lg:inline-flex"
-              title={panelMode === 'full' ? 'تغییر به نمای کشویی' : 'تغییر به نمای تمام‌عرض'}
+              onClick={onClose}
+              className="mr-1 grid size-9 place-items-center rounded-xl bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+              title="بستن پرونده و بازگشت به کارتابل"
             >
-              {panelMode === 'full' ? <Columns className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              <X className="size-5" />
             </button>
+          </div>
+        </div>
+      </header>
 
-            {/* خروجی اکسل */}
+      {/* محدوده اصلی محتوای پرونده جامع */}
+      <div className="mx-auto max-w-[1480px] px-4 sm:px-6 py-6 space-y-5">
+        {/* نوار مسیر ناوبری، عنوان پرونده و دکمه‌های اقدام */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-xs text-slate-400">
+              <button
+                onClick={onClose}
+                className="hover:text-slate-600 transition cursor-pointer"
+              >
+                کارتابل مراجعان
+              </button>
+              <ChevronRight className="size-3 text-slate-300" />
+              <button
+                onClick={() => {
+                  setCurrentView('dossier');
+                  setActiveTab('forms');
+                }}
+                className="text-slate-600 font-bold hover:text-[#173f6b] transition cursor-pointer"
+              >
+                پرونده {toPersianDigits(clientCase.caseCode)}
+              </button>
+              {currentView === 'formReport' && selectedFormObj && (
+                <>
+                  <ChevronRight className="size-3 text-slate-300" />
+                  <span className="text-[#173f6b] font-bold">گزارش {selectedFormObj.title}</span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-black text-slate-900">پرونده مراجع</h1>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={currentStatus}
+                  onChange={(e) => handleUpdateStatus(e.target.value as SubmissionStatus)}
+                  className={`rounded-full px-3 py-1 text-[11px] font-bold border transition cursor-pointer appearance-none pl-6 pr-3 ${
+                    statusConfigs[currentStatus].bg
+                  } ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border} ring-1 ${
+                    statusConfigs[currentStatus].ring
+                  }`}
+                >
+                  <option value="new">جدید</option>
+                  <option value="reviewing">در حال بررسی</option>
+                  <option value="approved">تأیید شده</option>
+                  <option value="rejected">نیازمند اقدام</option>
+                  <option value="archived">بایگانی</option>
+                </select>
+                <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">
+                  <ChevronRight className="size-3 rotate-90" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition cursor-pointer"
+            >
+              <Printer className="size-4" />
+              چاپ پرونده
+            </button>
             <button
               onClick={handleExportClientExcel}
               disabled={isExportingExcel}
-              className="p-2 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer"
-              title="خروجی کامل اکسل پرونده"
+              className="flex items-center gap-2 rounded-xl bg-[#173f6b] hover:bg-[#123357] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            </button>
-
-            {/* چاپ رسمی پرونده */}
-            <button
-              onClick={() => window.print()}
-              className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-              title="چاپ رسمی و کامل پرونده (شامل کلیه بخش‌ها به تفکیک)"
-            >
-              <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">چاپ پرونده</span>
-            </button>
-
-            {/* بستن */}
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-              title="بستن پنجره"
-            >
-              <X className="w-5 h-5" />
+              <FileSpreadsheet className="size-4" />
+              خروجی اکسل
             </button>
           </div>
-
         </div>
 
-        {/* ۲. محتوای پرونده */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
-          
-          {/* سربرگ خلاصه پرونده مراجع (تیره و مدرن) */}
-          <div className="bg-gradient-to-r from-slate-900 via-sky-950 to-blue-950 text-white px-4 sm:px-8 py-3 shrink-0 border-b border-white/10 no-print">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-black text-sm flex items-center justify-center border border-white/20 shadow-xs shrink-0">
-                  {displayFullName.slice(0, 1)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-base font-black tracking-tight text-white">{displayFullName}</h2>
-                    <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-white/10 text-sky-200 border border-white/15">
-                      {clientCase.caseCode}
-                    </span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${statusConfigs[currentStatus].bg} ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border}`}>
-                      {statusConfigs[currentStatus].label}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-white/70 flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Phone className="w-3 h-3 text-sky-400" />
-                      <span className="font-mono font-bold text-white/90">{clientCase.mobile || 'ثبت‌نشده'}</span>
-                    </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-sky-400" />
-                      <span>{clientCase.provinceCity || 'استان نامشخص'}</span>
-                    </span>
-                    <span>•</span>
-                    <span>سن: {clientAge}</span>
-                    <span>•</span>
-                    <span>نقش: {combinedData.f_role_in_family || 'مراجع'}</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* خلاصه نوبت و تراکنش */}
-              <div className="flex items-center gap-3 text-left">
-                <div className="bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 text-right">
-                  <span className="text-[10px] text-white/60 block">تعداد نوبت‌های دریافتی</span>
-                  <span className="text-sm font-black text-emerald-300 font-mono">
-                    {toPersianDigits(bookingSubmissions.length)} نوبت
+        {/* نوار زبانه‌های ناوبری ۵ گانه */}
+        <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xs">
+          {[
+            ['overview', 'تحلیل در یک نگاه'],
+            ['profile', 'مشخصات ثبت‌نام'],
+            ['forms', 'فرم‌ها و آزمون‌ها'],
+            ['followups', 'پیگیری‌ها'],
+            ['finances', 'مالی و نوبت‌ها'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => {
+                setCurrentView('dossier');
+                setActiveTab(key as any);
+              }}
+              className={`shrink-0 rounded-xl px-5 py-3 text-xs font-bold transition cursor-pointer ${
+                (currentView === 'dossier' && activeTab === key) ||
+                (currentView === 'formReport' && key === 'forms')
+                  ? 'bg-[#173f6b] text-white shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        {/* ۱. تب تحلیل در یک نگاه (Overview Tab) */}
+        {currentView === 'dossier' && activeTab === 'overview' && (
+          <div className="space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black text-slate-900">تحلیل هوشمند وضعیت مراجع</h2>
+                <p className="mt-1 text-xs text-slate-400">مهم‌ترین اطلاعات برای تصمیم‌گیری سریع پیش از جلسه</p>
+              </div>
+              <span className="hidden items-center gap-2 text-[11px] text-emerald-600 md:flex font-bold">
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                به‌روزرسانی خودکار
+              </span>
+            </div>
+
+            {/* گرید سه‌گانه بالای صفحه: توصیه‌ها، نوبت‌ها، مدرسه معارفی */}
+            <div className="grid gap-4 xl:grid-cols-3">
+              {/* کارت ۱: آخرین توصیه‌های مشاور */}
+              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="mb-5 flex items-center gap-3">
+                    <div className="grid size-10 place-items-center rounded-xl bg-violet-50 text-violet-600">
+                      <FileText className="size-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">آخرین توصیه‌های مشاور</h3>
+                      <p className="mt-1 text-[11px] text-slate-400">بازتاب خودکار از آخرین گزارش جلسه</p>
+                    </div>
+                  </div>
+
+                  {latestRecommendation ? (
+                    <div className="rounded-2xl bg-violet-50/70 p-4 text-sm leading-7 text-slate-700 min-h-[96px]">
+                      {latestRecommendation.recommendation}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-4 text-xs leading-6 text-slate-500 min-h-[96px] flex flex-col justify-center items-center text-center">
+                      <FileText className="size-6 text-slate-300 mb-1" />
+                      <span className="font-bold text-slate-600">هنوز توصیه‌ای از سوی مشاور ثبت نشده است.</span>
+                      <span className="text-[11px] text-slate-400 mt-0.5">
+                        با ثبت اولین گزارش جلسه بالینی، نسخه و توصیه‌های تجویزی مشاور در این کارت منعکس خواهد شد.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-[11px]">
+                  <span className="font-bold text-slate-600">
+                    {latestRecommendation?.counselor ? latestRecommendation.counselor : 'مشاور تعیین‌نشده'}
+                  </span>
+                  <span className="text-slate-400 font-mono">
+                    {latestRecommendation?.date ? latestRecommendation.date.split('،')[0] : 'فاقد سابقه گزارش'}
                   </span>
                 </div>
-                <div className="bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 text-right">
-                  <span className="text-[10px] text-white/60 block">کل فرم‌های تکمیل‌شده</span>
-                  <span className="text-sm font-black text-sky-300 font-mono">
-                    {toPersianDigits(currentCaseSubmissions.length)} فرم
+              </article>
+
+              {/* کارت ۲: نوبت‌ها و جلسات مشاوره */}
+              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="grid size-10 place-items-center rounded-xl bg-blue-50 text-[#173f6b]">
+                        <Calendar className="size-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900">نوبت‌ها و جلسات مشاوره</h3>
+                        <p className="mt-1 text-[11px] text-slate-400">مرتب‌شده از جدیدترین نوبت</p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#173f6b] font-mono">
+                      {toPersianDigits(appointments.length)} نوبت
+                    </span>
+                  </div>
+
+                  {appointments.length > 0 ? (
+                    <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-0.5">
+                      {appointments.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => openReportModal(item)}
+                          className={`w-full rounded-2xl border p-3.5 text-right transition hover:-translate-y-0.5 cursor-pointer ${
+                            item.status === 'new'
+                              ? 'border-blue-200 bg-blue-50/70'
+                              : 'border-slate-200 bg-slate-50 text-slate-500'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div
+                                className={`text-xs font-black ${
+                                  item.status === 'new' ? 'text-blue-800' : 'text-slate-600'
+                                }`}
+                              >
+                                {toPersianDigits(item.date)}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-3 text-[11px]">
+                                <span>{item.topic}</span>
+                                <span>•</span>
+                                <span>{item.counselor}</span>
+                              </div>
+                            </div>
+                            <span
+                              className={`mt-1 size-2.5 shrink-0 rounded-full ${
+                                item.status === 'new' ? 'bg-blue-500 ring-4 ring-blue-100' : 'bg-slate-300'
+                              }`}
+                            />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+                      <Calendar className="size-7 mx-auto text-slate-300" />
+                      <p className="text-xs font-bold text-slate-600">هنوز نوبت مشاوره‌ای برای این مراجع ثبت نشده است.</p>
+                      <button
+                        onClick={() => setIsNewAppointmentModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#173f6b] text-white rounded-xl text-xs font-bold hover:bg-[#123357] transition cursor-pointer"
+                      >
+                        <Plus className="size-3.5" />
+                        <span>ثبت نوبت مشاوره جدید</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 mt-3 text-[11px] text-slate-400 flex items-center justify-between">
+                  {appointments.length > 0 ? (
+                    <>
+                      <span>روی هر نوبت جهت ثبت گزارش کلیک کنید</span>
+                      <button
+                        onClick={() => setIsNewAppointmentModalOpen(true)}
+                        className="text-[#173f6b] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="size-3" />
+                        <span>افزودن نوبت</span>
+                      </button>
+                    </>
+                  ) : (
+                    <span>سامانه نوبت‌دهی مشاوره بالحق</span>
+                  )}
+                </div>
+              </article>
+
+              {/* کارت ۳: نام مدرسه معارفی */}
+              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="mb-5 flex items-center gap-3">
+                    <div className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
+                      <GraduationCap className="size-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">نام مدرسه معارفی</h3>
+                      <p className="mt-1 text-[11px] text-slate-400">اطلاعات ارتباطی مدرسه مراجع</p>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-emerald-50/60 p-4">
+                    <div className="text-sm font-black text-emerald-900">
+                      {combinedData.f_school_name || 'مدرسه معارفی ثبت نشده است'}
+                    </div>
+                    <div className="mt-1 text-[11px] text-emerald-700">
+                      {combinedData.f_school_grade
+                        ? combinedData.f_school_grade
+                        : combinedData.f_school_name
+                        ? `شهر/استان مراجع: ${clientCase.provinceCity && clientCase.provinceCity !== 'ثبت‌نشده' ? clientCase.provinceCity : (combinedData.f_province_city || combinedData.province || 'ثبت‌نشده')}`
+                        : 'اطلاعاتی در فرم ثبت‌نام ثبت نشده است'}
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl border border-slate-100 p-3">
+                      <div className="text-[10px] text-slate-400">ناظم مدرسه</div>
+                      <div className="mt-1.5 text-xs font-bold text-slate-800">
+                        {combinedData.f_school_supervisor || 'ثبت‌نشده توسط مراجع'}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 p-3">
+                      <div className="text-[10px] text-slate-400">مربی تربیتی</div>
+                      <div className="mt-1.5 text-xs font-bold text-slate-800">
+                        {combinedData.f_mentor_name || 'ثبت‌نشده توسط مراجع'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 mt-4 text-[11px] text-slate-400">
+                  {combinedData.f_school_name ? 'معرف و رابط معارفی مدرسه به مرکز' : 'فاقد اطلاعات مدرسه معارفی'}
+                </div>
+              </article>
+            </div>
+
+            {/* گرید میانی: نتایج واقعی آزمون‌ها و آمار پرونده */}
+            <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
+              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
+                      <BarChart3 className="size-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">خلاصه نتایج آزمون‌ها و شاخص‌های بالینی</h3>
+                      <p className="mt-1 text-[11px] text-slate-400">بررسی شاخص‌های واقعی ثبت‌شده در ارزیابی‌های مراجع</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('forms')}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                  >
+                    مشاهده فرم‌ها
+                  </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  {/* آزمون ۱: کارنامه خودسنجی صفاً */}
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+                    <div className="text-[11px] text-slate-500 font-medium">خودسنجی صفاً</div>
+                    <div className="mt-2 flex items-end justify-between">
+                      <span className="text-xl font-black text-emerald-700 font-mono">
+                        {safaEvaluationSubmission?.evaluationResult?.overallScore
+                          ? toPersianDigits(safaEvaluationSubmission.evaluationResult.overallScore)
+                          : 'انجام‌نشده'}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[9px] font-bold ${
+                          safaEvaluationSubmission?.evaluationResult
+                            ? safaEvaluationSubmission.evaluationResult.isCritical
+                              ? 'bg-rose-100 text-rose-700'
+                              : 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {safaEvaluationSubmission?.evaluationResult
+                          ? safaEvaluationSubmission.evaluationResult.alignmentAnalysis?.title ||
+                            (safaEvaluationSubmission.evaluationResult.isThriving
+                              ? 'عالی و پیشرو'
+                              : safaEvaluationSubmission.evaluationResult.isCritical
+                              ? 'نیازمند مداخله'
+                              : 'محدوده مطلوب')
+                          : 'فاقد کارنامه'}
+                      </span>
+                    </div>
+                    {(() => {
+                      const overallScore = safaEvaluationSubmission?.evaluationResult?.overallScore || 0;
+                      const safaColor = getSemanticColorByPercentage(overallScore);
+                      return (
+                        <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${safaColor.bgBar} transition-all duration-700 shadow-2xs`}
+                            style={{
+                              width: `${Math.min(100, Math.max(Number(overallScore) || 0, 0))}%`,
+                              backgroundColor: safaColor.hex,
+                            }}
+                          />
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* شاخص ۲: پایش سلامت پزشکی و دارویی */}
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+                    <div className="text-[11px] text-slate-500 font-medium">پایش سلامت و سوابق دارویی</div>
+                    <div className="mt-2 flex items-end justify-between">
+                      <span className="text-sm font-black text-blue-900">
+                        {smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
+                          ? 'دارای سابقه'
+                          : 'پایدار'}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[9px] font-bold ${
+                          smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
+                          ? 'نیازمند بررسی'
+                          : 'بدون بیماری حاد'}
+                      </span>
+                    </div>
+                    <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${
+                          smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500'
+                        }`}
+                        style={{
+                          width:
+                            smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
+                              ? '60%'
+                              : '100%',
+                          backgroundColor:
+                            smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
+                              ? '#f59e0b'
+                              : '#059669',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* شاخص ۳: نرخ تکمیل اطلاعات پرونده */}
+                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+                    <div className="text-[11px] text-slate-500 font-medium">تکمیل اطلاعات پرونده</div>
+                    <div className="mt-2 flex items-end justify-between">
+                      <span className="text-xl font-black text-indigo-700 font-mono">
+                        %{toPersianDigits(profileCompletionRate)}
+                      </span>
+                      {(() => {
+                        const profColor = getSemanticColorByPercentage(profileCompletionRate);
+                        return (
+                          <span className={`rounded-full px-2 py-1 text-[9px] font-bold border ${profColor.badgeBg} ${profColor.textColor} ${profColor.badgeBorder}`}>
+                            {profColor.shortLabel} ({profileCompletionRate >= 80 ? 'مناسب' : 'نقص اطلاعات'})
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    {(() => {
+                      const profColor = getSemanticColorByPercentage(profileCompletionRate);
+                      return (
+                        <div className="mt-3 h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${profColor.bgBar} transition-all duration-700 shadow-2xs`}
+                            style={{
+                              width: `${Math.min(100, Math.max(Number(profileCompletionRate) || 0, 0))}%`,
+                              backgroundColor: profColor.hex,
+                            }}
+                          />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="text-sm font-black text-slate-900">آمار پرونده</h3>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <Stat
+                    value={toPersianDigits(clientCase.totalFormsCount)}
+                    label="فرم ثبت‌شده"
+                    tone="blue"
+                  />
+                  <Stat
+                    value={toPersianDigits(appointments.length)}
+                    label="جلسه مشاوره"
+                    tone="green"
+                  />
+                  <Stat
+                    value={toPersianDigits(allFollowupComments.length)}
+                    label="پیگیری فعال"
+                    tone="amber"
+                  />
+                  <Stat value={dossierAgeText} label="سابقه پرونده" tone="blue" />
+                </div>
+              </article>
+            </div>
+
+            {/* گرید پایینی: دکمه‌های اقدام و هدایت سریع */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <button
+                onClick={() => setActiveTab('forms')}
+                className="group flex items-center justify-between rounded-3xl bg-[#173f6b] p-6 text-right text-white shadow-lg shadow-blue-950/10 transition hover:-translate-y-1 cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="grid size-12 place-items-center rounded-2xl bg-white/10">
+                    <FileText className="size-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-base font-black">مشاهده فرم‌ها و پرسشنامه‌ها</div>
+                    <div className="mt-1 text-xs text-blue-200 font-mono">
+                      {toPersianDigits(clientCase.totalFormsCount)} فرم تکمیل‌شده در پرونده
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="size-5 transition group-hover:-translate-x-1 rotate-180" />
+              </button>
+
+              <button
+                onClick={() => setActiveTab('finances')}
+                className="group flex items-center justify-between rounded-3xl border-2 border-blue-100 bg-blue-50 p-6 text-right text-[#173f6b] transition hover:-translate-y-1 cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="grid size-12 place-items-center rounded-2xl bg-white text-blue-600 shadow-sm">
+                    <Calendar className="size-6" />
+                  </div>
+                  <div>
+                    <div className="text-base font-black">مشاهده نوبت‌های اخذ شده</div>
+                    <div className="mt-1 text-xs text-blue-500 font-mono">
+                      {appointments.length === 0
+                        ? 'فاقد نوبت رزرو شده'
+                        : `${toPersianDigits(appointments.length)} نوبت ثبت‌شده (${toPersianDigits(newAppointmentsCount)} در انتظار)`}
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="size-5 transition group-hover:-translate-x-1 rotate-180" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ۲. تب مشخصات ثبت‌نام مراجع (Profile Tab) */}
+        {currentView === 'dossier' && activeTab === 'profile' && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* اطلاعات هویتی و سجلی */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-5 bg-slate-50 border-b border-slate-200/90 flex items-center gap-2">
+                <User className="w-4 h-4 text-[#173f6b]" />
+                <h3 className="text-sm font-extrabold text-slate-900">مشخصات هویتی و فردی مراجع</h3>
+              </div>
+
+              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">نام و نام خانوادگی:</span>
+                  <span className="font-bold text-slate-900 text-sm">{displayFullName}</span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">شماره تلفن همراه:</span>
+                  <span className="font-bold text-slate-900 text-sm font-mono">{toPersianDigits(clientCase.mobile)}</span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">تاریخ تولد:</span>
+                  <span className="font-bold text-slate-900 text-sm font-mono">
+                    {toPersianDigits(combinedData.f_birth_date || 'ثبت‌نشده')}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">نقش در خانواده:</span>
+                  <span className="font-bold text-slate-900 text-sm">{roleInFamily}</span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">تعداد اعضای خانواده:</span>
+                  <span className="font-bold text-slate-900 text-sm font-mono">
+                    {combinedData.f_family_members ? toPersianDigits(combinedData.f_family_members) : 'ثبت‌نشده'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">وضعیت تأهل:</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {combinedData.f_marital_status || 'ثبت‌نشده'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">استان و شهرستان:</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {clientCase.provinceCity && clientCase.provinceCity !== 'ثبت‌نشده'
+                      ? clientCase.provinceCity
+                      : combinedData.f_province_city || combinedData.province || 'ثبت‌نشده'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">عضویت در سایت عبادالله:</span>
+                  <span className="font-bold text-emerald-700 text-sm">
+                    {combinedData.f_ebadollah_member || 'ثبت‌نشده'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">کد یکتای پرونده:</span>
+                  <span className="font-bold text-[#173f6b] text-sm font-mono">{clientCase.caseCode}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* سوابق سلامت و پزشکی */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-5 bg-slate-50 border-b border-slate-200/90 flex items-center gap-2">
+                <HeartPulse className="w-4 h-4 text-rose-500" />
+                <h3 className="text-sm font-extrabold text-slate-900">سوابق سلامت و شرح‌حال پزشکی مراجع</h3>
+              </div>
+
+              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span className="text-slate-400 font-bold">سابقه بیماری جسمی:</span>
+                  <p className="font-bold text-slate-900 pt-1">
+                    {combinedData.f_physical_illness || 'ندارد / ثبت‌نشده'}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span className="text-slate-400 font-bold">سابقه بیماری روحی و روانشناختی:</span>
+                  <p className="font-bold text-slate-900 pt-1">
+                    {combinedData.f_mental_illness || 'ندارد / ثبت‌نشده'}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span className="text-slate-400 font-bold">داروهای مصرفی:</span>
+                  <p className="font-bold text-slate-900 pt-1">
+                    {combinedData.f_medications || 'ندارد / ثبت‌نشده'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* اطلاعات مدرسه معارفی */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-5 bg-slate-50 border-b border-slate-200/90 flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-[#173f6b]" />
+                <h3 className="text-sm font-extrabold text-slate-900">اطلاعات تحصیلی و مدرسه معارفی</h3>
+              </div>
+
+              <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">نام مدرسه معارفی:</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {combinedData.f_school_name || 'ثبت‌نشده'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">ناظم مدرسه:</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {combinedData.f_school_supervisor || 'ثبت‌نشده توسط مراجع'}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <span className="text-slate-400 block mb-1">مربی تربیتی / مشاور:</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {combinedData.f_mentor_name || 'ثبت‌نشده توسط مراجع'}
                   </span>
                 </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* تب‌های ناوبری پرونده مراجع */}
-          <div className="bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0 shadow-2xs no-print">
-            {[
-              { id: 'overview', label: 'خلاصه و تحلیل جامع پرونده', icon: Compass },
-              { id: 'profile', label: 'مشخصات ثبت‌نام و سلامت', icon: UserCheck },
-              { id: 'bookings', label: 'نوبت‌های دریافتی', icon: CalendarCheck, count: bookingSubmissions.length },
-              { id: 'referrals', label: 'ارجاعات تخصصی', icon: Share2, count: referralsList.length },
-              { id: 'forms', label: 'پرسشنامه‌ها و تست‌ها', icon: FileCheck2, count: currentCaseSubmissions.length },
-              { id: 'followups', label: 'لیست توصیه‌ها و پیگیری‌ها', icon: MessageSquare, count: allFollowupComments.length },
-              { id: 'stats', label: 'آمارهای مراجع', icon: BarChart3 },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = currentView === 'dossier' && activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setCurrentView('dossier');
-                    setActiveTab(tab.id as any);
-                  }}
-                  className={`py-3 px-3.5 sm:px-4 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                    isActive
-                      ? 'border-sky-600 text-sky-700 bg-sky-50/50'
-                      : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
-                  <span>{tab.label}</span>
-                  {tab.count !== undefined && tab.count > 0 && (
-                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${isActive ? 'bg-sky-200 text-sky-900 font-black' : 'bg-slate-100 text-slate-600'}`}>
-                      {toPersianDigits(tab.count)}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+        {/* ۳. تب فرم‌ها و آزمون‌ها (Forms Tab) - تفکیک ۳ قسمتی زیر هم: ۱. پرسشنامه‌ها ۲. نوبت‌های مشاوره ۳. کادر ثبت‌نام */}
+        {currentView === 'dossier' && activeTab === 'forms' && (
+          <div className="space-y-8 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200/80 gap-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  فرم‌ها و پرسشنامه‌های تکمیل‌شده توسط مراجع
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  تفکیک ۳ قسمتی پرونده: پرسشنامه‌ها، نوبت‌های مشاوره و کادر ثبت‌نام
+                </p>
+              </div>
 
-          {/* ۳. محتوای درون تب‌ها برای نمایش در مانیتور (روی صفحه) */}
-          <div className="p-4 sm:p-7 space-y-6 no-print">
+              <span className="text-xs font-bold px-3 py-1 bg-blue-50 text-[#173f6b] rounded-full font-mono self-start sm:self-auto border border-blue-200/60">
+                مجموع {toPersianDigits(clientCase.submissions.length)} فرم در پرونده
+              </span>
+            </div>
 
-            {/* الف) تب خلاصه و تحلیل جامع پرونده (شامل باکس‌های ضروری مراجع) */}
-            {currentView === 'dossier' && activeTab === 'overview' && (
-              <div className="space-y-6">
-                
-                {/* ۱. باکس خلاصه پرونده */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <User className="w-4 h-4 text-sky-600" />
-                      <span>۱. باکس خلاصه پرونده مشاوره</span>
-                    </h3>
-                    <span className="text-xs font-mono font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
-                      کد پرونده: {clientCase.caseCode}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-                      <span className="text-[11px] text-slate-400 block font-medium">نام و نام خانوادگی:</span>
-                      <strong className="text-sm text-slate-900">{displayFullName}</strong>
+            {/* سه ستون موازی: ۱. ستون پرسشنامه‌ها ۲. ستون نوبت‌های مشاوره ۳. کادر ثبت‌نام */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              {/* ستون اول (سمت راست در RTL): ستون پرسشنامه‌ها */}
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b-2 border-indigo-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200/80 shrink-0">
+                      <HelpCircle className="w-4 h-4" />
                     </div>
-
-                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-                      <span className="text-[11px] text-slate-400 block font-medium">جنسیت و سن:</span>
-                      <strong className="text-sm text-slate-900">{clientGender} - {clientAge}</strong>
-                    </div>
-
-                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-                      <span className="text-[11px] text-slate-400 block font-medium">وضعیت تاهل و فرزندان:</span>
-                      <strong className="text-sm text-slate-900">{clientMaritalStatus} | {clientChildrenCount}</strong>
-                    </div>
-
-                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
-                      <span className="text-[11px] text-slate-400 block font-medium">اولین و آخرین نوبت:</span>
-                      <span className="text-xs font-bold text-slate-800 font-mono block">اولین: {firstBookingDate}</span>
-                      <span className="text-xs font-bold text-emerald-700 font-mono block">آخرین: {latestBookingDate}</span>
-                    </div>
-                  </div>
-
-                  {/* موضوعات اصلی و اساتید طرف مراجعه */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                    <div className="p-4 bg-sky-50/60 rounded-2xl border border-sky-200/80 space-y-1.5">
-                      <span className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
-                        <Compass className="w-3.5 h-3.5 text-sky-600" />
-                        <span>موضوعات اصلی مراجعه:</span>
+                    <div>
+                      <h4 className="text-sm font-black text-indigo-950">
+                        ستون پرسشنامه‌ها
+                      </h4>
+                      <span className="text-[10px] text-slate-400 block">
+                        آزمون صفا و پرسشنامه‌های بالینی
                       </span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {mainTopicsList.length === 0 ? (
-                          <span className="text-slate-500 text-xs">ثبت‌نشده</span>
-                        ) : (
-                          mainTopicsList.map((t, i) => (
-                            <span key={i} className="px-2.5 py-1 rounded-lg bg-white text-sky-800 border border-sky-200 text-xs font-bold">
-                              {t}
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-200/80 space-y-1.5">
-                      <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                        <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>مشاوره با کدام اساتید داشته است:</span>
-                      </span>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {counselorsList.length === 0 ? (
-                          <span className="text-slate-500 text-xs">نوبت فعالی ثبت نشده است</span>
-                        ) : (
-                          counselorsList.map((c, i) => (
-                            <span key={i} className="px-2.5 py-1 rounded-lg bg-white text-indigo-900 border border-indigo-200 text-xs font-bold">
-                              استاد {c.replace(/^(آقای|خانم|دکتر)\s+/, '')}
-                            </span>
-                          ))
-                        )}
-                      </div>
                     </div>
                   </div>
 
-                  {/* آخرین توصیه مشاور */}
-                  <div className="p-4 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-1">
-                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>آخرین توصیه و یادداشت مشاور:</span>
-                    </span>
-                    <p className="text-xs text-slate-800 font-medium leading-relaxed">
-                      {latestCounselorRecommendation}
-                    </p>
-                  </div>
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
+                    {toPersianDigits(questionnaireSubs.length)}
+                  </span>
                 </div>
 
-                {/* ۲. باکس ارجاعات تخصصی */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <Share2 className="w-4 h-4 text-emerald-600" />
-                      <span>۲. باکس ارجاعات تخصصی (مشاور به مشاوران یا روانپزشک)</span>
-                    </h3>
-                    <span className="text-xs text-slate-400">
-                      {toPersianDigits(referralsList.length)} ارجاع ثبت‌شده
-                    </span>
-                  </div>
-
-                  {referralsList.length === 0 ? (
-                    <div className="py-6 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                      تاکنون ارجاع تخصصی برای این مراجع ثبت نشده است. می‌توانید از بخش ثبت پیگیری زیر ارجاع جدید صادر فرمایید.
+                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
+                <div className="flex flex-col space-y-3.5">
+                  {questionnaireSubs.length === 0 ? (
+                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                      پرسشنامه‌ای ثبت نشده است
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {referralsList.map((ref) => (
-                        <div key={ref.id} className="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200 text-xs space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-emerald-900">{ref.authorName} ({ref.authorRole})</span>
-                            <span className="text-[11px] text-slate-400 font-mono">{formatPersianDateTime(ref.createdAt)}</span>
-                          </div>
-                          <p className="text-slate-800 font-medium">{ref.content}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    questionnaireSubs.map((sub) => {
+                      const formObj = forms.find((f) => f.id === sub.formId);
+                      const formTitle = formObj ? formObj.title : sub.formId;
+                      const st = statusConfigs[sub.status] || statusConfigs.new;
 
-                  {/* فرم ثبت ارجاع فوری */}
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                    <span className="text-xs font-bold text-slate-800 block">ثبت ارجاع تخصصی جدید برای مراجع:</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <input
-                        type="text"
-                        placeholder="مقصد ارجاع (نام مشاور، روانپزشک، کلینیک)..."
-                        value={referralTarget}
-                        onChange={(e) => setReferralTarget(e.target.value)}
-                        className="sm:col-span-1 p-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                      />
-                      <input
-                        type="text"
-                        placeholder="علت و شرح ارجاع تخصصی..."
-                        value={newFollowupText}
-                        onChange={(e) => {
-                          setNewFollowupText(e.target.value);
-                          setNewFollowupType('referral');
-                        }}
-                        className="sm:col-span-2 p-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <button
-                        onClick={handleAddFollowup}
-                        disabled={isSubmittingFollowup || !newFollowupText.trim()}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>ثبت قطعی ارجاع در پرونده</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ۳. باکس نوبت‌های دریافتی */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <CalendarCheck className="w-4 h-4 text-sky-600" />
-                      <span>۳. باکس نوبت‌های دریافتی مراجع</span>
-                    </h3>
-                    <span className="text-xs text-slate-400">
-                      مجموع {toPersianDigits(bookingSubmissions.length)} جلسه ثبت‌شده
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-right text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-bold">
-                          <th className="py-2 px-2">ردیف</th>
-                          <th className="py-2 px-2">نام مشاور</th>
-                          <th className="py-2 px-2">موضوع مشاوره</th>
-                          <th className="py-2 px-2">زمان / سانس رزرو شده</th>
-                          <th className="py-2 px-2 text-center">وضعیت پرداخت</th>
-                          <th className="py-2 px-2 text-center">کد پیگیری</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {bookingSubmissions.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="py-6 text-center text-slate-400">
-                              هیچ نوبتی برای این مراجع ثبت نشده است.
-                            </td>
-                          </tr>
-                        ) : (
-                          bookingSubmissions.map((sub, idx) => {
-                            let counselor = sub.data?.f_counselor || 'استاد مشاور';
-                            for (const k of Object.keys(sub.data || {})) {
-                              if (k.startsWith('f_counselor_') && sub.data[k]) {
-                                counselor = sub.data[k];
-                                break;
-                              }
-                            }
-                            let slot = 'تعیین‌شده';
-                            for (const k of Object.keys(sub.data || {})) {
-                              if (k.startsWith('f_booking_') && sub.data[k]) {
-                                slot = sub.data[k];
-                                break;
-                              }
-                            }
-
-                            return (
-                              <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="py-2.5 px-2 font-mono text-slate-400">{toPersianDigits(idx + 1)}</td>
-                                <td className="py-2.5 px-2 font-bold text-slate-900">{counselor}</td>
-                                <td className="py-2.5 px-2 text-slate-700">{sub.data?.f_topic || 'مشاوره فردی'}</td>
-                                <td className="py-2.5 px-2 font-semibold text-emerald-800">{slot}</td>
-                                <td className="py-2.5 px-2 text-center">
-                                  {sub.paymentStatus === 'paid' ? (
-                                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
-                                      پرداخت تأییدشده
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium text-[10px]">
-                                      بدون هزینه درگاه
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="py-2.5 px-2 text-center font-mono text-slate-500">{sub.trackingCode}</td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* ۴. باکس ثبت نام (اطلاعات کامل هویتی و سلامت) */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-sky-600" />
-                      <span>۴. باکس مشخصات ثبت‌نام، هویت و سلامت مراجع</span>
-                    </h3>
-                    <span className="text-xs text-slate-400">اطلاعات اولیه فرم ثبت‌نام</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block text-[11px]">شماره تماس همراه:</span>
-                      <strong className="text-slate-900 font-mono text-xs">{clientCase.mobile || 'ثبت‌نشده'}</strong>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block text-[11px]">موقعیت استانی و شهری:</span>
-                      <strong className="text-slate-900 text-xs">{clientCase.provinceCity || 'ثبت‌نشده'}</strong>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block text-[11px]">مدرسه معارفی:</span>
-                      <strong className="text-slate-900 text-xs">
-                        {combinedData.f_school_name || 'ثبت‌نشده'} (ناظم: {combinedData.f_school_supervisor || '—'})
-                      </strong>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block text-[11px]">سابقه بیماری جسمی:</span>
-                      <strong className={`text-xs ${healthStatus.hasPhys ? 'text-amber-700' : 'text-slate-900'}`}>
-                        {healthStatus.phys}
-                      </strong>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block text-[11px]">سابقه بیماری روحی/روانی:</span>
-                      <strong className={`text-xs ${healthStatus.hasMent ? 'text-rose-700 font-bold' : 'text-slate-900'}`}>
-                        {healthStatus.ment}
-                      </strong>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <span className="text-slate-400 block text-[11px]">داروهای مصرفی:</span>
-                      <strong className={`text-xs ${healthStatus.hasMeds ? 'text-purple-700' : 'text-slate-900'}`}>
-                        {healthStatus.meds}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ۵. باکس پرسشنامه‌ها و تست‌ها */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-purple-600" />
-                      <span>۵. باکس پرسشنامه‌ها، تست‌ها و آزمون‌های مراجع</span>
-                    </h3>
-                    <span className="text-xs text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
-                      {safaEvaluationSubmission ? 'ارزیابی صفان تکمیل‌شده' : 'فاقد ارزیابی'}
-                    </span>
-                  </div>
-
-                  {safaEvaluationSubmission ? (
-                    <div className="p-4 bg-purple-50/60 rounded-2xl border border-purple-200 space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                          <h4 className="text-xs sm:text-sm font-extrabold text-purple-950">
-                            کارنامه ارزیابی خودسنجی صفان (تست ۱۷ مؤلفه‌ای رشد)
-                          </h4>
-                          <p className="text-xs text-slate-600 mt-0.5">
-                            نمره کل: <strong className="text-purple-900 font-mono text-sm">{toPersianDigits(safaEvaluationSubmission.evaluationResult?.overallScore || 0)}</strong> از ۱۰۰ | میانگین سلامت رفتاری: <strong className="text-emerald-800 font-mono text-sm">{toPersianDigits(safaEvaluationSubmission.evaluationResult?.behaviorAvgScore || 0)}</strong>
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedSubmissionId(safaEvaluationSubmission.id);
-                            setCurrentView('formReport');
-                          }}
-                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                      return (
+                        <div
+                          key={sub.id}
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-indigo-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
                         >
-                          <span>مشاهده کارنامه و نمودار رادار</span>
-                          <ArrowUpRight className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* ۳ اولویت رشد */}
-                      {safaEvaluationSubmission.evaluationResult?.topPriorities && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                          {safaEvaluationSubmission.evaluationResult.topPriorities.slice(0, 3).map((item, idx) => (
-                            <div key={idx} className="p-2.5 bg-white rounded-xl border border-purple-200 text-xs">
-                              <span className="text-[10px] font-bold text-amber-700 block">اولویت رشد {toPersianDigits(idx + 1)}:</span>
-                              <span className="font-extrabold text-slate-900 block truncate">{item.title}</span>
-                              <span className="text-[10px] text-slate-500 font-mono">فاصله رشد: {toPersianDigits(item.gap)}٪</span>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold text-indigo-700 block mb-0.5">
+                                پرسشنامه بالینی
+                              </span>
+                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                                {formTitle}
+                              </h5>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="py-6 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                      مراجع تاکنون پرسشنامه خودسنجی صفان را تکمیل نکرده است.
-                    </div>
-                  )}
-                </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                              {st.label}
+                            </span>
+                          </div>
 
-                {/* ۶. باکس لیست توصیه‌های مشاوران (همراه با تاریخ و نام مشاور) */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-sky-600" />
-                      <span>۶. باکس لیست توصیه‌ها، پیگیری‌ها و یادداشت‌های بالینی مشاوران</span>
-                    </h3>
-                    <span className="text-xs text-slate-400">
-                      {toPersianDigits(allFollowupComments.length)} ثبت در سوابق
-                    </span>
-                  </div>
-
-                  {/* فرم ثبت سریع یادداشت یا توصیه */}
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                      <span className="text-slate-500 font-bold">نوع اقدام:</span>
-                      {[
-                        { id: 'note', label: '📝 یادداشت بالینی' },
-                        { id: 'meeting', label: '🤝 جلسه مشاوره' },
-                        { id: 'call', label: '📞 تماس تلفنی' },
-                        { id: 'sms', label: '💬 پیامک ارسالی' },
-                      ].map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setNewFollowupType(t.id as any)}
-                          className={`px-3 py-1 rounded-xl font-bold transition-all cursor-pointer ${
-                            newFollowupType === t.id
-                              ? 'bg-sky-600 text-white shadow-xs'
-                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                          }`}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <textarea
-                      rows={2}
-                      value={newFollowupText}
-                      onChange={(e) => setNewFollowupText(e.target.value)}
-                      placeholder="متن توصیه مشاور، نکات بالینی یا شرح تصمیم جلسه..."
-                      className="w-full p-3 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                    />
-
-                    <div className="flex justify-end">
-                      <button
-                        onClick={handleAddFollowup}
-                        disabled={isSubmittingFollowup || !newFollowupText.trim()}
-                        className="px-5 py-2 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>ثبت در پرونده مراجع</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* تاریخچه کامل توصیه‌ها */}
-                  <div className="space-y-3">
-                    {allFollowupComments.length === 0 ? (
-                      <div className="py-6 text-center text-slate-400 text-xs">
-                        هیچ توصیه یا پیگیری برای این مراجع ثبت نشده است.
-                      </div>
-                    ) : (
-                      allFollowupComments.map((item) => (
-                        <div key={item.id} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 text-xs space-y-1.5">
-                          <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold text-slate-900">{item.authorName}</span>
-                              <span className="text-[11px] text-slate-400 font-medium">({item.authorRole})</span>
-                              <span className="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded-full font-bold">
-                                {item.formTitle}
+                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">کد پیگیری:</span>
+                              <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">تاریخ ثبت:</span>
+                              <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="font-bold text-emerald-700">
+                                {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
                               </span>
                             </div>
-                            <span className="text-[11px] text-slate-400 font-mono">
-                              {formatPersianDateTime(item.createdAt)}
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setSelectedSubmissionId(sub.id);
+                              setCurrentView('formReport');
+                            }}
+                            className="w-full py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 text-indigo-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش و تحلیل</span>
+                            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* ستون دوم (وسط در RTL): ستون نوبت‌های مشاوره */}
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b-2 border-sky-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center font-bold border border-sky-200/80 shrink-0">
+                      <CalendarCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-sky-950">
+                        ستون نوبت‌های مشاوره
+                      </h4>
+                      <span className="text-[10px] text-slate-400 block">
+                        جلسات و رزرو نوبت تلفنی
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-sky-50 text-sky-800 border border-sky-200">
+                    {toPersianDigits(bookingSubs.length)}
+                  </span>
+                </div>
+
+                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
+                <div className="flex flex-col space-y-3.5">
+                  {bookingSubs.length === 0 ? (
+                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                      نوبت مشاوره‌ای ثبت نشده است
+                    </div>
+                  ) : (
+                    bookingSubs.map((sub) => {
+                      const formObj = forms.find((f) => f.id === sub.formId);
+                      const formTitle = formObj ? formObj.title : sub.formId;
+                      const st = statusConfigs[sub.status] || statusConfigs.new;
+
+                      return (
+                        <div
+                          key={sub.id}
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-sky-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold text-sky-700 block mb-0.5">
+                                سامانه نوبت‌دهی
+                              </span>
+                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                                {formTitle}
+                              </h5>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                              {st.label}
                             </span>
                           </div>
-                          <p className="text-slate-800 leading-relaxed font-medium">
-                            {item.content}
-                          </p>
+
+                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">کد پیگیری:</span>
+                              <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">تاریخ ثبت:</span>
+                              <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="font-bold text-emerald-700">
+                                {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setSelectedSubmissionId(sub.id);
+                              setCurrentView('formReport');
+                            }}
+                            className="w-full py-2 bg-[#173f6b] hover:bg-[#123357] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 text-blue-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش و تحلیل</span>
+                            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                          </button>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      );
+                    })
+                  )}
                 </div>
-
-                {/* ۷. آمارهای مختلف این فرد (با نمودارهای میله‌ای عمودی) */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-emerald-600" />
-                      <span>۷. آمارهای تحلیلی مراجع (نمودار میله‌ای عمودی)</span>
-                    </h3>
-                    <span className="text-xs text-slate-400">تحلیل شاخص‌های رشد، سلامت، نوبت‌ها و مؤلفه‌ها</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* نمودار میله‌ای عمودی مؤلفه‌ها و شاخص‌ها */}
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                      <h4 className="text-xs font-extrabold text-slate-900">شاخص‌های پنج‌گانه سلامت و تعهد</h4>
-                      <VerticalBarChart
-                        data={clientDimensionsBarData}
-                        unit="نمره"
-                        height={220}
-                        showValues={true}
-                      />
-                    </div>
-
-                    {/* نمودار میله‌ای مراجعات به مشاوران مختلف */}
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                      <h4 className="text-xs font-extrabold text-slate-900">توزیع جلسات مشاوره بین اساتید</h4>
-                      {counselorsBarData.length === 0 ? (
-                        <div className="py-16 text-center text-slate-400 text-xs">
-                          هنوز جلسه‌ای برای تفکیک اساتید ثبت نشده است.
-                        </div>
-                      ) : (
-                        <VerticalBarChart
-                          data={counselorsBarData}
-                          unit="جلسه"
-                          height={220}
-                          showValues={true}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
               </div>
-            )}
 
-            {/* ب) تب مشخصات ثبت‌نام */}
-            {currentView === 'dossier' && activeTab === 'profile' && (
-              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-6">
-                <h3 className="text-sm font-black text-slate-900 pb-3 border-b border-slate-100">
-                  اطلاعات تفصیلی ثبت‌نام و ساختار خانوادگی مراجع
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                  {Object.entries(combinedData).map(([key, val]) => {
-                    if (typeof val === 'object' || val === null || val === undefined) return null;
+              {/* ستون سوم (سمت چپ در RTL): کادر ثبت‌نام */}
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b-2 border-emerald-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold border border-emerald-200/80 shrink-0">
+                      <BadgeCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-emerald-950">
+                        کادر ثبت‌نام
+                      </h4>
+                      <span className="text-[10px] text-slate-400 block">
+                        پذیرش و مشخصات فردی مراجع
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    {toPersianDigits(registrationSubs.length)}
+                  </span>
+                </div>
+
+                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
+                <div className="flex flex-col space-y-3.5">
+                  {registrationSubs.length === 0 ? (
+                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                      فرم ثبت‌نام اولیه‌ای یافت نشد
+                    </div>
+                  ) : (
+                    registrationSubs.map((sub) => {
+                      const formObj = forms.find((f) => f.id === sub.formId);
+                      const formTitle = formObj ? formObj.title : sub.formId;
+                      const st = statusConfigs[sub.status] || statusConfigs.new;
+
+                      return (
+                        <div
+                          key={sub.id}
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-bold text-emerald-700 block mb-0.5">
+                                ثبت‌نام و تشکیل پرونده
+                              </span>
+                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                                {formTitle}
+                              </h5>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                              {st.label}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">کد پیگیری:</span>
+                              <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">تاریخ ثبت:</span>
+                              <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="font-bold text-emerald-700">
+                                {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setSelectedSubmissionId(sub.id);
+                              setCurrentView('formReport');
+                            }}
+                            className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 text-emerald-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش و تحلیل</span>
+                            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* در صورت وجود سایر فرم‌ها (کاملاً عمودی) */}
+            {otherSubs.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <h4 className="text-sm font-black text-slate-800">
+                    سایر فرم‌های پرونده
+                  </h4>
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700">
+                    {toPersianDigits(otherSubs.length)} فرم
+                  </span>
+                </div>
+                <div className="flex flex-col space-y-3.5">
+                  {otherSubs.map((sub) => {
+                    const formObj = forms.find((f) => f.id === sub.formId);
+                    const formTitle = formObj ? formObj.title : sub.formId;
+                    const st = statusConfigs[sub.status] || statusConfigs.new;
+
                     return (
-                      <div key={key} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1">
-                        <span className="text-slate-400 text-[11px] block">{key}</span>
-                        <strong className="text-slate-900 text-xs">{String(val)}</strong>
+                      <div
+                        key={sub.id}
+                        className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-400 shadow-2xs hover:shadow-sm transition-all p-5 flex flex-col space-y-4"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-base border border-slate-200 shrink-0">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-black text-slate-900 leading-snug">
+                                {formTitle}
+                              </h4>
+                            </div>
+                          </div>
+
+                          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border self-start sm:self-auto shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                            {st.label}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50 p-3.5 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border border-slate-100">
+                          <div className="flex items-center justify-between sm:justify-start sm:gap-2 text-slate-500">
+                            <span>کد پیگیری فرم:</span>
+                            <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between sm:justify-start sm:gap-2 text-slate-500">
+                            <span>تاریخ و ساعت ثبت:</span>
+                            <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-1">
+                          <button
+                            onClick={() => {
+                              setSelectedSubmissionId(sub.id);
+                              setCurrentView('formReport');
+                            }}
+                            className="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 group"
+                          >
+                            <BarChart3 className="w-4 h-4 text-slate-300 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش نموداری و مفصل این فرم</span>
+                            <ChevronRight className="w-4 h-4 rotate-180" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
             )}
+          </div>
+        )}
 
-            {/* ج) تب نوبت‌ها */}
-            {currentView === 'dossier' && activeTab === 'bookings' && (
-              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-                <h3 className="text-sm font-black text-slate-900 pb-3 border-b border-slate-100">
-                  کلیه نوبت‌ها و جلسات مشاوره رزرو شده
-                </h3>
-                <div className="space-y-3">
-                  {bookingSubmissions.map((b, i) => (
-                    <div key={b.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-slate-900 block text-sm">
-                          جلسه {toPersianDigits(i + 1)}: {b.data?.f_topic || 'مشاوره'}
-                        </span>
-                        <span className="text-slate-500 text-xs mt-1 block">
-                          تاریخ ثبت: {formatPersianDateTime(b.createdAt)} | کد: {b.trackingCode}
-                        </span>
-                      </div>
-                      <span className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs">
-                        {b.paymentStatus === 'paid' ? 'پرداخت شده' : 'ثبت قطعی'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* د) تب ارجاعات */}
-            {currentView === 'dossier' && activeTab === 'referrals' && (
-              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-                <h3 className="text-sm font-black text-slate-900 pb-3 border-b border-slate-100">
-                  ارجاعات تخصصی بین مشاوران یا روانپزشک
-                </h3>
-                <div className="space-y-3">
-                  {referralsList.length === 0 ? (
-                    <div className="py-12 text-center text-slate-400 text-xs">
-                      هیچ ارجاع تخصصی ثبت نشده است.
-                    </div>
-                  ) : (
-                    referralsList.map((ref) => (
-                      <div key={ref.id} className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-emerald-900">{ref.authorName}</span>
-                          <span className="text-slate-400 font-mono text-[11px]">{formatPersianDateTime(ref.createdAt)}</span>
-                        </div>
-                        <p className="text-slate-800">{ref.content}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ه) تب فرم‌ها و پرسشنامه‌ها */}
-            {((currentView === 'dossier' && activeTab === 'forms') || currentView === 'formReport') && (
-              <div className="space-y-6">
-                {currentView === 'formReport' && safaEvaluationSubmission?.evaluationResult ? (
-                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
-                    <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
-                      <h3 className="text-sm font-black text-slate-900">
-                        کارنامه رسمی ارزیابی صفان: {displayFullName}
-                      </h3>
-                      <button
-                        onClick={() => setCurrentView('dossier')}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
-                      >
-                        بازگشت به نمای کلی پرونده
-                      </button>
-                    </div>
-                    <EvaluationReportView evaluation={safaEvaluationSubmission.evaluationResult} />
-                  </div>
-                ) : (
-                  <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-                    <h3 className="text-sm font-black text-slate-900 pb-3 border-b border-slate-100">
-                      لیست کلیه فرم‌های تکمیل‌شده توسط این مراجع ({toPersianDigits(currentCaseSubmissions.length)} فرم)
+        {/* نمای ویژه: گزارش تفکیکی، نموداری و مفصل فرم انتخاب‌شده */}
+        {currentView === 'formReport' && selectedSubmission && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* نوار بالای گزارش: بازگشت به لیست فرم‌ها + عنوان و متاداده */}
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setCurrentView('dossier');
+                    setActiveTab('forms');
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  <span>بازگشت به لیست فرم‌های مراجع</span>
+                </button>
+                <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-[#173f6b] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200 font-mono">
+                      فرم مرحله {toPersianDigits(clientCase.submissions.findIndex((s) => s.id === selectedSubmission.id) + 1 || 1)}
+                    </span>
+                    <h3 className="text-base font-black text-slate-900">
+                      گزارش و تحلیل: {selectedFormObj?.title || 'فرم مراجع'}
                     </h3>
-                    <div className="space-y-3">
-                      {currentCaseSubmissions.map((sub) => {
-                        const formObj = forms.find((f) => f.id === sub.formId);
-                        return (
-                          <div key={sub.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between text-xs">
-                            <div>
-                              <span className="font-bold text-slate-900 text-sm block">{formObj?.title || 'فرم ثبت‌شده'}</span>
-                              <span className="text-slate-400 text-xs mt-1 block">کد پیگیری: {sub.trackingCode} | تاریخ: {formatPersianDateTime(sub.createdAt)}</span>
-                            </div>
-                            {sub.evaluationResult && (
-                              <button
-                                onClick={() => {
-                                  setSelectedSubmissionId(sub.id);
-                                  setCurrentView('formReport');
-                                }}
-                                className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    تحلیل نموداری، کارنامه شاخص‌ها و ریز پاسخ‌های ثبت‌شده در این فرم
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="font-mono text-xs px-3 py-1.5 bg-slate-50 text-slate-700 rounded-xl border border-slate-200 font-bold">
+                  کد پیگیری: {selectedSubmission.trackingCode}
+                </span>
+                <span className="text-xs px-3 py-1.5 bg-slate-50 text-slate-700 rounded-xl border border-slate-200 font-mono">
+                  {formatPersianDateTime(selectedSubmission.createdAt)}
+                </span>
+                <span
+                  className={`text-xs px-3 py-1.5 rounded-xl border font-bold ${
+                    selectedSubmission.paymentStatus === 'paid'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-50 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {selectedSubmission.paymentStatus === 'paid'
+                    ? `پرداخت: ${formatCurrency(selectedSubmission.paymentAmount || 0, 'IRT')}`
+                    : 'بدون هزینه'}
+                </span>
+              </div>
+            </div>
+
+            {/* نوار جابجایی سریع بین فرم‌های مراجع */}
+            {clientCase.submissions.length > 1 && (
+              <div className="flex items-center gap-2 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs overflow-x-auto">
+                <span className="text-xs font-bold text-slate-400 mr-2 shrink-0">
+                  انتخاب سریع فرم:
+                </span>
+                {clientCase.submissions.map((sub, sIdx) => {
+                  const fObj = forms.find((f) => f.id === sub.formId);
+                  const isSel = sub.id === selectedSubmission.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => setSelectedSubmissionId(sub.id)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                        isSel
+                          ? 'bg-[#173f6b] text-white shadow-xs'
+                          : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                      }`}
+                    >
+                      <span className="font-mono text-[10px] opacity-75">
+                        مرحله {toPersianDigits(sIdx + 1)}:
+                      </span>
+                      <span>{fObj?.title || sub.trackingCode}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* بخش نمودارها و کارنامه آزمون یا شاخص‌های آماری فرم */}
+            {(() => {
+              const evalRes =
+                selectedSubmission.evaluationResult ||
+                selectedSubmission.data?.evaluationResult ||
+                (selectedSubmission.formId === 'form-safaan-assessment'
+                  ? safaEvaluationSubmission?.evaluationResult
+                  : undefined);
+
+              if (evalRes && evalRes.componentScores && evalRes.componentScores.length > 0) {
+                return (
+                  <EvaluationReportView
+                    evaluation={evalRes}
+                    formTitle={selectedFormObj?.title || 'کارنامه خودسنجی صفاً'}
+                  />
+                );
+              }
+
+              if (formAnalytics) {
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    {/* ۱. نمودار حلقه‌ای درصد تکمیل داده‌ها */}
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center text-center">
+                      <span className="text-xs font-extrabold text-slate-600 mb-4 flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-[#173f6b]" />
+                        <span>نرخ تکمیل فیلدها و پاسخگویی</span>
+                      </span>
+
+                      <div className="relative w-36 h-36 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                          <path
+                            className="text-slate-100"
+                            strokeWidth="3.5"
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                          <path
+                            className="text-[#173f6b] transition-all duration-1000 ease-out"
+                            strokeDasharray={`${formAnalytics.completionRate}, 100`}
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                        </svg>
+                        <div className="absolute flex flex-col items-center justify-center">
+                          <span className="text-2xl font-black text-slate-900 font-mono">
+                            %{toPersianDigits(formAnalytics.completionRate)}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-bold mt-0.5">تکمیل فرم</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 text-xs text-slate-600">
+                        <p>
+                          تعداد <strong className="text-slate-900 font-mono">{toPersianDigits(formAnalytics.filledCount)}</strong> فیلد از{' '}
+                          <strong className="text-slate-900 font-mono">{toPersianDigits(formAnalytics.totalFields)}</strong> فیلد موجود تکمیل گردیده است.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* ۲. نمودارهای میله‌ای ابعاد و شاخص‌های کیفی فرم با رنگ‌بندی ۴ گانه معنایی */}
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs lg:col-span-2 flex flex-col justify-between space-y-4">
+                      <div>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-3 gap-2">
+                          <span className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-[#173f6b]" />
+                            <span>تحلیل ابعاد کیفی، اعتبارسنجی و تطابق مراجع</span>
+                          </span>
+                          <span className="text-[11px] text-slate-400">محاسبه هوشمند بر پایه پاسخ‌های فرم</span>
+                        </div>
+
+                        <div className="space-y-4">
+                          {formAnalytics.dimensions.map((dim, idx) => {
+                            const dimColor = getSemanticColorByPercentage(dim.score);
+                            return (
+                              <div key={idx} className="space-y-1.5 group">
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${dimColor.dotBg} shrink-0 ring-2 ${dimColor.ringColor}`} />
+                                    <span className="font-bold text-slate-800">{dim.name}</span>
+                                  </div>
+                                  <span className={`font-mono font-extrabold text-xs px-2 py-0.5 rounded border ${dimColor.badgeBg} ${dimColor.textColor} ${dimColor.badgeBorder}`}>
+                                    %{toPersianDigits(dim.score)}
+                                  </span>
+                                </div>
+                                <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full ${dimColor.bgBar} rounded-full transition-all duration-500`}
+                                    style={{
+                                      width: `${Math.min(100, Math.max(Number(dim.score) || 0, 0))}%`,
+                                      backgroundColor: dimColor.hex,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* متاداده فرم */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-4 mt-4 border-t border-slate-100 text-[11px]">
+                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <span className="text-slate-400 block">سوالات گزینه‌ای:</span>
+                          <span className="font-bold text-slate-800 text-xs mt-0.5 block font-mono">
+                            {toPersianDigits(formAnalytics.choiceFieldsCount)} فیلد
+                          </span>
+                        </div>
+                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <span className="text-slate-400 block">پاسخ‌های تشریحی:</span>
+                          <span className="font-bold text-slate-800 text-xs mt-0.5 block font-mono">
+                            {toPersianDigits(formAnalytics.textFieldsCount)} فیلد
+                          </span>
+                        </div>
+                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <span className="text-slate-400 block">تاریخ ثبت:</span>
+                          <span className="font-bold text-slate-800 text-xs mt-0.5 block font-mono">
+                            {formatPersianDateOnly(selectedSubmission.createdAt)}
+                          </span>
+                        </div>
+                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <span className="text-slate-400 block">وضعیت پرداخت:</span>
+                          <span className={`font-bold text-xs mt-0.5 block ${selectedSubmission.paymentStatus === 'paid' ? 'text-emerald-700' : 'text-slate-500'}`}>
+                            {selectedSubmission.paymentStatus === 'paid' ? 'تأیید شاپرک' : 'بدون هزینه'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
+
+            {/* ۳. نمایش مفصل و گام به گام تمام فیلدهای این فرم (Detailed Field-by-Field Breakdown) */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-6 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#173f6b] flex items-center justify-center font-bold">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+                      جزئیات کامل پاسخ‌ها و فیلدهای فرم: {selectedFormObj?.title || 'فرم ثبت‌شده'}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      تمامی فیلدها و پاسخ‌های ارائه شده توسط مراجع به تفکیک مراحل فرم
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-8">
+                {selectedFormObj?.steps && selectedFormObj.steps.length > 0 ? (
+                  selectedFormObj.steps.map((step: any, stepIdx: number) => {
+                    const stepFields = (selectedFormObj.fields || []).filter(
+                      (f: FormField) => f.stepId === step.id && !['sectionDivider', 'alertBox'].includes(f.type)
+                    );
+
+                    if (stepFields.length === 0) return null;
+
+                    return (
+                      <div key={step.id} className="space-y-4">
+                        <div className="flex items-center gap-2.5 pb-2 border-b border-slate-200">
+                          <span className="w-6 h-6 rounded-lg bg-[#173f6b] text-white font-bold text-xs flex items-center justify-center">
+                            {toPersianDigits(stepIdx + 1)}
+                          </span>
+                          <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                            {step.title}
+                          </h4>
+                          {step.description && (
+                            <span className="text-[11px] text-slate-400 mr-2">
+                              ({step.description})
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                          {stepFields.map((field: FormField) => {
+                            const val = selectedSubmission.data?.[field.id];
+                            const displayVal = getFieldDisplayValue(field, val);
+
+                            return (
+                              <div
+                                key={field.id}
+                                className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/70 hover:bg-slate-50 transition-colors flex flex-col justify-between"
                               >
-                                <span>مشاهده کارنامه</span>
-                                <ArrowUpRight className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-xs text-slate-500 font-medium">
+                                    {field.label}:
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {field.id}
+                                  </span>
+                                </div>
+                                <div className="text-xs sm:text-sm font-bold text-slate-900 pt-1">
+                                  {val === undefined || val === null || val === '' ? (
+                                    <span className="text-slate-300 italic">ثبت‌نشده</span>
+                                  ) : (
+                                    <span className="text-slate-900 break-words">{displayVal}</span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {(selectedFormObj?.fields || [])
+                      .filter((f: FormField) => !['sectionDivider', 'alertBox'].includes(f.type))
+                      .map((field: FormField) => {
+                        const val = selectedSubmission.data?.[field.id];
+                        const displayVal = getFieldDisplayValue(field, val);
+
+                        return (
+                          <div
+                            key={field.id}
+                            className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex flex-col justify-between"
+                          >
+                            <span className="text-xs text-slate-500 font-medium mb-1">
+                              {field.label}:
+                            </span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 break-words">
+                              {val === undefined || val === null || val === '' ? (
+                                <span className="text-slate-300 italic">ثبت‌نشده</span>
+                              ) : (
+                                displayVal
+                              )}
+                            </span>
                           </div>
                         );
                       })}
-                    </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* و) تب پیگیری‌ها و توصیه‌ها */}
-            {currentView === 'dossier' && activeTab === 'followups' && (
-              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-6">
-                <h3 className="text-sm font-black text-slate-900 pb-3 border-b border-slate-100">
-                  ثبت و تاریخچه کامل لاگ‌ها، تماس‌ها و جلسات مشاوره
-                </h3>
+                {/* فیلدهای تکمیلی ثبت‌شده */}
+                {(() => {
+                  const knownFieldIds = new Set((selectedFormObj?.fields || []).map((f: FormField) => f.id));
+                  const extraEntries = Object.entries(selectedSubmission.data || {}).filter(
+                    ([k, v]) =>
+                      !knownFieldIds.has(k) &&
+                      !['caseCode', 'evaluationResult', 'trackingCode', 'reconciledReason', 'linkingStatus', 'reconciledAt'].includes(k) &&
+                      v !== undefined &&
+                      v !== null &&
+                      v !== ''
+                  );
 
-                {/* افزودن پیگیری */}
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                  <div className="flex items-center gap-2 flex-wrap text-xs">
-                    {[
-                      { id: 'call', label: '📞 تماس تلفنی' },
-                      { id: 'meeting', label: '🤝 جلسه حضوری/مشاوره' },
-                      { id: 'sms', label: '💬 پیامک ارسالی' },
-                      { id: 'note', label: '📝 یادداشت محرمانه' },
-                      { id: 'referral', label: '🔄 ارجاع تخصصی' },
-                    ].map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setNewFollowupType(t.id as any)}
-                        className={`px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all ${
-                          newFollowupType === t.id ? 'bg-sky-600 text-white' : 'bg-white border text-slate-700'
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
+                  if (extraEntries.length === 0) return null;
 
-                  <textarea
-                    rows={3}
-                    value={newFollowupText}
-                    onChange={(e) => setNewFollowupText(e.target.value)}
-                    placeholder="شرح کامل مکالمه، تصمیم اتخاذ شده، یادداشت محرمانه، یا توضیحات جهت پیگیری‌های بعدی..."
-                    className="w-full p-3 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                  />
-
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleAddFollowup}
-                      disabled={isSubmittingFollowup || !newFollowupText.trim()}
-                      className="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>ثبت در پرونده مراجع</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* تایم‌لاین کامل */}
-                <div className="space-y-3">
-                  {allFollowupComments.length === 0 ? (
-                    <div className="py-12 text-center text-slate-400 text-xs">
-                      هیچ پیگیری یا تماسی برای این مراجع ثبت نشده است.
-                    </div>
-                  ) : (
-                    allFollowupComments.map((item) => (
-                      <div key={item.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
-                        <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
-                          <span className="font-extrabold text-slate-900">{item.authorName} ({item.authorRole})</span>
-                          <span className="text-slate-400 font-mono text-[11px]">{formatPersianDateTime(item.createdAt)}</span>
-                        </div>
-                        <p className="text-slate-800 leading-relaxed font-medium">{item.content}</p>
+                  return (
+                    <div className="space-y-4 pt-4 border-t border-slate-200">
+                      <h4 className="text-xs sm:text-sm font-black text-slate-800">
+                        سایر اطلاعات و پاسخ‌های ثبت‌شده:
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                        {extraEntries.map(([k, v]) => (
+                          <div
+                            key={k}
+                            className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex flex-col justify-between"
+                          >
+                            <span className="text-xs text-slate-500 font-mono mb-1">{k}:</span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 break-words">
+                              {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  );
+                })()}
               </div>
-            )}
+            </div>
 
-            {/* ز) تب آمارها */}
-            {currentView === 'dossier' && activeTab === 'stats' && (
-              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-6">
-                <h3 className="text-sm font-black text-slate-900 pb-3 border-b border-slate-100">
-                  نمودارهای میله‌ای و آمارهای تحلیلی مراجع
-                </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <VerticalBarChart
-                      data={clientDimensionsBarData}
-                      unit="نمره"
-                      height={240}
-                      showValues={true}
-                    />
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <VerticalBarChart
-                      data={counselorsBarData}
-                      unit="جلسه"
-                      height={240}
-                      showValues={true}
-                    />
-                  </div>
+            {/* ۴. ثبت نظر کارشناسی و یادداشت روی این فرم */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-[#173f6b]" />
+                <span>یادداشت‌ها و نظرات کارشناسی روی این فرم:</span>
+              </h4>
+
+              {selectedSubmission.comments && selectedSubmission.comments.length > 0 && (
+                <div className="space-y-2.5 pb-2">
+                  {selectedSubmission.comments.map((comment) => (
+                    <div
+                      key={comment.id}
+                      className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-900">
+                          {comment.authorName} ({comment.authorRole})
+                        </span>
+                        <span className="text-slate-400 font-mono text-[11px]">
+                          {formatPersianDateTime(comment.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-700 leading-relaxed pt-1">
+                        {comment.content}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            )}
+              )}
 
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={formCommentText}
+                  onChange={(e) => setFormCommentText(e.target.value)}
+                  placeholder="یادداشت کارشناسی یا دستور اقدام مدیر برای این فرم..."
+                  className="flex-1 px-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-400 focus:outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddFormComment();
+                    }
+                  }}
+                />
+                <button
+                  onClick={handleAddFormComment}
+                  disabled={!formCommentText.trim()}
+                  className="px-5 py-2.5 bg-[#173f6b] hover:bg-[#123357] text-white rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-40"
+                >
+                  ثبت نظر
+                </button>
+              </div>
+            </div>
           </div>
+        )}
 
-          {/* ۴. قالب چاپ رسمی پرونده مشاوره (فقط در زمان Print اجرا می‌شود و تمامی بخش‌ها را به تفکیک و کامل زیر هم می‌آورد) */}
-          <div id="belhagh-printable-dossier" className="hidden print:block text-black bg-white p-6 space-y-6">
-            
-            {/* سربرگ رسمی نامه چاپ */}
-            <div className="border-b-2 border-slate-900 pb-4 text-center space-y-1">
-              <div className="flex items-center justify-between text-xs text-slate-600 pb-2">
-                <span>جمهوری اسلامی ایران</span>
-                <span className="font-mono">تاریخ چاپ: {formatPersianDateOnly(new Date().toISOString())}</span>
-              </div>
-              <h1 className="text-lg font-black text-slate-900">
-                مرکز خدمات روانشناسی و مشاوره بالحق
-              </h1>
-              <h2 className="text-sm font-bold text-slate-700">
-                پرونده جامع خدمات مشاوره، روانشناختی و ارزیابی مراجع
-              </h2>
-              <div className="flex items-center justify-center gap-4 text-xs font-mono pt-1 text-slate-800">
-                <span>شماره پرونده: <strong>{clientCase.caseCode}</strong></span>
-                <span>•</span>
-                <span>نام مراجع: <strong>{displayFullName}</strong></span>
-                <span>•</span>
-                <span>تلفن تماس: <strong>{clientCase.mobile}</strong></span>
-              </div>
-            </div>
-
-            {/* بخش ۱ پرینت: باکس خلاصه پرونده */}
-            <div className="border border-slate-400 rounded-xl p-4 space-y-2 print-avoid-break">
-              <h3 className="text-xs font-black bg-slate-100 p-1.5 rounded text-slate-900 border-b border-slate-300">
-                ۱. خلاصه پرونده مشاوره
+        {/* ۴. تب پیگیری‌ها (Followups Tab) */}
+        {currentView === 'dossier' && activeTab === 'followups' && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* افزودن لاگ پیگیری */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-[#173f6b]" />
+                <span>افزودن لاگ پیگیری، تماس یا جلسه جدید:</span>
               </h3>
-              <div className="grid grid-cols-4 gap-2 text-xs">
-                <div><strong>نام و نام خانوادگی:</strong> {displayFullName}</div>
-                <div><strong>کد پرونده:</strong> {clientCase.caseCode}</div>
-                <div><strong>جنسیت:</strong> {clientGender}</div>
-                <div><strong>سن:</strong> {clientAge}</div>
-                <div><strong>وضعیت تاهل:</strong> {clientMaritalStatus}</div>
-                <div><strong>تعداد فرزندان:</strong> {clientChildrenCount}</div>
-                <div><strong>تاریخ اولین نوبت:</strong> {firstBookingDate}</div>
-                <div><strong>تاریخ آخرین نوبت:</strong> {latestBookingDate}</div>
-              </div>
-              <div className="text-xs pt-1 border-t border-slate-200">
-                <strong>موضوعات مراجعه:</strong> {mainTopicsList.join('، ') || 'مشاوره عمومی'} | <strong>مشاوران:</strong> {counselorsList.join('، ') || 'استاد مشاور'}
-              </div>
-              <div className="text-xs pt-1 border-t border-slate-200">
-                <strong>آخرین توصیه مشاور:</strong> {latestCounselorRecommendation}
-              </div>
-            </div>
 
-            {/* بخش ۲ پرینت: مشخصات هویتی و سلامت */}
-            <div className="border border-slate-400 rounded-xl p-4 space-y-2 print-avoid-break">
-              <h3 className="text-xs font-black bg-slate-100 p-1.5 rounded text-slate-900 border-b border-slate-300">
-                ۲. مشخصات ثبت‌نام و سوابق سلامت
-              </h3>
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <div><strong>شهر محل سکونت:</strong> {clientCase.provinceCity}</div>
-                <div><strong>نقش در خانواده:</strong> {combinedData.f_role_in_family || 'مراجع'}</div>
-                <div><strong>مدرسه معارفی:</strong> {combinedData.f_school_name || 'ثبت‌نشده'} (ناظم: {combinedData.f_school_supervisor || '—'})</div>
-                <div><strong>سابقه بیماری جسمی:</strong> {healthStatus.phys}</div>
-                <div><strong>سابقه بیماری روحی:</strong> {healthStatus.ment}</div>
-                <div><strong>داروهای مصرفی:</strong> {healthStatus.meds}</div>
-              </div>
-            </div>
-
-            {/* بخش ۳ پرینت: جدول نوبت‌های دریافتی */}
-            <div className="border border-slate-400 rounded-xl p-4 space-y-2 print-avoid-break">
-              <h3 className="text-xs font-black bg-slate-100 p-1.5 rounded text-slate-900 border-b border-slate-300">
-                ۳. سوابق کلیه نوبت‌های دریافتی
-              </h3>
-              <table className="w-full text-right text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-300 text-slate-700">
-                    <th className="py-1">ردیف</th>
-                    <th className="py-1">نام مشاور</th>
-                    <th className="py-1">موضوع جلسه</th>
-                    <th className="py-1">زمان و سانس</th>
-                    <th className="py-1 text-center">وضعیت پرداخت</th>
-                    <th className="py-1 text-center">کد رهگیری</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {bookingSubmissions.length === 0 ? (
-                    <tr><td colSpan={6} className="py-2 text-center">بدون نوبت ثبت‌شده</td></tr>
-                  ) : (
-                    bookingSubmissions.map((sub, idx) => {
-                      let counselor = sub.data?.f_counselor || 'استاد مشاور';
-                      for (const k of Object.keys(sub.data || {})) {
-                        if (k.startsWith('f_counselor_') && sub.data[k]) { counselor = sub.data[k]; break; }
-                      }
-                      let slot = 'تعیین‌شده';
-                      for (const k of Object.keys(sub.data || {})) {
-                        if (k.startsWith('f_booking_') && sub.data[k]) { slot = sub.data[k]; break; }
-                      }
-                      return (
-                        <tr key={sub.id}>
-                          <td className="py-1">{toPersianDigits(idx + 1)}</td>
-                          <td className="py-1 font-bold">{counselor}</td>
-                          <td className="py-1">{sub.data?.f_topic || 'مشاوره'}</td>
-                          <td className="py-1">{slot}</td>
-                          <td className="py-1 text-center">{sub.paymentStatus === 'paid' ? 'پرداخت شده' : 'حضوری/رایگان'}</td>
-                          <td className="py-1 text-center font-mono">{sub.trackingCode}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* بخش ۴ پرینت: ارجاعات تخصصی */}
-            <div className="border border-slate-400 rounded-xl p-4 space-y-2 print-avoid-break">
-              <h3 className="text-xs font-black bg-slate-100 p-1.5 rounded text-slate-900 border-b border-slate-300">
-                ۴. سوابق ارجاعات تخصصی
-              </h3>
-              {referralsList.length === 0 ? (
-                <p className="text-xs text-slate-500">ارجاع تخصصی ثبت نشده است.</p>
-              ) : (
-                <div className="space-y-1 text-xs">
-                  {referralsList.map((ref, idx) => (
-                    <div key={idx} className="border-b border-slate-100 pb-1">
-                      <strong>{toPersianDigits(idx + 1)}. {ref.authorName} ({formatPersianDateOnly(ref.createdAt)}):</strong> {ref.content}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* بخش ۵ پرینت: لیست توصیه‌ها و پیگیری‌ها */}
-            <div className="border border-slate-400 rounded-xl p-4 space-y-2 print-avoid-break">
-              <h3 className="text-xs font-black bg-slate-100 p-1.5 rounded text-slate-900 border-b border-slate-300">
-                ۵. لیست توصیه‌ها، یادداشت‌ها و پیگیری‌های مشاوران
-              </h3>
-              {allFollowupComments.length === 0 ? (
-                <p className="text-xs text-slate-500">یادداشتی ثبت نشده است.</p>
-              ) : (
-                <div className="space-y-1.5 text-xs">
-                  {allFollowupComments.map((item, idx) => (
-                    <div key={idx} className="border-b border-slate-200 pb-1">
-                      <span className="font-bold text-slate-900">[{toPersianDigits(idx + 1)}] {item.authorName} - {formatPersianDateOnly(item.createdAt)}:</span>
-                      <p className="text-slate-800 pr-2">{item.content}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* بخش ۶ پرینت: پرسشنامه‌ها و تست‌ها */}
-            <div className="border border-slate-400 rounded-xl p-4 space-y-2 print-avoid-break">
-              <h3 className="text-xs font-black bg-slate-100 p-1.5 rounded text-slate-900 border-b border-slate-300">
-                ۶. نتایج پرسشنامه‌ها و تست‌های مراجع
-              </h3>
-              {safaEvaluationSubmission ? (
-                <div className="space-y-1 text-xs">
-                  <div><strong>عنوان ارزیابی:</strong> آزمون خودسنجی صفان (۱۷ مؤلفه‌ای)</div>
-                  <div>
-                    <strong>نمره کل:</strong> {toPersianDigits(safaEvaluationSubmission.evaluationResult?.overallScore || 0)} از ۱۰۰ | <strong>سلامت رفتاری:</strong> {toPersianDigits(safaEvaluationSubmission.evaluationResult?.behaviorAvgScore || 0)}
-                  </div>
-                  {safaEvaluationSubmission.evaluationResult?.topPriorities && (
-                    <div className="pt-1">
-                      <strong>اولویت‌های نخست رشد: </strong>
-                      {safaEvaluationSubmission.evaluationResult.topPriorities.slice(0, 3).map((p) => p.title).join('، ')}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-500">پرسشنامه خودسنجی ثبت نشده است.</p>
-              )}
-            </div>
-
-            {/* بخش ۷ پرینت: آمارهای مراجع (میله‌ای عمودی) */}
-            <div className="border border-slate-400 rounded-xl p-4 space-y-3 print-avoid-break">
-              <h3 className="text-xs font-black bg-slate-100 p-1.5 rounded text-slate-900 border-b border-slate-300">
-                ۷. شاخص‌های آماری و پایش سلامت مراجع
-              </h3>
-              <div className="grid grid-cols-5 gap-2 text-center text-xs">
-                {clientDimensionsBarData.map((d, i) => (
-                  <div key={i} className="border border-slate-200 p-2 rounded-lg">
-                    <span className="block text-[10px] text-slate-600 truncate">{d.label}</span>
-                    <strong className="block text-sm font-mono text-slate-900 mt-1">{toPersianDigits(d.value)}</strong>
-                  </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-500 font-bold">نوع اقدام:</span>
+                {[
+                  { id: 'call', label: '📞 تماس تلفنی' },
+                  { id: 'meeting', label: '🤝 جلسه حضوری/مشاوره' },
+                  { id: 'sms', label: '💬 پیامک ارسالی' },
+                  { id: 'note', label: '📝 یادداشت محرمانه' },
+                  { id: 'referral', label: '🔄 ارجاع تخصصی' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setNewFollowupType(t.id as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      newFollowupType === t.id
+                        ? 'bg-[#173f6b] text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
                 ))}
               </div>
+
+              <textarea
+                rows={3}
+                value={newFollowupText}
+                onChange={(e) => setNewFollowupText(e.target.value)}
+                placeholder="شرح کامل مکالمه، تصمیم اتخاذ شده، یادداشت محرمانه، یا توضیحات جهت پیگیری‌های بعدی..."
+                className="w-full p-3.5 text-xs bg-slate-50 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white focus:outline-none transition-all"
+              />
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleAddFollowup}
+                  disabled={isSubmittingFollowup || !newFollowupText.trim()}
+                  className="px-6 py-2.5 bg-[#173f6b] hover:bg-[#123357] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>ثبت در پرونده مراجع</span>
+                </button>
+              </div>
             </div>
 
-            {/* کادر امضا و تأییدیه */}
-            <div className="pt-8 flex items-center justify-between text-xs border-t border-slate-300 print-avoid-break">
-              <div>
-                <span>مهر و تأیید دبیرخانه مرکز مشاوره بالحق</span>
-              </div>
-              <div>
-                <span>امضای استاد ناظر و مدیر مرکز</span>
+            {/* تاریخچه پیگیری‌ها */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+              <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">
+                تاریخچه کامل پیگیری‌ها و یادداشت‌های مدیر:
+              </h3>
+
+              <div className="space-y-4">
+                {allFollowupComments.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400 text-xs">
+                    هیچ پیگیری یا تماسی برای این مراجع ثبت نشده است.
+                  </div>
+                ) : (
+                  allFollowupComments.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-slate-900">{item.authorName}</span>
+                          <span className="text-[11px] text-slate-400">({item.authorRole})</span>
+                          <span className="text-[10px] bg-blue-50 text-[#173f6b] px-2 py-0.5 rounded-full font-bold">
+                            {item.formTitle}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {formatPersianDateTime(item.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-slate-800 text-xs leading-relaxed font-medium">
+                        {item.content}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
-
           </div>
+        )}
 
-        </div>
+        {/* ۵. تب مالی و نوبت‌ها (Finances Tab) با داده‌های واقعی */}
+        {currentView === 'dossier' && activeTab === 'finances' && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* خلاصه‌های مالی */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
+                <span className="text-xs text-slate-400 font-bold">مجموع مبالغ واریز شده:</span>
+                <span className="text-2xl font-black text-emerald-700 block font-mono">
+                  {clientCase.totalPaidAmount > 0 ? formatCurrency(clientCase.totalPaidAmount, 'IRT') : 'بدون هزینه'}
+                </span>
+                <span className="text-[11px] text-emerald-600 block">
+                  {clientCase.totalPaidAmount > 0 ? 'تراکنش موفق شاپرک' : 'پرونده بدون هزینه / رایگان'}
+                </span>
+              </div>
 
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
+                <span className="text-xs text-slate-400 font-bold">تعداد نوبت‌های ثبت‌شده:</span>
+                <span className="text-2xl font-black text-[#173f6b] block font-mono">
+                  {toPersianDigits(appointments.length)} نوبت
+                </span>
+                <span className="text-[11px] text-blue-600 block">
+                  {appointments.length > 0 ? 'ثبت شده در سامانه نوبت‌دهی' : 'فاقد نوبت ثبت‌شده'}
+                </span>
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
+                <span className="text-xs text-slate-400 font-bold">استاد مشاور پرونده:</span>
+                <span className="text-sm font-black text-slate-900 block mt-1">
+                  {latestRecommendation?.counselor || (appointments[0]?.counselor ? appointments[0].counselor : 'مشاور تعیین‌نشده')}
+                </span>
+                <span className="text-[11px] text-slate-400 block">
+                  موضوع: {appointments[0]?.topic || 'مشاوره و ارزیابی جامع'}
+                </span>
+              </div>
+            </div>
+
+            {/* لیست جلسات مشاوره با امکان ثبت و مشاهده گزارش */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">لیست نوبت‌ها و سوابق مشاوره مراجع</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">برای مشاهده یا ثبت گزارش بالینی هر جلسه، روی آن کلیک کنید.</p>
+                </div>
+                <button
+                  onClick={() => setIsNewAppointmentModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#173f6b] text-white rounded-xl text-xs font-bold hover:bg-[#123357] transition cursor-pointer"
+                >
+                  <Plus className="size-3.5" />
+                  <span>ثبت نوبت جدید</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {appointments.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+                    <Calendar className="size-8 mx-auto text-slate-300" />
+                    <p className="text-xs font-bold text-slate-600">هنوز نوبت مشاوره‌ای برای این مراجع ثبت نشده است.</p>
+                  </div>
+                ) : (
+                  appointments.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-2xl border border-slate-200 hover:border-blue-400 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-slate-900">{toPersianDigits(item.date)}</span>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                              item.status === 'new'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-emerald-100 text-emerald-700'
+                            }`}
+                          >
+                            {item.status === 'new' ? 'جدید / در انتظار' : 'انجام‌شده'}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          موضوع: <strong className="text-slate-700">{item.topic}</strong> | مشاور:{' '}
+                          <strong className="text-slate-700">{item.counselor}</strong>
+                        </div>
+                        {item.recommendation && (
+                          <p className="mt-2 text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-100 leading-relaxed">
+                            <strong>توصیه ثبت‌شده:</strong> {item.recommendation}
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => openReportModal(item)}
+                        className="px-4 py-2 bg-white hover:bg-blue-50 text-[#173f6b] border border-blue-200 rounded-xl text-xs font-bold transition shadow-xs shrink-0 cursor-pointer"
+                      >
+                        {item.status === 'new' ? 'ثبت گزارش جلسه' : 'مشاهده / اصلاح گزارش'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* سوابق تراکنش‌ها */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-5 bg-slate-50 border-b border-slate-200/90">
+                <h3 className="text-sm font-extrabold text-slate-900">ریز تراکنش‌های پرداخت الکترونیک مراجع</h3>
+              </div>
+
+              <div className="divide-y divide-slate-100 text-xs">
+                {clientCase.submissions.filter((s) => s.paymentAmount && s.paymentAmount > 0).length === 0 ? (
+                  <div className="p-8 text-center text-slate-400">
+                    هیچ تراکنش پرداختی برای این پرونده ثبت نشده است.
+                  </div>
+                ) : (
+                  clientCase.submissions
+                    .filter((s) => s.paymentAmount && s.paymentAmount > 0)
+                    .map((s) => (
+                      <div key={s.id} className="p-5 flex items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <span className="font-bold text-slate-900 block">
+                            پرداخت الکترونیک ثبت نام یا رزرو مشاوره
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono block">
+                            شناسه پرداخت شاپرک: {s.paymentRefId || 'تأییدیه درگاه'}
+                          </span>
+                        </div>
+                        <div className="text-left space-y-1">
+                          <span className="font-mono font-black text-emerald-700 text-sm block">
+                            {formatCurrency(s.paymentAmount || 0, 'IRT')}
+                          </span>
+                          <span className="text-[11px] text-slate-400 block">
+                            {formatPersianDateTime(s.paymentDate || s.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* مودال ثبت نوبت جدید */}
+      {isNewAppointmentModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setIsNewAppointmentModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-black text-slate-900">ثبت نوبت مشاوره جدید</h3>
+              <button
+                onClick={() => setIsNewAppointmentModalOpen(false)}
+                className="grid size-8 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1.5">تاریخ و ساعت نوبت:</label>
+                <input
+                  type="text"
+                  placeholder="مثال: دوشنبه ۱۴۰۳/۰۸/۱۴ ساعت ۱۶:۰۰"
+                  value={newAppointmentData.date}
+                  onChange={(e) => setNewAppointmentData({ ...newAppointmentData, date: e.target.value })}
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-400 outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1.5">موضوع مشاوره:</label>
+                <select
+                  value={newAppointmentData.topic}
+                  onChange={(e) => setNewAppointmentData({ ...newAppointmentData, topic: e.target.value })}
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-400 outline-none"
+                >
+                  <option value="خانواده و ازدواج">خانواده و ازدواج</option>
+                  <option value="کودک و نوجوان">کودک و نوجوان</option>
+                  <option value="تحصیلی و انتخاب رشته">تحصیلی و انتخاب رشته</option>
+                  <option value="بالینی و فردی">بالینی و فردی</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1.5">استاد مشاور:</label>
+                <input
+                  type="text"
+                  placeholder="نام مشاور (مثال: دکتر علوی)"
+                  value={newAppointmentData.counselor}
+                  onChange={(e) => setNewAppointmentData({ ...newAppointmentData, counselor: e.target.value })}
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-400 outline-none"
+                  required
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewAppointmentModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-[#173f6b] text-white font-bold hover:bg-[#123357]"
+                >
+                  ثبت نوبت در پرونده
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* مودال ثبت گزارش جلسه مشاوره */}
+      {editing && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm md:items-center md:p-6"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setEditing(null);
+          }}
+        >
+          <section className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-[28px] bg-white shadow-2xl md:rounded-[28px]">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 p-5 backdrop-blur">
+              <div>
+                <div className="text-base font-black text-slate-900">ثبت گزارش جلسه مشاوره</div>
+                <div className="mt-1 text-[11px] text-slate-400">
+                  {toPersianDigits(editing.date)} · {editing.counselor}
+                </div>
+              </div>
+              <button
+                onClick={() => setEditing(null)}
+                className="grid size-9 place-items-center rounded-full bg-slate-100 text-lg text-slate-500 hover:bg-slate-200 transition cursor-pointer"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-5">
+              <div
+                className={`mb-5 rounded-2xl p-4 text-xs ${
+                  editing.status === 'new' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {editing.status === 'new'
+                  ? 'این نوبت هنوز بررسی نشده است. با ثبت گزارش، وضعیت آن به «انجام‌شده» تغییر می‌کند.'
+                  : 'گزارش این جلسه قبلاً ثبت شده است و می‌توانید آن را تکمیل یا اصلاح کنید.'}
+              </div>
+
+              <div className="space-y-5">
+                {[
+                  ['reviewed', 'موارد بررسی‌شده', 'مباحث، شرح‌حال و سرفصل‌های گفت‌وگو شده در جلسه...'],
+                  ['challenges', 'معضلات و چالش‌های مراجع', 'مشکلات رفتاری، خانوادگی یا تحصیلی تشخیص داده‌شده...'],
+                  ['recommendation', 'نسخه و توصیه‌های تجویزی مشاور', 'راهکارها، تمرین‌ها و پروتکل پیشنهادی برای ادامه مسیر...'],
+                ].map(([key, label, placeholder], index) => (
+                  <label key={key} className="block">
+                    <span className="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
+                      <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">
+                        {toPersianDigits(index + 1)}
+                      </span>
+                      {label}
+                    </span>
+                    <textarea
+                      value={reportForm[key as keyof typeof reportForm]}
+                      onChange={(event) =>
+                        setReportForm((old) => ({ ...old, [key]: event.target.value }))
+                      }
+                      placeholder={placeholder}
+                      rows={index === 2 ? 4 : 3}
+                      className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 outline-none transition placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-slate-100 p-4 text-xs">
+                <div>
+                  <span className="text-slate-400">مشاور ثبت‌کننده</span>
+                  <div className="mt-1 font-bold text-slate-800">{editing.counselor}</div>
+                </div>
+                <div>
+                  <span className="text-slate-400">تاریخ جلسه</span>
+                  <div className="mt-1 font-bold text-slate-800 font-mono">
+                    {toPersianDigits(editing.date.split('،')[0])}
+                  </div>
+                </div>
+              </div>
+
+              {savedReport && (
+                <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
+                  <Check className="size-4" />
+                  گزارش ثبت شد و آخرین توصیه‌ها به‌روزرسانی شد.
+                </div>
+              )}
+
+              <button
+                onClick={submitReport}
+                disabled={
+                  !reportForm.reviewed.trim() ||
+                  !reportForm.challenges.trim() ||
+                  !reportForm.recommendation.trim()
+                }
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#173f6b] px-5 py-4 text-sm font-black text-white transition hover:bg-[#0f3155] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+              >
+                <Check className="size-4" />
+                ثبت گزارش ذیل همین نوبت
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 };
