@@ -45,6 +45,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { EvaluationReportView } from '../analytics/evaluation-report-view';
+import { ClientStatisticalAnalysisTab } from './client-statistical-analysis-tab';
 import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
   formatPersianDateTime,
@@ -242,7 +243,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const [formCommentText, setFormCommentText] = useState('');
 
   // تب‌های داخل پرونده مراجع
-  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'forms' | 'followups' | 'finances'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'profile' | 'forms' | 'followups' | 'finances'>('overview');
 
   // ثبت نظر بر روی فرم فعال در گزارش تفکیکی
   const handleAddFormComment = () => {
@@ -1566,12 +1567,22 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       <p className="mt-1 text-[11px] text-slate-400">بررسی شاخص‌های واقعی ثبت‌شده در ارزیابی‌های مراجع</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setActiveTab('forms')}
-                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
-                  >
-                    مشاهده فرم‌ها
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveTab('analytics')}
+                      className="text-[11px] font-bold text-[#173f6b] hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <BarChart3 className="size-3.5" />
+                      <span>تحلیل‌های آماری</span>
+                    </button>
+                    <span className="text-slate-300">•</span>
+                    <button
+                      onClick={() => setActiveTab('forms')}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                    >
+                      مشاهده فرم‌ها
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
@@ -1720,18 +1731,36 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* گرید پایینی: دکمه‌های اقدام و هدایت سریع */}
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <button
-                onClick={() => setActiveTab('forms')}
+                onClick={() => setActiveTab('analytics')}
                 className="group flex items-center justify-between rounded-3xl bg-[#173f6b] p-6 text-right text-white shadow-lg shadow-blue-950/10 transition hover:-translate-y-1 cursor-pointer"
               >
                 <div className="flex items-center gap-4">
                   <div className="grid size-12 place-items-center rounded-2xl bg-white/10">
-                    <FileText className="size-6 text-white" />
+                    <BarChart3 className="size-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-base font-black">مشاهده فرم‌ها و پرسشنامه‌ها</div>
+                    <div className="text-base font-black">تحلیل‌های جامع آماری</div>
                     <div className="mt-1 text-xs text-blue-200 font-mono">
+                      رشد، نوبت‌ها، سلامت، دارو، زوجین، اختلالات
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="size-5 transition group-hover:-translate-x-1 rotate-180" />
+              </button>
+
+              <button
+                onClick={() => setActiveTab('forms')}
+                className="group flex items-center justify-between rounded-3xl border-2 border-slate-200 bg-white p-6 text-right text-slate-800 transition hover:-translate-y-1 cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="grid size-12 place-items-center rounded-2xl bg-slate-100 text-[#173f6b]">
+                    <FileText className="size-6" />
+                  </div>
+                  <div>
+                    <div className="text-base font-black">مشاهده فرم‌ها و آزمون‌ها</div>
+                    <div className="mt-1 text-xs text-slate-500 font-mono">
                       {toPersianDigits(clientCase.totalFormsCount)} فرم تکمیل‌شده در پرونده
                     </div>
                   </div>
@@ -1760,6 +1789,19 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </button>
             </div>
           </div>
+        )}
+
+        {/* ۲. تب تحلیل‌های آماری مراجع (Statistical Analysis Tab) */}
+        {currentView === 'dossier' && activeTab === 'analytics' && (
+          <ClientStatisticalAnalysisTab
+            clientCase={clientCase}
+            appointments={appointments}
+            combinedData={combinedData}
+            safaEvaluationSubmission={safaEvaluationSubmission}
+            smartAnalysis={smartAnalysis}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onOpenAppointmentModal={(app) => openReportModal(app)}
+          />
         )}
 
         {/* ۲. تب مشخصات ثبت‌نام مراجع (Profile Tab) */}
