@@ -1828,6 +1828,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     );
     const finalSub: FormSubmission = {
       ...sub,
+      id: isRegistrationForm ? ('sub-case-' + newCaseCode) : sub.id,
       trackingCode: newCaseCode,
       data: {
         ...sub.data,

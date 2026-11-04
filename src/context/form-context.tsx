@@ -586,10 +586,14 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     });
     const existingProfiles = Array.from(profileMap.values());
 
+    const isRegForm = formId === 'form-belhagh-registration' || formId === 'zexuz';
+    const regCaseCode = submissionData.caseCode || data.caseCode;
+    const initialSubId = isRegForm && regCaseCode ? `sub-case-${regCaseCode}` : `sub-${Date.now()}`;
+
     const initialSubObj: FormSubmission = {
-      id: `sub-${Date.now()}`,
+      id: initialSubId,
       formId,
-      trackingCode,
+      trackingCode: isRegForm && regCaseCode ? regCaseCode : trackingCode,
       data: submissionData,
       status: 'new',
       paymentStatus: paymentInfo?.status || 'none',

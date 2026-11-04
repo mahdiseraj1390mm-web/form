@@ -340,17 +340,27 @@ export async function createCaseRecord(
  */
 export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void> {
   const mobile = normalizeMobile(String(sub.data?.f_mobile || sub.data?.mobile || sub.data?.f_phone || sub.mobile || ''));
+  const isReg = sub.formId === 'form-belhagh-registration' || sub.formId === 'zexuz';
+  const cCode = sub.data?.caseCode || sub.trackingCode;
+  const canonicalId = (isReg && cCode)
+    ? (cCode.startsWith('sub-case-') ? cCode : `sub-case-${cCode}`)
+    : sub.id;
 
   // ۱. ذخیره بی‌درنگ در مخزن محلی مطمئن
   try {
     const local = readLocalSubmissions();
-    const idx = local.findIndex((s) => s.id === sub.id);
+    const idx = local.findIndex((s) =>
+      s.id === canonicalId ||
+      s.id === sub.id ||
+      (isReg && ((cCode && (s.trackingCode === cCode || s.data?.caseCode === cCode)) || (mobile && (s.mobile === mobile || s.data?.f_mobile === mobile))))
+    );
     const updatedSub: FormSubmission = {
       ...sub,
+      id: canonicalId,
       mobile: mobile || sub.mobile,
       data: {
         ...(sub.data || {}),
-        caseCode: sub.data?.caseCode || sub.trackingCode,
+        caseCode: cCode,
         fullName: sub.data?.fullName || sub.data?.f_fullname || `${sub.data?.f_name || ''} ${sub.data?.f_family || ''}`.trim(),
         evaluationResult: sub.evaluationResult || sub.data?.evaluationResult,
       },
@@ -370,18 +380,34 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
 
   // ۲. ارسال به پایگاه‌داده PostgreSQL
   try {
+    // برای فرم‌های ثبت‌نام، رکوردهای تکراری احتمالی پیشین با شناسه‌های قدیمی پاکسازی می‌شوند
+    if (isReg && (cCode || mobile)) {
+      await executeNeonQueryWithTimeout(
+        `DELETE FROM form_submissions 
+         WHERE (form_id = 'form-belhagh-registration' OR form_id = 'zexuz')
+           AND id != $1 
+           AND (
+             tracking_code = $2 
+             OR data->>'caseCode' = $2 
+             OR mobile = $3
+           )`,
+        [canonicalId, cCode, mobile]
+      ).catch(() => {});
+    }
+
     await executeNeonQueryWithTimeout(
       `INSERT INTO form_submissions (id, form_id, tracking_code, mobile, data, status, payment_status, payment_amount, payment_ref_id, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (id) DO UPDATE SET
+         tracking_code = EXCLUDED.tracking_code,
          status = EXCLUDED.status,
          payment_status = EXCLUDED.payment_status,
          mobile = EXCLUDED.mobile,
          data = EXCLUDED.data`,
       [
-        sub.id,
+        canonicalId,
         sub.formId,
-        sub.trackingCode || null,
+        cCode || sub.trackingCode || null,
         mobile || null,
         JSON.stringify(sub.data || {}),
         sub.status || 'new',
