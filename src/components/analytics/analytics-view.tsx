@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits, formatCurrency, formatPersianDateTime, getFieldDisplayValue } from '@/lib/persian';
 import { getSemanticColorByPercentage, getFourColorByIndex } from '@/lib/chart-colors';
+import { VerticalBarChart } from '@/components/analytics/vertical-bar-chart';
 
 interface AnalyticsViewProps {
   onNavigateToRunner?: () => void;
@@ -1148,6 +1149,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 </div>
               )}
