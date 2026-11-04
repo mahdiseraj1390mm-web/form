@@ -1107,7 +1107,22 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                     </div>
                   </div>
 
-                  <div className="space-y-3 pt-2">
+                  <div className="space-y-4 pt-2">
+                    <VerticalBarChart
+                      data={optionDistribution.map((opt) => ({
+                        id: opt.id,
+                        label: opt.label,
+                        value: opt.count,
+                        percentage: opt.percentage,
+                        secondaryLabel: `${toPersianDigits(opt.count)} نفر`,
+                        color: opt.percentage > 70 ? 'bg-emerald-600' : opt.percentage > 40 ? 'bg-sky-600' : opt.percentage > 20 ? 'bg-amber-500' : 'bg-rose-500',
+                      }))}
+                      unit="نفر"
+                      height={220}
+                      showValues={true}
+                    />
+
+                    <div className="space-y-2.5 pt-2 border-t border-slate-100">
                     {optionDistribution.map((opt) => {
                       const sc = getSemanticColorByPercentage(opt.percentage);
                       return (

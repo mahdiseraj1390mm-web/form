@@ -118,7 +118,7 @@ export const belhaghRegistrationForm: Form = {
       label: 'تعداد اعضای خانواده:',
       stepId: 'step-2',
       gridCols: 12,
-      validations: { required: false },
+      validations: { required: true, customErrorMessage: 'انتخاب تعداد اعضای خانواده الزامی است.' },
       options: [
         { id: '2', label: 'دو نفر', value: '۲ نفر' },
         { id: '3', label: 'سه نفر', value: '۳ نفر' },
@@ -158,7 +158,7 @@ export const belhaghRegistrationForm: Form = {
       label: 'نام مدرسه معارفی:',
       stepId: 'step-3',
       gridCols: 12,
-      validations: { required: false },
+      validations: { required: true, customErrorMessage: 'درج نام مدرسه معارفی الزامی است.' },
     },
     {
       id: 'f_school_supervisor',
@@ -166,7 +166,7 @@ export const belhaghRegistrationForm: Form = {
       label: 'ناظم مدرسه:',
       stepId: 'step-3',
       gridCols: 12,
-      validations: { required: false },
+      validations: { required: true, customErrorMessage: 'درج نام ناظم مدرسه الزامی است.' },
     },
     {
       id: 'f_mentor_name',
@@ -174,7 +174,7 @@ export const belhaghRegistrationForm: Form = {
       label: 'نام مربی تربیتی:',
       stepId: 'step-3',
       gridCols: 12,
-      validations: { required: false },
+      validations: { required: true, customErrorMessage: 'درج نام مربی تربیتی الزامی است.' },
     },
     // مرحله ۴: وضعیت سلامت
     {
@@ -496,7 +496,7 @@ export const belhaghBookingForm: Form = {
       placeholder: 'نام مشاورانی که قبلاً با آنها جلسه داشته‌اید...',
       stepId: 'step-3',
       gridCols: 12,
-      validations: { required: false },
+      validations: { required: true, customErrorMessage: 'درج نام مشاوران سابق الزامی است.' },
     },
     {
       id: 'f_khankaram_member',
@@ -976,7 +976,7 @@ export const belhaghBookingForm: Form = {
       label: 'رزرو نوبت از آقای دکتر ترشیزی',
       stepId: 'step-4',
       gridCols: 12,
-      validations: { required: false },
+      validations: { required: true, customErrorMessage: 'انتخاب زمان مشاوره دکتر ترشیزی الزامی است.' },
       appointmentData: {
         slotDurationMinutes: 30,
         restTimeMinutes: 0,
@@ -985,7 +985,9 @@ export const belhaghBookingForm: Form = {
         endHour: '00:00',
         holidays: [],
       },
-      options: [],
+      options: [
+        { id: 'slot_torshizi_1', label: 'هماهنگی و تعیین وقت تلفنی با منشی بالینی', value: 'torshizi_phone_slot' },
+      ],
     },
     {
       id: 'f_phone_torshizi',
@@ -1103,7 +1105,7 @@ export const belhaghBookingForm: Form = {
       label: 'رزرو نوبت از آقای دکتر صدیقی',
       stepId: 'step-4',
       gridCols: 12,
-      validations: { required: false },
+      validations: { required: true, customErrorMessage: 'انتخاب زمان مشاوره دکتر صدیقی الزامی است.' },
       appointmentData: {
         slotDurationMinutes: 45,
         restTimeMinutes: 15,
@@ -1113,7 +1115,9 @@ export const belhaghBookingForm: Form = {
         daySchedules: {},
         holidays: [],
       },
-      options: [],
+      options: [
+        { id: 'slot_sedighi_1', label: 'هماهنگی و تعیین وقت تلفنی خانواده', value: 'sedighi_phone_slot' },
+      ],
     },
     {
       id: 'f_phone_sedighi',

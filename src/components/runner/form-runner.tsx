@@ -1614,6 +1614,36 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       }
     }
 
+    // بررسی اجباری بودن انتخاب زمان مشاوره در سامانه نوبت‌دهی
+    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+      let selectedSlotVal = '';
+      let bookingFieldKey = '';
+      for (const key of Object.keys(formData)) {
+        if (key.startsWith('f_booking_') && formData[key] && String(formData[key]).trim() !== '') {
+          selectedSlotVal = String(formData[key]).trim();
+          bookingFieldKey = key;
+          break;
+        }
+      }
+
+      if (!selectedSlotVal) {
+        // فیلد رزرو زمانی فعال مشاور
+        const visibleBooking = form.fields.find(
+          (f) => f.type === 'appointmentBooking' && isFieldVisible(f.id)
+        );
+        const errKey = visibleBooking ? visibleBooking.id : 'f_topic';
+        setErrors((prev) => ({
+          ...prev,
+          [errKey]: '⚠️ انتخاب روز و ساعت جلسه مشاوره الزامی است. لطفاً حتماً یکی از زمان‌های آزاد مشاور را انتخاب فرمایید.',
+        }));
+        setTimeout(() => {
+          const el = document.getElementById(`field-${errKey}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 60);
+        return;
+      }
+    }
+
     // بررسی رزرو نبودن نوبت انتخابی در فرم نوبت‌دهی (جلوگیری از ثبت نوبت تکراری در همان زمان)
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
       try {
