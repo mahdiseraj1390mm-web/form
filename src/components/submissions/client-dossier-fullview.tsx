@@ -51,6 +51,7 @@ import {
   formatPersianDateOnly,
   formatCurrency,
   toPersianDigits,
+  toEnglishDigits,
   getFieldDisplayValue,
 } from '@/lib/persian';
 
@@ -450,6 +451,266 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const latestRecommendation = useMemo(() => {
     return appointments.find((item) => item.recommendation && item.recommendation.trim().length > 0) || null;
   }, [appointments]);
+
+  // استخراج جنسیت مراجع با اولویت داده‌های صریح و سپس نقش خانوادگی
+  const clientGender = useMemo(() => {
+    const raw =
+      combinedData.gender ||
+      combinedData.f_gender ||
+      combinedData.sex ||
+      combinedData.f_sex;
+
+    if (raw && typeof raw === 'string') {
+      const lower = raw.trim().toLowerCase();
+      if (lower === 'male' || lower === 'man' || lower === 'مرد' || lower === 'آقا' || lower === 'مذکر') {
+        return 'آقا (مرد)';
+      }
+      if (lower === 'female' || lower === 'woman' || lower === 'زن' || lower === 'خانم' || lower === 'مونث') {
+        return 'خانم (زن)';
+      }
+      return raw;
+    }
+
+    const role = combinedData.f_role_in_family || clientCase.roleInFamily || '';
+    if (role.includes('پدر') || role.includes('پسر') || role.includes('مرد')) {
+      return 'آقا (مرد)';
+    }
+    if (role.includes('مادر') || role.includes('دختر') || role.includes('زن')) {
+      return 'خانم (زن)';
+    }
+
+    return 'ثبت‌نشده';
+  }, [combinedData, clientCase.roleInFamily]);
+
+  // سن مراجع (محاسبه هوشمند از سال تولد یا تاریخ تولد شمسی)
+  const clientAge = useMemo(() => {
+    if (combinedData.f_age || combinedData.age) {
+      const rawAge = combinedData.f_age || combinedData.age;
+      const numAge = parseInt(toEnglishDigits(String(rawAge)));
+      if (!isNaN(numAge) && numAge > 0 && numAge < 120) {
+        return `${toPersianDigits(numAge)} سال`;
+      }
+    }
+
+    let bYear: number | null = null;
+
+    if (combinedData.birth_year) {
+      const parsed = parseInt(toEnglishDigits(String(combinedData.birth_year)));
+      if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
+        bYear = parsed;
+      }
+    }
+
+    if (!bYear && combinedData.f_birth_date) {
+      const rawDate = toEnglishDigits(String(combinedData.f_birth_date)).trim();
+      const parts = rawDate.split(/[\/\-\.]/);
+      if (parts.length >= 1) {
+        const parsed = parseInt(parts[0]);
+        if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
+          bYear = parsed;
+        }
+      }
+    }
+
+    if (!bYear) {
+      for (const sub of clientCase.submissions) {
+        if (sub.data?.birth_year) {
+          const parsed = parseInt(toEnglishDigits(String(sub.data.birth_year)));
+          if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
+            bYear = parsed;
+            break;
+          }
+        }
+        if (sub.data?.f_birth_date) {
+          const rawDate = toEnglishDigits(String(sub.data.f_birth_date)).trim();
+          const parts = rawDate.split(/[\/\-\.]/);
+          const parsed = parseInt(parts[0]);
+          if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
+            bYear = parsed;
+            break;
+          }
+        }
+      }
+    }
+
+    if (bYear) {
+      const currentJalaliYear = 1403;
+      const calculatedAge = Math.max(1, currentJalaliYear - bYear);
+      return `${toPersianDigits(calculatedAge)} سال (متولد ${toPersianDigits(bYear)})`;
+    }
+
+    return 'ثبت‌نشده';
+  }, [combinedData, clientCase.submissions]);
+
+  // وضعیت تاهل
+  const maritalStatusDisplay = useMemo(() => {
+    const raw = combinedData.f_marital_status || combinedData.marital_status || combinedData.maritalStatus;
+    if (!raw) return 'ثبت‌نشده';
+    return getFieldDisplayValue(undefined, raw);
+  }, [combinedData]);
+
+  // تعداد فرزندان مراجع
+  const childrenCountDisplay = useMemo(() => {
+    const explicit =
+      combinedData.f_children_count ||
+      combinedData.children_count ||
+      combinedData.f_children ||
+      combinedData.children ||
+      combinedData.f_number_of_children ||
+      combinedData.numberOfChildren;
+
+    if (explicit !== undefined && explicit !== null && explicit !== '') {
+      const num = parseInt(toEnglishDigits(String(explicit)));
+      if (!isNaN(num)) {
+        return num === 0 ? 'بدون فرزند' : `${toPersianDigits(num)} فرزند`;
+      }
+      return toPersianDigits(String(explicit));
+    }
+
+    const marital = (combinedData.f_marital_status || '').trim();
+    if (marital.includes('مجرد') || marital.toLowerCase() === 'single') {
+      return 'بدون فرزند (مجرد)';
+    }
+
+    const membersRaw = combinedData.f_family_members;
+    if (membersRaw) {
+      const membersNum = parseInt(toEnglishDigits(String(membersRaw)));
+      if (!isNaN(membersNum)) {
+        const isParent = roleInFamily.includes('پدر') || roleInFamily.includes('مادر');
+        const isMarried = marital.includes('متأهل') || marital.includes('متاهل');
+        const parentsCount = isMarried ? 2 : 1;
+        if (isParent) {
+          const calculatedChildren = Math.max(0, membersNum - parentsCount);
+          if (calculatedChildren === 0) return 'بدون فرزند';
+          return `${toPersianDigits(calculatedChildren)} فرزند`;
+        }
+      }
+    }
+
+    return 'ثبت‌نشده';
+  }, [combinedData, roleInFamily]);
+
+  // تفکیک و تعیین تاریخ اولین و آخرین نوبت مراجع
+  const { firstAppointmentDate, lastAppointmentDate } = useMemo(() => {
+    if (appointments.length === 0) {
+      return {
+        firstAppointmentDate: 'فاقد نوبت ثبت‌شده',
+        lastAppointmentDate: 'فاقد نوبت ثبت‌شده',
+      };
+    }
+
+    if (appointments.length === 1) {
+      const singleDate = toPersianDigits(appointments[0].date);
+      return {
+        firstAppointmentDate: singleDate,
+        lastAppointmentDate: singleDate,
+      };
+    }
+
+    const parseWeight = (dateStr: string): number => {
+      if (!dateStr) return 0;
+      const eng = toEnglishDigits(dateStr).trim();
+      const iso = Date.parse(eng);
+      if (!isNaN(iso)) return iso;
+
+      const m = eng.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+      if (m) {
+        const y = parseInt(m[1]);
+        const mo = parseInt(m[2]);
+        const d = parseInt(m[3]);
+        const tm = eng.match(/(\d{1,2}):(\d{2})/);
+        const h = tm ? parseInt(tm[1]) : 0;
+        const mi = tm ? parseInt(tm[2]) : 0;
+        return y * 100000000 + mo * 1000000 + d * 10000 + h * 100 + mi;
+      }
+
+      const pMonths = [
+        'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+        'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+      ];
+      for (let i = 0; i < pMonths.length; i++) {
+        if (dateStr.includes(pMonths[i])) {
+          const digits = eng.match(/\d+/g);
+          if (digits && digits.length >= 2) {
+            const y = parseInt(digits.find((n) => n.length === 4) || '1403');
+            const d = parseInt(digits.find((n) => n.length <= 2) || '1');
+            return y * 100000000 + (i + 1) * 1000000 + d * 10000;
+          }
+        }
+      }
+      return 0;
+    };
+
+    const sorted = [...appointments].sort((a, b) => {
+      const wa = parseWeight(a.date);
+      const wb = parseWeight(b.date);
+      if (wa !== 0 && wb !== 0) return wa - wb;
+      return 0;
+    });
+
+    const earliest = sorted[0];
+    const latest = sorted[sorted.length - 1];
+
+    return {
+      firstAppointmentDate: toPersianDigits(earliest.date),
+      lastAppointmentDate: toPersianDigits(latest.date),
+    };
+  }, [appointments]);
+
+  // موضوعات اصلی مراجعه
+  const mainConsultationTopics = useMemo(() => {
+    const topicsSet = new Set<string>();
+
+    appointments.forEach((app) => {
+      if (app.topic && app.topic.trim()) {
+        topicsSet.add(app.topic.trim());
+      }
+    });
+
+    clientCase.submissions.forEach((sub) => {
+      const d = sub.data || {};
+      const t = d.f_counseling_subject || d.f_topic || d.f_consultation_type || d.consultationSubject || d.topic;
+      if (t && typeof t === 'string' && t.trim()) {
+        topicsSet.add(t.trim());
+      }
+    });
+
+    const list = Array.from(topicsSet).filter(
+      (t) => t && t !== 'مشاوره تخصصی' && t !== 'سایر'
+    );
+
+    if (list.length === 0) {
+      if (topicsSet.size > 0) return Array.from(topicsSet);
+      return ['مشاوره فردی و خانواده'];
+    }
+
+    return list;
+  }, [appointments, clientCase.submissions]);
+
+  // مشاورانی که مراجع با آن‌ها جلسه داشته است
+  const consultantsAttended = useMemo(() => {
+    const cSet = new Set<string>();
+
+    appointments.forEach((app) => {
+      if (
+        app.counselor &&
+        app.counselor.trim() &&
+        !['مشاور تعیین‌نشده', 'مشاور تعیین‌شده مرکز'].includes(app.counselor.trim())
+      ) {
+        cSet.add(app.counselor.trim());
+      }
+    });
+
+    clientCase.submissions.forEach((sub) => {
+      const d = sub.data || {};
+      const cName = d.f_booking_counselor || d.f_counselor || d.f_counselor_name || d.counselorName;
+      if (cName && typeof cName === 'string' && cName.trim()) {
+        cSet.add(cName.trim());
+      }
+    });
+
+    return Array.from(cSet);
+  }, [appointments, clientCase.submissions]);
 
   const openReportModal = (appointment: Appointment) => {
     setEditing(appointment);
@@ -882,10 +1143,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         </div>
 
 
-        {/* نوار زبانه‌های ناوبری ۵ گانه */}
+        {/* نوار زبانه‌های ناوبری ۶ گانه */}
         <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xs">
           {[
             ['overview', 'تحلیل در یک نگاه'],
+            ['analytics', 'تحلیل‌های آماری'],
             ['profile', 'مشخصات ثبت‌نام'],
             ['forms', 'فرم‌ها و آزمون‌ها'],
             ['followups', 'پیگیری‌ها'],
@@ -922,6 +1184,201 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 به‌روزرسانی خودکار
               </span>
             </div>
+
+            {/* باکس ۱: خلاصه پرونده جامع مراجع */}
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-11 place-items-center rounded-2xl bg-[#173f6b]/10 text-[#173f6b]">
+                    <FileSpreadsheet className="size-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-black text-slate-900">خلاصه پرونده</h3>
+                      <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-extrabold text-[#173f6b] border border-blue-100">
+                        شناسنامه هویتی و بالینی
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      مشخصات فردی، وضعیت تاهل و فرزندان، سوابق نوبت‌ها و روند جلسات مشاوره‌ای
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className="text-xs text-slate-400 font-medium">کد یکتای پرونده:</span>
+                  <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-black text-[#173f6b] font-mono border border-slate-200">
+                    {clientCase.caseCode}
+                  </span>
+                </div>
+              </div>
+
+              {/* شبکه اطلاعاتی ۸ گانه */}
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                {/* ۱. نام و نام خانوادگی */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <User className="size-3.5 text-blue-600 shrink-0" />
+                    <span className="font-medium">نام و نام خانوادگی:</span>
+                  </div>
+                  <div className="font-black text-slate-900 text-sm truncate" title={displayFullName}>
+                    {displayFullName}
+                  </div>
+                </div>
+
+                {/* ۲. کد پرونده */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <Hash className="size-3.5 text-slate-500 shrink-0" />
+                    <span className="font-medium">کد پرونده:</span>
+                  </div>
+                  <div className="font-black text-[#173f6b] text-sm font-mono truncate" title={clientCase.caseCode}>
+                    {clientCase.caseCode}
+                  </div>
+                </div>
+
+                {/* ۳. جنسیت */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <Users className="size-3.5 text-indigo-500 shrink-0" />
+                    <span className="font-medium">جنسیت:</span>
+                  </div>
+                  <div className="font-bold text-slate-800 text-sm">
+                    {clientGender}
+                  </div>
+                </div>
+
+                {/* ۴. سن */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <Calendar className="size-3.5 text-emerald-600 shrink-0" />
+                    <span className="font-medium">سن مراجع:</span>
+                  </div>
+                  <div className="font-bold text-slate-800 text-sm truncate" title={clientAge}>
+                    {clientAge}
+                  </div>
+                </div>
+
+                {/* ۵. وضعیت تاهل */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <HeartPulse className="size-3.5 text-rose-500 shrink-0" />
+                    <span className="font-medium">وضعیت تاهل:</span>
+                  </div>
+                  <div className="font-bold text-slate-800 text-sm truncate" title={maritalStatusDisplay}>
+                    {maritalStatusDisplay}
+                  </div>
+                </div>
+
+                {/* ۶. تعداد فرزندان */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <Users className="size-3.5 text-teal-600 shrink-0" />
+                    <span className="font-medium">تعداد فرزندان:</span>
+                  </div>
+                  <div className="font-bold text-slate-800 text-sm truncate" title={childrenCountDisplay}>
+                    {childrenCountDisplay}
+                  </div>
+                </div>
+
+                {/* ۷. تاریخ اولین نوبت */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <Clock className="size-3.5 text-amber-600 shrink-0" />
+                    <span className="font-medium">تاریخ اولین نوبت:</span>
+                  </div>
+                  <div className="font-bold text-slate-800 text-sm font-mono truncate" title={firstAppointmentDate}>
+                    {firstAppointmentDate}
+                  </div>
+                </div>
+
+                {/* ۸. تاریخ آخرین نوبت */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <CalendarCheck className="size-3.5 text-blue-600 shrink-0" />
+                    <span className="font-medium">تاریخ آخرین نوبت:</span>
+                  </div>
+                  <div className="font-bold text-slate-800 text-sm font-mono truncate" title={lastAppointmentDate}>
+                    {lastAppointmentDate}
+                  </div>
+                </div>
+              </div>
+
+              {/* مشاوران طرف مراجعه و موضوعات اصلی */}
+              <div className="mt-3.5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* ۹. مشاوره با کدام مشاوران داشته */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-4">
+                  <div className="flex items-center gap-1.5 text-slate-500 text-[11px] mb-2 font-bold">
+                    <BadgeCheck className="size-4 text-purple-600 shrink-0" />
+                    <span>مشاوره با کدام مشاوران داشته:</span>
+                  </div>
+                  {consultantsAttended.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {consultantsAttended.map((cName, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 border border-purple-200/70 px-2.5 py-1 text-xs font-bold text-purple-800"
+                        >
+                          <User className="size-3 text-purple-600 shrink-0" />
+                          <span>{cName}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">هنوز جلسه‌ای با مشاوران ثبت نشده است.</p>
+                  )}
+                </div>
+
+                {/* ۱۰. موضوعات اصلی مراجعه */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-4">
+                  <div className="flex items-center gap-1.5 text-slate-500 text-[11px] mb-2 font-bold">
+                    <Activity className="size-4 text-sky-600 shrink-0" />
+                    <span>موضوعات اصلی مراجعه:</span>
+                  </div>
+                  {mainConsultationTopics.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {mainConsultationTopics.map((topic, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-sky-50 border border-sky-200/70 px-2.5 py-1 text-xs font-bold text-sky-800"
+                        >
+                          <span className="size-1.5 rounded-full bg-sky-500 shrink-0" />
+                          <span>{topic}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">موضوع مشخصی ثبت نشده است.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* ۱۱. آخرین توصیه مشاور */}
+              <div className="mt-3.5 rounded-2xl bg-violet-50/60 border border-violet-100 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-1.5 text-violet-900 text-xs font-black">
+                    <Sparkles className="size-4 text-violet-600 shrink-0" />
+                    <span>آخرین توصیه مشاور:</span>
+                  </div>
+                  {latestRecommendation && (
+                    <div className="flex items-center gap-2 text-[11px] text-violet-600">
+                      <span className="font-bold">{latestRecommendation.counselor}</span>
+                      <span>•</span>
+                      <span className="font-mono">{latestRecommendation.date.split('،')[0]}</span>
+                    </div>
+                  )}
+                </div>
+                {latestRecommendation?.recommendation ? (
+                  <div className="text-xs sm:text-sm leading-7 text-slate-800 font-medium bg-white/90 rounded-xl p-3.5 border border-violet-100 shadow-2xs">
+                    {latestRecommendation.recommendation}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 italic py-1">
+                    هنوز توصیه‌ای از سوی مشاور برای این مراجع ثبت نشده است. (با ثبت اولین گزارش جلسه بالینی، در این بخش منعکس خواهد شد)
+                  </p>
+                )}
+              </div>
+            </article>
 
             {/* گرید سه‌گانه بالای صفحه: توصیه‌ها، نوبت‌ها، مدرسه معارفی */}
             <div className="grid gap-4 xl:grid-cols-3">
