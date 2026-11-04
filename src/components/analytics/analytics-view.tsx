@@ -1115,92 +1115,42 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </div>
             </div>
 
-            {/* ۵. باکس بیشترین نوبت‌ها و فرم‌های مراجعان (چه کسانی بیشترین نوبت ها و فرم ها را دریافت کرده اند) */}
+            {/* ۵. باکس بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی) */}
             <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
-              <div>
+              <div className="space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <Award className="w-5 h-5 text-amber-600" />
                     <div>
                       <h2 className="text-sm font-extrabold text-slate-900">
-                        بیشترین نوبت‌ها و فرم‌های مراجعان
+                        بیشترین نوبت‌ها توسط مراجعان
                       </h2>
-                      <span className="text-[11px] text-slate-400">فعال‌ترین مراجعین با بیشترین جلسات و آزمون‌ها</span>
+                      <span className="text-[11px] text-slate-400">کد پرونده مراجعینی که بیشترین نوبت را دریافت کرده‌اند</span>
                     </div>
                   </div>
-                  <span className="text-xs font-mono font-bold text-slate-400">
-                    {toPersianDigits(topClientsDetailedList.length)} مراجع برتر
+                  <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold border border-amber-100 shrink-0">
+                    نمودار میله‌ای عمودی
                   </span>
                 </div>
 
-                <div className="overflow-x-auto mt-3">
-                  <table className="w-full text-right text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-bold">
-                        <th className="py-2.5 px-2">کد پرونده مراجع</th>
-                        <th className="py-2.5 px-2 text-center">نوبت‌ها</th>
-                        <th className="py-2.5 px-2 text-center">پرسش‌نامه‌ها</th>
-                        <th className="py-2.5 px-2 text-center">کل فرم‌ها</th>
-                        <th className="py-2.5 px-2 text-center">اقدام</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {topClientsDetailedList.map((client, idx) => (
-                        <tr key={client.caseCode} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-2.5 px-2">
-                            <div className="flex items-center gap-2">
-                              <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black flex items-center justify-center shrink-0">
-                                {toPersianDigits(idx + 1)}
-                              </span>
-                              <div>
-                                <span className="font-mono font-black text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 block text-xs">
-                                  {client.caseCode}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="py-2.5 px-2 text-center font-mono">
-                            <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200">
-                              {toPersianDigits(client.totalBookings)} نوبت
-                            </span>
-                          </td>
-
-                          <td className="py-2.5 px-2 text-center font-mono">
-                            <span className="inline-block px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold text-[11px] border border-purple-200">
-                              {toPersianDigits(client.totalQuizzes)} آزمون
-                            </span>
-                          </td>
-
-                          <td className="py-2.5 px-2 text-center font-mono font-black text-slate-800 text-xs">
-                            {toPersianDigits(client.totalForms)}
-                          </td>
-
-                          <td className="py-2.5 px-2 text-center">
-                            <button
-                              onClick={() => router.push(`/dossier?case=${encodeURIComponent(client.caseCode)}`)}
-                              className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg text-[10px] font-bold transition-all cursor-pointer inline-flex items-center gap-1"
-                              title="مشاهده پرونده مراجع"
-                            >
-                              <span>پرونده</span>
-                              <ArrowRight className="w-3 h-3 rotate-180" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <VerticalBarChart
+                  data={topClientsBarData}
+                  unit="نوبت"
+                  height={230}
+                  barColor="bg-amber-500"
+                  showValues={true}
+                />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>مرتب‌سازی بر اساس تعامل پیوسته</span>
-                <span className="text-sky-700 font-bold">بازه: {timeRange === 'all' ? 'کل سوابق' : 'انتخابی'}</span>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>مرتب‌سازی بر اساس حجم جلسات رزرو شده</span>
+                <span className="text-amber-700 font-bold">بازه: {timeRange === 'all' ? 'کل سوابق' : 'انتخابی'}</span>
               </div>
             </div>
 
           </div>
 
+          '
 
           {/* ردیف اول: تحلیل نوبت‌های هر فرد در بازه زمانی + جدول تاپ ۱۰ مراجعین پرتکرار */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

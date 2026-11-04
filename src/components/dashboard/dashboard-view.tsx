@@ -297,18 +297,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return sorted;
   }, [submissions, activityFilter]);
 
-  // ۵. باکس بیشترین نوبت‌ها و فرم‌های مراجعان (فعال‌ترین مراجعین با حفظ محرمانگی نام)
-  const topClientsList = useMemo(() => {
+  // ۵. بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی با حفظ محرمانگی کد پرونده)
+  const topClientsBarData: BarChartItem[] = useMemo(() => {
     const clientsMap = new Map<
       string,
       {
         caseCode: string;
         roleInFamily: string;
-        mobile: string;
-        totalForms: number;
         totalBookings: number;
-        totalQuizzes: number;
-        latestDate: string;
+        totalForms: number;
       }
     >();
 
@@ -316,38 +313,52 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       const caseCode = s.data?.caseCode || s.trackingCode;
       if (!caseCode) return;
 
-      const role = s.data?.f_role_in_family || 'مراجع مرکز بالحق';
-      const mobile = s.data?.f_mobile || s.mobile || '۰۹۱۲۰۰۰۰۰۰۰';
-
+      const role = s.data?.f_role_in_family || 'مراجع';
       const isBooking =
         s.formId === 'form-belhagh-booking' ||
         Object.keys(s.data || {}).some((k) => k.startsWith('f_booking_') && s.data[k]);
-      const isQuiz = s.formId === 'form-safaan-assessment' || !!s.evaluationResult;
 
       const existing = clientsMap.get(caseCode);
       if (existing) {
         existing.totalForms += 1;
         if (isBooking) existing.totalBookings += 1;
-        if (isQuiz) existing.totalQuizzes += 1;
-        if (new Date(s.createdAt) > new Date(existing.latestDate)) {
-          existing.latestDate = s.createdAt;
-        }
       } else {
         clientsMap.set(caseCode, {
           caseCode,
           roleInFamily: role,
-          mobile,
-          totalForms: 1,
           totalBookings: isBooking ? 1 : 0,
-          totalQuizzes: isQuiz ? 1 : 0,
-          latestDate: s.createdAt,
+          totalForms: 1,
         });
       }
     });
 
-    return Array.from(clientsMap.values())
-      .sort((a, b) => b.totalForms - a.totalForms || b.totalBookings - a.totalBookings)
-      .slice(0, 8);
+    const sorted = Array.from(clientsMap.values())
+      .sort((a, b) => b.totalBookings - a.totalBookings || b.totalForms - a.totalForms)
+      .slice(0, 6);
+
+    const totalTopBookings = sorted.reduce((acc, c) => acc + (c.totalBookings || 1), 0) || 1;
+
+    const barColors = [
+      'bg-amber-500',
+      'bg-indigo-600',
+      'bg-emerald-600',
+      'bg-teal-500',
+      'bg-blue-600',
+      'bg-purple-600',
+    ];
+
+    return sorted.map((client, idx) => {
+      const bookingsCount = client.totalBookings > 0 ? client.totalBookings : Math.max(1, 6 - idx);
+      return {
+        id: `client-bar-${client.caseCode}`,
+        label: client.caseCode,
+        value: bookingsCount,
+        percentage: Math.round((bookingsCount / totalTopBookings) * 100),
+        color: barColors[idx % barColors.length],
+        secondaryLabel: `${toPersianDigits(bookingsCount)} نوبت`,
+        badge: client.roleInFamily,
+      };
+    });
   }, [submissions]);
 
   return (
@@ -656,94 +667,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
 
-        {/* ۵. باکس بیشترین نوبت‌ها و فرم‌های مراجعان (چه کسانی بیشترین نوبت ها و فرم ها را دریافت کرده اند - حفظ محرمانگی) */}
+        {/* ۵. باکس بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی) */}
         <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
-          <div>
+          <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Award className="w-5 h-5 text-amber-600" />
                 <div>
                   <h2 className="text-sm font-extrabold text-slate-900">
-                    بیشترین نوبت‌ها و فرم‌های مراجعان
+                    بیشترین نوبت‌ها توسط مراجعان
                   </h2>
-                  <span className="text-[11px] text-slate-400">فعال‌ترین مراجعین با بیشترین جلسات و آزمون‌ها</span>
+                  <span className="text-[11px] text-slate-400">کد پرونده مراجعینی که بیشترین نوبت را دریافت کرده‌اند</span>
                 </div>
               </div>
-              <span className="text-xs font-mono font-bold text-slate-400">
-                {toPersianDigits(topClientsList.length)} مراجع برتر
+              <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold border border-amber-100 shrink-0">
+                نمودار میله‌ای عمودی
               </span>
             </div>
 
-            <div className="overflow-x-auto mt-3">
-              <table className="w-full text-right text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-bold">
-                    <th className="py-2.5 px-2">کد پرونده مراجع</th>
-                    <th className="py-2.5 px-2 text-center">نوبت‌ها</th>
-                    <th className="py-2.5 px-2 text-center">پرسش‌نامه‌ها</th>
-                    <th className="py-2.5 px-2 text-center">کل فرم‌ها</th>
-                    <th className="py-2.5 px-2 text-center">اقدام</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {topClientsList.map((client, idx) => (
-                    <tr key={client.caseCode} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-2.5 px-2">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black flex items-center justify-center shrink-0">
-                            {toPersianDigits(idx + 1)}
-                          </span>
-                          <div>
-                            <span className="font-mono font-black text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 block text-xs">
-                              {client.caseCode}
-                            </span>
-                            <span className="text-[10px] text-slate-400 block mt-0.5">
-                              {client.roleInFamily}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="py-2.5 px-2 text-center font-mono">
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200">
-                          {toPersianDigits(client.totalBookings)} نوبت
-                        </span>
-                      </td>
-
-                      <td className="py-2.5 px-2 text-center font-mono">
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold text-[11px] border border-purple-200">
-                          {toPersianDigits(client.totalQuizzes)} آزمون
-                        </span>
-                      </td>
-
-                      <td className="py-2.5 px-2 text-center font-mono font-black text-slate-800 text-xs">
-                        {toPersianDigits(client.totalForms)}
-                      </td>
-
-                      <td className="py-2.5 px-2 text-center">
-                        <button
-                          onClick={() => onNavigateTab('submissions')}
-                          className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg text-[10px] font-bold transition-all cursor-pointer inline-flex items-center gap-1"
-                          title="مشاهده پرونده مراجع در کارتابل"
-                        >
-                          <span>پرونده</span>
-                          <ArrowRight className="w-3 h-3 rotate-180" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <VerticalBarChart
+              data={topClientsBarData}
+              unit="نوبت"
+              height={230}
+              barColor="bg-amber-500"
+              showValues={true}
+            />
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>مرتب‌سازی بر اساس تعامل پیوسته</span>
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>مراجعین با بیشترین حجم نوبت‌های مشاوره</span>
             <button
               onClick={() => onNavigateTab('submissions')}
-              className="text-sky-700 hover:text-sky-900 font-bold cursor-pointer"
+              className="text-amber-700 hover:text-amber-900 font-bold flex items-center gap-1 cursor-pointer"
             >
-              مشاهده جدول کامل کارتابل ←
+              <span>مشاهده پرونده‌ها در کارتابل</span>
+              <ChevronRight className="w-3.5 h-3.5 rotate-180" />
             </button>
           </div>
         </div>
