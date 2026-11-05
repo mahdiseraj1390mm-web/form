@@ -260,7 +260,9 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((err) => {
         console.warn('Could not sync forms from /api/forms:', err);
+      });
 
+    // همگام‌سازی مستقل و قطعی اعضای تیم از پایگاه داده سرور
     fetch(`/api/team?_nocache=${Date.now()}`, { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
@@ -272,7 +274,6 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch((err) => console.warn('Could not sync team from /api/team:', err));
-      });
   }, []);
 
   useEffect(() => {
