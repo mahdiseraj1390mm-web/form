@@ -48,6 +48,7 @@ import { EvaluationReportView } from '../analytics/evaluation-report-view';
 import { VerticalBarChart } from '../analytics/vertical-bar-chart';
 import { PointLineChart } from '../analytics/point-line-chart';
 import { ClientStatisticalAnalysisTab } from './client-statistical-analysis-tab';
+import { PrintableClientDossier } from './printable-client-dossier';
 import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
   formatPersianDateTime,
@@ -1062,7 +1063,19 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   }, [appointments]);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f5f7fa] text-slate-800" dir="rtl">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
+      {/* سند جامع رسمی چاپی پرونده - تمام فیلدها، سوابق و آمارها به تفکیک و زیر هم */}
+      <PrintableClientDossier
+        clientCase={clientCase}
+        combinedData={combinedData}
+        appointments={appointments}
+        submissions={currentSubmissions}
+        forms={forms}
+        safaEvaluationSubmission={safaEvaluationSubmission}
+      />
+
+      {/* رابط کاربری تعاملی صفحه مانیتور - هنگام پرینت کاملاً پنهان می‌شود */}
+      <div className="flex flex-col min-h-screen print:hidden">
       {/* سربرگ ناوبری سراسری برند بالحق */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur shadow-2xs">
         <div className="mx-auto flex max-w-[1480px] items-center justify-between gap-6 px-4 sm:px-6 py-3.5">
@@ -3160,6 +3173,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           </section>
         </div>
       )}
+      </div>
     </div>
   );
 };
