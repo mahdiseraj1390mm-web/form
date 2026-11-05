@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import { AdminLoginView } from '@/components/auth/admin-login-view';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import dynamic from 'next/dynamic';
-import { Layers } from 'lucide-react';
+import { Layers, ShieldAlert } from 'lucide-react';
 
 function ViewSkeleton() {
   return (
@@ -66,23 +66,49 @@ const NewFormModal = dynamic(
 );
 
 export default function AppHome() {
-  const { isAuthenticated, isLoading } = useAdminAuth();
+  const { isAuthenticated, isLoading, currentUser } = useAdminAuth();
   const { forms, activeForm, setActiveForm, getFormById } = useForm();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isNewFormModalOpen, setIsNewFormModalOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [runnerPrefillData, setRunnerPrefillData] = useState<Record<string, any> | undefined>(undefined);
 
+  const isSuperAdmin = !!(
+    currentUser?.isSuperAdmin ||
+    currentUser?.username === 'admin' ||
+    currentUser?.role === 'super_admin'
+  );
+  const userAllowedTabs = currentUser?.allowedTabs;
+
+  // انتخاب خودکار اولین تب مجاز برای کاربر
+  useEffect(() => {
+    if (!currentUser || isSuperAdmin) return;
+    const allowed = userAllowedTabs && userAllowedTabs.length > 0 ? userAllowedTabs : ['submissions'];
+    if (!allowed.includes(currentTab)) {
+      setCurrentTab(allowed[0]);
+    }
+  }, [currentUser, isSuperAdmin, userAllowedTabs, currentTab]);
+
+  const handleTabChange = (targetTab: string) => {
+    if (!isSuperAdmin && userAllowedTabs) {
+      if (!userAllowedTabs.includes(targetTab)) {
+        return;
+      }
+    }
+    setCurrentTab(targetTab);
+    setIsMobileNavOpen(false);
+  };
+
   const handleTemplateSelected = (newFormId: string) => {
     const f = getFormById(newFormId);
     if (f) setActiveForm(f);
-    setCurrentTab('builder');
+    handleTabChange('builder');
   };
 
   const handleFormCreated = (newFormId: string) => {
     const f = getFormById(newFormId);
     if (f) setActiveForm(f);
-    setCurrentTab('builder');
+    handleTabChange('builder');
   };
 
   const handleNavigateToForm = (formIdOrSlug: string, initialData?: Record<string, any>) => {
@@ -90,7 +116,7 @@ export default function AppHome() {
     if (target) {
       setActiveForm(target);
       setRunnerPrefillData(initialData);
-      setCurrentTab('runner');
+      handleTabChange('runner');
     }
   };
 
@@ -111,16 +137,21 @@ export default function AppHome() {
     return <AdminLoginView />;
   }
 
+  const isTabAllowed = (tabId: string) => {
+    if (isSuperAdmin) return true;
+    if (Array.isArray(userAllowedTabs) && userAllowedTabs.length > 0) {
+      return userAllowedTabs.includes(tabId);
+    }
+    return tabId === 'submissions';
+  };
+
   return (
     <div className="h-screen h-[100dvh] flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
       
       {/* سربرگ ناوبری سراسری */}
       <Header
         currentTab={currentTab}
-        setCurrentTab={(tab) => {
-          setCurrentTab(tab);
-          setIsMobileNavOpen(false);
-        }}
+        setCurrentTab={handleTabChange}
         openNewFormModal={() => setIsNewFormModalOpen(true)}
         isMobileNavOpen={isMobileNavOpen}
         onToggleMobileNav={() => setIsMobileNavOpen((prev) => !prev)}
@@ -132,61 +163,58 @@ export default function AppHome() {
         {/* منوی کناری ثابت و کشویی موبایل */}
         <Sidebar 
           currentTab={currentTab} 
-          setCurrentTab={(tab) => {
-            setCurrentTab(tab);
-            setIsMobileNavOpen(false);
-          }}
+          setCurrentTab={handleTabChange}
           isOpenMobile={isMobileNavOpen}
           onCloseMobile={() => setIsMobileNavOpen(false)}
         />
 
         {/* محتوای تب فعال */}
         <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          {currentTab === 'dashboard' && (
+          {currentTab === 'dashboard' && isTabAllowed('dashboard') && (
             <DashboardView
               onOpenNewFormModal={() => setIsNewFormModalOpen(true)}
-              onNavigateTab={(tab) => setCurrentTab(tab)}
+              onNavigateTab={handleTabChange}
             />
           )}
 
-          {currentTab === 'forms' && (
+          {currentTab === 'forms' && isTabAllowed('forms') && (
             <FormsListView
               onOpenNewFormModal={() => setIsNewFormModalOpen(true)}
-              onNavigateTab={(tab) => setCurrentTab(tab)}
+              onNavigateTab={handleTabChange}
             />
           )}
 
-          {currentTab === 'builder' && (
-            <Studio onPreview={() => setCurrentTab('runner')} />
+          {currentTab === 'builder' && isTabAllowed('builder') && (
+            <Studio onPreview={() => handleTabChange('runner')} />
           )}
 
-          {currentTab === 'runner' && activeForm && (
+          {currentTab === 'runner' && activeForm && isTabAllowed('runner') && (
             <div className="flex-1 overflow-y-auto bg-slate-100/60 p-4 sm:p-6">
               <FormRunner
                 key={activeForm.id}
                 form={activeForm}
-                onBackToStudio={() => setCurrentTab('builder')}
+                onBackToStudio={() => handleTabChange('builder')}
                 onNavigateToForm={handleNavigateToForm}
                 initialFormData={runnerPrefillData}
               />
             </div>
           )}
 
-          {currentTab === 'submissions' && <SubmissionsHub />}
+          {currentTab === 'submissions' && isTabAllowed('submissions') && <SubmissionsHub />}
 
-          {currentTab === 'media' && <MediaManagerView />}
+          {currentTab === 'media' && isTabAllowed('media') && <MediaManagerView />}
 
-          {currentTab === 'chat' && <AdminChatInboxView />}
+          {currentTab === 'chat' && isTabAllowed('chat') && <AdminChatInboxView />}
 
-          {currentTab === 'analytics' && (
-            <AnalyticsView onNavigateToRunner={() => setCurrentTab('runner')} />
+          {currentTab === 'analytics' && isTabAllowed('analytics') && (
+            <AnalyticsView onNavigateToRunner={() => handleTabChange('runner')} />
           )}
 
-          {currentTab === 'templates' && (
+          {currentTab === 'templates' && isTabAllowed('templates') && (
             <TemplatesView onSelectTemplate={handleTemplateSelected} />
           )}
 
-          {currentTab === 'settings' && <SystemSettingsView />}
+          {currentTab === 'settings' && isTabAllowed('settings') && <SystemSettingsView />}
         </main>
       </div>
 

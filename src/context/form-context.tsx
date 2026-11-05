@@ -14,102 +14,9 @@ export const allInitialSubmissions: FormSubmission[] = belhaghInitialSubmissions
 }));
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
+import { DEFAULT_INITIAL_TEAM_MEMBERS } from '@/lib/team-constants';
 
-export const initialTeamMembers: TeamMember[] = [
-  {
-    id: 'user-admin',
-    name: 'امیرحسین رضایی',
-    email: 'a.rezaei@paya.ir',
-    mobile: '09121112233',
-    jobTitle: 'مدیر ارشد سامانه',
-    role: 'super_admin',
-    status: 'active',
-    invitedAt: '2026-01-10T08:00:00Z',
-    lastActive: 'هم‌اکنون آنلاین',
-    accessibleFormIds: ['all'],
-    permissions: {
-      canCreateForms: true,
-      canEditForms: true,
-      canDeleteForms: true,
-      canPublishForms: true,
-      canViewSubmissions: true,
-      canEditSubmissions: true,
-      canDeleteSubmissions: true,
-      canChangeStatus: true,
-      canExportData: true,
-      canAddComments: true,
-      canManageBookings: true,
-      canRescheduleBookings: true,
-      canManualBook: true,
-      canViewFinances: true,
-      canManageSms: true,
-      canManageIntegrations: true,
-      canManageTeam: true,
-    },
-  },
-  {
-    id: 'user-booking-op',
-    name: 'مریم نوری',
-    email: 'm.nouri@psy-belhagh.com',
-    mobile: '09358889900',
-    jobTitle: 'مسئول پذیرش و نوبت‌دهی تلفنی',
-    role: 'booking_operator',
-    status: 'active',
-    invitedAt: '2026-03-01T10:30:00Z',
-    lastActive: '۲ ساعت پیش',
-    accessibleFormIds: ['form-belhagh-booking', 'form-belhagh-registration'],
-    permissions: {
-      canCreateForms: false,
-      canEditForms: false,
-      canDeleteForms: false,
-      canPublishForms: false,
-      canViewSubmissions: true,
-      canEditSubmissions: true,
-      canDeleteSubmissions: false,
-      canChangeStatus: true,
-      canExportData: true,
-      canAddComments: true,
-      canManageBookings: true,
-      canRescheduleBookings: true,
-      canManualBook: true,
-      canViewFinances: false,
-      canManageSms: false,
-      canManageIntegrations: false,
-      canManageTeam: false,
-    },
-  },
-  {
-    id: 'user-reviewer',
-    name: 'سارا سعادت',
-    email: 'sara@paya.ir',
-    mobile: '09193334455',
-    jobTitle: 'کارشناس بررسی پرونده‌های روانشناسی',
-    role: 'reviewer',
-    status: 'active',
-    invitedAt: '2026-02-15T12:00:00Z',
-    lastActive: 'دیروز',
-    accessibleFormIds: ['all'],
-    permissions: {
-      canCreateForms: false,
-      canEditForms: false,
-      canDeleteForms: false,
-      canPublishForms: false,
-      canViewSubmissions: true,
-      canEditSubmissions: true,
-      canDeleteSubmissions: false,
-      canChangeStatus: true,
-      canExportData: true,
-      canAddComments: true,
-      canManageBookings: false,
-      canRescheduleBookings: false,
-      canManualBook: false,
-      canViewFinances: false,
-      canManageSms: false,
-      canManageIntegrations: false,
-      canManageTeam: false,
-    },
-  },
-];
+export const initialTeamMembers: TeamMember[] = DEFAULT_INITIAL_TEAM_MEMBERS;
 
 interface FormContextType {
   forms: Form[];
@@ -353,6 +260,18 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((err) => {
         console.warn('Could not sync forms from /api/forms:', err);
+
+    fetch(`/api/team?_nocache=${Date.now()}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.teamMembers && Array.isArray(data.teamMembers) && data.teamMembers.length > 0) {
+          setTeamMembers(data.teamMembers);
+          try {
+            localStorage.setItem('formafzar_team_members', JSON.stringify(data.teamMembers));
+          } catch {}
+        }
+      })
+      .catch((err) => console.warn('Could not sync team from /api/team:', err));
       });
   }, []);
 
@@ -666,7 +585,15 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       candidateUserIds: assignedCandidates,
     };
 
-    setSubmissions((prev) => [newSubmission, ...prev]);
+    setSubmissions((prev) => {
+      const idx = prev.findIndex((s) => s.id === newSubmission.id);
+      if (idx !== -1) {
+        const next = [...prev];
+        next[idx] = newSubmission;
+        return next;
+      }
+      return [newSubmission, ...prev];
+    });
 
     setForms((prev) =>
       prev.map((f) => (f.id === formId ? { ...f, submissionCount: f.submissionCount + 1 } : f))
@@ -880,6 +807,14 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     setWebhookLogs((prev) => [newLog, ...prev]);
   };
 
+  const syncTeamToServer = (members: TeamMember[]) => {
+    fetch('/api/team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamMembers: members }),
+    }).catch((err) => console.warn('Error saving team to server:', err));
+  };
+
   const inviteTeamMember = (member: Omit<TeamMember, 'id' | 'invitedAt'>): TeamMember => {
     const newMember: TeamMember = {
       ...member,
@@ -887,28 +822,40 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       invitedAt: new Date().toISOString(),
       lastActive: 'به‌تازگی دعوت شده',
     };
-    setTeamMembers((prev) => [newMember, ...prev]);
+    setTeamMembers((prev) => {
+      const next = [newMember, ...prev];
+      syncTeamToServer(next);
+      return next;
+    });
     return newMember;
   };
 
   const updateTeamMember = (id: string, updated: Partial<TeamMember>) => {
-    setTeamMembers((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...updated } : m))
-    );
+    setTeamMembers((prev) => {
+      const next = prev.map((m) => (m.id === id ? { ...m, ...updated } : m));
+      syncTeamToServer(next);
+      return next;
+    });
   };
 
   const deleteTeamMember = (id: string) => {
-    setTeamMembers((prev) => prev.filter((m) => m.id !== id));
+    setTeamMembers((prev) => {
+      const next = prev.filter((m) => m.id !== id);
+      syncTeamToServer(next);
+      return next;
+    });
   };
 
   const toggleTeamMemberStatus = (id: string) => {
-    setTeamMembers((prev) =>
-      prev.map((m) =>
+    setTeamMembers((prev) => {
+      const next = prev.map((m) =>
         m.id === id
-          ? { ...m, status: m.status === 'active' ? 'suspended' : 'active' }
+          ? { ...m, status: (m.status === 'active' ? 'suspended' : 'active') as 'active' | 'suspended' }
           : m
-      )
-    );
+      );
+      syncTeamToServer(next);
+      return next;
+    });
   };
 
   return (

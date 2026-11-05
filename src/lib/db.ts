@@ -347,6 +347,8 @@ export async function createCaseRecord(
 export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void> {
   const mobile = normalizeMobile(String(sub.data?.f_mobile || sub.data?.mobile || sub.data?.f_phone || sub.mobile || ''));
   const isReg = sub.formId === 'form-belhagh-registration' || sub.formId === 'zexuz';
+  const isBooking = sub.formId === 'form-belhagh-booking' || sub.formId === '3uu4z';
+  const bookingSlot = Object.entries(sub.data || {}).find(([k, v]) => k.startsWith('f_booking_') && v)?.[1];
   const cCode = sub.data?.caseCode || sub.trackingCode;
   const canonicalId = (isReg && cCode)
     ? (cCode.startsWith('sub-case-') ? cCode : `sub-case-${cCode}`)
@@ -377,7 +379,8 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
     const idx = local.findIndex((s) =>
       s.id === canonicalId ||
       s.id === sub.id ||
-      (isReg && ((cCode && (s.trackingCode === cCode || s.data?.caseCode === cCode)) || (mobile && (s.mobile === mobile || s.data?.f_mobile === mobile))))
+      (isReg && ((cCode && (s.trackingCode === cCode || s.data?.caseCode === cCode)) || (mobile && (s.mobile === mobile || s.data?.f_mobile === mobile)))) ||
+      (isBooking && cCode && bookingSlot && (s.trackingCode === cCode || s.data?.caseCode === cCode) && JSON.stringify(s.data || {}).includes(String(bookingSlot)))
     );
 
     if (idx !== -1) {
@@ -404,6 +407,18 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
              OR mobile = $3
            )`,
         [canonicalId, cCode, mobile]
+      ).catch(() => {});
+    }
+
+    // برای فرم‌های رزرو نوبت مشاوره، رکوردهای تکراری ناشی از دابل‌کلیک مراجع برای همان زمان پاکسازی می‌شوند
+    if (isBooking && cCode && bookingSlot) {
+      await executeNeonQueryWithTimeout(
+        `DELETE FROM form_submissions 
+         WHERE (form_id = 'form-belhagh-booking' OR form_id = '3uu4z')
+           AND id != $1 
+           AND (tracking_code = $2 OR data->>'caseCode' = $2)
+           AND data::text LIKE $3`,
+        [canonicalId, cCode, `%${bookingSlot}%`]
       ).catch(() => {});
     }
 

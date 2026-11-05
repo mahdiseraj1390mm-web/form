@@ -2,8 +2,11 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm } from '@/context/form-context';
+import { useAdminAuth } from '@/context/admin-auth-context';
+import { ShieldAlert, Lock, Key } from 'lucide-react';
 import { FormSubmission, SubmissionStatus, Form } from '@/types/form';
 import { ClientDossierFullview } from './client-dossier-fullview';
+import { RestrictedDossierView } from './restricted-dossier-view';
 import { 
   Inbox, 
   Search, 
@@ -53,7 +56,28 @@ interface ClientCaseGroup {
 }
 
 export const SubmissionsHub: React.FC = () => {
-  const { forms, activeForm, submissions, updateSubmissionStatus, addSubmissionComment, refreshSubmissionsFromDb } = useForm();
+  const { forms, activeForm, submissions, teamMembers, updateSubmissionStatus, addSubmissionComment, refreshSubmissionsFromDb } = useForm();
+  const { currentUser } = useAdminAuth();
+
+  const isSuperAdmin = !!(
+    currentUser?.isSuperAdmin ||
+    currentUser?.username === 'admin' ||
+    currentUser?.role === 'super_admin'
+  );
+
+  const currentMember = teamMembers?.find(
+    (m) =>
+      m.id === currentUser?.id ||
+      m.mobile === currentUser?.mobile ||
+      m.mobile === currentUser?.username ||
+      m.username === currentUser?.username
+  );
+
+  const requireCaseCode = !isSuperAdmin && (
+    currentMember?.requireCaseCode !== undefined
+      ? currentMember.requireCaseCode
+      : (currentUser?.requireCaseCode !== false)
+  );
   // همگام‌سازی کاملاً خودکار و زنده با پایگاه‌داده سرور
   useEffect(() => {
     // ۱. دریافت بلافاصله در بدو ورود به کارتابل
@@ -337,6 +361,10 @@ function normalizeSearchText(str: string): string {
     const updated = submissions.find((s) => s.id === target.id);
     if (updated) setActiveSubmissionModal(updated);
   };
+
+  if (requireCaseCode) {
+    return <RestrictedDossierView clientCases={clientCases} forms={forms} />;
+  }
 
   return (
     <div className="relative flex-1 flex flex-col h-full overflow-hidden bg-slate-50 overscroll-contain">

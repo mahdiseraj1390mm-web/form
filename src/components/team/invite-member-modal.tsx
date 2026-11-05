@@ -5,172 +5,69 @@ import {
   X, 
   UserPlus, 
   ShieldCheck, 
-  Layers, 
-  FileText, 
-  Calendar, 
-  Sliders, 
-  Check, 
-  CheckSquare, 
-  Square, 
+  LayoutDashboard,
+  FolderKanban,
+  PenTool,
+  Eye,
+  EyeOff,
+  Inbox,
+  FileCheck,
+  Sparkles,
+  BarChart3,
+  Settings,
+  Lock,
   Phone, 
-  Mail, 
   Briefcase, 
   User, 
   AlertCircle,
-  MessageSquare
+  CheckSquare,
+  Square,
+  ShieldAlert,
+  Info
 } from 'lucide-react';
 import { TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { Form } from '@/types/form';
+import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (memberData: Omit<TeamMember, 'id' | 'invitedAt'>) => void;
   editingMember?: TeamMember | null;
-  forms: Form[];
+  forms?: Form[];
 }
 
-const DEFAULT_PERMISSIONS: DetailedPermissions = {
-  canCreateForms: false,
-  canEditForms: false,
+const TAB_ICONS: Record<string, React.ElementType> = {
+  dashboard: LayoutDashboard,
+  forms: FolderKanban,
+  builder: PenTool,
+  runner: Eye,
+  submissions: Inbox,
+  media: FileCheck,
+  chat: Sparkles,
+  analytics: BarChart3,
+  templates: Sparkles,
+  settings: Settings,
+};
+
+const DEFAULT_DETAILED_PERMISSIONS: DetailedPermissions = {
+  canCreateForms: true,
+  canEditForms: true,
   canDeleteForms: false,
-  canPublishForms: false,
+  canPublishForms: true,
   canViewSubmissions: true,
-  canEditSubmissions: false,
+  canEditSubmissions: true,
   canDeleteSubmissions: false,
   canChangeStatus: true,
-  canExportData: false,
+  canExportData: true,
   canAddComments: true,
-  canManageBookings: false,
-  canRescheduleBookings: false,
-  canManualBook: false,
+  canManageBookings: true,
+  canRescheduleBookings: true,
+  canManualBook: true,
   canViewFinances: false,
   canManageSms: false,
   canManageIntegrations: false,
   canManageTeam: false,
-};
-
-const ROLE_PRESETS: Record<TeamRole, { title: string; desc: string; permissions: DetailedPermissions }> = {
-  super_admin: {
-    title: 'مدیر کل (Super Admin)',
-    desc: 'دسترسی نامحدود به تمامی بخش‌ها، فرم‌ها، تنظیمات و دعوت همکاران',
-    permissions: {
-      canCreateForms: true,
-      canEditForms: true,
-      canDeleteForms: true,
-      canPublishForms: true,
-      canViewSubmissions: true,
-      canEditSubmissions: true,
-      canDeleteSubmissions: true,
-      canChangeStatus: true,
-      canExportData: true,
-      canAddComments: true,
-      canManageBookings: true,
-      canRescheduleBookings: true,
-      canManualBook: true,
-      canViewFinances: true,
-      canManageSms: true,
-      canManageIntegrations: true,
-      canManageTeam: true,
-    },
-  },
-  booking_operator: {
-    title: 'اپراتور نوبت‌دهی و پذیرش',
-    desc: 'مدیریت تقویم، ثبت نوبت دستی مراجعین، تماس تلفنی و تایید زمان‌ها',
-    permissions: {
-      canCreateForms: false,
-      canEditForms: false,
-      canDeleteForms: false,
-      canPublishForms: false,
-      canViewSubmissions: true,
-      canEditSubmissions: true,
-      canDeleteSubmissions: false,
-      canChangeStatus: true,
-      canExportData: true,
-      canAddComments: true,
-      canManageBookings: true,
-      canRescheduleBookings: true,
-      canManualBook: true,
-      canViewFinances: false,
-      canManageSms: false,
-      canManageIntegrations: false,
-      canManageTeam: false,
-    },
-  },
-  reviewer: {
-    title: 'کارشناس بررسی و کارتابل',
-    desc: 'بررسی پرونده‌های مراجعین، درج نظر کارشناسی و تغییر وضعیت پرونده',
-    permissions: {
-      canCreateForms: false,
-      canEditForms: false,
-      canDeleteForms: false,
-      canPublishForms: false,
-      canViewSubmissions: true,
-      canEditSubmissions: true,
-      canDeleteSubmissions: false,
-      canChangeStatus: true,
-      canExportData: true,
-      canAddComments: true,
-      canManageBookings: false,
-      canRescheduleBookings: false,
-      canManualBook: false,
-      canViewFinances: false,
-      canManageSms: false,
-      canManageIntegrations: false,
-      canManageTeam: false,
-    },
-  },
-  form_builder: {
-    title: 'طراح و مدیر فرم‌ها',
-    desc: 'طراحی، ویرایش فیلدها، تعیین شروط و قالب‌های ظاهری فرم‌ها',
-    permissions: {
-      canCreateForms: true,
-      canEditForms: true,
-      canDeleteForms: true,
-      canPublishForms: true,
-      canViewSubmissions: true,
-      canEditSubmissions: false,
-      canDeleteSubmissions: false,
-      canChangeStatus: false,
-      canExportData: true,
-      canAddComments: false,
-      canManageBookings: false,
-      canRescheduleBookings: false,
-      canManualBook: false,
-      canViewFinances: false,
-      canManageSms: false,
-      canManageIntegrations: false,
-      canManageTeam: false,
-    },
-  },
-  auditor: {
-    title: 'ناظر و بازرس (فقط مشاهده)',
-    desc: 'مشاهده گزارش‌ها، آمار مراجعین و خروجی اکسل بدون امکان دستکاری',
-    permissions: {
-      canCreateForms: false,
-      canEditForms: false,
-      canDeleteForms: false,
-      canPublishForms: false,
-      canViewSubmissions: true,
-      canEditSubmissions: false,
-      canDeleteSubmissions: false,
-      canChangeStatus: false,
-      canExportData: true,
-      canAddComments: false,
-      canManageBookings: false,
-      canRescheduleBookings: false,
-      canManualBook: false,
-      canViewFinances: true,
-      canManageSms: false,
-      canManageIntegrations: false,
-      canManageTeam: false,
-    },
-  },
-  custom: {
-    title: 'سطح دسترسی سفارشی',
-    desc: 'تعیین دقیق و دلخواه تک‌تک مجوزها و محدوده‌های دسترسی',
-    permissions: { ...DEFAULT_PERMISSIONS },
-  },
 };
 
 export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
@@ -178,84 +75,60 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   onClose,
   onSave,
   editingMember,
-  forms,
 }) => {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
-  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
-  const [role, setRole] = useState<TeamRole>('reviewer');
-  const [status, setStatus] = useState<'active' | 'pending' | 'suspended'>('active');
-  const [isAllForms, setIsAllForms] = useState(true);
-  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
-  const [permissions, setPermissions] = useState<DetailedPermissions>({ ...ROLE_PRESETS.reviewer.permissions });
-  const [sendSmsInvite, setSendSmsInvite] = useState(true);
+  const [status, setStatus] = useState<'active' | 'suspended'>('active');
+  const [allowedTabs, setAllowedTabs] = useState<string[]>(['submissions']);
+  const [requireCaseCode, setRequireCaseCode] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (editingMember) {
-      setName(editingMember.name);
-      setMobile(editingMember.mobile);
-      setEmail(editingMember.email);
-      setJobTitle(editingMember.jobTitle);
-      setRole(editingMember.role);
-      setStatus(editingMember.status);
-      const isAll = editingMember.accessibleFormIds.includes('all');
-      setIsAllForms(isAll);
-      setSelectedFormIds(isAll ? [] : editingMember.accessibleFormIds);
-      setPermissions({ ...editingMember.permissions });
-      setSendSmsInvite(false);
+      setName(editingMember.name || '');
+      setMobile(editingMember.mobile || editingMember.username || '');
+      setPassword(editingMember.password || '');
+      setJobTitle(editingMember.jobTitle || '');
+      setStatus(editingMember.status === 'suspended' ? 'suspended' : 'active');
+      setAllowedTabs(
+        Array.isArray(editingMember.allowedTabs) && editingMember.allowedTabs.length > 0
+          ? editingMember.allowedTabs
+          : ['submissions']
+      );
+      setRequireCaseCode(editingMember.requireCaseCode !== undefined ? editingMember.requireCaseCode : true);
     } else {
       setName('');
       setMobile('');
-      setEmail('');
-      setJobTitle('');
-      setRole('booking_operator');
+      setPassword('');
+      setJobTitle('همکار اداری و پذیرش');
       setStatus('active');
-      setIsAllForms(true);
-      setSelectedFormIds([]);
-      setPermissions({ ...ROLE_PRESETS.booking_operator.permissions });
-      setSendSmsInvite(true);
+      setAllowedTabs(['submissions']);
+      setRequireCaseCode(true);
     }
     setErrors({});
   }, [editingMember, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleRoleChange = (newRole: TeamRole) => {
-    setRole(newRole);
-    if (newRole !== 'custom') {
-      setPermissions({ ...ROLE_PRESETS[newRole].permissions });
-      if (newRole === 'super_admin') {
-        setIsAllForms(true);
+  const toggleTab = (tabId: string) => {
+    setAllowedTabs((prev) => {
+      if (prev.includes(tabId)) {
+        return prev.filter((id) => id !== tabId);
+      } else {
+        return [...prev, tabId];
       }
-    }
-  };
-
-  const handlePermissionToggle = (key: keyof DetailedPermissions) => {
-    setPermissions((prev) => {
-      const updated = { ...prev, [key]: !prev[key] };
-      // اگر تغییری داده شد و نقشی غیر از custom بود، نقش به custom تغییر کند تا مشخص باشد شخصی‌سازی شده
-      setRole('custom');
-      return updated;
     });
   };
 
-  const setCategoryPermissions = (keys: (keyof DetailedPermissions)[], value: boolean) => {
-    setPermissions((prev) => {
-      const updated = { ...prev };
-      keys.forEach((k) => {
-        updated[k] = value;
-      });
-      setRole('custom');
-      return updated;
-    });
+  const selectAllTabs = () => {
+    setAllowedTabs(AVAILABLE_SIDEBAR_TABS.map((t) => t.id));
   };
 
-  const toggleFormSelection = (formId: string) => {
-    setSelectedFormIds((prev) =>
-      prev.includes(formId) ? prev.filter((id) => id !== formId) : [...prev, formId]
-    );
+  const deselectAllTabs = () => {
+    setAllowedTabs([]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -263,14 +136,22 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) newErrors.name = 'نام و نام خانوادگی را وارد کنید';
-    if (!mobile.trim()) {
-      newErrors.mobile = 'شماره موبایل را وارد کنید';
-    } else if (!/^09\d{9}$/.test(mobile.trim())) {
-      newErrors.mobile = 'شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود';
+    
+    const cleanMobile = mobile.trim().replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[^0-9]/g, '');
+    if (!cleanMobile) {
+      newErrors.mobile = 'شماره تلفن (نام کاربری) را وارد کنید';
+    } else if (cleanMobile.length < 10) {
+      newErrors.mobile = 'شماره تلفن باید معتبر باشد (حداقل ۱۰ یا ۱۱ رقم)';
     }
-    if (!jobTitle.trim()) newErrors.jobTitle = 'سمت یا عنوان شغلی را مشخص کنید';
-    if (!isAllForms && selectedFormIds.length === 0) {
-      newErrors.forms = 'حداقل یک فرم را انتخاب کنید یا گزینه دسترسی به همه فرم‌ها را بزنید';
+
+    if (!password.trim()) {
+      newErrors.password = 'رمز عبور کاربر را تعیین کنید';
+    } else if (password.trim().length < 4) {
+      newErrors.password = 'رمز عبور باید حداقل ۴ نویسه باشد';
+    }
+
+    if (allowedTabs.length === 0) {
+      newErrors.tabs = 'حداقل یک تب از منوی کناری را برای دسترسی کاربر انتخاب کنید';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -280,166 +161,64 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
 
     onSave({
       name: name.trim(),
-      mobile: mobile.trim(),
-      email: email.trim() || `${mobile.trim()}@system.local`,
-      jobTitle: jobTitle.trim(),
-      role,
+      mobile: cleanMobile,
+      username: cleanMobile,
+      password: password.trim(),
+      email: `${cleanMobile}@paya.local`,
+      jobTitle: jobTitle.trim() || 'همکار سامانه',
+      role: 'custom',
       status,
-      accessibleFormIds: isAllForms ? ['all'] : selectedFormIds,
-      permissions,
+      accessibleFormIds: ['all'],
+      permissions: DEFAULT_DETAILED_PERMISSIONS,
+      allowedTabs,
+      requireCaseCode,
     });
+
     onClose();
   };
 
-  const permissionGroups: {
-    title: string;
-    icon: React.ReactNode;
-    keys: (keyof DetailedPermissions)[];
-    labels: Record<keyof DetailedPermissions, string>;
-  }[] = [
-    {
-      title: 'مدیریت و طراحی فرم‌ها',
-      icon: <Layers className="w-4 h-4 text-blue-600" />,
-      keys: ['canCreateForms', 'canEditForms', 'canDeleteForms', 'canPublishForms'],
-      labels: {
-        canCreateForms: 'ایجاد فرم و قالب جدید',
-        canEditForms: 'ویرایش فیلدها و ساختار فرم‌ها',
-        canDeleteForms: 'حذف فرم‌ها از سیستم',
-        canPublishForms: 'تغییر وضعیت انتشار و فعال/غیرفعال‌سازی',
-        canViewSubmissions: '',
-        canEditSubmissions: '',
-        canDeleteSubmissions: '',
-        canChangeStatus: '',
-        canExportData: '',
-        canAddComments: '',
-        canManageBookings: '',
-        canRescheduleBookings: '',
-        canManualBook: '',
-        canViewFinances: '',
-        canManageSms: '',
-        canManageIntegrations: '',
-        canManageTeam: '',
-      },
-    },
-    {
-      title: 'کارتابل مراجعین و پاسخ‌ها',
-      icon: <FileText className="w-4 h-4 text-emerald-600" />,
-      keys: [
-        'canViewSubmissions',
-        'canEditSubmissions',
-        'canDeleteSubmissions',
-        'canChangeStatus',
-        'canExportData',
-        'canAddComments',
-      ],
-      labels: {
-        canViewSubmissions: 'مشاهده لیست پاسخ‌ها و پرونده‌های ثبت‌شده',
-        canEditSubmissions: 'ویرایش اطلاعات و مدارک ثبت‌شده مراجعین',
-        canDeleteSubmissions: 'حذف پاسخ و پرونده‌ها از کارتابل',
-        canChangeStatus: 'تغییر وضعیت پرونده (تایید، رد، در حال بررسی)',
-        canExportData: 'خروجی اکسل (Excel/CSV) و چاپ پرونده‌ها',
-        canAddComments: 'ثبت یادداشت‌های داخلی و پیام برای همکاران',
-        canCreateForms: '',
-        canEditForms: '',
-        canDeleteForms: '',
-        canPublishForms: '',
-        canManageBookings: '',
-        canRescheduleBookings: '',
-        canManualBook: '',
-        canViewFinances: '',
-        canManageSms: '',
-        canManageIntegrations: '',
-        canManageTeam: '',
-      },
-    },
-    {
-      title: 'سامانه نوبت‌دهی مشاوره و تقویم',
-      icon: <Calendar className="w-4 h-4 text-teal-600" />,
-      keys: ['canManageBookings', 'canRescheduleBookings', 'canManualBook'],
-      labels: {
-        canManageBookings: 'مشاهده تقویم و مدیریت نوبت‌های رزرو شده',
-        canRescheduleBookings: 'تغییر زمان نوبت‌ها، جابجایی و لغو نوبت',
-        canManualBook: 'رزرو دستی نوبت مشاوره برای مراجعین تلفنی',
-        canCreateForms: '',
-        canEditForms: '',
-        canDeleteForms: '',
-        canPublishForms: '',
-        canViewSubmissions: '',
-        canEditSubmissions: '',
-        canDeleteSubmissions: '',
-        canChangeStatus: '',
-        canExportData: '',
-        canAddComments: '',
-        canViewFinances: '',
-        canManageSms: '',
-        canManageIntegrations: '',
-        canManageTeam: '',
-      },
-    },
-    {
-      title: 'تنظیمات سیستمی، پیامک و مالی',
-      icon: <Sliders className="w-4 h-4 text-purple-600" />,
-      keys: ['canViewFinances', 'canManageSms', 'canManageIntegrations', 'canManageTeam'],
-      labels: {
-        canViewFinances: 'مشاهده درگاه‌های بانکی، کارمزدها و صورت‌حساب مالی',
-        canManageSms: 'مشاهده لاگ پیامک‌ها و ارسال پیامک گروهی/تکی',
-        canManageIntegrations: 'تنظیمات وب‌هوک و کلیدهای API',
-        canManageTeam: 'مدیریت و دعوت همکاران جدید و ویرایش دسترسی‌ها',
-        canCreateForms: '',
-        canEditForms: '',
-        canDeleteForms: '',
-        canPublishForms: '',
-        canViewSubmissions: '',
-        canEditSubmissions: '',
-        canDeleteSubmissions: '',
-        canChangeStatus: '',
-        canExportData: '',
-        canAddComments: '',
-        canManageBookings: '',
-        canRescheduleBookings: '',
-        canManualBook: '',
-      },
-    },
-  ];
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-        {/* Modal Header */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-slate-900">
+        
+        {/* سربرگ مودال */}
+        <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
-              <UserPlus className="w-5 h-5 text-blue-400" />
+            <div className="p-2.5 rounded-2xl bg-white/10 ring-1 ring-white/20">
+              <UserPlus className="w-5 h-5 text-blue-300" />
             </div>
             <div>
-              <h2 className="text-base font-bold">
-                {editingMember ? 'ویرایش اطلاعات و دسترسی‌های همکار' : 'دعوت همکار جدید و تعیین سطح دسترسی'}
+              <h2 className="text-base font-extrabold tracking-tight">
+                {editingMember ? 'ویرایش اطلاعات و دسترسی‌های کاربر' : 'تعریف کاربر جدید و تعیین دسترسی‌ها'}
               </h2>
-              <p className="text-xs text-slate-300">
-                مشخصات فردی، نقش سازمانی و مجوزهای دقیق دسترسی به بخش‌های مختلف را تعیین کنید.
+              <p className="text-xs text-slate-300 mt-0.5">
+                تنظیم نام کاربری (تلفن)، رمز عبور و مجوزهای تب‌های منوی کناری
               </p>
             </div>
           </div>
+
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition text-slate-300 hover:text-white"
+            className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(85vh-120px)] overflow-y-auto">
-          {/* Section 1: Basic Information */}
+        {/* فرم مشخصات و دسترسی‌ها */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 text-xs max-h-[calc(85vh-5rem)] overflow-y-auto">
+          
+          {/* مشخصات کاربری و رمز عبور */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
               <User className="w-4 h-4 text-blue-600" />
-              <span>مشخصات فردی و اطلاعات تماس همکار</span>
-            </h3>
+              <span className="font-bold text-slate-800 text-sm">مشخصات هویتی و ورود به سامانه</span>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* نام و نام خانوادگی */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label className="block font-bold text-slate-700 mb-1.5">
                   نام و نام خانوادگی <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -448,38 +227,19 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="مثلاً: محمد کمالی"
-                    className={`w-full pr-9 pl-3 py-2 text-xs border rounded-lg focus:outline-none focus:ring-2 bg-white ${
-                      errors.name ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-300 focus:ring-blue-100'
+                    placeholder="مثال: زهرا مرادی"
+                    className={`w-full pr-9 pl-3 py-2 border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 text-xs ${
+                      errors.name ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300'
                     }`}
                   />
                 </div>
-                {errors.name && <p className="text-[11px] text-rose-500 mt-1">{errors.name}</p>}
+                {errors.name && <p className="text-rose-500 text-[11px] mt-1">{errors.name}</p>}
               </div>
 
+              {/* عنوان شغلی / سمت */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  شماره موبایل (جهت ارسال پیامک ورود) <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
-                  <input
-                    type="tel"
-                    dir="ltr"
-                    value={mobile}
-                    onChange={(e) => setMobile(e.target.value)}
-                    placeholder="0912xxxxxxx"
-                    className={`w-full pr-9 pl-3 py-2 text-xs border rounded-lg focus:outline-none focus:ring-2 bg-white font-mono text-left ${
-                      errors.mobile ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-300 focus:ring-blue-100'
-                    }`}
-                  />
-                </div>
-                {errors.mobile && <p className="text-[11px] text-rose-500 mt-1">{errors.mobile}</p>}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  سمت سازمانی / عنوان شغلی <span className="text-rose-500">*</span>
+                <label className="block font-bold text-slate-700 mb-1.5">
+                  سمت یا عنوان شغلی
                 </label>
                 <div className="relative">
                   <Briefcase className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
@@ -487,261 +247,222 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                     type="text"
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="مثلاً: مسئول نوبت‌دهی مشاوره تلفنی"
-                    className={`w-full pr-9 pl-3 py-2 text-xs border rounded-lg focus:outline-none focus:ring-2 bg-white ${
-                      errors.jobTitle ? 'border-rose-400 focus:ring-rose-200' : 'border-slate-300 focus:ring-blue-100'
+                    placeholder="مثال: اپراتور پذیرش / مشاور"
+                    className="w-full pr-9 pl-3 py-2 border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* نام کاربری (شماره تلفن) */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">
+                  نام کاربری (شماره تلفن) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                    placeholder="09123456789"
+                    dir="ltr"
+                    className={`w-full pr-9 pl-3 py-2 border rounded-xl bg-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-100 text-xs text-left ${
+                      errors.mobile ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300'
                     }`}
                   />
                 </div>
-                {errors.jobTitle && <p className="text-[11px] text-rose-500 mt-1">{errors.jobTitle}</p>}
+                <p className="text-[11px] text-slate-400 mt-1">
+                  کاربر با وارد کردن این شماره در صفحه ورود، وارد پنل می‌شود.
+                </p>
+                {errors.mobile && <p className="text-rose-500 text-[11px] mt-0.5">{errors.mobile}</p>}
               </div>
 
+              {/* رمز عبور */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  آدرس ایمیل سازمانی (اختیاری)
+                <label className="block font-bold text-slate-700 mb-1.5">
+                  رمز عبور تعریف‌شده <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
                   <input
-                    type="email"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="کلمه عبور جهت ورود کاربر"
                     dir="ltr"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="colleague@domain.com"
-                    className="w-full pr-9 pl-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white font-mono text-left"
+                    className={`w-full pr-9 pl-10 py-2 border rounded-xl bg-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-100 text-xs text-left ${
+                      errors.password ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300'
+                    }`}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute left-2.5 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    title={showPassword ? 'مخفی‌سازی' : 'نمایش رمز'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  رمز عبوری که ادمین برای این کاربر تعیین می‌کند.
+                </p>
+                {errors.password && <p className="text-rose-500 text-[11px] mt-0.5">{errors.password}</p>}
+              </div>
+            </div>
+
+            {/* وضعیت کاربر */}
+            <div className="pt-1 flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div>
+                <span className="font-bold text-slate-800">وضعیت دسترسی حساب کاربری</span>
+                <p className="text-[11px] text-slate-500 mt-0.5">در صورت تعلیق، ورود کاربر به سیستم مسدود می‌شود.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStatus('active')}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition ${
+                    status === 'active'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  فعال
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatus('suspended')}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs transition ${
+                    status === 'suspended'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  غیرفعال / تعلیق
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Role Preset Selection */}
+          {/* دسترسی به تب‌های منوی کناری */}
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-amber-500" />
-                <span>الگوی نقش و سطح دسترسی پایه (Role Presets)</span>
-              </h3>
-              <span className="text-[11px] text-slate-400">
-                با انتخاب هر الگو، مجوزهای زیر به صورت هوشمند تنظیم می‌شوند
-              </span>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <span className="font-bold text-slate-800 text-sm">دسترسی به تب‌های کناری سامانه</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={selectAllTabs}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800"
+                >
+                  انتخاب همه
+                </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={deselectAllTabs}
+                  className="text-[11px] font-bold text-slate-500 hover:text-slate-700"
+                >
+                  لغو همه
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-              {(Object.keys(ROLE_PRESETS) as TeamRole[]).map((rKey) => {
-                const preset = ROLE_PRESETS[rKey];
-                const isSelected = role === rKey;
+            <p className="text-[11px] text-slate-500">
+              فقط تب‌هایی که در این قسمت تیک بزنید در منوی کناری کاربر نمایش داده می‌شوند و کاربر امکان ورود به آن‌ها را خواهد داشت:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {AVAILABLE_SIDEBAR_TABS.map((tab) => {
+                const isSelected = allowedTabs.includes(tab.id);
+                const IconComponent = TAB_ICONS[tab.id] || LayoutDashboard;
+
                 return (
                   <button
-                    key={rKey}
+                    key={tab.id}
                     type="button"
-                    onClick={() => handleRoleChange(rKey)}
-                    className={`p-3 rounded-xl border text-right transition-all flex flex-col justify-between ${
+                    onClick={() => toggleTab(tab.id)}
+                    className={`flex items-center justify-between p-3 rounded-xl border text-right transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-blue-600 bg-blue-50/70 ring-1 ring-blue-600 shadow-sm'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                        ? 'border-blue-500 bg-blue-50/50 text-blue-900 shadow-xs ring-1 ring-blue-400/20'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between w-full mb-1">
-                      <span className={`text-xs font-bold ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
-                        {preset.title}
-                      </span>
-                      {isSelected && (
-                        <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
-                          ✓
-                        </span>
+                    <div className="flex items-center gap-2.5">
+                      <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <span className="font-bold text-xs">{tab.label}</span>
+                    </div>
+
+                    <div>
+                      {isSelected ? (
+                        <CheckSquare className="w-4 h-4 text-blue-600" />
+                      ) : (
+                        <Square className="w-4 h-4 text-slate-300" />
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      {preset.desc}
-                    </p>
                   </button>
                 );
               })}
             </div>
+            {errors.tabs && <p className="text-rose-500 text-[11px] mt-1">{errors.tabs}</p>}
           </div>
 
-          {/* Section 3: Granular Permissions Checklist */}
-          <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div>
-                <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-teal-600" />
-                  <span>دسترسی‌ها و مجوزهای جزئی (Granular Permissions)</span>
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  می‌توانید هر یک از مجوزها را مستقل از نقش پایه تیک بزنید یا لغو کنید.
+          {/* تنظیمات صفحه پرونده مراجعین */}
+          <div className="p-4 bg-gradient-to-r from-amber-50/70 via-blue-50/40 to-slate-50 border border-amber-200/80 rounded-2xl space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-700 mt-0.5">
+                <ShieldAlert className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={requireCaseCode}
+                    onChange={(e) => setRequireCaseCode(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="font-extrabold text-slate-900 text-xs">
+                    محدودیت پرونده مراجعین: الزام به وارد کردن کد پرونده
+                  </span>
+                </label>
+
+                <p className="text-[11px] text-slate-600 leading-relaxed mt-2 pr-6">
+                  {requireCaseCode ? (
+                    <span className="text-amber-900 font-medium">
+                      فعال است: وقتی کاربر وارد تب «پرونده مراجعین» می‌شود، باکسی جهت درخواست کد پرونده ظاهر می‌شود. کاربر صرفاً با وارد کردن کد پرونده می‌تواند آن پرونده خاص را مشاهده کند و در غیر این صورت هیچ پرونده‌ای برای او نمایش داده نمی‌شود.
+                    </span>
+                  ) : (
+                    <span className="text-slate-500">
+                      غیرفعال است: این کاربر مانند مدیر کل، به کل فهرست پرونده‌ها و کارتابل مراجعین دسترسی آزاد خواهد داشت.
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {permissionGroups.map((group, gIdx) => {
-                const allChecked = group.keys.every((k) => permissions[k]);
-                const someChecked = group.keys.some((k) => permissions[k]);
-
-                return (
-                  <div key={gIdx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                      <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
-                        {group.icon}
-                        <span>{group.title}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setCategoryPermissions(group.keys, !allChecked)}
-                        className="text-[10px] text-blue-600 hover:underline font-medium"
-                      >
-                        {allChecked ? 'لغو همه' : 'انتخاب همه'}
-                      </button>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {group.keys.map((permKey) => (
-                        <label
-                          key={permKey}
-                          className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-white cursor-pointer transition select-none"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={permissions[permKey]}
-                            onChange={() => handlePermissionToggle(permKey)}
-                            className="mt-0.5 rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 border-slate-300"
-                          />
-                          <span className="text-[11px] text-slate-700 leading-tight">
-                            {group.labels[permKey]}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </div>
 
-          {/* Section 4: Form Scope */}
-          <div className="space-y-3 pt-2">
-            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 pb-2 border-b border-slate-100">
-              <FileText className="w-4 h-4 text-indigo-600" />
-              <span>محدوده فرم‌های مجاز برای همکار</span>
-            </h3>
-
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
-                <input
-                  type="radio"
-                  name="formScope"
-                  checked={isAllForms}
-                  onChange={() => setIsAllForms(true)}
-                  className="text-blue-600 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-xs font-bold text-slate-800">دسترسی به تمامی فرم‌های سامانه</span>
-                  <p className="text-[11px] text-slate-400">
-                    همکار به کارتابل و تنظیمات تمام فرم‌های فعلی و فرم‌های جدیدی که ساخته می‌شوند دسترسی دارد.
-                  </p>
-                </div>
-              </label>
-
-              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
-                <input
-                  type="radio"
-                  name="formScope"
-                  checked={!isAllForms}
-                  onChange={() => setIsAllForms(false)}
-                  className="text-blue-600 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-xs font-bold text-slate-800">دسترسی محدود به فرم‌های مشخص‌شده</span>
-                  <p className="text-[11px] text-slate-400">
-                    همکار صرفاً اطلاعات و کارتابل فرم‌های تیک‌خورده زیر را مشاهده خواهد کرد.
-                  </p>
-                </div>
-              </label>
-            </div>
-
-            {!isAllForms && (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 mt-2">
-                <span className="text-[11px] font-bold text-slate-700">فرم‌های مجاز را انتخاب کنید:</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                  {forms.map((f) => {
-                    const isChecked = selectedFormIds.includes(f.id);
-                    return (
-                      <label
-                        key={f.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition ${
-                          isChecked ? 'bg-blue-50/60 border-blue-300 font-bold text-blue-900' : 'bg-white border-slate-200 text-slate-700'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleFormSelection(f.id)}
-                          className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                        />
-                        <span className="truncate">{f.title}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-                {errors.forms && <p className="text-[11px] text-rose-500 mt-1">{errors.forms}</p>}
-              </div>
-            )}
-          </div>
-
-          {/* Section 5: Invitation Options (SMS) */}
-          {!editingMember && (
-            <div className="p-3.5 bg-sky-50 border border-sky-200 rounded-xl space-y-2">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={sendSmsInvite}
-                  onChange={(e) => setSendSmsInvite(e.target.checked)}
-                  className="mt-0.5 rounded text-sky-600 focus:ring-sky-500 w-4 h-4"
-                />
-                <div>
-                  <span className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
-                    <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
-                    ارسال پیامک دعوت‌نامه و اطلاعات ورود به سامانه
-                  </span>
-                  <p className="text-[11px] text-sky-700 leading-relaxed mt-0.5">
-                    پیامکی حاوی لینک ورود، نام کاربری ({mobile || 'شماره موبایل'}) و کلمه عبور موقت برای همکار ارسال خواهد شد.
-                  </p>
-                </div>
-              </label>
-
-              {sendSmsInvite && (
-                <div className="p-2.5 bg-white border border-sky-100 rounded-lg text-[11px] text-slate-600 font-sans leading-relaxed">
-                  <span className="font-bold text-slate-700">پیش‌نمایش پیامک:</span>
-                  <div className="mt-1 p-2 bg-slate-50 rounded border border-slate-200 text-slate-700">
-                    همکار گرامی {name || '...'}، دعوت‌نامه شما به عنوان «{jobTitle || 'عضو سامانه'}» در پنل فرم‌افزار صادر شد. جهت ورود و تعیین رمز عبور به لینک زیر مراجعه فرمایید:
-                    <br />
-                    <span className="font-mono text-blue-600">https://panel.formafzar.ir/invite/setup</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Footer Actions */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+          {/* دکمه‌های عملیات */}
+          <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+              className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition"
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:from-blue-700 hover:to-indigo-700 transition flex items-center gap-1.5"
+              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 transition"
             >
-              <Check className="w-4 h-4" />
-              <span>{editingMember ? 'ذخیره تغییرات دسترسی' : 'ثبت و ارسال دعوت‌نامه'}</span>
+              {editingMember ? 'ذخیره تغییرات کاربر' : 'ایجاد و ثبت کاربر'}
             </button>
           </div>
+
         </form>
+
       </div>
     </div>
   );

@@ -74,6 +74,8 @@ export interface TeamMember {
   name: string;
   email: string;
   mobile: string;
+  username?: string;
+  password?: string;
   jobTitle: string;
   role: TeamRole;
   status: 'active' | 'pending' | 'suspended';
@@ -81,5 +83,6 @@ export interface TeamMember {
   lastActive?: string;
   accessibleFormIds: string[]; // ['all'] یا آرایه‌ای از شناسه‌های فرم
   permissions: DetailedPermissions;
+  allowedTabs: string[]; // شناسه‌های تب‌های مجاز در سایدبار
+  requireCaseCode?: boolean; // آیا در صفحه پرونده مراجعین نیاز به وارد کردن کد پرونده دارد؟
 }
-

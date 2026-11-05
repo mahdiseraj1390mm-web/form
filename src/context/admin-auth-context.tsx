@@ -2,10 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface AdminUser {
+export interface AdminUser {
+  id?: string;
   username: string;
   name: string;
   role: string;
+  mobile?: string;
+  jobTitle?: string;
+  allowedTabs?: string[];
+  requireCaseCode?: boolean;
+  isSuperAdmin?: boolean;
 }
 
 interface AdminAuthContextType {
@@ -34,36 +40,47 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // بررسی وضعیت لاگین در بارگذاری اولیه
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem(LOCAL_STORAGE_KEY);
-      const cookieVal = getCookie(COOKIE_NAME);
+    let isMounted = true;
 
-      if (storedUser && cookieVal) {
-        const user = JSON.parse(storedUser);
-        if (user && user.username === 'admin') {
-          setCurrentUser(user);
-          setIsAuthenticated(true);
-          setIsLoading(false);
-          return;
+    async function checkSession() {
+      try {
+        const storedUser = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (storedUser) {
+          const user: AdminUser = JSON.parse(storedUser);
+          if (user && user.username) {
+            if (isMounted) {
+              setCurrentUser(user);
+              setIsAuthenticated(true);
+            }
+          }
         }
-      } else if (storedUser) {
-        // بازسازی کوکی در صورت وجود جلسه ذخیره‌شده معتبر در کلاینت
-        const user = JSON.parse(storedUser);
-        if (user && user.username === 'admin') {
-          document.cookie = `${COOKIE_NAME}=${encodeURIComponent(btoa('admin:' + Date.now()))}; path=/; max-age=2592000; SameSite=Lax`;
-          setCurrentUser(user);
-          setIsAuthenticated(true);
-          setIsLoading(false);
-          return;
+
+        // استعلام از سرور جهت به‌روزرسانی سطوح دسترسی
+        const res = await fetch('/api/auth/session', { cache: 'no-store' });
+        const data = await res.json();
+
+        if (isMounted) {
+          if (data?.authenticated && data?.user) {
+            setCurrentUser(data.user);
+            setIsAuthenticated(true);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.user));
+          } else if (!storedUser) {
+            setCurrentUser(null);
+            setIsAuthenticated(false);
+          }
         }
+      } catch {
+        // در صورت خطای شبکه از اطلاعات محلی استفاده می‌شود
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-    } catch {
-      // در صورت خطای پارس، لاگین اولیه پاک می‌شود
     }
 
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setIsLoading(false);
+    checkSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (
@@ -73,9 +90,8 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   ): Promise<{ success: boolean; error?: string }> => {
     const cleanUsername = username.trim();
 
-    // بررسی اولیه در کلاینت و سرور
     if (!cleanUsername || !password) {
-      return { success: false, error: 'لطفاً نام کاربری و رمز عبور را وارد نمایید.' };
+      return { success: false, error: 'لطفاً نام کاربری (شماره تلفن) و رمز عبور را وارد نمایید.' };
     }
 
     try {
@@ -90,31 +106,30 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (!res.ok || !data.success) {
         return {
           success: false,
-          error: data.error || 'نام کاربری یا رمز عبور اشتباه است.',
+          error: data.error || 'نام کاربری (شماره تلفن) یا رمز عبور اشتباه است.',
         };
       }
 
-      const user: AdminUser = data.user || {
-        username: 'admin',
-        name: 'مدیر ارشد سامانه',
-        role: 'super_admin',
-      };
+      const user: AdminUser = data.user;
 
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(user));
-      if (!getCookie(COOKIE_NAME)) {
-        document.cookie = `${COOKIE_NAME}=${encodeURIComponent(btoa('admin:' + Date.now()))}; path=/; max-age=${rememberMe ? 2592000 : 86400}; SameSite=Lax`;
-      }
-
       setCurrentUser(user);
       setIsAuthenticated(true);
       return { success: true };
-    } catch (err: any) {
+    } catch {
       // پشتیبان آفلاین در صورت اختلال شبکه
       if (cleanUsername === 'admin' && password === 'belhagh@12345') {
         const user: AdminUser = {
+          id: 'admin',
           username: 'admin',
           name: 'مدیر ارشد سامانه',
           role: 'super_admin',
+          isSuperAdmin: true,
+          allowedTabs: [
+            'dashboard', 'forms', 'builder', 'runner', 'submissions',
+            'media', 'chat', 'analytics', 'templates', 'settings'
+          ],
+          requireCaseCode: false,
         };
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(user));
         document.cookie = `${COOKIE_NAME}=${encodeURIComponent(btoa('admin:' + Date.now()))}; path=/; max-age=2592000; SameSite=Lax`;
@@ -122,6 +137,41 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsAuthenticated(true);
         return { success: true };
       }
+
+      // بررسی در اعضای ذخیره شده در localStorage
+      try {
+        const localTeamStr = localStorage.getItem('formafzar_team_members');
+        if (localTeamStr) {
+          const members = JSON.parse(localTeamStr);
+          const cleanPhone = cleanUsername.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[^0-9]/g, '');
+          const found = members.find((m: any) => {
+            const mPhone = (m.mobile || '').replace(/[^0-9]/g, '');
+            return (mPhone === cleanPhone || m.username === cleanUsername) && m.password === password;
+          });
+
+          if (found) {
+            if (found.status === 'suspended') {
+              return { success: false, error: 'حساب کاربری شما معلق شده است.' };
+            }
+            const user: AdminUser = {
+              id: found.id,
+              username: found.mobile || found.username,
+              name: found.name,
+              mobile: found.mobile,
+              role: found.role || 'member',
+              jobTitle: found.jobTitle,
+              isSuperAdmin: false,
+              allowedTabs: found.allowedTabs || ['submissions'],
+              requireCaseCode: found.requireCaseCode !== undefined ? found.requireCaseCode : true,
+            };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(user));
+            document.cookie = `${COOKIE_NAME}=${encodeURIComponent(btoa('member:' + found.id + ':' + Date.now()))}; path=/; max-age=2592000; SameSite=Lax`;
+            setCurrentUser(user);
+            setIsAuthenticated(true);
+            return { success: true };
+          }
+        }
+      } catch {}
 
       return {
         success: false,

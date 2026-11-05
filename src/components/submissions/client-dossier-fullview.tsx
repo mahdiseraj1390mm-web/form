@@ -245,22 +245,34 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     const cleanMobile = cleanPhone(clientCase.mobile);
 
     const updatedFromContext = clientCase.submissions.map((sub) => {
-      const live = submissions.find(
-        (s) => s.id === sub.id || (sub.trackingCode && s.trackingCode === sub.trackingCode)
-      );
+      const live = submissions.find((s) => s.id === sub.id);
       return live || sub;
     });
 
+    const seenIds = new Set(updatedFromContext.map((s) => s.id));
     const extraFromContext = submissions.filter((s) => {
-      if (targetIds.has(s.id)) return false;
+      if (seenIds.has(s.id)) return false;
       const sCode = (s.data?.caseCode || s.trackingCode || '').toLowerCase().trim();
-      if (cleanCaseCode && sCode === cleanCaseCode) return true;
+      if (cleanCaseCode && sCode === cleanCaseCode) {
+        seenIds.add(s.id);
+        return true;
+      }
       const sMob = cleanPhone(s.mobile || s.data?.f_mobile || s.data?.bk_mobile || '');
-      if (cleanMobile && sMob && sMob === cleanMobile) return true;
+      if (cleanMobile && sMob && sMob === cleanMobile) {
+        seenIds.add(s.id);
+        return true;
+      }
       return false;
     });
 
-    return [...updatedFromContext, ...extraFromContext];
+    const merged = [...updatedFromContext, ...extraFromContext];
+    const uniqueMap = new Map<string, FormSubmission>();
+    for (const item of merged) {
+      if (!uniqueMap.has(item.id)) {
+        uniqueMap.set(item.id, item);
+      }
+    }
+    return Array.from(uniqueMap.values());
   }, [submissions, clientCase]);
 
   // نام و نقش واقعی کاربر ادمین جاری در سامانه

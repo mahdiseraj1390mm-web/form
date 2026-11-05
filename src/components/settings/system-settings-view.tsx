@@ -23,9 +23,15 @@ import {
   Sliders,
   CheckCircle2,
   XCircle,
-  Phone,
-  Mail,
-  LogIn
+  Phone, 
+  Mail, 
+  LogIn,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldAlert,
+  Layers,
+  KeyRound
 } from 'lucide-react';
 import { WebhookTester } from './webhook-tester';
 import { PortalSettingsTab } from './portal-settings-tab';
@@ -33,6 +39,20 @@ import { SmsSettingsTab } from './sms-settings-tab';
 import { useForm } from '@/context/form-context';
 import { TeamMember, TeamRole } from '@/types/advanced';
 import { InviteMemberModal } from '@/components/team/invite-member-modal';
+import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
+
+const TAB_NAME_MAP: Record<string, string> = {
+  dashboard: 'داشبورد مدیریت',
+  forms: 'فرم‌ها و پرسشنامه‌ها',
+  builder: 'استودیو طراحی فرم',
+  runner: 'پیش‌نمایش فرم زنده',
+  submissions: 'پرونده مراجعین',
+  media: 'مرکز اسناد و فایل‌ها',
+  chat: 'گفتگوی آنلاین',
+  analytics: 'آمارها و تحلیل‌ها',
+  templates: 'قالب‌های آماده فرم',
+  settings: 'تنظیمات و وب‌هوک‌ها',
+};
 
 export const SystemSettingsView: React.FC = () => {
   const { forms, teamMembers, inviteTeamMember, updateTeamMember, deleteTeamMember, toggleTeamMemberStatus } = useForm();
@@ -41,7 +61,14 @@ export const SystemSettingsView: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+
+  const togglePasswordVisibility = (id: string) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   const copyApiKey = () => {
     navigator.clipboard.writeText('fa_live_89b271f8490a21ce98124098319');
@@ -70,7 +97,7 @@ export const SystemSettingsView: React.FC = () => {
   };
 
   const handleDeleteMember = (member: TeamMember) => {
-    if (window.confirm(`آیا از حذف دسترسی همکار «${member.name}» اطمینان دارید؟`)) {
+    if (window.confirm(`آیا از حذف دسترسی کاربر «${member.name}» با شماره «${member.mobile}» اطمینان دارید؟`)) {
       deleteTeamMember(member.id);
     }
   };
@@ -79,20 +106,10 @@ export const SystemSettingsView: React.FC = () => {
     const matchesSearch = 
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.mobile.includes(searchQuery) ||
-      m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.jobTitle.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || m.role === roleFilter;
-    return matchesSearch && matchesRole;
+      (m.username && m.username.includes(searchQuery)) ||
+      (m.jobTitle && m.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesSearch;
   });
-
-  const ROLE_BADGES: Record<TeamRole, { title: string; color: string }> = {
-    super_admin: { title: 'مدیر کل (Super Admin)', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-    booking_operator: { title: 'اپراتور نوبت‌دهی و پذیرش', color: 'bg-teal-100 text-teal-800 border-teal-200' },
-    reviewer: { title: 'کارشناس کارتابل', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-    form_builder: { title: 'طراح فرم', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-    auditor: { title: 'ناظر و بازرس', color: 'bg-amber-100 text-amber-800 border-amber-200' },
-    custom: { title: 'دسترسی سفارشی', color: 'bg-slate-100 text-slate-800 border-slate-200' },
-  };
 
   return (
     <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bg-slate-50">
@@ -103,7 +120,7 @@ export const SystemSettingsView: React.FC = () => {
           تنظیمات سازمانی و وب‌سرویس‌ها
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          پیکربندی کلیدهای امنیتی، پنل پیامک، درگاه‌های شاپرک و اعضای تیم
+          پیکربندی کلیدهای امنیتی، پنل پیامک، درگاه‌های شاپرک و اعضای تیم و دسترسی‌ها
         </p>
 
         {/* منوی تب‌های تنظیمات */}
@@ -122,7 +139,7 @@ export const SystemSettingsView: React.FC = () => {
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id as any)}
-                className={`flex items-center gap-2 py-3 px-3 border-b-2 transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 py-3 px-3 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
                   isActive
                     ? 'border-blue-600 text-blue-600 font-bold'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -226,7 +243,7 @@ export const SystemSettingsView: React.FC = () => {
                 />
                 <button
                   onClick={copyApiKey}
-                  className="px-4 py-2 bg-slate-900 text-white font-bold rounded-md hover:bg-slate-800 flex items-center gap-1.5"
+                  className="px-4 py-2 bg-slate-900 text-white font-bold rounded-md hover:bg-slate-800 flex items-center gap-1.5 cursor-pointer"
                 >
                   {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   <span>{copiedKey ? 'کپی شد' : 'کپی کلید'}</span>
@@ -243,19 +260,19 @@ export const SystemSettingsView: React.FC = () => {
             {/* سربرگ بخش همکاران و آمار */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                <span className="text-[11px] text-slate-500 font-medium">کل همکاران سامانه</span>
+                <span className="text-[11px] text-slate-500 font-medium">کل کاربران سامانه</span>
                 <div className="text-xl font-bold text-slate-900 mt-0.5">{teamMembers.length} نفر</div>
               </div>
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                <span className="text-[11px] text-emerald-700 font-medium">همکاران فعال</span>
+                <span className="text-[11px] text-emerald-700 font-medium">کاربران فعال</span>
                 <div className="text-xl font-bold text-emerald-800 mt-0.5">
                   {teamMembers.filter((m) => m.status === 'active').length} نفر
                 </div>
               </div>
-              <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl">
-                <span className="text-[11px] text-teal-700 font-medium">اپراتورهای نوبت‌دهی</span>
-                <div className="text-xl font-bold text-teal-800 mt-0.5">
-                  {teamMembers.filter((m) => m.role === 'booking_operator').length} نفر
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                <span className="text-[11px] text-amber-700 font-medium">دارای محدودیت کد پرونده</span>
+                <div className="text-xl font-bold text-amber-800 mt-0.5">
+                  {teamMembers.filter((m) => m.requireCaseCode !== false && m.role !== 'super_admin').length} نفر
                 </div>
               </div>
               <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl">
@@ -266,77 +283,70 @@ export const SystemSettingsView: React.FC = () => {
               </div>
             </div>
 
-            {/* نوار جستجو و فیلتر + دکمه دعوت همکار */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-              <div className="flex flex-1 items-center gap-2">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="جستجوی همکار بر اساس نام، شماره موبایل یا سمت..."
-                    className="w-full pr-9 pl-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
+            {/* راهنما و توضیحات */}
+            <div className="p-4 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 border border-blue-200/70 rounded-2xl flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-slate-700">
+                <div className="font-bold text-slate-900 text-xs">مدیریت کاربران و سطوح دسترسی منوی کناری</div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  در این بخش می‌توانید برای همکاران با نام کاربری (شماره تلفن) و رمز عبور دلخواه حساب کاربری بسازید. دسترسی هر کاربر به تب‌های منوی کناری را تیک بزنید. همچنین می‌توانید مشخص کنید که کاربر در صفحه «پرونده مراجعین»، فقط با وارد کردن کد پرونده بتواند پرونده را مشاهده کند.
+                </p>
+              </div>
+            </div>
 
-                <div className="relative">
-                  <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value)}
-                    className="px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  >
-                    <option value="all">همه نقش‌ها</option>
-                    <option value="super_admin">مدیر کل</option>
-                    <option value="booking_operator">اپراتور نوبت‌دهی</option>
-                    <option value="reviewer">کارشناس کارتابل</option>
-                    <option value="form_builder">طراح فرم</option>
-                    <option value="auditor">ناظر و بازرس</option>
-                    <option value="custom">دسترسی سفارشی</option>
-                  </select>
-                </div>
+            {/* نوار جستجو و فیلتر + دکمه افزودن کاربر */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="جستجوی کاربر بر اساس نام، شماره تلفن یا سمت..."
+                  className="w-full pr-9 pl-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
               </div>
 
               <button
                 onClick={handleOpenInvite}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-sm hover:from-blue-700 hover:to-indigo-700 transition flex items-center justify-center gap-1.5"
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-sm hover:from-blue-700 hover:to-indigo-700 transition flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>+ دعوت همکار جدید</span>
+                <span>+ تعریف کاربر جدید</span>
               </button>
             </div>
 
-            {/* لیست کارت‌های همکاران */}
+            {/* لیست کارت‌های کاربران */}
             <div className="space-y-3">
               {filteredMembers.length === 0 ? (
                 <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
                   <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-slate-600">همکاری با این مشخصات یافت نشد</p>
+                  <p className="text-xs font-bold text-slate-600">کاربری با این مشخصات یافت نشد</p>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    می‌توانید عبارت جستجو را پاک کنید یا همکار جدیدی به سیستم اضافه نمایید.
+                    می‌توانید عبارت جستجو را پاک کنید یا کاربر جدیدی تعریف نمایید.
                   </p>
                 </div>
               ) : (
                 filteredMembers.map((member) => {
-                  const roleInfo = ROLE_BADGES[member.role] || ROLE_BADGES.custom;
                   const isActive = member.status === 'active';
-                  const isAllScope = member.accessibleFormIds.includes('all');
-                  const accessibleFormsCount = isAllScope ? forms.length : member.accessibleFormIds.length;
-
-                  // شمارش مجوزهای فعال
-                  const activePermCount = Object.values(member.permissions).filter(Boolean).length;
+                  const isSuper = member.role === 'super_admin';
+                  const userTabs = Array.isArray(member.allowedTabs) && member.allowedTabs.length > 0
+                    ? member.allowedTabs
+                    : (isSuper ? AVAILABLE_SIDEBAR_TABS.map((t) => t.id) : ['submissions']);
+                  const isPasswordVisible = !!visiblePasswords[member.id];
+                  const hasCaseCodeRestriction = member.requireCaseCode !== false && !isSuper;
 
                   return (
                     <div
                       key={member.id}
-                      className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs hover:border-slate-300 transition space-y-3"
+                      className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs hover:border-slate-300 transition space-y-3"
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        {/* مشخصات فردی */}
+                        {/* مشخصات کاربری */}
                         <div className="flex items-start gap-3">
                           <div className="relative">
-                            <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold flex items-center justify-center text-sm">
-                              {member.name.slice(0, 2)}
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 border border-slate-300 text-slate-800 font-extrabold flex items-center justify-center text-sm shadow-xs">
+                              {member.name ? member.name.slice(0, 2) : 'کا'}
                             </div>
                             <span
                               className={`absolute -bottom-1 -left-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
@@ -346,14 +356,9 @@ export const SystemSettingsView: React.FC = () => {
                             />
                           </div>
 
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-sm text-slate-900">{member.name}</span>
-                              <span
-                                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-md border ${roleInfo.color}`}
-                              >
-                                {roleInfo.title}
-                              </span>
+                              <span className="font-extrabold text-sm text-slate-900">{member.name}</span>
                               <span
                                 className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                                   isActive
@@ -361,24 +366,46 @@ export const SystemSettingsView: React.FC = () => {
                                     : 'bg-rose-50 text-rose-700 border border-rose-200'
                                 }`}
                               >
-                                {isActive ? 'فعال' : 'غیرفعال'}
+                                {isActive ? 'فعال' : 'معلق'}
                               </span>
+
+                              {isSuper ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
+                                  مدیر کل (Super Admin)
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                  کاربر پنل
+                                </span>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap">
-                              <span className="font-medium text-slate-700">{member.jobTitle}</span>
+                              <span className="font-medium text-slate-700">{member.jobTitle || 'عضو سامانه'}</span>
                               <span>•</span>
-                              <span className="font-mono text-slate-600 flex items-center gap-1">
-                                <Phone className="w-3 h-3 text-slate-400" />
-                                {member.mobile}
+                              <span className="font-mono text-slate-700 flex items-center gap-1 font-semibold" title="نام کاربری جهت ورود">
+                                <Phone className="w-3.5 h-3.5 text-blue-500" />
+                                <span>نام کاربری: {member.mobile}</span>
                               </span>
-                              {member.email && (
+                              
+                              {member.password && (
                                 <>
                                   <span>•</span>
-                                  <span className="font-mono text-slate-500 flex items-center gap-1">
-                                    <Mail className="w-3 h-3 text-slate-400" />
-                                    {member.email}
-                                  </span>
+                                  <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/80">
+                                    <Lock className="w-3 h-3 text-slate-400" />
+                                    <span className="text-slate-500 text-[10px]">رمز:</span>
+                                    <span className="font-mono font-bold text-slate-800 text-[11px]">
+                                      {isPasswordVisible ? member.password : '••••••'}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePasswordVisibility(member.id)}
+                                      className="p-0.5 text-slate-400 hover:text-slate-700"
+                                      title={isPasswordVisible ? 'مخفی‌سازی رمز' : 'مشاهده رمز'}
+                                    >
+                                      {isPasswordVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                    </button>
+                                  </div>
                                 </>
                               )}
                             </div>
@@ -386,19 +413,19 @@ export const SystemSettingsView: React.FC = () => {
                         </div>
 
                         {/* دکمه‌های عملیات */}
-                        <div className="flex items-center gap-1.5 self-end md:self-center">
+                        <div className="flex items-center gap-2 self-end md:self-center">
                           <button
                             onClick={() => handleEditMember(member)}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1"
-                            title="ویرایش سطح دسترسی و مشخصات"
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-blue-200 cursor-pointer"
+                            title="ویرایش دسترسی‌ها و رمز عبور"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
-                            <span>ویرایش دسترسی‌ها</span>
+                            <span>ویرایش دسترسی‌ها و رمز</span>
                           </button>
 
                           <button
                             onClick={() => toggleTeamMemberStatus(member.id)}
-                            className={`p-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 ${
+                            className={`p-2 rounded-xl border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
                               isActive
                                 ? 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
                                 : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
@@ -408,11 +435,11 @@ export const SystemSettingsView: React.FC = () => {
                             <Power className="w-3.5 h-3.5" />
                           </button>
 
-                          {member.role !== 'super_admin' && (
+                          {!isSuper && (
                             <button
                               onClick={() => handleDeleteMember(member)}
-                              className="p-1.5 rounded-lg border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 text-xs font-bold transition"
-                              title="حذف همکار"
+                              className="p-2 rounded-xl border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100 text-xs font-bold transition cursor-pointer"
+                              title="حذف کاربر"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -420,63 +447,32 @@ export const SystemSettingsView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* خلاصه سطوح دسترسی و فرم‌های مجاز */}
-                      <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                      {/* تب‌های مجاز و وضعیت محدودیت کد پرونده */}
+                      <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-[11px]">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-slate-400">مجوزهای فعال:</span>
-
-                          {member.permissions.canCreateForms && (
-                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200 text-[10px]">
-                              طراحی فرم
+                          <span className="text-slate-400 font-medium">تب‌های مجاز سایدبار:</span>
+                          {userTabs.map((tabId) => (
+                            <span
+                              key={tabId}
+                              className="px-2 py-0.5 bg-slate-100 text-slate-800 rounded-md border border-slate-200 text-[10px] font-semibold"
+                            >
+                              {TAB_NAME_MAP[tabId] || tabId}
                             </span>
-                          )}
-
-                          {member.permissions.canViewSubmissions && (
-                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 text-[10px]">
-                              مشاهده کارتابل
-                            </span>
-                          )}
-
-                          {member.permissions.canChangeStatus && (
-                            <span className="px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded border border-cyan-200 text-[10px]">
-                              تغییر وضعیت مراجعین
-                            </span>
-                          )}
-
-                          {member.permissions.canManageBookings && (
-                            <span className="px-2 py-0.5 bg-teal-50 text-teal-700 rounded border border-teal-200 text-[10px]">
-                              مدیریت نوبت‌دهی مشاوره
-                            </span>
-                          )}
-
-                          {member.permissions.canExportData && (
-                            <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-200 text-[10px]">
-                              خروجی اکسل
-                            </span>
-                          )}
-
-                          {member.permissions.canViewFinances && (
-                            <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded border border-purple-200 text-[10px]">
-                              تراکنش‌های مالی
-                            </span>
-                          )}
-
-                          {member.permissions.canManageTeam && (
-                            <span className="px-2 py-0.5 bg-rose-50 text-rose-700 rounded border border-rose-200 text-[10px]">
-                              مدیریت همکاران
-                            </span>
-                          )}
-
-                          <span className="text-slate-400 text-[10px]">
-                            ({activePermCount} از ۱۶ مجوز فعال)
-                          </span>
+                          ))}
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-slate-500">
-                          <span className="text-slate-400">محدوده فرم‌ها:</span>
-                          <span className="font-bold text-slate-700 px-2 py-0.5 bg-slate-100 rounded text-[10px]">
-                            {isAllScope ? 'همه فرم‌های سامانه' : `${accessibleFormsCount} فرم اختصاصی`}
-                          </span>
+                        <div>
+                          {hasCaseCodeRestriction ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
+                              <ShieldAlert className="w-3 h-3 text-amber-600" />
+                              <span>پرونده مراجعین: نیاز به ورود کد پرونده</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>پرونده مراجعین: دسترسی آزاد به همه</span>
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -488,7 +484,7 @@ export const SystemSettingsView: React.FC = () => {
         )}
       </div>
 
-      {/* مودال دعوت یا ویرایش همکار */}
+      {/* مودال تعریف یا ویرایش کاربر */}
       <InviteMemberModal
         isOpen={isInviteModalOpen}
         onClose={() => {

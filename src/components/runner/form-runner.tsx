@@ -600,6 +600,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   // استیت نتیجه ثبت موفق
   const [submittedResult, setSubmittedResult] = useState<FormSubmission | null>(null);
 
+  // استیت وضعیت در حال ارسال (جلوگیری قطعی از کلیک‌های چندباره و ایجاد ثبت‌های تکراری)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const isCasePortalForm =
     form.generalSettings?.showPortalGate === true
       ? true
@@ -1561,6 +1564,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    // جلوگیری قطعی از کلیک‌های همزمان یا ارسال‌های موازی
+    if (isSubmitting) return;
+
     // جلوگیری قطعی از پرش از روی مرحله چهارم و ثبت تصادفی ناشی از دابل‌کلیک
     if (Date.now() - stepEnteredAt < 700) {
       return;
@@ -1601,91 +1607,103 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const fieldsToValidate = form.fields;
     if (!validateFields(fieldsToValidate)) return;
 
-    // بررسی ثبت‌نام تکراری قبل از ثبت نهایی فرم ثبت‌نام مراجع
-    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
-      const mobileVal = formData.f_mobile || formData.mobile;
-      if (mobileVal) {
-        const isDuplicate = await checkDuplicateMobile(mobileVal);
-        if (isDuplicate) {
-          const el = document.getElementById('field-f_mobile');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return;
-        }
-      }
-    }
+    setIsSubmitting(true);
 
-    // بررسی اجباری بودن انتخاب زمان مشاوره در سامانه نوبت‌دهی
-    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-      let selectedSlotVal = '';
-      let bookingFieldKey = '';
-      for (const key of Object.keys(formData)) {
-        if (key.startsWith('f_booking_') && formData[key] && String(formData[key]).trim() !== '') {
-          selectedSlotVal = String(formData[key]).trim();
-          bookingFieldKey = key;
-          break;
+    try {
+      // بررسی ثبت‌نام تکراری قبل از ثبت نهایی فرم ثبت‌نام مراجع
+      if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
+        const mobileVal = formData.f_mobile || formData.mobile;
+        if (mobileVal) {
+          const isDuplicate = await checkDuplicateMobile(mobileVal);
+          if (isDuplicate) {
+            setIsSubmitting(false);
+            const el = document.getElementById('field-f_mobile');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
         }
       }
 
-      if (!selectedSlotVal) {
-        // فیلد رزرو زمانی فعال مشاور
-        const visibleBooking = form.fields.find(
-          (f) => f.type === 'appointmentBooking' && isFieldVisible(f.id)
-        );
-        const errKey = visibleBooking ? visibleBooking.id : 'f_topic';
-        setErrors((prev) => ({
-          ...prev,
-          [errKey]: '⚠️ انتخاب روز و ساعت جلسه مشاوره الزامی است. لطفاً حتماً یکی از زمان‌های آزاد مشاور را انتخاب فرمایید.',
-        }));
-        setTimeout(() => {
-          const el = document.getElementById(`field-${errKey}`);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 60);
-        return;
-      }
-    }
-
-    // بررسی رزرو نبودن نوبت انتخابی در فرم نوبت‌دهی (جلوگیری از ثبت نوبت تکراری در همان زمان)
-    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-      try {
+      // بررسی اجباری بودن انتخاب زمان مشاوره در سامانه نوبت‌دهی
+      if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
         let selectedSlotVal = '';
         let bookingFieldKey = '';
         for (const key of Object.keys(formData)) {
-          if (key.startsWith('f_booking_') && formData[key] && isFieldVisible(key)) {
+          if (key.startsWith('f_booking_') && formData[key] && String(formData[key]).trim() !== '') {
             selectedSlotVal = String(formData[key]).trim();
             bookingFieldKey = key;
             break;
           }
         }
 
-        if (bookingFieldKey && selectedSlotVal) {
-          const checkRes = await fetch(`/api/cases?action=booked_slots&formId=form-belhagh-booking&counselorField=${encodeURIComponent(bookingFieldKey)}`);
-          const checkData = await checkRes.json();
-          if (checkData.success && Array.isArray(checkData.bookedSlots)) {
-            if (checkData.bookedSlots.some((b: string) => b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal))) {
-              setErrors((prev) => ({
-                ...prev,
-                [bookingFieldKey]: '⚠️ این نوبت قبلاً توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
-              }));
-              const el = document.getElementById(`field-${bookingFieldKey}`);
-              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              return;
+        if (!selectedSlotVal) {
+          setIsSubmitting(false);
+          // فیلد رزرو زمانی فعال مشاور
+          const visibleBooking = form.fields.find(
+            (f) => f.type === 'appointmentBooking' && isFieldVisible(f.id)
+          );
+          const errKey = visibleBooking ? visibleBooking.id : 'f_topic';
+          setErrors((prev) => ({
+            ...prev,
+            [errKey]: '⚠️ انتخاب روز و ساعت جلسه مشاوره الزامی است. لطفاً حتماً یکی از زمان‌های آزاد مشاور را انتخاب فرمایید.',
+          }));
+          setTimeout(() => {
+            const el = document.getElementById(`field-${errKey}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 60);
+          return;
+        }
+      }
+
+      // بررسی رزرو نبودن نوبت انتخابی در فرم نوبت‌دهی (جلوگیری از ثبت نوبت تکراری در همان زمان)
+      if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+        try {
+          let selectedSlotVal = '';
+          let bookingFieldKey = '';
+          for (const key of Object.keys(formData)) {
+            if (key.startsWith('f_booking_') && formData[key] && isFieldVisible(key)) {
+              selectedSlotVal = String(formData[key]).trim();
+              bookingFieldKey = key;
+              break;
             }
           }
+
+          if (bookingFieldKey && selectedSlotVal) {
+            const checkRes = await fetch(`/api/cases?action=booked_slots&formId=form-belhagh-booking&counselorField=${encodeURIComponent(bookingFieldKey)}`);
+            const checkData = await checkRes.json();
+            if (checkData.success && Array.isArray(checkData.bookedSlots)) {
+              if (checkData.bookedSlots.some((b: string) => b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal))) {
+                setIsSubmitting(false);
+                setErrors((prev) => ({
+                  ...prev,
+                  [bookingFieldKey]: '⚠️ این نوبت قبلاً توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
+                }));
+                const el = document.getElementById(`field-${bookingFieldKey}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Check booked slots on submit error:', e);
         }
-      } catch (e) {
-        console.warn('Check booked slots on submit error:', e);
       }
-    }
 
-    if (form.payment.enabled && calculatedAmount > 0) {
-      setIsPaymentOpen(true);
-      return;
-    }
+      if (form.payment.enabled && calculatedAmount > 0) {
+        setIsSubmitting(false);
+        setIsPaymentOpen(true);
+        return;
+      }
 
-    finalizeSubmission();
+      finalizeSubmission();
+    } catch (err) {
+      console.error('Submit error:', err);
+      setIsSubmitting(false);
+    }
   };
 
   const finalizeSubmission = (paymentRefId?: string) => {
+    setIsSubmitting(false);
     let quizResult = undefined;
     if (form.quiz.enabled) {
       let correct = 0;
@@ -3799,20 +3817,29 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               <button
                 key={`wizard-step-submit-${currentStepIndex}`}
                 type="submit"
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer ${borderRadiusClass || 'rounded-xl'}`}
+                disabled={isSubmitting}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 text-xs sm:text-sm font-bold shadow-md transition-all ${
+                  isSubmitting ? 'opacity-60 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
+                } ${borderRadiusClass || 'rounded-xl'}`}
                 style={{
                   backgroundColor: theme?.buttonColor || '#0284c7',
                   color: theme?.buttonTextColor || '#ffffff',
                 }}
               >
                 <span>
-                  {form.payment.enabled && calculatedAmount > 0
+                  {isSubmitting
+                    ? 'در حال ثبت...'
+                    : form.payment.enabled && calculatedAmount > 0
                     ? 'رفتن به درگاه پرداخت و ثبت'
                     : (form.id === 'form-belhagh-registration' || form.slug === 'zexuz')
                     ? 'ثبت فرم'
                     : 'ثبت و تکمیل پرونده نوبت‌دهی'}
                 </span>
-                <CheckCircle2 className="w-4 h-4" />
+                {isSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
               </button>
             )}
           </div>
