@@ -31,7 +31,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
 
   // دریافت کارنامه و ابعاد بالینی صفا در صورت وجود یا مؤلفه‌های تحلیلی
   const evalResult = safaEvaluationSubmission?.evaluationResult;
-  const overallScore = evalResult?.overallScore ?? (clientCase.safaScore || 75);
+  const overallScore = evalResult?.overallScore ?? ((clientCase as any).safaScore || 75);
 
   const clinicalDimensions =
     evalResult?.componentScores && evalResult.componentScores.length > 0
@@ -435,7 +435,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
                   author: c.authorName || 'استاد مشاور',
                   role: c.authorRole || 'مشاور مرکز',
                   date: c.createdAt,
-                  text: c.commentText,
+                  text: c.content || (c as any).commentText || "",
                 });
               });
             }
