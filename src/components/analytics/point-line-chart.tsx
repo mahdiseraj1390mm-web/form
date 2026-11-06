@@ -343,34 +343,7 @@ export const PointLineChart: React.FC<PointLineChartProps> = ({
             })}
         </svg>
 
-        {/* کارت راهنما یا توضیحات تعاملی نقطه فعال در پایین */}
-        {hoveredIdx !== null && points[hoveredIdx] && (
-          <div className="mt-2 p-2 rounded-xl bg-white/95 border border-slate-200/90 shadow-2xs text-xs flex items-center justify-between animate-in fade-in duration-150">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: points[hoveredIdx].item.color || lineColor }}
-              />
-              <span className="font-bold text-slate-800">
-                {points[hoveredIdx].item.label}
-              </span>
-              {points[hoveredIdx].item.badge && (
-                <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold">
-                  {points[hoveredIdx].item.badge}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 font-mono">
-              <span className="text-slate-500 text-[11px]">
-                {points[hoveredIdx].item.tooltip ? 'وضعیت:' : 'مقدار:'}
-              </span>
-              <span className="font-black text-slate-900 text-xs">
-                {points[hoveredIdx].item.tooltip || `${toPersianDigits(points[hoveredIdx].item.value)} ${unit}`}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
     </div>
   );
 };

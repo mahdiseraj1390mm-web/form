@@ -41,6 +41,7 @@ interface FormContextType {
   removeRuleFromForm: (formId: string, ruleId: string) => void;
   submitFormResponse: (formId: string, data: Record<string, any>, paymentInfo?: any, quizResult?: any, evaluationResult?: EvaluationResult, meta?: { deviceFingerprint?: string; detectedSafaCode?: string }) => FormSubmission;
   updateSubmissionStatus: (submissionId: string, newStatus: SubmissionStatus) => void;
+  updateSubmissionData: (submissionId: string, updatedFields: Record<string, any>) => void;
   addSubmissionComment: (submissionId: string, authorName: string, authorRole: string, content: string) => void;
   getSubmissionsByFormId: (formId: string) => FormSubmission[];
   refreshSubmissionsFromDb: (formId?: string) => Promise<void>;
@@ -120,7 +121,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-11-01-counselor-visibility-v15';
+      const CACHE_VERSION = 'v-2026-11-06-mandatory-fields-v16';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');

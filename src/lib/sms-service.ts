@@ -69,7 +69,7 @@ export async function getSmsSettings(): Promise<SmsSettings> {
         bodyId: DEFAULT_PATTERN_IDS.CASE_REGISTRATION,
         title: 'پیامک صدور کد پرونده',
         description: 'ارسال کد پرونده اختصاصی به مراجع',
-        template: 'با سلام\nکد پرونده شما: {0} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق',
+        template: 'کد پرونده اختصاصی شما در مرکز روانشناسی بالحق: {0}\nجهت ورود به سامانه و دریافت نوبت مشاوره این کد را ذخیره داشته باشید',
         variables: ['{0}: کد پرونده'],
       },
       appointment_client: {
@@ -295,7 +295,7 @@ export async function sendCaseRegistrationSms(clientMobile: string, caseCode: st
   const pattern = settings.patterns.case_registration;
   const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.CASE_REGISTRATION;
 
-  const exactText = `با سلام\nکد پرونده شما: ${caseCode} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق`;
+  const exactText = `کد پرونده اختصاصی شما در مرکز روانشناسی بالحق: ${caseCode}\nجهت ورود به سامانه و دریافت نوبت مشاوره این کد را ذخیره داشته باشید`;
 
   return sendSharedPatternSms(
     clientMobile,

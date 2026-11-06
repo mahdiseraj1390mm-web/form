@@ -518,32 +518,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            onClick={() => onNavigateTab('analytics')}
-            className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <BarChart3 className="w-4 h-4 text-indigo-600" />
-            <span>تحلیل‌های بالینی</span>
-          </button>
-
-          <button
-            onClick={() => onNavigateTab('submissions')}
-            className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Users className="w-4 h-4 text-sky-600" />
-            <span>کارتابل مراجعان</span>
-          </button>
-          
-          <button
-            onClick={onOpenNewFormModal}
-            className="px-4 py-2 text-xs font-black text-white bg-sky-600 hover:bg-sky-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>ایجاد فرم / سامانه جدید</span>
-          </button>
         </div>
-      </div>
 
       {/* ۳. باکس آمار کلی سامانه (تعداد ثبت پرونده، تعداد نوبت‌های دریافتی، تعداد فرم‌های پرسشنامه و تراکنش‌ها) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

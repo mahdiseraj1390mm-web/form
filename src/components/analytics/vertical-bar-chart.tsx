@@ -142,6 +142,17 @@ export const VerticalBarChart: React.FC<VerticalBarChartProps> = ({
                 </div>
 
                 {/* عنوان و برچسب زیر میله */}
+                {/* کادر شناور راهنما (Tooltip) - دقیقاً هنگام مکث موس زیر/بالای ستون ظاهر می‌شود و هنگام خروج ناپدید می‌گردد */}
+                {isHovered && (
+                  <div className="absolute -top-14 z-30 pointer-events-none bg-slate-900/95 text-white text-[11px] py-1.5 px-3 rounded-xl shadow-xl border border-slate-700/80 whitespace-nowrap flex flex-col items-center animate-in fade-in zoom-in-95 duration-100">
+                    <span className="font-bold">{item.label}</span>
+                    <span className="font-mono font-black text-amber-300">
+                      {toPersianDigits(item.value)} {unit} {item.percentage !== undefined ? `(${toPersianDigits(item.percentage)}٪)` : ''}
+                    </span>
+                    <div className="w-2 h-2 bg-slate-900 rotate-45 -mb-2.5 mt-0.5" />
+                  </div>
+                )}
+
                 <div className="mt-2 text-center w-full px-0.5">
                   <span
                     className={`block text-[10.5px] sm:text-[11px] truncate select-none transition-colors ${
@@ -163,39 +174,6 @@ export const VerticalBarChart: React.FC<VerticalBarChartProps> = ({
         </div>
       </div>
 
-      {/* نوار راهنمای تعاملی کوچک در زیر نمودار در صورت هاور */}
-      {hoveredIdx !== null && data[hoveredIdx] && (
-        <div className="p-2 rounded-xl bg-white border border-slate-200/90 shadow-2xs text-xs flex items-center justify-between animate-in fade-in duration-100">
-          <div className="flex items-center gap-2">
-            <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{
-                backgroundColor:
-                  data[hoveredIdx].color && (data[hoveredIdx].color!.startsWith('#') || data[hoveredIdx].color!.startsWith('rgb'))
-                    ? data[hoveredIdx].color
-                    : '#173f6b',
-              }}
-            />
-            <span className="font-bold text-slate-800">{data[hoveredIdx].label}</span>
-            {data[hoveredIdx].badge && (
-              <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">
-                {data[hoveredIdx].badge}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 font-mono">
-            <span className="text-slate-500 text-[11px]">مقدار:</span>
-            <span className="font-black text-slate-900 text-xs">
-              {toPersianDigits(data[hoveredIdx].value)} {unit}
-            </span>
-            {data[hoveredIdx].percentage !== undefined && (
-              <span className="text-[11px] text-slate-400">
-                ({toPersianDigits(data[hoveredIdx].percentage)}٪)
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
   );
 };

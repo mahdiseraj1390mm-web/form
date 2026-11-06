@@ -309,6 +309,65 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const [currentStatus, setCurrentStatus] = useState<SubmissionStatus>(clientCase.overallStatus);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
+  // استیت و متدهای ویرایش مشخصات مراجع توسط مشاور
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [editProfileForm, setEditProfileForm] = useState({
+    f_name: '',
+    f_family: '',
+    f_mobile: '',
+    f_birth_date: '',
+    f_role_in_family: '',
+    f_family_members: '',
+    f_marital_status: '',
+    f_children_count: '',
+    f_province_city: '',
+    f_school_name: '',
+    f_school_supervisor: '',
+    f_mentor_name: '',
+    f_physical_illness: '',
+    f_mental_illness: '',
+    f_medications: '',
+  });
+
+  const openEditProfileModal = () => {
+    setEditProfileForm({
+      f_name: combinedData.f_name || '',
+      f_family: combinedData.f_family || '',
+      f_mobile: clientCase.mobile || combinedData.f_mobile || '',
+      f_birth_date: combinedData.f_birth_date || '',
+      f_role_in_family: combinedData.f_role_in_family || clientCase.roleInFamily || '',
+      f_family_members: combinedData.f_family_members || '',
+      f_marital_status: combinedData.f_marital_status || '',
+      f_children_count: combinedData.f_children_count || combinedData.children_count || '',
+      f_province_city: clientCase.provinceCity || combinedData.f_province_city || '',
+      f_school_name: combinedData.f_school_name || '',
+      f_school_supervisor: combinedData.f_school_supervisor || '',
+      f_mentor_name: combinedData.f_mentor_name || '',
+      f_physical_illness: combinedData.f_physical_illness || '',
+      f_mental_illness: combinedData.f_mental_illness || '',
+      f_medications: combinedData.f_medications || '',
+    });
+    setIsEditProfileModalOpen(true);
+  };
+
+  const handleSaveProfileEdit = () => {
+    const targetSub = clientCase.submissions[0];
+    if (!targetSub) return;
+
+    updateSubmissionData(targetSub.id, editProfileForm);
+
+    const changes: string[] = [];
+    if (editProfileForm.f_physical_illness !== combinedData.f_physical_illness) changes.push(`بیماری جسمی: ${editProfileForm.f_physical_illness}`);
+    if (editProfileForm.f_mental_illness !== combinedData.f_mental_illness) changes.push(`بیماری روحی: ${editProfileForm.f_mental_illness}`);
+    if (editProfileForm.f_medications !== combinedData.f_medications) changes.push(`داروها: ${editProfileForm.f_medications}`);
+    if (editProfileForm.f_marital_status !== combinedData.f_marital_status) changes.push(`وضعیت تاهل: ${editProfileForm.f_marital_status}`);
+    
+    const summary = changes.length > 0 ? changes.join(' | ') : 'ویرایش اطلاعات هویتی و سلامت';
+    addSubmissionComment(targetSub.id, adminName, adminRole, `✏️ ویرایش پرونده مراجع توسط مشاور: ${summary}`);
+
+    setIsEditProfileModalOpen(false);
+  };
+
   // استخراج یکپارچه داده‌های هویتی مراجع از میان تمام فرم‌های پر شده در دیتابیس
   const combinedData = useMemo(() => {
     const data: Record<string, any> = {};
@@ -531,7 +590,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     return 'ثبت‌نشده';
   }, [combinedData, clientCase.roleInFamily]);
 
-  // سن مراجع (محاسبه هوشمند از سال تولد یا تاریخ تولد شمسی)
+  // سن مراجع (محاسبه دقیق و استاندارد از سال تولد یا تاریخ تولد شمسی)
   const clientAge = useMemo(() => {
     if (combinedData.f_age || combinedData.age) {
       const rawAge = combinedData.f_age || combinedData.age;
@@ -542,50 +601,41 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     }
 
     let bYear: number | null = null;
+    const candidates = [
+      combinedData.birth_year,
+      combinedData.f_birth_year,
+      combinedData.birthYear,
+      combinedData.f_birth_date,
+      combinedData.birth_date,
+      combinedData.birthDate,
+      ...currentSubmissions.map((s) => s.data?.birth_year),
+      ...currentSubmissions.map((s) => s.data?.f_birth_date),
+      ...currentSubmissions.map((s) => s.data?.f_birth_year),
+    ];
 
-    if (combinedData.birth_year) {
-      const parsed = parseInt(toEnglishDigits(String(combinedData.birth_year)));
-      if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
-        bYear = parsed;
+    for (const cand of candidates) {
+      if (!cand) continue;
+      const str = toEnglishDigits(String(cand)).trim();
+      const match4 = str.match(/(13\d{2}|14\d{2})/);
+      if (match4) {
+        bYear = parseInt(match4[1]);
+        break;
       }
-    }
-
-    if (!bYear && combinedData.f_birth_date) {
-      const rawDate = toEnglishDigits(String(combinedData.f_birth_date)).trim();
-      const parts = rawDate.split(/[\/\-\.]/);
-      if (parts.length >= 1) {
-        const parsed = parseInt(parts[0]);
-        if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
-          bYear = parsed;
+      const parts = str.split(/[\/\-\.\s]/).filter(Boolean);
+      for (const p of parts) {
+        const num = parseInt(p);
+        if (!isNaN(num) && num >= 1320 && num <= 1440) {
+          bYear = num;
+          break;
         }
       }
-    }
-
-    if (!bYear) {
-      for (const sub of currentSubmissions) {
-        if (sub.data?.birth_year) {
-          const parsed = parseInt(toEnglishDigits(String(sub.data.birth_year)));
-          if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
-            bYear = parsed;
-            break;
-          }
-        }
-        if (sub.data?.f_birth_date) {
-          const rawDate = toEnglishDigits(String(sub.data.f_birth_date)).trim();
-          const parts = rawDate.split(/[\/\-\.]/);
-          const parsed = parseInt(parts[0]);
-          if (!isNaN(parsed) && parsed > 1300 && parsed < 1450) {
-            bYear = parsed;
-            break;
-          }
-        }
-      }
+      if (bYear) break;
     }
 
     if (bYear) {
       const currentJalaliYear = 1403;
       const calculatedAge = Math.max(1, currentJalaliYear - bYear);
-      return `${toPersianDigits(calculatedAge)} سال (متولد ${toPersianDigits(bYear)})`;
+      return `${toPersianDigits(calculatedAge)} سال`;
     }
 
     return 'ثبت‌نشده';
@@ -1205,7 +1255,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
 
         {/* نوار زبانه‌های ناوبری ۶ گانه */}
-        <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xs">
+        <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 w-full p-2 bg-white rounded-2xl border border-slate-200 shadow-2xs">
           {[
             ['overview', 'تحلیل در یک نگاه'],
             ['analytics', 'تحلیل‌های آماری'],
@@ -1220,11 +1270,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 setCurrentView('dossier');
                 setActiveTab(key as any);
               }}
-              className={`shrink-0 rounded-xl px-5 py-3 text-xs font-bold transition cursor-pointer ${
+              className={`w-full rounded-xl py-3 px-3 text-xs sm:text-sm font-black transition-all flex items-center justify-center text-center cursor-pointer ${
                 (currentView === 'dossier' && activeTab === key) ||
                 (currentView === 'formReport' && key === 'forms')
                   ? 'bg-[#173f6b] text-white shadow-sm'
-                  : 'text-slate-500 hover:bg-slate-50'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
               {label}
@@ -1414,32 +1464,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               </div>
 
-              {/* ۱۱. آخرین توصیه مشاور */}
-              <div className="mt-3.5 rounded-2xl bg-violet-50/60 border border-violet-100 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-1.5 text-violet-900 text-xs font-black">
-                    <Sparkles className="size-4 text-violet-600 shrink-0" />
-                    <span>آخرین توصیه مشاور:</span>
-                  </div>
-                  {latestRecommendation && (
-                    <div className="flex items-center gap-2 text-[11px] text-violet-600">
-                      <span className="font-bold">{latestRecommendation.counselor}</span>
-                      <span>•</span>
-                      <span className="font-mono">{latestRecommendation.date.split('،')[0]}</span>
-                    </div>
-                  )}
-                </div>
-                {latestRecommendation?.recommendation ? (
-                  <div className="text-xs sm:text-sm leading-7 text-slate-800 font-medium bg-white/90 rounded-xl p-3.5 border border-violet-100 shadow-2xs">
-                    {latestRecommendation.recommendation}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500 italic py-1">
-                    هنوز توصیه‌ای از سوی مشاور برای این مراجع ثبت نشده است. (با ثبت اولین گزارش جلسه بالینی، در این بخش منعکس خواهد شد)
-                  </p>
-                )}
-              </div>
-            </article>
+              </article>
 
             {/* گرید سه‌گانه بالای صفحه: توصیه‌ها، نوبت‌ها، مدرسه معارفی */}
             <div className="grid gap-4 xl:grid-cols-3">
@@ -3186,6 +3211,204 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         </div>
       )}
       </div>
-    </div>
+    
+      {/* مودال ویرایش مشخصات مراجع توسط مشاور */}
+      {isEditProfileModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in" dir="rtl">
+          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
+                  <Edit className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">ویرایش پرونده و شرح‌حال مراجع</h3>
+                  <p className="text-[11px] text-slate-400">به‌روزرسانی سوابق بیماری، اطلاعات هویتی و تغییرات دوره‌ای مراجع</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditProfileModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">نام:</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.f_name}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_name: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">نام خانوادگی:</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.f_family}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_family: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">تلفن همراه:</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.f_mobile}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_mobile: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">تاریخ تولد (شمسی):</label>
+                  <input
+                    type="text"
+                    placeholder="روز / ماه / سال"
+                    value={editProfileForm.f_birth_date}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_birth_date: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">وضعیت تأهل:</label>
+                  <select
+                    value={editProfileForm.f_marital_status}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_marital_status: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  >
+                    <option value="">انتخاب کنید</option>
+                    <option value="مجرد">مجرد</option>
+                    <option value="متاهل">متاهل</option>
+                    <option value="مطلقه">مطلقه</option>
+                    <option value="همسر فوت شده">همسر فوت شده</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">نقش در خانواده:</label>
+                  <select
+                    value={editProfileForm.f_role_in_family}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_role_in_family: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  >
+                    <option value="">انتخاب کنید</option>
+                    <option value="پدر">پدر</option>
+                    <option value="مادر">مادر</option>
+                    <option value="دختر">دختر</option>
+                    <option value="پسر">پسر</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">تعداد اعضای خانواده:</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.f_family_members}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_family_members: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">استان و شهرستان:</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.f_province_city}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_province_city: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* بخش سلامت و بیماری‌ها */}
+              <div className="pt-3 border-t border-slate-100 space-y-3">
+                <div className="text-xs font-black text-rose-700">سوابق سلامت و بیماری‌ها (شرح‌حال پزشک/مشاور):</div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">سابقه بیماری جسمی:</label>
+                  <textarea
+                    rows={2}
+                    placeholder="در صورت عدم بیماری بنویسید «ندارم»..."
+                    value={editProfileForm.f_physical_illness}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_physical_illness: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">سابقه بیماری روحی/روانی:</label>
+                  <textarea
+                    rows={2}
+                    placeholder="در صورت عدم بیماری بنویسید «ندارم»..."
+                    value={editProfileForm.f_mental_illness}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_mental_illness: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">داروهای مصرفی:</label>
+                  <textarea
+                    rows={2}
+                    placeholder="در صورت عدم مصرف بنویسید «ندارم»..."
+                    value={editProfileForm.f_medications}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_medications: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* مدرسه معارفی */}
+              <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">نام مدرسه معارفی:</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.f_school_name}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_school_name: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">ناظم مدرسه:</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.f_school_supervisor}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_school_supervisor: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">مربی تربیتی:</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.f_mentor_name}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, f_mentor_name: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsEditProfileModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-bold transition cursor-pointer"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfileEdit}
+                className="px-5 py-2.5 rounded-xl bg-[#173f6b] hover:bg-[#123357] text-white text-xs font-black shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Check className="w-4 h-4" />
+                <span>ذخیره تغییرات در پرونده</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+</div>
   );
 };

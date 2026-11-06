@@ -680,7 +680,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       try {
         await navigator.share({
           title: 'کد پرونده سامانه روانشناسی بالحق',
-          text: `کد پرونده اختصاصی شما در مرکز روانشناسی بالحق: ${code}\nجهت ورود به سامانه و دریافت نوبت مشاوره این کد را ذخیره داشته باشید:\nhttps://s.psy-belhagh.com/form/3uu4z`,
+          text: `کد پرونده اختصاصی شما در مرکز روانشناسی بالحق: ${code}\nجهت ورود به سامانه و دریافت نوبت مشاوره این کد را ذخیره داشته باشید`,
         });
         return;
       } catch (e) {
