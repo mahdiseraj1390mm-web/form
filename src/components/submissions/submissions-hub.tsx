@@ -338,7 +338,7 @@ function normalizeSearchText(str: string): string {
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
-      const { exportClientCasesToXLSX, exportSubmissionsListToXLSX, exportFormSubmissionsToXLSX } = await import('@/lib/excel-export');
+      const { exportClientCasesToXLSX, exportSingleClientDossierToXLSX, exportSubmissionsListToXLSX, exportFormSubmissionsToXLSX } = await import('@/lib/excel-export');
       if (hubTab === 'cases') {
         if (filteredCases.length === 0) {
           alert('پرونده‌ای برای خروجی اکسل وجود ندارد.');
@@ -630,13 +630,33 @@ function normalizeSearchText(str: string): string {
 
                         {/* عملیات: مشاهده پرونده */}
                         <td className="p-3.5 sm:p-4 text-center">
-                          <button
-                            onClick={() => setActiveCaseModal(c)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>مشاهده پرونده</span>
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => setActiveCaseModal(c)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                              title="مشاهده پرونده کامل مراجع"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>مشاهده پرونده</span>
+                            </button>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
+                                  await exportSingleClientDossierToXLSX(c, forms);
+                                } catch (err) {
+                                  console.error(err);
+                                  alert('خطا در صدور اکسل این پرونده');
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
+                              title="خروجی اکسل اختصاصی فقط این پرونده"
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                              <span>اکسل</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

@@ -313,6 +313,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   // استیت و متدهای ویرایش مشخصات مراجع توسط مشاور
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [localOverrides, setLocalOverrides] = useState<Record<string, any>>({});
   const [editProfileForm, setEditProfileForm] = useState({
     f_name: '',
     f_family: '',
@@ -332,16 +333,20 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   });
 
   const openEditProfileModal = () => {
+    const nameParts = (clientCase.fullName && clientCase.fullName !== 'مراجع مرکز بالحق' ? clientCase.fullName : '').split(' ');
+    const autoFirst = nameParts[0] || '';
+    const autoLast = nameParts.slice(1).join(' ') || '';
+
     setEditProfileForm({
-      f_name: combinedData.f_name || '',
-      f_family: combinedData.f_family || '',
+      f_name: combinedData.f_name || autoFirst,
+      f_family: combinedData.f_family || autoLast,
       f_mobile: clientCase.mobile || combinedData.f_mobile || '',
       f_birth_date: combinedData.f_birth_date || '',
-      f_role_in_family: combinedData.f_role_in_family || clientCase.roleInFamily || '',
-      f_family_members: combinedData.f_family_members || '',
-      f_marital_status: combinedData.f_marital_status || '',
+      f_role_in_family: combinedData.f_role_in_family || clientCase.roleInFamily || 'مادر خانواده',
+      f_family_members: combinedData.f_family_members ? String(combinedData.f_family_members) : '',
+      f_marital_status: combinedData.f_marital_status || 'متاهل',
       f_children_count: combinedData.f_children_count || combinedData.children_count || '',
-      f_province_city: clientCase.provinceCity || combinedData.f_province_city || '',
+      f_province_city: clientCase.provinceCity || combinedData.f_province_city || combinedData.province || '',
       f_school_name: combinedData.f_school_name || '',
       f_school_supervisor: combinedData.f_school_supervisor || '',
       f_mentor_name: combinedData.f_mentor_name || '',
@@ -353,19 +358,55 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   };
 
   const handleSaveProfileEdit = () => {
-    const targetSub = clientCase.submissions[0];
-    if (!targetSub) return;
+    // 1. اعمال آنی در وضعیت محلی
+    setLocalOverrides((prev) => ({
+      ...prev,
+      ...editProfileForm,
+    }));
 
-    updateSubmissionData(targetSub.id, editProfileForm);
+    // 2. به‌روزرسانی مشخصات پرونده مراجع
+    const newFullName = `${editProfileForm.f_name || ''} ${editProfileForm.f_family || ''}`.trim();
+    if (newFullName) {
+      clientCase.fullName = newFullName;
+    }
+    if (editProfileForm.f_mobile) {
+      clientCase.mobile = editProfileForm.f_mobile;
+    }
+    if (editProfileForm.f_role_in_family) {
+      clientCase.roleInFamily = editProfileForm.f_role_in_family;
+    }
+    if (editProfileForm.f_province_city) {
+      clientCase.provinceCity = editProfileForm.f_province_city;
+    }
 
+    // 3. اعمال و همگام‌سازی روی تمام ارسالی‌ها و فرم‌های این مراجع در کانتکست
+    currentSubmissions.forEach((sub) => {
+      updateSubmissionData(sub.id, editProfileForm);
+    });
+
+    // 4. ثبت تاریخچه تغییرات در پرونده
     const changes: string[] = [];
-    if (editProfileForm.f_physical_illness !== combinedData.f_physical_illness) changes.push(`بیماری جسمی: ${editProfileForm.f_physical_illness}`);
-    if (editProfileForm.f_mental_illness !== combinedData.f_mental_illness) changes.push(`بیماری روحی: ${editProfileForm.f_mental_illness}`);
-    if (editProfileForm.f_medications !== combinedData.f_medications) changes.push(`داروها: ${editProfileForm.f_medications}`);
-    if (editProfileForm.f_marital_status !== combinedData.f_marital_status) changes.push(`وضعیت تاهل: ${editProfileForm.f_marital_status}`);
-    
-    const summary = changes.length > 0 ? changes.join(' | ') : 'ویرایش اطلاعات هویتی و سلامت';
-    addSubmissionComment(targetSub.id, adminName, adminRole, `✏️ ویرایش پرونده مراجع توسط مشاور: ${summary}`);
+    if (editProfileForm.f_physical_illness !== combinedData.f_physical_illness) {
+      changes.push(`بیماری جسمی: ${editProfileForm.f_physical_illness || 'ندارد'}`);
+    }
+    if (editProfileForm.f_mental_illness !== combinedData.f_mental_illness) {
+      changes.push(`بیماری روحی: ${editProfileForm.f_mental_illness || 'ندارد'}`);
+    }
+    if (editProfileForm.f_medications !== combinedData.f_medications) {
+      changes.push(`داروها: ${editProfileForm.f_medications || 'ندارد'}`);
+    }
+    if (editProfileForm.f_marital_status !== combinedData.f_marital_status) {
+      changes.push(`وضعیت تاهل: ${editProfileForm.f_marital_status}`);
+    }
+    if (editProfileForm.f_school_name !== combinedData.f_school_name) {
+      changes.push(`مدرسه: ${editProfileForm.f_school_name}`);
+    }
+
+    const summary = changes.length > 0 ? changes.join(' | ') : 'ویرایش پرونده مراجع توسط مشاور';
+    const primarySub = currentSubmissions[0];
+    if (primarySub) {
+      addSubmissionComment(primarySub.id, adminName, adminRole, `✏️ ${summary}`);
+    }
 
     setIsEditProfileModalOpen(false);
   };
@@ -374,10 +415,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const combinedData = useMemo(() => {
     const data: Record<string, any> = {};
     currentSubmissions.forEach((sub) => {
-      Object.assign(data, sub.data);
+      if (sub.data) Object.assign(data, sub.data);
     });
-    return data;
-  }, [currentSubmissions]);
+    return { ...data, ...localOverrides };
+  }, [currentSubmissions, localOverrides]);
 
   // نام کامل مراجع از روی داده‌های واقعی ثبت‌نام
   const displayFullName = useMemo(() => {
@@ -875,6 +916,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     }, 900);
   };
 
+  const handlePrintDossier = () => {
+    document.body.classList.add('printing-single-dossier');
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('printing-single-dossier');
+    }, 1000);
+  };
+
   const handleExportClientExcel = async () => {
     try {
       setIsExportingExcel(true);
@@ -1127,7 +1176,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   }, [appointments]);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
+    <div id="printable-dossier-wrapper" className="fixed inset-0 z-50 overflow-y-auto bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
       {/* سند جامع رسمی چاپی پرونده - تمام فیلدها، سوابق و آمارها به تفکیک و زیر هم */}
       <PrintableClientDossier
         clientCase={clientCase}
@@ -1139,7 +1188,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       />
 
       {/* رابط کاربری تعاملی صفحه مانیتور - هنگام پرینت کاملاً پنهان می‌شود */}
-      <div className="flex flex-col min-h-screen print:hidden">
+      <div className="flex flex-col min-h-screen print:hidden print-hidden-in-dossier">
       {/* سربرگ ناوبری سراسری برند بالحق */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur shadow-2xs">
         <div className="mx-auto flex max-w-[1480px] items-center justify-between gap-6 px-4 sm:px-6 py-3.5">
@@ -1238,7 +1287,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
           <div className="flex items-center gap-2.5">
             <button
-              onClick={() => window.print()}
+              onClick={handlePrintDossier}
               className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition cursor-pointer"
             >
               <Printer className="size-4" />
@@ -1951,7 +2000,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setIsEditProfileModalOpen(true)}
+                    onClick={openEditProfileModal}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#173f6b] hover:bg-[#123357] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
                   >
                     <Edit className="size-4" />
@@ -2021,7 +2070,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={() => setIsEditProfileModalOpen(true)}
+                  onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                 >
                   <Edit className="size-3.5" />
@@ -2123,7 +2172,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={() => setIsEditProfileModalOpen(true)}
+                  onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                 >
                   <Edit className="size-3.5" />
@@ -2177,7 +2226,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={() => setIsEditProfileModalOpen(true)}
+                  onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                 >
                   <Edit className="size-3.5" />
@@ -2611,6 +2660,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <ArrowRight className="w-4 h-4" />
                   <span>بازگشت به لیست فرم‌های مراجع</span>
                 </button>
+                <button
+                  onClick={openEditProfileModal}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#173f6b] hover:bg-[#123357] text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs"
+                  title="ویرایش و به‌روزرسانی اطلاعات پرونده توسط مشاور"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>ویرایش مشخصات پرونده توسط مشاور</span>
+                </button>
                 <div className="h-6 w-px bg-slate-200 hidden sm:block" />
                 <div>
                   <div className="flex items-center gap-2">
@@ -2864,9 +2921,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                   <span className="text-xs text-slate-500 font-medium">
                                     {field.label}:
                                   </span>
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {field.id}
-                                  </span>
+                                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/80">پاسخ ثبت‌شده</span>
                                 </div>
                                 <div className="text-xs sm:text-sm font-bold text-slate-900 pt-1">
                                   {val === undefined || val === null || val === '' ? (
@@ -2931,17 +2986,40 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                         سایر اطلاعات و پاسخ‌های ثبت‌شده:
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                        {extraEntries.map(([k, v]) => (
-                          <div
-                            key={k}
-                            className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex flex-col justify-between"
-                          >
-                            <span className="text-xs text-slate-500 font-mono mb-1">{k}:</span>
-                            <span className="text-xs sm:text-sm font-bold text-slate-900 break-words">
-                              {typeof v === 'object' ? JSON.stringify(v) : String(v)}
-                            </span>
-                          </div>
-                        ))}
+                        {extraEntries.map(([k, v]) => {
+                          const keyTranslations: Record<string, string> = {
+                            fullName: 'نام و نام خانوادگی',
+                            f_name: 'نام مراجع',
+                            f_family: 'نام خانوادگی',
+                            f_mobile: 'شماره تلفن همراه',
+                            f_province_city_city: 'شهر محل سکونت',
+                            f_province_city_province: 'استان محل سکونت',
+                            f_birth_date: 'تاریخ تولد',
+                            f_marital_status: 'وضعیت تأهل',
+                            f_role_in_family: 'نقش در خانواده',
+                            f_family_members: 'تعداد اعضای خانواده',
+                            f_ebadollah_member: 'عضویت در سایت عبادالله',
+                            f_physical_illness: 'سابقه بیماری جسمی',
+                            f_mental_illness: 'سابقه بیماری روحی و روانشناختی',
+                            f_medications: 'داروهای مصرفی',
+                            f_school_name: 'نام مدرسه معارفی',
+                            f_school_supervisor: 'ناظم مدرسه',
+                            f_mentor_name: 'مربی تربیتی / استاد راهنما',
+                          };
+                          const label = keyTranslations[k] || k.replace(/^f_/, '').replace(/_/g, ' ');
+
+                          return (
+                            <div
+                              key={k}
+                              className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex flex-col justify-between"
+                            >
+                              <span className="text-xs text-slate-500 font-bold mb-1">{label}:</span>
+                              <span className="text-xs sm:text-sm font-bold text-slate-900 break-words">
+                                {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );

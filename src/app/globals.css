@@ -123,14 +123,30 @@ pre {
   }
 
   /* پنهان‌سازی اجزای ناوبری و عناصر غیرچاپی */
-  header, aside, nav, .no-print, button, input, textarea, select {
+  header, aside, nav, .no-print, button, input, textarea, select, .print-hidden {
+    display: none !important;
+  }
+
+  /* حالت چاپ ایزوله پرونده تکی مراجع: فقط پرونده فعال همان شخص چاپ شود نه کل صفحه */
+  body.printing-single-dossier > *:not(#printable-dossier-wrapper) {
+    display: none !important;
+  }
+
+  body.printing-single-dossier #printable-dossier-wrapper {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+  }
+
+  body.printing-single-dossier .print-hidden-in-dossier {
     display: none !important;
   }
 
   /* اجبار به نمایش کامل محتوای پرینت و برداشتن محدودیت‌های اسکرول */
-  div, main, section {
-    overflow: visible !important;
-    max-height: none !important;
+  #printable-client-dossier-root {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
   }
 
   .print-only {

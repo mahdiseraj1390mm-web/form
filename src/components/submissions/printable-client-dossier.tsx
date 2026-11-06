@@ -56,7 +56,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
         ];
 
   return (
-    <div className="hidden print:block print-only w-full bg-white text-black p-4 text-xs font-sans dir-rtl text-right leading-relaxed">
+    <div id="printable-client-dossier-root" className="hidden print:block print-only w-full bg-white text-black p-4 text-xs font-sans dir-rtl text-right leading-relaxed">
       {/* ==================== سربرگ رسمی سند بالحق ==================== */}
       <div className="border-2 border-slate-900 rounded-2xl p-4 mb-5 print-avoid-break bg-slate-50/50">
         <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3 mb-3">
@@ -252,103 +252,52 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
         )}
       </section>
 
-      {/* ==================== ۴. پاسخ‌های فیلد به فیلد کلیه فرم‌ها و پرسشنامه‌ها ==================== */}
-      <section className="mb-5 space-y-4">
-        <div className="bg-slate-800 text-white px-3 py-1.5 rounded-t-xl font-black text-xs flex items-center justify-between print-avoid-break">
-          <span>۴. پاسخ‌های فیلد به فیلد فرم‌ها و پرسشنامه‌های تکمیل‌شده مراجع</span>
+      {/* ==================== ۴. لیست و سوابق فرم‌ها و پرسشنامه‌های مراجع ==================== */}
+      <section className="mb-5 print-avoid-break">
+        <div className="bg-slate-800 text-white px-3 py-1.5 rounded-t-xl font-black text-xs flex items-center justify-between">
+          <span>۴. لیست و کارنامه فرم‌ها و پرسشنامه‌های تکمیل‌شده مراجع</span>
           <span className="font-mono text-[10px]">مجموعاً {toPersianDigits(submissions.length)} فرم ارسالی</span>
         </div>
 
-        {submissions.map((sub, sIdx) => {
-          const formObj = forms.find((f) => f.id === sub.formId || f.slug === sub.formId);
-          const formTitle = formObj ? formObj.title : `فرم ارسالی (${sub.formId})`;
-          const fields = formObj?.fields || [];
-
-          // فیلتر کردن کلیدهای سیستمی و غیرپاسخی
-          const ignoredKeys = [
-            'caseCode',
-            'fullName',
-            'f_name',
-            'f_family',
-            'f_mobile',
-            'trackingCode',
-            'evaluationResult',
-            'reconciledReason',
-            'linkingStatus',
-            'reconciledAt',
-          ];
-
-          const renderedFieldIds = new Set<string>();
-
-          return (
-            <div key={sub.id} className="border border-slate-300 rounded-xl overflow-hidden print-avoid-break">
-              {/* هدر هر فرم */}
-              <div className="bg-slate-100 p-2.5 border-b border-slate-300 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-slate-800 text-white font-mono font-bold text-[10px] flex items-center justify-center">
-                    {toPersianDigits(sIdx + 1)}
-                  </span>
-                  <h4 className="font-black text-slate-900 text-xs">
-                    {formTitle}
-                  </h4>
-                </div>
-
-                <div className="flex items-center gap-3 font-mono text-[10px] text-slate-600">
-                  <span>کد پیگیری: <strong className="text-slate-900">{sub.trackingCode}</strong></span>
-                  <span>|</span>
-                  <span>تاریخ ثبت: {formatPersianDateTime(sub.createdAt)}</span>
-                </div>
-              </div>
-
-              {/* جدول فیلدها و پاسخ‌ها */}
-              <table className="w-full border-collapse text-[11px]">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                    <th className="p-2 border-l border-slate-200 text-right w-1/2">عنوان فیلد / سؤال پرسشنامه</th>
-                    <th className="p-2 text-right w-1/2">پاسخ ثبت‌شده توسط مراجع</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {/* فیلدهای منطبق با تعریف فرم */}
-                  {fields.map((field) => {
-                    const rawVal = sub.data?.[field.id];
-                    if (rawVal === undefined || rawVal === null || rawVal === '') return null;
-                    renderedFieldIds.add(field.id);
-                    const displayVal = getFieldDisplayValue(field, rawVal);
-
-                    return (
-                      <tr key={field.id} className="hover:bg-slate-50">
-                        <td className="p-2 border-l border-slate-200 font-bold text-slate-800 bg-slate-50/50">
-                          {field.label}
-                        </td>
-                        <td className="p-2 text-slate-900 font-medium">
-                          {displayVal}
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  {/* هر فیلد دیگری که در داده‌های فرم هست و در فیلدها نیامده */}
-                  {Object.entries(sub.data || {})
-                    .filter(([k, v]) => !ignoredKeys.includes(k) && !renderedFieldIds.has(k) && v !== undefined && v !== null && v !== '')
-                    .map(([k, v]) => (
-                      <tr key={k} className="hover:bg-slate-50">
-                        <td className="p-2 border-l border-slate-200 font-bold text-slate-800 bg-slate-50/50">
-                          {k}
-                        </td>
-                        <td className="p-2 text-slate-900 font-medium font-mono">
-                          {typeof v === 'object' ? JSON.stringify(v) : String(v)}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          );
-        })}
+        <table className="w-full border-collapse border border-slate-300 text-[11px]">
+          <thead>
+            <tr className="bg-slate-100 border-b border-slate-300 font-bold text-slate-800">
+              <th className="p-2 border-l border-slate-300 text-center w-10">ردیف</th>
+              <th className="p-2 border-l border-slate-300 text-right">عنوان فرم / آزمون</th>
+              <th className="p-2 border-l border-slate-300 text-center w-28">کد پیگیری</th>
+              <th className="p-2 border-l border-slate-300 text-center w-32">تاریخ ثبت</th>
+              <th className="p-2 border-l border-slate-300 text-center w-24">وضعیت</th>
+              <th className="p-2 text-center w-28">وضعیت پرداخت</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-300">
+            {submissions.map((sub, sIdx) => {
+              const formObj = forms.find((f) => f.id === sub.formId || f.slug === sub.formId);
+              const formTitle = formObj ? formObj.title : `فرم ارسالی (${sub.formId})`;
+              return (
+                <tr key={sub.id} className="hover:bg-slate-50">
+                  <td className="p-2 border-l border-slate-300 text-center font-mono">{toPersianDigits(sIdx + 1)}</td>
+                  <td className="p-2 border-l border-slate-300 font-bold text-slate-900">{formTitle}</td>
+                  <td className="p-2 border-l border-slate-300 text-center font-mono">{sub.trackingCode}</td>
+                  <td className="p-2 border-l border-slate-300 text-center font-mono">{formatPersianDateTime(sub.createdAt)}</td>
+                  <td className="p-2 border-l border-slate-300 text-center font-bold">
+                    {sub.status === 'approved' ? 'تأیید شده' : sub.status === 'reviewing' ? 'در حال بررسی' : 'ثبت اولیه'}
+                  </td>
+                  <td className="p-2 text-center font-bold text-emerald-700">
+                    {sub.paymentStatus === 'paid' ? 'پرداخت موفق' : 'بدون هزینه'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </section>
 
-      {/* ==================== ۵. شاخص‌های آماری و تحلیل‌های بالینی مراجع ==================== */}
+      {/* بخش تکمیلی پرسشنامه در صورت وجود فیلدهای مهم */}
+      <div style={{ display: 'none' }}>
+      </div>
+
+      {/* ==================== ۵. شاخص‌های آماری و تحلیل‌های بالینی مراجع ==================== */}{/* ==================== ۵. شاخص‌های آماری و تحلیل‌های بالینی مراجع ==================== */}
       <section className="mb-5 print-avoid-break">
         <div className="bg-slate-800 text-white px-3 py-1.5 rounded-t-xl font-black text-xs flex items-center justify-between">
           <span>۵. شاخص‌های آماری و ارزیابی‌های بالینی مراجع</span>

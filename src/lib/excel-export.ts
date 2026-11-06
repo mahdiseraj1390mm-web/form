@@ -584,11 +584,21 @@ export async function exportSingleClientDossierToXLSX(
     alignV: 'middle',
   });
 
+  const combinedData: Record<string, any> = {};
+  (clientCase.submissions || []).forEach((s) => {
+    if (s.data) Object.assign(combinedData, s.data);
+  });
+
   const profileItems = [
-    ['کد پرونده:', clientCase.caseCode, 'وضعیت کلی پرونده:', STATUS_TRANSLATIONS[clientCase.overallStatus] || clientCase.overallStatus],
+    ['کد یکتای پرونده:', clientCase.caseCode, 'وضعیت کلی پرونده:', STATUS_TRANSLATIONS[clientCase.overallStatus] || clientCase.overallStatus],
     ['نام و نام خانوادگی:', clientCase.fullName, 'شماره همراه:', clientCase.mobile],
-    ['نقش در خانواده:', clientCase.roleInFamily || 'نامشخص', 'استان / شهر:', clientCase.provinceCity],
-    ['تعداد فرم‌های تکمیل‌شده:', clientCase.totalFormsCount, 'مجموع مبالغ پرداختی:', `${Number(clientCase.totalPaidAmount || 0).toLocaleString('fa-IR')} تومان`],
+    ['نقش در خانواده:', clientCase.roleInFamily || combinedData.f_role_in_family || 'مراجع', 'استان / شهرستان:', clientCase.provinceCity || combinedData.f_province_city || 'ثبت‌نشده'],
+    ['وضعیت تأهل:', combinedData.f_marital_status || 'ثبت‌نشده', 'تعداد اعضای خانواده:', combinedData.f_family_members ? `${combinedData.f_family_members} نفر` : 'ثبت‌نشده'],
+    ['تاریخ تولد:', combinedData.f_birth_date || 'ثبت‌نشده', 'عضویت سایت عبادالله:', combinedData.f_ebadollah_member || 'ثبت‌نشده'],
+    ['سابقه بیماری جسمی:', combinedData.f_physical_illness || 'ندارد / ثبت‌نشده', 'سابقه بیماری روحی/روانی:', combinedData.f_mental_illness || 'ندارد / ثبت‌نشده'],
+    ['داروهای مصرفی:', combinedData.f_medications || 'ندارد / ثبت‌نشده', 'مدرسه معارفی:', combinedData.f_school_name || 'ثبت‌نشده'],
+    ['ناظم مدرسه:', combinedData.f_school_supervisor || 'ثبت‌نشده', 'مربی تربیتی / مشاور:', combinedData.f_mentor_name || 'ثبت‌نشده'],
+    ['تعداد فرم‌های پرونده:', clientCase.totalFormsCount, 'مجموع مبالغ پرداختی:', `${Number(clientCase.totalPaidAmount || 0).toLocaleString('fa-IR')} تومان`],
     ['تاریخ آخرین ارسالی / نوبت:', formatPersianDateTime(clientCase.latestDate), 'عناوین فرم‌ها:', clientCase.formTitles.join('، ')],
   ];
 
