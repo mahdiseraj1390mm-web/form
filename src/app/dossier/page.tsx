@@ -6,6 +6,7 @@ import { useForm } from '@/context/form-context';
 import { ClientDossierFullview, ClientCaseGroup } from '@/components/submissions/client-dossier-fullview';
 import { Layers, FileQuestion, ArrowRight } from 'lucide-react';
 import { FormSubmission } from '@/types/form';
+import { isUnassignedSafaSubmission } from '@/lib/safa-utils';
 
 function DossierContent() {
   const router = useRouter();
@@ -120,8 +121,10 @@ function DossierContent() {
     if (submissions.length === 0) return null;
 
     // ۱. جستجوی سابمیشن منطبق با کد پرونده، کد پیگیری یا شماره تماس
+    const activeSubs = submissions.filter((s) => !isUnassignedSafaSubmission(s));
     let matchSub = caseCodeParam
       ? submissions.find((s) => {
+          if (isUnassignedSafaSubmission(s)) return false;
           const cCode = s.data?.caseCode || s.trackingCode || s.id;
           const mob = s.data?.f_mobile || s.data?.bk_mobile || s.mobile;
           const cleanParam = caseCodeParam.trim().toLowerCase();
@@ -132,14 +135,10 @@ function DossierContent() {
             (mob && String(mob).includes(cleanParam))
           );
         })
-      : submissions[0];
+      : (activeSubs[0] || null);
 
     if (!matchSub) {
-      if (!caseCodeParam && submissions.length > 0) {
-        matchSub = submissions[0];
-      } else {
-        return null;
-      }
+      return null;
     }
 
     const cCode = matchSub.data?.caseCode || matchSub.trackingCode || `CASE-${matchSub.id.slice(-6)}`;

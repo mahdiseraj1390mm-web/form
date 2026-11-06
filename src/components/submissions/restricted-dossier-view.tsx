@@ -201,7 +201,7 @@ export const RestrictedDossierView: React.FC<RestrictedDossierViewProps> = ({
                   type="text"
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
-                  placeholder="کد پرونده (مثال: SP968172 یا SF-63222)..."
+                  placeholder="کد پرونده (مثال: SP968172 یا SP328786)..."
                   dir="ltr"
                   autoFocus
                   className="w-full pr-9 pl-3 py-2.5 text-xs font-mono border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 text-left"

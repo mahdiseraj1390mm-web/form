@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
+import { isAssignedSafaSubmission } from '@/lib/safa-utils';
 
 interface FormsListViewProps {
   onOpenNewFormModal: () => void;
@@ -41,7 +42,9 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
   const [exportingFormId, setExportingFormId] = useState<string | null>(null);
 
   const handleExportFormExcel = async (form: Form) => {
-    const formSubs = submissions.filter((s) => s.formId === form.id);
+    const formSubs = form.id === 'form-safaan-assessment'
+      ? submissions.filter((s) => s.formId === form.id && isAssignedSafaSubmission(s))
+      : submissions.filter((s) => s.formId === form.id);
     if (formSubs.length === 0) {
       alert(`هنوز پاسخی برای فرم «${form.title}» ثبت نشده است.`);
       return;
@@ -144,7 +147,11 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
               <div className="p-2 bg-slate-50 rounded-lg">
                 <span className="text-[10px] text-slate-400 block">پاسخ‌های واقعی</span>
                 <span className="font-bold text-blue-700 font-mono">
-                  {toPersianDigits(submissions.filter((s) => s.formId === form.id).length)}
+                  {toPersianDigits(
+                    form.id === 'form-safaan-assessment'
+                      ? submissions.filter((s) => s.formId === form.id && isAssignedSafaSubmission(s)).length
+                      : submissions.filter((s) => s.formId === form.id).length
+                  )}
                 </span>
               </div>
               <div className="p-2 bg-slate-50 rounded-lg">

@@ -18,6 +18,7 @@ import {
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import { toPersianDigits } from '@/lib/persian';
+import { filterActiveSubmissions } from '@/lib/safa-utils';
 
 interface SidebarProps {
   currentTab: string;
@@ -42,7 +43,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
   const userAllowedTabs = currentUser?.allowedTabs;
 
-  const totalSubmissions = submissions.length;
+  const activeSubmissions = filterActiveSubmissions(submissions);
+  const totalCasesCount = new Set(
+    activeSubmissions
+      .map((s) => s.data?.caseCode || s.trackingCode)
+      .filter((c) => c && typeof c === 'string' && !c.startsWith('SF-'))
+  ).size;
 
   const allNavItems = [
     {
@@ -74,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'submissions',
       label: 'پرونده مراجعین',
       icon: Inbox,
-      badge: toPersianDigits(totalSubmissions),
+      badge: toPersianDigits(totalCasesCount),
     },
     {
       id: 'media',

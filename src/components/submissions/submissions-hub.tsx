@@ -40,6 +40,7 @@ import {
   X
 } from 'lucide-react';
 import { formatPersianDateTime, formatCurrency, toPersianDigits, getFieldDisplayValue } from '@/lib/persian';
+import { isUnassignedSafaSubmission } from '@/lib/safa-utils';
 
 interface ClientCaseGroup {
   caseCode: string;
@@ -118,6 +119,15 @@ export const SubmissionsHub: React.FC = () => {
   };
 
   // گروه‌بندی هوشمند پاسخ‌ها به پرونده‌های مراجعین
+  // پرونده‌های صفان تا وقتی که به کسی نسبت داده نشده‌اند در لیست پرونده‌ها نمایش داده نمی‌شوند
+  const activeSubmissions = useMemo(() => {
+    return submissions.filter((s) => !isUnassignedSafaSubmission(s));
+  }, [submissions]);
+
+  const unassignedSafaCount = useMemo(() => {
+    return submissions.filter(isUnassignedSafaSubmission).length;
+  }, [submissions]);
+
   const clientCases: ClientCaseGroup[] = useMemo(() => {
     const caseMap = new Map<string, ClientCaseGroup>();
 
@@ -130,7 +140,7 @@ export const SubmissionsHub: React.FC = () => {
 
     // نگاشت شماره همراه به کد پرونده اصلی برای تجمیع کامل مراجعانی که چند بار ثبت فرم کرده‌اند
     const mobileToPrimaryCase = new Map<string, string>();
-    submissions.forEach((sub) => {
+    activeSubmissions.forEach((sub) => {
       const rawMobile = sub.data?.f_mobile || sub.data?.bk_mobile || sub.data?.mobile || (sub as any).mobile;
       const clean = normalizeMob(rawMobile);
       if (clean) {
@@ -144,7 +154,7 @@ export const SubmissionsHub: React.FC = () => {
       }
     });
 
-    submissions.forEach((sub) => {
+    activeSubmissions.forEach((sub) => {
       const rawMobile = sub.data?.f_mobile || sub.data?.bk_mobile || sub.data?.mobile || (sub as any).mobile;
       const cleanMobile = normalizeMob(rawMobile);
 
@@ -261,6 +271,10 @@ function normalizeSearchText(str: string): string {
   // فیلتر ارسالی‌های تکی فرم‌ها
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((s) => {
+      // کارنامه‌های صفان تا وقتی که به کسی نسبت داده نشده‌اند، در نمای کلی پاسخ‌ها نیز مگر در صورت انتخاب صریح فرم صفان پنهان باشند
+      if (isUnassignedSafaSubmission(s) && selectedFormId !== 'form-safaan-assessment') {
+        return false;
+      }
       const matchesForm = selectedFormId === 'all' || s.formId === selectedFormId;
       const q = normalizeSearchText(searchQuery);
       if (!q) {
@@ -414,9 +428,16 @@ function normalizeSearchText(str: string): string {
               }`}
             >
               <Inbox className="w-4 h-4 text-slate-500" />
-              <span>کل پاسخ‌های دریافتی ({toPersianDigits(submissions.length)})</span>
+              <span>کل پاسخ‌های دریافتی ({toPersianDigits(activeSubmissions.length)})</span>
             </button>
           </div>
+
+          {unassignedSafaCount > 0 && (
+            <div className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 rounded-xl text-xs font-medium">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              <span>{toPersianDigits(unassignedSafaCount)} کارنامه صفان در انتظار انتساب</span>
+            </div>
+          )}
 
           <button
             onClick={() => refreshSubmissionsFromDb('all')}
@@ -431,10 +452,10 @@ function normalizeSearchText(str: string): string {
             onClick={handleRunReconcile}
             disabled={isReconciling}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
-            title="اجرای تطبیق شبانه و پیوند کارنامه‌های صفاً به پرونده‌های مراجعین"
+            title="اجرای تطبیق شبانه و پیوند کارنامه‌های صفان به پرونده‌های مراجعین"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{isReconciling ? 'در حال تطبیق...' : 'تطبیق کارنامه‌های صفاً'}</span>
+            <span>{isReconciling ? 'در حال تطبیق...' : 'تطبیق کارنامه‌های صفان'}</span>
           </button>
 
           <button

@@ -30,6 +30,7 @@ import {
   FileText
 } from 'lucide-react';
 import { toPersianDigits, formatCurrency, formatPersianDateTime } from '@/lib/persian';
+import { isAssignedSafaSubmission, filterActiveSubmissions } from '@/lib/safa-utils';
 import { VerticalBarChart, BarChartItem } from '../analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '../analytics/point-line-chart';
 
@@ -46,17 +47,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [activityFilter, setActivityFilter] = useState<'all' | 'cases' | 'bookings' | 'quizzes'>('all');
   const [progressMetric, setProgressMetric] = useState<'bookings' | 'cases' | 'attendance'>('bookings');
 
+  // ارسالی‌های فعال و انتساب‌یافته (حذف پرونده‌های متصل‌نشده صفان از تحلیل‌ها و آمارگیری)
+  const activeSubmissions = useMemo(() => filterActiveSubmissions(submissions), [submissions]);
+
   // ۱. محاسبات باکس آمار کلی سامانه (تعداد ثبت پرونده، نوبت‌های دریافتی، فرم‌های پرسشنامه)
   const statsOverview = useMemo(() => {
     const caseCodes = new Set<string>();
-    submissions.forEach((s) => {
+    activeSubmissions.forEach((s) => {
       const code = s.data?.caseCode || s.trackingCode;
-      if (code && typeof code === 'string' && code.startsWith('SP')) {
+      if (code && typeof code === 'string' && !code.startsWith('SF-')) {
         caseCodes.add(code);
       }
     });
 
-    const bookingSubmissions = submissions.filter((s) => {
+    const bookingSubmissions = activeSubmissions.filter((s) => {
       if (s.formId === 'form-belhagh-booking') return true;
       if (!s.data || typeof s.data !== 'object') return false;
       return Object.keys(s.data).some(
@@ -64,20 +68,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       );
     });
 
-    const quizSubmissions = submissions.filter((s) => {
+    const quizSubmissions = activeSubmissions.filter((s) => {
       return (
-        s.formId === 'form-safaan-assessment' ||
-        !!s.evaluationResult ||
-        !!s.quizResult ||
-        (s.data && (s.data.safaUserCode || s.data.q_safa_01))
+        isAssignedSafaSubmission(s) ||
+        (s.formId !== 'form-safaan-assessment' &&
+          s.formId !== 'form-belhagh-registration' &&
+          s.formId !== 'form-belhagh-booking' &&
+          (!!s.evaluationResult || !!s.quizResult))
       );
     });
 
-    const registrationSubmissions = submissions.filter(
+    const registrationSubmissions = activeSubmissions.filter(
       (s) => s.formId === 'form-belhagh-registration' || s.data?.f_ebadollah_member !== undefined
     );
 
-    const paidSubmissions = submissions.filter((s) => s.paymentStatus === 'paid');
+    const paidSubmissions = activeSubmissions.filter((s) => s.paymentStatus === 'paid');
     const totalRevenue = paidSubmissions.reduce((acc, curr) => acc + (curr.paymentAmount || 0), 0);
 
     return {
@@ -86,9 +91,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       totalQuizzesCount: quizSubmissions.length,
       totalPaidCount: paidSubmissions.length,
       totalRevenue,
-      totalAllSubmissions: submissions.length,
+      totalAllSubmissions: activeSubmissions.length,
     };
-  }, [submissions]);
+  }, [activeSubmissions]);
 
   // پایش روند پیشرفت ماهانه مرکز بالحق (نمودار نقطه و خط پیشرفت)
   const monthlyProgressData: PointLineChartItem[] = useMemo(() => {
@@ -145,7 +150,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       'برنامه‌ریزی تحصیلی و انگیزش': 0,
     };
 
-    submissions.forEach((s, idx) => {
+    activeSubmissions.forEach((s, idx) => {
       const rec = s.data?.f_counselor_recommendation || s.data?.f_next_plan || s.data?.recommendation || '';
       if (rec) {
         if (rec.includes('ارتباط') || rec.includes('زوج')) recCounts['مهارت‌های ارتباطی و زوجین']++;
@@ -174,7 +179,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       color: colors[idx % colors.length],
       secondaryLabel: `${toPersianDigits(val)} توصیه`,
     }));
-  }, [submissions]);
+  }, [activeSubmissions]);
 
   // ۲-ب. باکس بیشترین موضوعات مراجعه به مشاوران
   const topReferralTopicsData: BarChartItem[] = useMemo(() => {
@@ -186,7 +191,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       'ازدواج و خانواده': 0,
     };
 
-    submissions.forEach((s) => {
+    activeSubmissions.forEach((s) => {
       const topic = s.data?.f_topic || s.data?.f_counseling_subject;
       if (!topic) return;
 
@@ -217,13 +222,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       color: colors[idx % colors.length],
       secondaryLabel: `${toPersianDigits(val)} مراجعه`,
     }));
-  }, [submissions]);
+  }, [activeSubmissions]);
 
   // ۴. باکس بیشترین نوبت‌ها از مشاوران (رتبه‌بندی اساتید مشاور)
   const topCounselorsData: BarChartItem[] = useMemo(() => {
     const counselorCounts: Record<string, number> = {};
 
-    submissions.forEach((s) => {
+    activeSubmissions.forEach((s) => {
       let counselor = s.data?.f_counselor;
       if (!counselor) {
         for (const k of Object.keys(s.data || {})) {
@@ -262,7 +267,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       color: barColors[idx % barColors.length],
       secondaryLabel: `${toPersianDigits(count)} نوبت`,
     }));
-  }, [submissions]);
+  }, [activeSubmissions]);
 
   // ۱. باکس آخرین فعالیت‌ها (فید زنده با حفظ محرمانگی نام)
   const recentActivities = useMemo(() => {
@@ -277,7 +282,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       badgeColor: string;
     }> = [];
 
-    submissions.forEach((s) => {
+    activeSubmissions.forEach((s) => {
       const caseCode = s.data?.caseCode || s.trackingCode || 'SP000000';
 
       if (s.formId === 'form-belhagh-registration' || s.data?.f_ebadollah_member) {
@@ -321,7 +326,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         });
       }
 
-      if (s.formId === 'form-safaan-assessment' || s.evaluationResult) {
+      if (isAssignedSafaSubmission(s) || (s.formId !== 'form-safaan-assessment' && s.evaluationResult)) {
         const score = s.evaluationResult?.overallScore || 75;
         list.push({
           id: `act-quiz-${s.id}`,
@@ -343,7 +348,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     if (activityFilter === 'bookings') return sorted.filter((a) => a.type === 'booking');
     if (activityFilter === 'quizzes') return sorted.filter((a) => a.type === 'quiz');
     return sorted;
-  }, [submissions, activityFilter]);
+  }, [activeSubmissions, activityFilter]);
 
   // ۵. بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی با حفظ محرمانگی کد پرونده)
   const topClientsBarData: BarChartItem[] = useMemo(() => {
@@ -357,7 +362,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       }
     >();
 
-    submissions.forEach((s) => {
+    activeSubmissions.forEach((s) => {
       const caseCode = s.data?.caseCode || s.trackingCode;
       if (!caseCode) return;
 
@@ -407,7 +412,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         badge: client.roleInFamily,
       };
     });
-  }, [submissions]);
+  }, [activeSubmissions]);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-7 pb-20 sm:pb-12 space-y-6 bg-slate-50 overscroll-contain">

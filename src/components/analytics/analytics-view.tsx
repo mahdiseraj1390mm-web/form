@@ -49,6 +49,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { toPersianDigits, formatCurrency, formatPersianDateTime, getFieldDisplayValue } from '@/lib/persian';
+import { isAssignedSafaSubmission, filterActiveSubmissions } from '@/lib/safa-utils';
 import { getSemanticColorByPercentage, getFourColorByIndex } from '@/lib/chart-colors';
 import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '@/components/analytics/point-line-chart';
@@ -79,11 +80,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
   const currentForm = forms.find((f) => f.id === selectedFormId) || forms[0];
 
-  // اعمال فیلتر زمانی روی کل سابمیشن‌ها
+    // اعمال فیلتر زمانی روی کل سابمیشن‌های معتبر (کارنامه‌های متصل‌نشده صفان از آمار و تحلیل‌ها خارج می‌شوند)
   const filteredSubmissions = useMemo(() => {
-    if (timeRange === 'all') return submissions;
+    const activeBase = filterActiveSubmissions(submissions);
+    if (timeRange === 'all') return activeBase;
     const now = new Date();
-    return submissions.filter((s) => {
+    return activeBase.filter((s) => {
       const d = new Date(s.createdAt);
       if (isNaN(d.getTime())) return true;
       const diffDays = (now.getTime() - d.getTime()) / (1000 * 3600 * 24);
@@ -116,10 +118,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
     const quizSubmissions = filteredSubmissions.filter((s) => {
       return (
-        s.formId === 'form-safaan-assessment' ||
-        !!s.evaluationResult ||
-        !!s.quizResult ||
-        (s.data && (s.data.safaUserCode || s.data.q_safa_01))
+        isAssignedSafaSubmission(s) ||
+        (s.formId !== 'form-safaan-assessment' &&
+          s.formId !== 'form-belhagh-registration' &&
+          s.formId !== 'form-belhagh-booking' &&
+          (!!s.evaluationResult || !!s.quizResult))
       );
     });
 
@@ -382,7 +385,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
       }
 
       // رویداد پرسشنامه و آزمون
-      if (s.formId === 'form-safaan-assessment' || s.evaluationResult) {
+      if (isAssignedSafaSubmission(s) || (s.formId !== 'form-safaan-assessment' && s.evaluationResult)) {
         const score = s.evaluationResult?.overallScore || 75;
         list.push({
           id: `act-quiz-${s.id}`,
@@ -767,7 +770,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
   }, []);
 
   // ۹. محاسبات اختصاصی تب تفکیکی فرم‌ها
-  const formSubmissions = submissions.filter((s) => s.formId === selectedFormId);
+  const formSubmissions = useMemo(() => {
+    const raw = submissions.filter((s) => s.formId === selectedFormId);
+    if (selectedFormId === 'form-safaan-assessment') {
+      return raw.filter((s) => isAssignedSafaSubmission(s));
+    }
+    return raw;
+  }, [submissions, selectedFormId]);
   const totalFormSubs = formSubmissions.length;
   const choiceFields = currentForm?.fields.filter((f) => 
     ['select', 'radio', 'checkbox', 'quizQuestion'].includes(f.type)
