@@ -72,6 +72,7 @@ export interface ClientCaseGroup {
   overallStatus: SubmissionStatus;
   totalPaidAmount: number;
   roleInFamily?: string;
+  firstSubmissionDate?: string;
 }
 
 export type Appointment = {
@@ -1909,7 +1910,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <div className="flex items-center gap-5">
                   <div className="relative">
                     <div className="grid size-20 place-items-center rounded-2xl bg-gradient-to-br from-[#173f6b] to-[#123357] text-white text-2xl font-black shadow-md">
-                      {clientCase.name ? clientCase.name.charAt(0) : 'م'}
+                      {displayFullName ? displayFullName.charAt(0) : 'م'}
                     </div>
                     <span className="absolute -bottom-1 -left-1 size-5 rounded-full bg-emerald-500 border-2 border-white ring-2 ring-emerald-100" />
                   </div>
@@ -1934,7 +1935,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       </span>
                       <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-xl border border-slate-100">
                         <Calendar className="size-3.5 text-[#173f6b]" />
-                        <span className="text-slate-700">سن: {toPersianDigits(calculatedAge)}</span>
+                        <span className="text-slate-700">سن: {clientAge}</span>
                       </span>
                       <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-xl border border-slate-100">
                         <MapPin className="size-3.5 text-[#173f6b]" />
@@ -2000,7 +2001,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <div>
                     <span className="text-[11px] text-slate-400 font-bold block">تاریخ پذیرش و تشکیل</span>
                     <span className="text-sm font-black text-slate-900 font-mono">
-                      {clientCase.firstSubmissionDate ? formatPersianDateTime(clientCase.firstSubmissionDate).split('-')[0] : 'ثبت‌نشده'}
+                      {(() => { const d = clientCase.firstSubmissionDate || currentSubmissions[currentSubmissions.length - 1]?.createdAt || clientCase.latestDate; return d ? formatPersianDateTime(d).split('-')[0] : 'ثبت‌نشده'; })()}
                     </span>
                   </div>
                 </div>
@@ -2049,7 +2050,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
                   <span className="text-xs text-slate-400 font-bold block">سن مراجع:</span>
                   <span className="text-sm sm:text-base font-black text-[#173f6b] font-mono block">
-                    {toPersianDigits(calculatedAge)}
+                    {clientAge}
                   </span>
                 </div>
 
