@@ -1256,7 +1256,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
 
         {/* نوار زبانه‌های ناوبری ۶ گانه */}
-        <nav className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 w-full p-2 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+        <nav className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-2.5 w-full p-2.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
           {[
             ['overview', 'تحلیل در یک نگاه'],
             ['analytics', 'تحلیل‌های آماری'],
@@ -1900,132 +1900,308 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           />
         )}
 
-        {/* ۲. تب مشخصات ثبت‌نام مراجع (Profile Tab) */}
+        {/* ۲. تب مشخصات ثبت‌نام مراجع (Profile Tab) - چیدمان بزرگ، کامل و استاندارد دسکتاپ */}
         {currentView === 'dossier' && activeTab === 'profile' && (
           <div className="space-y-6 animate-in fade-in">
-            {/* اطلاعات هویتی و سجلی */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 bg-slate-50 border-b border-slate-200/90 flex items-center gap-2">
-                <User className="w-4 h-4 text-[#173f6b]" />
-                <h3 className="text-sm font-extrabold text-slate-900">مشخصات هویتی و فردی مراجع</h3>
+            {/* بنر هویتی و خلاصه مشخصات مراجع */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-2xs space-y-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+                <div className="flex items-center gap-5">
+                  <div className="relative">
+                    <div className="grid size-20 place-items-center rounded-2xl bg-gradient-to-br from-[#173f6b] to-[#123357] text-white text-2xl font-black shadow-md">
+                      {clientCase.name ? clientCase.name.charAt(0) : 'م'}
+                    </div>
+                    <span className="absolute -bottom-1 -left-1 size-5 rounded-full bg-emerald-500 border-2 border-white ring-2 ring-emerald-100" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h2 className="text-2xl font-black text-slate-900">{displayFullName}</h2>
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold border ${statusConfigs[currentStatus].bg} ${statusConfigs[currentStatus].color} ${statusConfigs[currentStatus].border}`}>
+                        {statusConfigs[currentStatus].label}
+                      </span>
+                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-mono font-bold text-[#173f6b] border border-blue-200/60">
+                        کد پرونده: {toPersianDigits(clientCase.caseCode)}
+                      </span>
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500">
+                      <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-xl border border-slate-100">
+                        <Phone className="size-3.5 text-[#173f6b]" />
+                        <span className="font-mono text-slate-700">{toPersianDigits(clientCase.mobile)}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-xl border border-slate-100">
+                        <User className="size-3.5 text-[#173f6b]" />
+                        <span className="text-slate-700">نقش: {roleInFamily}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-xl border border-slate-100">
+                        <Calendar className="size-3.5 text-[#173f6b]" />
+                        <span className="text-slate-700">سن: {toPersianDigits(calculatedAge)}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-xl border border-slate-100">
+                        <MapPin className="size-3.5 text-[#173f6b]" />
+                        <span className="text-slate-700">
+                          {clientCase.provinceCity && clientCase.provinceCity !== 'ثبت‌نشده'
+                            ? clientCase.provinceCity
+                            : combinedData.f_province_city || combinedData.province || 'ثبت‌نشده'}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setIsEditProfileModalOpen(true)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#173f6b] hover:bg-[#123357] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+                  >
+                    <Edit className="size-4" />
+                    <span>ویرایش مشخصات پرونده مراجع</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">نام و نام خانوادگی:</span>
-                  <span className="font-bold text-slate-900 text-sm">{displayFullName}</span>
+              {/* ۴ کارت سریع هویتی در عرض کامل صفحه */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center shrink-0">
+                    <Users className="size-5" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 font-bold block">وضعیت تأهل</span>
+                    <span className="text-sm font-black text-slate-900">{combinedData.f_marital_status || 'ثبت‌نشده'}</span>
+                  </div>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">شماره تلفن همراه:</span>
-                  <span className="font-bold text-slate-900 text-sm font-mono">{toPersianDigits(clientCase.mobile)}</span>
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-purple-100 text-purple-700 grid place-items-center shrink-0">
+                    <Layers className="size-5" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 font-bold block">تعداد اعضای خانواده</span>
+                    <span className="text-sm font-black text-slate-900 font-mono">
+                      {combinedData.f_family_members ? toPersianDigits(combinedData.f_family_members) + ' نفر' : 'ثبت‌نشده'}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">تاریخ تولد:</span>
-                  <span className="font-bold text-slate-900 text-sm font-mono">
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center shrink-0">
+                    <ShieldCheck className="size-5" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 font-bold block">عضویت عبادالله</span>
+                    <span className="text-sm font-black text-emerald-700">{combinedData.f_ebadollah_member || 'ثبت‌نشده'}</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-amber-100 text-amber-700 grid place-items-center shrink-0">
+                    <Clock className="size-5" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 font-bold block">تاریخ پذیرش و تشکیل</span>
+                    <span className="text-sm font-black text-slate-900 font-mono">
+                      {clientCase.firstSubmissionDate ? formatPersianDateTime(clientCase.firstSubmissionDate).split('-')[0] : 'ثبت‌نشده'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* بخش ۱: اطلاعات هویتی و شناسنامه‌ای مراجع در ۴ ستون دسکتاپ */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
+                    <User className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">مشخصات هویتی و شناسنامه‌ای مراجع</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">اطلاعات هویتی و ثبت‌نام اولیه ثبت‌شده در سامانه</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditProfileModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <Edit className="size-3.5" />
+                  <span>ویرایش مشخصات فردی</span>
+                </button>
+              </div>
+
+              <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">نام و نام خانوادگی:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 block">{displayFullName}</span>
+                </div>
+
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">شماره تلفن همراه:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 font-mono block">{toPersianDigits(clientCase.mobile)}</span>
+                </div>
+
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">تاریخ تولد:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 font-mono block">
                     {toPersianDigits(combinedData.f_birth_date || 'ثبت‌نشده')}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">نقش در خانواده:</span>
-                  <span className="font-bold text-slate-900 text-sm">{roleInFamily}</span>
-                </div>
-
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">تعداد اعضای خانواده:</span>
-                  <span className="font-bold text-slate-900 text-sm font-mono">
-                    {combinedData.f_family_members ? toPersianDigits(combinedData.f_family_members) : 'ثبت‌نشده'}
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">سن مراجع:</span>
+                  <span className="text-sm sm:text-base font-black text-[#173f6b] font-mono block">
+                    {toPersianDigits(calculatedAge)}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">وضعیت تأهل:</span>
-                  <span className="font-bold text-slate-900 text-sm">
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">نقش در خانواده:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 block">{roleInFamily}</span>
+                </div>
+
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">وضعیت تأهل:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 block">
                     {combinedData.f_marital_status || 'ثبت‌نشده'}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">استان و شهرستان:</span>
-                  <span className="font-bold text-slate-900 text-sm">
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">تعداد اعضای خانواده:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 font-mono block">
+                    {combinedData.f_family_members ? toPersianDigits(combinedData.f_family_members) + ' نفر' : 'ثبت‌نشده'}
+                  </span>
+                </div>
+
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">استان و شهرستان:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 block">
                     {clientCase.provinceCity && clientCase.provinceCity !== 'ثبت‌نشده'
                       ? clientCase.provinceCity
                       : combinedData.f_province_city || combinedData.province || 'ثبت‌نشده'}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">عضویت در سایت عبادالله:</span>
-                  <span className="font-bold text-emerald-700 text-sm">
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">عضویت در سایت عبادالله:</span>
+                  <span className="text-sm sm:text-base font-black text-emerald-700 block">
                     {combinedData.f_ebadollah_member || 'ثبت‌نشده'}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">کد یکتای پرونده:</span>
-                  <span className="font-bold text-[#173f6b] text-sm font-mono">{clientCase.caseCode}</span>
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">کد یکتای پرونده:</span>
+                  <span className="text-sm sm:text-base font-black text-[#173f6b] font-mono block">{clientCase.caseCode}</span>
+                </div>
+
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">وضعیت پرونده:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 block">
+                    {statusConfigs[currentStatus]?.label || 'جدید'}
+                  </span>
+                </div>
+
+                <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
+                  <span className="text-xs text-slate-400 font-bold block">مجموع فرم‌های تکمیل‌شده:</span>
+                  <span className="text-sm sm:text-base font-black text-[#173f6b] font-mono block">
+                    {toPersianDigits(currentSubmissions.length)} فرم
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* سوابق سلامت و پزشکی */}
+            {/* بخش ۲: سوابق سلامت، شرح‌حال پزشکی و بالینی مراجع در ۳ ستون پهن دسکتاپ */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 bg-slate-50 border-b border-slate-200/90 flex items-center gap-2">
-                <HeartPulse className="w-4 h-4 text-rose-500" />
-                <h3 className="text-sm font-extrabold text-slate-900">سوابق سلامت و شرح‌حال پزشکی مراجع</h3>
+              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-rose-100 text-rose-600 grid place-items-center">
+                    <HeartPulse className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">سوابق سلامت و شرح‌حال پزشکی مراجع</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">وضعیت سلامت جسمی، بیماری‌های روحی و داروهای مصرفی</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditProfileModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <Edit className="size-3.5" />
+                  <span>ویرایش سوابق سلامت</span>
+                </button>
               </div>
 
-              <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <span className="text-slate-400 font-bold">سابقه بیماری جسمی:</span>
-                  <p className="font-bold text-slate-900 pt-1">
+              <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <HeartPulse className="size-4 text-rose-500" />
+                    <span className="text-xs text-slate-500 font-bold">سابقه بیماری جسمی:</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-black text-slate-900 pt-1 leading-relaxed">
                     {combinedData.f_physical_illness || 'ندارد / ثبت‌نشده'}
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <span className="text-slate-400 font-bold">سابقه بیماری روحی و روانشناختی:</span>
-                  <p className="font-bold text-slate-900 pt-1">
+                <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="size-4 text-purple-600" />
+                    <span className="text-xs text-slate-500 font-bold">سابقه بیماری روحی و روانشناختی:</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-black text-slate-900 pt-1 leading-relaxed">
                     {combinedData.f_mental_illness || 'ندارد / ثبت‌نشده'}
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-                  <span className="text-slate-400 font-bold">داروهای مصرفی:</span>
-                  <p className="font-bold text-slate-900 pt-1">
+                <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Activity className="size-4 text-blue-600" />
+                    <span className="text-xs text-slate-500 font-bold">داروهای مصرفی:</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-black text-slate-900 pt-1 leading-relaxed">
                     {combinedData.f_medications || 'ندارد / ثبت‌نشده'}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* اطلاعات مدرسه معارفی */}
+            {/* بخش ۳: اطلاعات تحصیلی و مدرسه معارفی در ۳ ستون پهن دسکتاپ */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 bg-slate-50 border-b border-slate-200/90 flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-[#173f6b]" />
-                <h3 className="text-sm font-extrabold text-slate-900">اطلاعات تحصیلی و مدرسه معارفی</h3>
+              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
+                    <GraduationCap className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">اطلاعات تحصیلی و مدرسه معارفی</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">وضعیت ثبت‌نام در مدارس معارفی، کادر آموزشی و مربیان تربیتی</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditProfileModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  <Edit className="size-3.5" />
+                  <span>ویرایش</span>
+                </button>
               </div>
 
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">نام مدرسه معارفی:</span>
-                  <span className="font-bold text-slate-900 text-sm">
+              <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2">
+                  <span className="text-xs text-slate-400 font-bold block">نام مدرسه معارفی:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 block">
                     {combinedData.f_school_name || 'ثبت‌نشده'}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">ناظم مدرسه:</span>
-                  <span className="font-bold text-slate-900 text-sm">
+                <div className="p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2">
+                  <span className="text-xs text-slate-400 font-bold block">ناظم مدرسه:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 block">
                     {combinedData.f_school_supervisor || 'ثبت‌نشده توسط مراجع'}
                   </span>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-slate-400 block mb-1">مربی تربیتی / مشاور:</span>
-                  <span className="font-bold text-slate-900 text-sm">
+                <div className="p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2">
+                  <span className="text-xs text-slate-400 font-bold block">مربی تربیتی / مشاور:</span>
+                  <span className="text-sm sm:text-base font-black text-slate-900 block">
                     {combinedData.f_mentor_name || 'ثبت‌نشده توسط مراجع'}
                   </span>
                 </div>
@@ -2034,56 +2210,81 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           </div>
         )}
 
-        {/* ۳. تب فرم‌ها و آزمون‌ها (Forms Tab) - تفکیک ۳ قسمتی زیر هم: ۱. پرسشنامه‌ها ۲. نوبت‌های مشاوره ۳. کادر ثبت‌نام */}
+        {/* ۳. تب فرم‌ها و آزمون‌ها (Forms Tab) با چیدمان کامل و استاندارد دسکتاپ */}
         {currentView === 'dossier' && activeTab === 'forms' && (
           <div className="space-y-8 animate-in fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200/80 gap-3">
-              <div>
-                <h3 className="text-base font-black text-slate-900">
-                  فرم‌ها و پرسشنامه‌های تکمیل‌شده توسط مراجع
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  تفکیک ۳ قسمتی پرونده: پرسشنامه‌ها، نوبت‌های مشاوره و کادر ثبت‌نام
-                </p>
+            {/* خلاصه‌ی آماری فرم‌های پرونده (۳ کارت پهن بالای صفحه) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-slate-400 font-bold block">آزمون‌ها و پرسشنامه‌های بالینی</span>
+                  <span className="text-2xl font-black text-indigo-950 font-mono block">
+                    {toPersianDigits(questionnaireSubs.length)} فرم
+                  </span>
+                  <span className="text-[11px] text-indigo-600 block">آزمون صفا، ارزیابی‌های روانشناختی و تست‌ها</span>
+                </div>
+                <div className="size-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 grid place-items-center shrink-0">
+                  <HelpCircle className="size-7" />
+                </div>
               </div>
 
-              <span className="text-xs font-bold px-3 py-1 bg-blue-50 text-[#173f6b] rounded-full font-mono self-start sm:self-auto border border-blue-200/60">
-                مجموع {toPersianDigits(currentSubmissions.length)} فرم در پرونده
-              </span>
+              <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-slate-400 font-bold block">سامانه‌های نوبت‌دهی مشاوره</span>
+                  <span className="text-2xl font-black text-[#173f6b] font-mono block">
+                    {toPersianDigits(bookingSubs.length)} نوبت
+                  </span>
+                  <span className="text-[11px] text-blue-600 block">جلسات مشاوره تلفنی و حضوری رزرو شده</span>
+                </div>
+                <div className="size-14 rounded-2xl bg-sky-50 border border-sky-100 text-sky-700 grid place-items-center shrink-0">
+                  <CalendarCheck className="size-7" />
+                </div>
+              </div>
+
+              <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs text-slate-400 font-bold block">فرم پذیرش و تشکیل پرونده</span>
+                  <span className="text-2xl font-black text-emerald-900 font-mono block">
+                    {toPersianDigits(registrationSubs.length)} فرم
+                  </span>
+                  <span className="text-[11px] text-emerald-600 block">مشخصات هویتی و ثبت‌نام اولیه مراجع</span>
+                </div>
+                <div className="size-14 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 grid place-items-center shrink-0">
+                  <BadgeCheck className="size-7" />
+                </div>
+              </div>
             </div>
 
-            {/* سه ستون موازی: ۱. ستون پرسشنامه‌ها ۲. ستون نوبت‌های مشاوره ۳. کادر ثبت‌نام */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-              {/* ستون اول (سمت راست در RTL): ستون پرسشنامه‌ها */}
-              <div className="space-y-3.5">
-                <div className="flex items-center justify-between pb-2 border-b-2 border-indigo-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200/80 shrink-0">
-                      <HelpCircle className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-indigo-950">
-                        ستون پرسشنامه‌ها
-                      </h4>
-                      <span className="text-[10px] text-slate-400 block">
-                        آزمون صفا و پرسشنامه‌های بالینی
-                      </span>
-                    </div>
+            {/* بخش ۱: آزمون‌ها و پرسشنامه‌های بالینی مراجع در عرض کامل دسکتاپ */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
+                    <HelpCircle className="size-5" />
                   </div>
-
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
-                    {toPersianDigits(questionnaireSubs.length)}
-                  </span>
+                  <div>
+                    <h4 className="text-base font-black text-indigo-950">
+                      آزمون‌ها و پرسشنامه‌های بالینی
+                    </h4>
+                    <span className="text-xs text-slate-400 block mt-0.5">
+                      آزمون صفا، پرسشنامه‌های اختصاصی و خودسنجی‌های تکمیل‌شده توسط مراجع
+                    </span>
+                  </div>
                 </div>
 
-                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
-                <div className="flex flex-col space-y-3.5">
-                  {questionnaireSubs.length === 0 ? (
-                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
-                      پرسشنامه‌ای ثبت نشده است
-                    </div>
-                  ) : (
-                    questionnaireSubs.map((sub) => {
+                <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
+                  {toPersianDigits(questionnaireSubs.length)} آزمون
+                </span>
+              </div>
+
+              <div className="p-6">
+                {questionnaireSubs.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                    پرسشنامه‌ای برای این مراجع ثبت نشده است.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {questionnaireSubs.map((sub) => {
                       const formObj = forms.find((f) => f.id === sub.formId);
                       const formTitle = formObj ? formObj.title : sub.formId;
                       const st = statusConfigs[sub.status] || statusConfigs.new;
@@ -2091,23 +2292,23 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       return (
                         <div
                           key={sub.id}
-                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-indigo-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-indigo-400 shadow-2xs hover:shadow-sm transition-all p-5 flex flex-col justify-between space-y-4"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <span className="text-[10px] font-bold text-indigo-700 block mb-0.5">
                                 پرسشنامه بالینی
                               </span>
-                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                              <h5 className="text-sm font-black text-slate-900 leading-snug">
                                 {formTitle}
                               </h5>
                             </div>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
                               {st.label}
                             </span>
                           </div>
 
-                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                          <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs border border-slate-100 text-slate-600">
                             <div className="flex items-center justify-between">
                               <span className="text-slate-400">کد پیگیری:</span>
                               <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
@@ -2117,7 +2318,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                               <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="text-slate-400">وضعیت پرداخت:</span>
                               <span className="font-bold text-emerald-700">
                                 {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
                               </span>
@@ -2129,49 +2330,50 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                               setSelectedSubmissionId(sub.id);
                               setCurrentView('formReport');
                             }}
-                            className="w-full py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                            className="w-full py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
                           >
-                            <BarChart3 className="w-3.5 h-3.5 text-indigo-200 group-hover:scale-110 transition-transform" />
-                            <span>مشاهده گزارش و تحلیل</span>
+                            <BarChart3 className="w-4 h-4 text-indigo-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش و تحلیل کارنامه</span>
                             <ChevronRight className="w-3.5 h-3.5 rotate-180" />
                           </button>
                         </div>
                       );
-                    })
-                  )}
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* بخش ۲: نوبت‌های مشاوره رزرو شده در عرض کامل دسکتاپ */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-sky-100 text-sky-700 grid place-items-center">
+                    <CalendarCheck className="size-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-sky-950">
+                      سامانه‌های نوبت‌دهی مشاوره
+                    </h4>
+                    <span className="text-xs text-slate-400 block mt-0.5">
+                      جلسات مشاوره، رزرو نوبت تلفنی و پیگیری‌های زمان‌بندی‌شده مراجع
+                    </span>
+                  </div>
                 </div>
+
+                <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-sky-50 text-sky-800 border border-sky-200">
+                  {toPersianDigits(bookingSubs.length)} نوبت
+                </span>
               </div>
 
-              {/* ستون دوم (وسط در RTL): ستون نوبت‌های مشاوره */}
-              <div className="space-y-3.5">
-                <div className="flex items-center justify-between pb-2 border-b-2 border-sky-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center font-bold border border-sky-200/80 shrink-0">
-                      <CalendarCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-sky-950">
-                        ستون نوبت‌های مشاوره
-                      </h4>
-                      <span className="text-[10px] text-slate-400 block">
-                        جلسات و رزرو نوبت تلفنی
-                      </span>
-                    </div>
+              <div className="p-6">
+                {bookingSubs.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                    نوبت مشاوره‌ای ثبت نشده است.
                   </div>
-
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-sky-50 text-sky-800 border border-sky-200">
-                    {toPersianDigits(bookingSubs.length)}
-                  </span>
-                </div>
-
-                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
-                <div className="flex flex-col space-y-3.5">
-                  {bookingSubs.length === 0 ? (
-                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
-                      نوبت مشاوره‌ای ثبت نشده است
-                    </div>
-                  ) : (
-                    bookingSubs.map((sub) => {
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {bookingSubs.map((sub) => {
                       const formObj = forms.find((f) => f.id === sub.formId);
                       const formTitle = formObj ? formObj.title : sub.formId;
                       const st = statusConfigs[sub.status] || statusConfigs.new;
@@ -2179,23 +2381,23 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       return (
                         <div
                           key={sub.id}
-                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-sky-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-sky-400 shadow-2xs hover:shadow-sm transition-all p-5 flex flex-col justify-between space-y-4"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <span className="text-[10px] font-bold text-sky-700 block mb-0.5">
                                 سامانه نوبت‌دهی
                               </span>
-                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                              <h5 className="text-sm font-black text-slate-900 leading-snug">
                                 {formTitle}
                               </h5>
                             </div>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
                               {st.label}
                             </span>
                           </div>
 
-                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                          <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs border border-slate-100 text-slate-600">
                             <div className="flex items-center justify-between">
                               <span className="text-slate-400">کد پیگیری:</span>
                               <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
@@ -2205,7 +2407,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                               <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="text-slate-400">وضعیت پرداخت:</span>
                               <span className="font-bold text-emerald-700">
                                 {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
                               </span>
@@ -2217,49 +2419,50 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                               setSelectedSubmissionId(sub.id);
                               setCurrentView('formReport');
                             }}
-                            className="w-full py-2 bg-[#173f6b] hover:bg-[#123357] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                            className="w-full py-2.5 bg-[#173f6b] hover:bg-[#123357] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
                           >
-                            <BarChart3 className="w-3.5 h-3.5 text-blue-200 group-hover:scale-110 transition-transform" />
-                            <span>مشاهده گزارش و تحلیل</span>
+                            <BarChart3 className="w-4 h-4 text-blue-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده گزارش و جزئیات نوبت</span>
                             <ChevronRight className="w-3.5 h-3.5 rotate-180" />
                           </button>
                         </div>
                       );
-                    })
-                  )}
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* بخش ۳: کادر ثبت‌نام و پذیرش در عرض کامل دسکتاپ */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
+                    <BadgeCheck className="size-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-emerald-950">
+                      پذیرش و فرم ثبت‌نام اولیه
+                    </h4>
+                    <span className="text-xs text-slate-400 block mt-0.5">
+                      فرم تشکیل پرونده اولیه، مشخصات فردی و سوابق پایه‌ای ثبت‌شده
+                    </span>
+                  </div>
                 </div>
+
+                <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {toPersianDigits(registrationSubs.length)} فرم
+                </span>
               </div>
 
-              {/* ستون سوم (سمت چپ در RTL): کادر ثبت‌نام */}
-              <div className="space-y-3.5">
-                <div className="flex items-center justify-between pb-2 border-b-2 border-emerald-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold border border-emerald-200/80 shrink-0">
-                      <BadgeCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-emerald-950">
-                        کادر ثبت‌نام
-                      </h4>
-                      <span className="text-[10px] text-slate-400 block">
-                        پذیرش و مشخصات فردی مراجع
-                      </span>
-                    </div>
+              <div className="p-6">
+                {registrationSubs.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
+                    فرم ثبت‌نام اولیه‌ای یافت نشد.
                   </div>
-
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    {toPersianDigits(registrationSubs.length)}
-                  </span>
-                </div>
-
-                {/* فرم‌های پر شده در این ستون از بالا به پایین یکی یکی چیده می‌شوند */}
-                <div className="flex flex-col space-y-3.5">
-                  {registrationSubs.length === 0 ? (
-                    <div className="p-4 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
-                      فرم ثبت‌نام اولیه‌ای یافت نشد
-                    </div>
-                  ) : (
-                    registrationSubs.map((sub) => {
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {registrationSubs.map((sub) => {
                       const formObj = forms.find((f) => f.id === sub.formId);
                       const formTitle = formObj ? formObj.title : sub.formId;
                       const st = statusConfigs[sub.status] || statusConfigs.new;
@@ -2267,23 +2470,23 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       return (
                         <div
                           key={sub.id}
-                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-400 shadow-2xs hover:shadow-sm transition-all p-4 flex flex-col justify-between space-y-3.5"
+                          className="bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-400 shadow-2xs hover:shadow-sm transition-all p-5 flex flex-col justify-between space-y-4"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <span className="text-[10px] font-bold text-emerald-700 block mb-0.5">
                                 ثبت‌نام و تشکیل پرونده
                               </span>
-                              <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                              <h5 className="text-sm font-black text-slate-900 leading-snug">
                                 {formTitle}
                               </h5>
                             </div>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
                               {st.label}
                             </span>
                           </div>
 
-                          <div className="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-[11px] border border-slate-100 text-slate-600">
+                          <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs border border-slate-100 text-slate-600">
                             <div className="flex items-center justify-between">
                               <span className="text-slate-400">کد پیگیری:</span>
                               <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
@@ -2293,7 +2496,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                               <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-slate-400">پرداخت:</span>
+                              <span className="text-slate-400">وضعیت پرداخت:</span>
                               <span className="font-bold text-emerald-700">
                                 {sub.paymentStatus === 'paid' ? formatCurrency(sub.paymentAmount || 0, 'IRT') : 'بدون هزینه'}
                               </span>
@@ -2305,32 +2508,42 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                               setSelectedSubmissionId(sub.id);
                               setCurrentView('formReport');
                             }}
-                            className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
+                            className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 group"
                           >
-                            <BarChart3 className="w-3.5 h-3.5 text-emerald-200 group-hover:scale-110 transition-transform" />
-                            <span>مشاهده گزارش و تحلیل</span>
+                            <BarChart3 className="w-4 h-4 text-emerald-200 group-hover:scale-110 transition-transform" />
+                            <span>مشاهده اطلاعات و گزارش</span>
                             <ChevronRight className="w-3.5 h-3.5 rotate-180" />
                           </button>
                         </div>
                       );
-                    })
-                  )}
-                </div>
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* در صورت وجود سایر فرم‌ها (کاملاً عمودی) */}
+            {/* بخش ۴: سایر فرم‌های پرونده (در صورت وجود) */}
             {otherSubs.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <h4 className="text-sm font-black text-slate-800">
-                    سایر فرم‌های پرونده
-                  </h4>
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+                <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-xl bg-slate-200 text-slate-700 grid place-items-center">
+                      <FileText className="size-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-black text-slate-900">
+                        سایر فرم‌های ثبت‌شده پرونده
+                      </h4>
+                      <span className="text-xs text-slate-400 block mt-0.5">
+                        سایر فرم‌ها و استعلام‌های انجام‌شده مراجع
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
                     {toPersianDigits(otherSubs.length)} فرم
                   </span>
                 </div>
-                <div className="flex flex-col space-y-3.5">
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {otherSubs.map((sub) => {
                     const formObj = forms.find((f) => f.id === sub.formId);
                     const formTitle = formObj ? formObj.title : sub.formId;
@@ -2339,50 +2552,39 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     return (
                       <div
                         key={sub.id}
-                        className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-400 shadow-2xs hover:shadow-sm transition-all p-5 flex flex-col space-y-4"
+                        className="bg-white rounded-2xl border border-slate-200 hover:border-slate-400 shadow-2xs p-5 flex flex-col justify-between space-y-4"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-base border border-slate-200 shrink-0">
-                              <FileText className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-black text-slate-900 leading-snug">
-                                {formTitle}
-                              </h4>
-                            </div>
-                          </div>
-
-                          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-xl border self-start sm:self-auto shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-sm font-black text-slate-900 leading-snug">
+                            {formTitle}
+                          </h4>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
                             {st.label}
                           </span>
                         </div>
 
-                        <div className="bg-slate-50 p-3.5 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border border-slate-100">
-                          <div className="flex items-center justify-between sm:justify-start sm:gap-2 text-slate-500">
-                            <span>کد پیگیری فرم:</span>
+                        <div className="bg-slate-50 p-3 rounded-xl space-y-1.5 text-xs border border-slate-100">
+                          <div className="flex items-center justify-between text-slate-500">
+                            <span>کد پیگیری:</span>
                             <span className="font-mono font-bold text-slate-800">{sub.trackingCode}</span>
                           </div>
-
-                          <div className="flex items-center justify-between sm:justify-start sm:gap-2 text-slate-500">
-                            <span>تاریخ و ساعت ثبت:</span>
+                          <div className="flex items-center justify-between text-slate-500">
+                            <span>تاریخ ثبت:</span>
                             <span className="font-mono text-slate-800">{formatPersianDateTime(sub.createdAt)}</span>
                           </div>
                         </div>
 
-                        <div className="flex justify-end pt-1">
-                          <button
-                            onClick={() => {
-                              setSelectedSubmissionId(sub.id);
-                              setCurrentView('formReport');
-                            }}
-                            className="w-full sm:w-auto px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 group"
-                          >
-                            <BarChart3 className="w-4 h-4 text-slate-300 group-hover:scale-110 transition-transform" />
-                            <span>مشاهده گزارش نموداری و مفصل این فرم</span>
-                            <ChevronRight className="w-4 h-4 rotate-180" />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedSubmissionId(sub.id);
+                            setCurrentView('formReport');
+                          }}
+                          className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 group"
+                        >
+                          <BarChart3 className="w-4 h-4 text-slate-300 group-hover:scale-110 transition-transform" />
+                          <span>مشاهده گزارش مفصل</span>
+                          <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+                        </button>
                       </div>
                     );
                   })}
@@ -2802,107 +3004,179 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           </div>
         )}
 
-        {/* ۴. تب پیگیری‌ها (Followups Tab) */}
+        {/* ۴. تب پیگیری‌ها (Followups Tab) - چیدمان دو ستونه مدرن و استاندارد دسکتاپ */}
         {currentView === 'dossier' && activeTab === 'followups' && (
           <div className="space-y-6 animate-in fade-in">
-            {/* افزودن لاگ پیگیری */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-[#173f6b]" />
-                <span>افزودن لاگ پیگیری، تماس یا جلسه جدید:</span>
-              </h3>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-500 font-bold">نوع اقدام:</span>
-                {[
-                  { id: 'call', label: '📞 تماس تلفنی' },
-                  { id: 'meeting', label: '🤝 جلسه حضوری/مشاوره' },
-                  { id: 'sms', label: '💬 پیامک ارسالی' },
-                  { id: 'note', label: '📝 یادداشت محرمانه' },
-                  { id: 'referral', label: '🔄 ارجاع تخصصی' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setNewFollowupType(t.id as any)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      newFollowupType === t.id
-                        ? 'bg-[#173f6b] text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
+            {/* خلاصه‌ی آماری سریع پیگیری‌ها در بالای صفحه */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-2xs flex items-center gap-4">
+                <div className="size-12 rounded-2xl bg-blue-50 border border-blue-100 text-[#173f6b] grid place-items-center shrink-0">
+                  <MessageSquare className="size-6" />
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 font-bold block">مجموع تعاملات و پیگیری‌ها</span>
+                  <span className="text-xl font-black text-slate-900 font-mono">
+                    {toPersianDigits(allFollowupComments.length)} اقدام ثبت‌شده
+                  </span>
+                </div>
               </div>
 
-              <textarea
-                rows={3}
-                value={newFollowupText}
-                onChange={(e) => setNewFollowupText(e.target.value)}
-                placeholder="شرح کامل مکالمه، تصمیم اتخاذ شده، یادداشت محرمانه، یا توضیحات جهت پیگیری‌های بعدی..."
-                className="w-full p-3.5 text-xs bg-slate-50 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white focus:outline-none transition-all"
-              />
+              <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-2xs flex items-center gap-4">
+                <div className="size-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 grid place-items-center shrink-0">
+                  <CheckCircle2 className="size-6" />
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 font-bold block">وضعیت پرونده</span>
+                  <span className="text-base font-black text-slate-900">
+                    {statusConfigs[currentStatus]?.label || 'فعال'}
+                  </span>
+                </div>
+              </div>
 
-              <div className="flex justify-end">
-                <button
-                  onClick={handleAddFollowup}
-                  disabled={isSubmittingFollowup || !newFollowupText.trim()}
-                  className="px-6 py-2.5 bg-[#173f6b] hover:bg-[#123357] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-2"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>ثبت در پرونده مراجع</span>
-                </button>
+              <div className="p-5 rounded-3xl bg-white border border-slate-200 shadow-2xs flex items-center gap-4">
+                <div className="size-12 rounded-2xl bg-amber-50 border border-amber-100 text-amber-700 grid place-items-center shrink-0">
+                  <Clock className="size-6" />
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 font-bold block">آخرین پیگیری ثبت‌شده</span>
+                  <span className="text-sm font-black text-slate-800 font-mono">
+                    {allFollowupComments.length > 0 ? formatPersianDateTime(allFollowupComments[0].createdAt).split('-')[0] : 'هنوز ثبت نشده'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* تاریخچه پیگیری‌ها */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-              <h3 className="text-sm font-extrabold text-slate-900 pb-3 border-b border-slate-100">
-                تاریخچه کامل پیگیری‌ها و یادداشت‌های مدیر:
-              </h3>
-
-              <div className="space-y-4">
-                {allFollowupComments.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 text-xs">
-                    هیچ پیگیری یا تماسی برای این مراجع ثبت نشده است.
-                  </div>
-                ) : (
-                  allFollowupComments.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs"
-                    >
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-slate-900">{item.authorName}</span>
-                          <span className="text-[11px] text-slate-400">({item.authorRole})</span>
-                          <span className="text-[10px] bg-blue-50 text-[#173f6b] px-2 py-0.5 rounded-full font-bold">
-                            {item.formTitle}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-mono">
-                          {formatPersianDateTime(item.createdAt)}
-                        </span>
-                      </div>
-                      <p className="text-slate-800 text-xs leading-relaxed font-medium">
-                        {item.content}
-                      </p>
+            {/* محیط کار ۲ ستونه پیگیری‌ها: سمت راست پنل ثبت، سمت چپ تایم‌لاین کامل */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* ستون ثبت اقدام و لاگ جدید (۵ ستون در دسکتاپ) */}
+              <div className="lg:col-span-5 space-y-6">
+                <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-2xs space-y-5">
+                  <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
+                      <MessageSquare className="size-5" />
                     </div>
-                  ))
-                )}
+                    <div>
+                      <h3 className="text-base font-black text-slate-900">ثبت اقدام یا لاگ جدید</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">تماس تلفنی، جلسه، یادداشت محرمانه یا ارجاع</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-xs text-slate-500 font-bold block">نوع تعامل / اقدام:</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'call', label: '📞 تماس تلفنی' },
+                        { id: 'meeting', label: '🤝 جلسه حضوری' },
+                        { id: 'sms', label: '💬 پیامک ارسالی' },
+                        { id: 'note', label: '📝 یادداشت محرمانه' },
+                        { id: 'referral', label: '🔄 ارجاع تخصصی' },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setNewFollowupType(t.id as any)}
+                          className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                            newFollowupType === t.id
+                              ? 'bg-[#173f6b] text-white shadow-xs'
+                              : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/70'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="text-xs text-slate-500 font-bold block">متن و شرح گزارش پیگیری:</span>
+                    <textarea
+                      rows={4}
+                      value={newFollowupText}
+                      onChange={(e) => setNewFollowupText(e.target.value)}
+                      placeholder="شرح کامل مکالمه، تصمیم اتخاذ شده، یادداشت محرمانه، یا توضیحات جهت پیگیری‌های بعدی..."
+                      className="w-full p-4 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white focus:outline-none transition-all leading-relaxed"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleAddFollowup}
+                    disabled={isSubmittingFollowup || !newFollowupText.trim()}
+                    className="w-full py-3 bg-[#173f6b] hover:bg-[#123357] disabled:opacity-50 text-white text-xs sm:text-sm font-bold rounded-2xl transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Send className="size-4" />
+                    <span>ثبت اقدام در پرونده مراجع</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ستون تاریخچه و تایم‌لاین کامل پیگیری‌ها (۷ ستون در دسکتاپ) */}
+              <div className="lg:col-span-7">
+                <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-2xs space-y-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-xl bg-slate-100 text-slate-700 grid place-items-center">
+                        <Clock className="size-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-900">تاریخچه کامل پیگیری‌ها و اقدامات</h3>
+                        <p className="text-xs text-slate-400 mt-0.5">گاه‌شمار کلیه مکالمات، جلسات و یادداشت‌های مدیران</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700">
+                      {toPersianDigits(allFollowupComments.length)} مورد
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {allFollowupComments.length === 0 ? (
+                      <div className="text-center py-16 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs sm:text-sm space-y-2">
+                        <MessageSquare className="size-8 mx-auto text-slate-300" />
+                        <p className="font-bold">هیچ پیگیری یا تماسی برای این مراجع ثبت نشده است.</p>
+                        <p className="text-xs text-slate-400">می‌توانید اولین گزارش تماس یا پیگیری را از فرم کنار ثبت کنید.</p>
+                      </div>
+                    ) : (
+                      allFollowupComments.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3 text-xs sm:text-sm hover:border-blue-300 transition-all"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200/60">
+                            <div className="flex items-center gap-2">
+                              <span className="font-black text-slate-900">{item.authorName}</span>
+                              <span className="text-xs text-slate-400">({item.authorRole})</span>
+                              <span className="text-[11px] bg-blue-50 text-[#173f6b] px-2.5 py-0.5 rounded-full font-bold border border-blue-100">
+                                {item.formTitle}
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-400 font-mono">
+                              {formatPersianDateTime(item.createdAt)}
+                            </span>
+                          </div>
+                          <p className="text-slate-800 text-xs sm:text-sm leading-relaxed font-medium">
+                            {item.content}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ۵. تب مالی و نوبت‌ها (Finances Tab) با داده‌های واقعی */}
+        {/* ۵. تب مالی و نوبت‌ها (Finances Tab) - چیدمان بزرگ، جامع و استاندارد دسکتاپ */}
         {currentView === 'dossier' && activeTab === 'finances' && (
           <div className="space-y-6 animate-in fade-in">
-            {/* خلاصه‌های مالی */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* خلاصه‌های مالی در ۴ کارت پهن دسکتاپ */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
-                <span className="text-xs text-slate-400 font-bold">مجموع مبالغ واریز شده:</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-bold">مجموع مبالغ واریز شده:</span>
+                  <div className="size-8 rounded-xl bg-emerald-50 text-emerald-600 grid place-items-center">
+                    <CreditCard className="size-4" />
+                  </div>
+                </div>
                 <span className="text-2xl font-black text-emerald-700 block font-mono">
                   {clientCase.totalPaidAmount > 0 ? formatCurrency(clientCase.totalPaidAmount, 'IRT') : 'بدون هزینه'}
                 </span>
@@ -2912,7 +3186,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </div>
 
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
-                <span className="text-xs text-slate-400 font-bold">تعداد نوبت‌های ثبت‌شده:</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-bold">تعداد نوبت‌های ثبت‌شده:</span>
+                  <div className="size-8 rounded-xl bg-blue-50 text-[#173f6b] grid place-items-center">
+                    <CalendarCheck className="size-4" />
+                  </div>
+                </div>
                 <span className="text-2xl font-black text-[#173f6b] block font-mono">
                   {toPersianDigits(appointments.length)} نوبت
                 </span>
@@ -2922,47 +3201,123 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </div>
 
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
-                <span className="text-xs text-slate-400 font-bold">استاد مشاور پرونده:</span>
-                <span className="text-sm font-black text-slate-900 block mt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-bold">استاد مشاور پرونده:</span>
+                  <div className="size-8 rounded-xl bg-indigo-50 text-indigo-700 grid place-items-center">
+                    <User className="size-4" />
+                  </div>
+                </div>
+                <span className="text-base font-black text-slate-900 block truncate">
                   {latestRecommendation?.counselor || (appointments[0]?.counselor ? appointments[0].counselor : 'مشاور تعیین‌نشده')}
                 </span>
-                <span className="text-[11px] text-slate-400 block">
+                <span className="text-[11px] text-slate-400 block truncate">
                   موضوع: {appointments[0]?.topic || 'مشاوره و ارزیابی جامع'}
+                </span>
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-bold">وضعیت مالی و تعرفه:</span>
+                  <div className="size-8 rounded-xl bg-purple-50 text-purple-700 grid place-items-center">
+                    <ShieldCheck className="size-4" />
+                  </div>
+                </div>
+                <span className="text-base font-black text-slate-900 block">
+                  {clientCase.totalPaidAmount > 0 ? 'تعرفه آزاد مصوب' : 'حمایتی / آزاد سازمانی'}
+                </span>
+                <span className="text-[11px] text-purple-600 block">
+                  تسویه‌شده از طریق درگاه پرداخت
                 </span>
               </div>
             </div>
 
-            {/* لیست جلسات مشاوره با امکان ثبت و مشاهده گزارش */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs p-6 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">لیست نوبت‌ها و سوابق مشاوره مراجع</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">برای مشاهده یا ثبت گزارش بالینی هر جلسه، روی آن کلیک کنید.</p>
+            {/* لیست جلسات مشاوره با جدول استاندارد و عریض دسکتاپ */}
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs p-6 sm:p-7 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
+                    <Calendar className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">جدول جامع نوبت‌ها و جلسات مشاوره مراجع</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">برای مشاهده یا ثبت گزارش بالینی هر جلسه، روی دکمه عملیات کلیک کنید.</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setIsNewAppointmentModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#173f6b] text-white rounded-xl text-xs font-bold hover:bg-[#123357] transition cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#173f6b] text-white rounded-xl text-xs font-bold hover:bg-[#123357] transition cursor-pointer self-start sm:self-auto shadow-xs"
                 >
-                  <Plus className="size-3.5" />
-                  <span>ثبت نوبت جدید</span>
+                  <Plus className="size-4" />
+                  <span>ثبت نوبت مشاوره جدید</span>
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {appointments.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
-                    <Calendar className="size-8 mx-auto text-slate-300" />
-                    <p className="text-xs font-bold text-slate-600">هنوز نوبت مشاوره‌ای برای این مراجع ثبت نشده است.</p>
+              {appointments.length === 0 ? (
+                <div className="p-12 text-center bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 space-y-2">
+                  <Calendar className="size-10 mx-auto text-slate-300" />
+                  <p className="text-sm font-bold text-slate-700">هنوز نوبت مشاوره‌ای برای این مراجع ثبت نشده است.</p>
+                  <p className="text-xs text-slate-400">می‌توانید با دکمه بالا یک نوبت مشاوره جدید ایجاد کنید.</p>
+                </div>
+              ) : (
+                <>
+                  {/* جدول عریض ویژه دسکتاپ */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-right border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-black text-slate-500">
+                          <th className="py-3 px-4 rounded-r-xl">ردیف</th>
+                          <th className="py-3 px-4">تاریخ و زمان</th>
+                          <th className="py-3 px-4">استاد مشاور</th>
+                          <th className="py-3 px-4">موضوع جلسه</th>
+                          <th className="py-3 px-4">وضعیت جلسه</th>
+                          <th className="py-3 px-4">توصیه بالینی ثبت‌شده</th>
+                          <th className="py-3 px-4 text-center rounded-l-xl">عملیات</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+                        {appointments.map((item, idx) => (
+                          <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-4 px-4 font-mono font-bold text-slate-400">{toPersianDigits(idx + 1)}</td>
+                            <td className="py-4 px-4 font-mono font-bold text-slate-900">{toPersianDigits(item.date)}</td>
+                            <td className="py-4 px-4 font-bold text-slate-800">{item.counselor}</td>
+                            <td className="py-4 px-4 text-slate-600">{item.topic}</td>
+                            <td className="py-4 px-4">
+                              <span
+                                className={`inline-block text-[11px] px-2.5 py-0.5 rounded-full font-bold ${
+                                  item.status === 'new'
+                                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                }`}
+                              >
+                                {item.status === 'new' ? 'جدید / در انتظار' : 'انجام‌شده'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-4 text-xs text-slate-500 max-w-xs truncate">
+                              {item.recommendation || 'توصیه‌ای ثبت نشده'}
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              <button
+                                onClick={() => openReportModal(item)}
+                                className="px-3 py-1.5 bg-white hover:bg-blue-50 text-[#173f6b] border border-blue-200 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+                              >
+                                {item.status === 'new' ? 'ثبت گزارش جلسه' : 'مشاهده / اصلاح'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ) : (
-                  appointments.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 rounded-2xl border border-slate-200 hover:border-blue-400 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-black text-slate-900">{toPersianDigits(item.date)}</span>
+
+                  {/* نمای کارتی ویژه موبایل */}
+                  <div className="grid grid-cols-1 gap-3 md:hidden">
+                    {appointments.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-black text-slate-900 font-mono">{toPersianDigits(item.date)}</span>
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                               item.status === 'new'
@@ -2973,65 +3328,109 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                             {item.status === 'new' ? 'جدید / در انتظار' : 'انجام‌شده'}
                           </span>
                         </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          موضوع: <strong className="text-slate-700">{item.topic}</strong> | مشاور:{' '}
-                          <strong className="text-slate-700">{item.counselor}</strong>
+                        <div className="text-xs text-slate-600 space-y-1">
+                          <div>مشاور: <strong className="text-slate-800">{item.counselor}</strong></div>
+                          <div>موضوع: <strong className="text-slate-800">{item.topic}</strong></div>
                         </div>
                         {item.recommendation && (
-                          <p className="mt-2 text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-100 leading-relaxed">
-                            <strong>توصیه ثبت‌شده:</strong> {item.recommendation}
+                          <p className="text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-100">
+                            <strong>توصیه:</strong> {item.recommendation}
                           </p>
                         )}
+                        <button
+                          onClick={() => openReportModal(item)}
+                          className="w-full py-2 bg-white hover:bg-blue-50 text-[#173f6b] border border-blue-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                        >
+                          {item.status === 'new' ? 'ثبت گزارش جلسه' : 'مشاهده / اصلاح گزارش'}
+                        </button>
                       </div>
-
-                      <button
-                        onClick={() => openReportModal(item)}
-                        className="px-4 py-2 bg-white hover:bg-blue-50 text-[#173f6b] border border-blue-200 rounded-xl text-xs font-bold transition shadow-xs shrink-0 cursor-pointer"
-                      >
-                        {item.status === 'new' ? 'ثبت گزارش جلسه' : 'مشاهده / اصلاح گزارش'}
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* سوابق تراکنش‌ها */}
+            {/* سوابق و ریز تراکنش‌های پرداخت الکترونیک شاپرک در جدول دسکتاپ */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 bg-slate-50 border-b border-slate-200/90">
-                <h3 className="text-sm font-extrabold text-slate-900">ریز تراکنش‌های پرداخت الکترونیک مراجع</h3>
+              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
+                    <CreditCard className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">ریز تراکنش‌های پرداخت الکترونیک شاپرک</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">صورتحساب تراکنش‌های مالی، شناسه رهگیری و رسیدهای پرداخت</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="divide-y divide-slate-100 text-xs">
-                {currentSubmissions.filter((s) => s.paymentAmount && s.paymentAmount > 0).length === 0 ? (
-                  <div className="p-8 text-center text-slate-400">
-                    هیچ تراکنش پرداختی برای این پرونده ثبت نشده است.
+              {currentSubmissions.filter((s) => s.paymentAmount && s.paymentAmount > 0).length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-xs sm:text-sm">
+                  هیچ تراکنش پرداختی برای این پرونده ثبت نشده است.
+                </div>
+              ) : (
+                <>
+                  {/* جدول ویژه دسکتاپ */}
+                  <div className="hidden md:block overflow-x-auto p-6">
+                    <table className="w-full text-right border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-black text-slate-500">
+                          <th className="py-3 px-4 rounded-r-xl">ردیف</th>
+                          <th className="py-3 px-4">شرح خدمت / پرداخت</th>
+                          <th className="py-3 px-4">شناسه پرداخت شاپرک</th>
+                          <th className="py-3 px-4">تاریخ و زمان</th>
+                          <th className="py-3 px-4">مبلغ تراکنش</th>
+                          <th className="py-3 px-4 text-center rounded-l-xl">وضعیت درگاه</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+                        {currentSubmissions
+                          .filter((s) => s.paymentAmount && s.paymentAmount > 0)
+                          .map((s, idx) => (
+                            <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-4 px-4 font-mono font-bold text-slate-400">{toPersianDigits(idx + 1)}</td>
+                              <td className="py-4 px-4 font-bold text-slate-900">پرداخت الکترونیک ثبت نام یا رزرو مشاوره</td>
+                              <td className="py-4 px-4 font-mono text-xs text-slate-600">{s.paymentRefId || 'تأییدیه درگاه بانکی'}</td>
+                              <td className="py-4 px-4 font-mono text-xs text-slate-600">{formatPersianDateTime(s.paymentDate || s.createdAt)}</td>
+                              <td className="py-4 px-4 font-mono font-black text-emerald-700 text-sm">{formatCurrency(s.paymentAmount || 0, 'IRT')}</td>
+                              <td className="py-4 px-4 text-center">
+                                <span className="inline-block text-[11px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  پرداخت موفق شاپرک
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
                   </div>
-                ) : (
-                  currentSubmissions
-                    .filter((s) => s.paymentAmount && s.paymentAmount > 0)
-                    .map((s) => (
-                      <div key={s.id} className="p-5 flex items-center justify-between gap-4">
-                        <div className="space-y-1">
-                          <span className="font-bold text-slate-900 block">
-                            پرداخت الکترونیک ثبت نام یا رزرو مشاوره
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-mono block">
-                            شناسه پرداخت شاپرک: {s.paymentRefId || 'تأییدیه درگاه'}
-                          </span>
+
+                  {/* نمای موبایل */}
+                  <div className="divide-y divide-slate-100 text-xs md:hidden">
+                    {currentSubmissions
+                      .filter((s) => s.paymentAmount && s.paymentAmount > 0)
+                      .map((s) => (
+                        <div key={s.id} className="p-4 flex items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <span className="font-bold text-slate-900 block">
+                              پرداخت الکترونیک مشاوره
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-mono block">
+                              شناسه: {s.paymentRefId || 'تأییدیه درگاه'}
+                            </span>
+                          </div>
+                          <div className="text-left space-y-1">
+                            <span className="font-mono font-black text-emerald-700 text-sm block">
+                              {formatCurrency(s.paymentAmount || 0, 'IRT')}
+                            </span>
+                            <span className="text-[11px] text-slate-400 block">
+                              {formatPersianDateTime(s.paymentDate || s.createdAt)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-left space-y-1">
-                          <span className="font-mono font-black text-emerald-700 text-sm block">
-                            {formatCurrency(s.paymentAmount || 0, 'IRT')}
-                          </span>
-                          <span className="text-[11px] text-slate-400 block">
-                            {formatPersianDateTime(s.paymentDate || s.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                )}
-              </div>
+                      ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
