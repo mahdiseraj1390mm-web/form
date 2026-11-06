@@ -404,22 +404,21 @@ export function extractBookingItemFromSubmission(sub: FormSubmission): Consultan
     }
   }
 
-  const isBookingForm = sub.formId === 'form-belhagh-booking' || sub.formId === '3uu4z';
-
-  // اگر نه مشاور مشخص بود و نه اسلات و نه فرم نوبت‌دهی بود، نوبت نیست
-  if (!consultantName && !slotValue && !isBookingForm) {
+  // اگر هیچ مشاوری و هیچ فیلد نوبتی ثبت نشده باشد، به هیچ وجه نوبت محسوب نمی‌شود
+  if (!consultantName && !matchedFieldId && !slotValue) {
     return null;
   }
 
-  if (!consultantName && isBookingForm) {
-    consultantName = 'مشاور مرکز (پذیرش نوبت)';
+  // اگر حتی فرم نوبت‌دهی باشد اما کاربر مشاور انتخاب نکرده باشد، نباید نوبت به نام مشاور فیک ثبت شود
+  if (!consultantName) {
+    return null;
   }
 
-  if (!slotValue && isBookingForm) {
-    slotValue = 'نوبت ثبت‌شده در سامانه';
+  if (!slotValue) {
+    slotValue = 'زمان هماهنگ‌نشده';
   }
 
-  const cleanName = cleanConsultantName(consultantName || 'مشاور مرکز');
+  const cleanName = cleanConsultantName(consultantName);
   const dayIdx = detectDayIndex(slotValue);
   const dayName = PERSIAN_WEEK_DAYS[dayIdx]?.name || 'شنبه';
   const timeRange = extractTimeRange(slotValue);
@@ -488,7 +487,7 @@ export function matchMemberToConsultant(
     id: member.id,
     name: member.name,
     mobile: member.mobile || member.username || '',
-    jobTitle: member.jobTitle || 'مشاور مرکز',
+    jobTitle: member.jobTitle || 'مشاور',
     specialization: member.jobTitle || 'مشاوره تخصصی',
     bookingFieldIds: [],
     definedSlots: [
@@ -731,18 +730,18 @@ export function buildAllConsultantsWithBookings(
       }
     }
 
-    // د: اگر نوبت به هیچ یک از مشاوران موجود اختصاص نیافت (مثلاً «دکتر علوی» یا «مشاور مرکز»):
-    // ایجاد مشاور جدید به صورت پویا تا نوبت و مراجع دقیقاً نمایش داده شوند
-    if (!assigned) {
-      const dynamicKey = `dyn_${cleanBName || 'center'}`;
+    // د: اگر نوبت به مشاور دیگری اختصاص داشت (مثلاً نام متنی مشاور مثل «دکتر علوی» که در لیست پیش‌فرض نیست):
+    // ایجاد مشاور جدید با همان نام واقعی تا نوبت به مشاور مربوطه نمایش داده شود
+    if (!assigned && cleanBName && !cleanBName.includes('مشاور مرکز')) {
+      const dynamicKey = `dyn_${cleanBName}`;
       let dynamicEntry = consultantsMap.get(dynamicKey);
       if (!dynamicEntry) {
         const dynProfile: ConsultantProfile = {
           id: dynamicKey,
-          name: booking.consultantName || 'مشاور مرکز (پذیرش نوبت)',
+          name: booking.consultantName,
           mobile: booking.consultantMobile || '',
-          jobTitle: 'مشاور تخصصی مرکز',
-          specialization: booking.topic || 'مشاوره',
+          jobTitle: 'مشاور',
+          specialization: booking.topic || 'مشاوره تخصصی',
           bookingFieldIds: [],
           definedSlots: [
             {

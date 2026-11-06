@@ -54,6 +54,30 @@ import { getSemanticColorByPercentage, getFourColorByIndex } from '@/lib/chart-c
 import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '@/components/analytics/point-line-chart';
 
+// بررسی این‌که آیا سابمیشن یک نوبت مشاوره واقعی با مشاور مشخص یا زمان مشخص است
+export const isRealBookingSubmission = (s: any): boolean => {
+  if (!s || !s.data || typeof s.data !== 'object') return false;
+  const d = s.data;
+  const hasCounselor = Boolean(
+    d.f_counselor ||
+    d.f_booking_counselor ||
+    d.counselorName ||
+    d.counselor ||
+    d.f_counselor_child ||
+    d.f_counselor_teen ||
+    d.f_counselor_education ||
+    d.f_counselor_clinical ||
+    d.f_counselor_family
+  );
+  const hasSlot = Boolean(
+    d.f_booking_datetime ||
+    d.f_booking_date ||
+    d.f_booking_slot ||
+    Object.keys(d).some((k) => k.startsWith('f_booking_') && Boolean(d[k]))
+  );
+  return hasCounselor || hasSlot;
+};
+
 interface AnalyticsViewProps {
   onNavigateToRunner?: () => void;
 }
@@ -108,13 +132,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
       }
     });
 
-    const bookingSubmissions = filteredSubmissions.filter((s) => {
-      if (s.formId === 'form-belhagh-booking') return true;
-      if (!s.data || typeof s.data !== 'object') return false;
-      return Object.keys(s.data).some(
-        (k) => (k.startsWith('f_booking_') || k.startsWith('f_counselor')) && s.data[k]
-      );
-    });
+    const bookingSubmissions = filteredSubmissions.filter((s) => isRealBookingSubmission(s));
 
     const quizSubmissions = filteredSubmissions.filter((s) => {
       return (
@@ -185,9 +203,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
         if (!displayMonths.includes(m)) return;
 
         // شمارش نوبت‌ها و جلسات واقعی
-        const isBooking =
-          s.formId === 'form-belhagh-booking' ||
-          (s.data && typeof s.data === 'object' && Object.keys(s.data).some((k) => (k.startsWith('f_booking_') || k.startsWith('f_counselor')) && s.data[k]));
+        const isBooking = isRealBookingSubmission(s);
         if (isBooking) {
           monthlySessions[m] = (monthlySessions[m] || 0) + 1;
         }
@@ -437,7 +453,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
       }
 
       // رویداد نوبت مشاوره
-      if (s.formId === 'form-belhagh-booking' || s.data?.f_topic) {
+      if (isRealBookingSubmission(s)) {
         let counselor = s.data?.f_counselor || 'استاد مشاور';
         for (const k of Object.keys(s.data || {})) {
           if (k.startsWith('f_counselor_') && s.data[k]) {
@@ -509,9 +525,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
       if (!caseCode) return;
 
       const role = s.data?.f_role_in_family || 'مراجع';
-      const isBooking =
-        s.formId === 'form-belhagh-booking' ||
-        Object.keys(s.data || {}).some((k) => k.startsWith('f_booking_') && s.data[k]);
+      const isBooking = isRealBookingSubmission(s);
 
       const existing = clientsMap.get(caseCode);
       if (existing) {
@@ -576,7 +590,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     filteredSubmissions.forEach((sub) => {
       const d = sub.data || {};
       const cCode = d.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
-      const isBooking = sub.formId === 'form-belhagh-booking' || Boolean(d.f_booking_counselor || d.f_booking_date);
+      const isBooking = isRealBookingSubmission(sub);
       if (isBooking) bookingsSum++;
 
       const candidateName = d.fullName || (d.f_name || d.f_family ? `${d.f_name || ''} ${d.f_family || ''}`.trim() : '') || d.f_fullname || '';
