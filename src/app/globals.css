@@ -114,6 +114,9 @@ pre {
   }
 
   html, body {
+  scrollbar-gutter: stable;
+  width: 100%;
+  max-width: 100%;
     background: #ffffff !important;
     color: #000000 !important;
     height: auto !important;

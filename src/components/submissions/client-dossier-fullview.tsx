@@ -1176,7 +1176,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   }, [appointments]);
 
   return (
-    <div id="printable-dossier-wrapper" className="fixed inset-0 z-50 overflow-y-auto bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
+    <div id="printable-dossier-wrapper" className="fixed inset-0 z-50 overflow-y-scroll bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
       {/* سند جامع رسمی چاپی پرونده - تمام فیلدها، سوابق و آمارها به تفکیک و زیر هم */}
       <PrintableClientDossier
         clientCase={clientCase}
@@ -1191,7 +1191,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       <div className="flex flex-col min-h-screen print:hidden print-hidden-in-dossier">
       {/* سربرگ ناوبری سراسری برند بالحق */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur shadow-2xs">
-        <div className="mx-auto flex max-w-[1480px] items-center justify-between gap-6 px-4 sm:px-6 py-3.5">
+        <div className="mx-auto flex w-full items-center justify-between gap-6 px-4 sm:px-8 lg:px-12 py-3.5">
           <div className="flex items-center gap-3.5">
             <div className="grid size-11 place-items-center rounded-2xl bg-[#173f6b] text-base font-black text-white shadow-sm">
               بـ
@@ -1232,7 +1232,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       </header>
 
       {/* محدوده اصلی محتوای پرونده جامع */}
-      <div className="mx-auto max-w-[1480px] px-4 sm:px-6 py-6 space-y-5">
+      <div className="w-full px-4 sm:px-8 lg:px-12 py-6 space-y-6">
         {/* نوار مسیر ناوبری، عنوان پرونده و دکمه‌های اقدام */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1306,7 +1306,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
 
         {/* نوار زبانه‌های ناوبری ۶ گانه */}
-        <nav className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-2.5 w-full p-2.5 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+        <nav className="grid grid-cols-6 gap-2 sm:gap-3 w-full p-2 sm:p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm min-h-[58px] select-none">
           {[
             ['overview', 'تحلیل در یک نگاه'],
             ['analytics', 'تحلیل‌های آماری'],
@@ -1321,11 +1321,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 setCurrentView('dossier');
                 setActiveTab(key as any);
               }}
-              className={`w-full rounded-xl py-3 px-3 text-xs sm:text-sm font-black transition-all flex items-center justify-center text-center cursor-pointer ${
+              className={`h-12 w-full rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center text-center whitespace-nowrap cursor-pointer px-2 ${
                 (currentView === 'dossier' && activeTab === key) ||
                 (currentView === 'formReport' && key === 'forms')
-                  ? 'bg-[#173f6b] text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50'
+                  ? 'bg-[#173f6b] text-white shadow-sm ring-1 ring-[#173f6b]'
+                  : 'text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200'
               }`}
             >
               {label}
