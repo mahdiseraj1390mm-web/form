@@ -9,12 +9,9 @@ import {
   Settings, 
   Sparkles, 
   Eye, 
-  FileCheck, 
-  FolderKanban, 
   CalendarClock,
   X,
-  LogOut,
-  User
+  LogOut
 } from 'lucide-react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
@@ -59,47 +56,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badge: null,
     },
     {
-      id: 'forms',
-      label: 'فرم‌ها و پرسشنامه‌ها',
-      icon: FolderKanban,
-      badge: toPersianDigits(forms.length),
+      id: 'submissions',
+      label: 'پرونده مراجعان',
+      icon: Inbox,
+      badge: toPersianDigits(totalCasesCount),
     },
     {
       id: 'builder',
-      label: 'استودیو طراحی فرم',
+      label: 'طراحی فرم',
       icon: PenTool,
       badge: activeForm ? 'فعال' : null,
       highlight: true,
     },
     {
       id: 'runner',
-      label: 'پیش‌نمایش فرم زنده',
+      label: 'پیش‌نمایش',
       icon: Eye,
       badge: null,
-    },
-    {
-      id: 'submissions',
-      label: 'پرونده مراجعین',
-      icon: Inbox,
-      badge: toPersianDigits(totalCasesCount),
     },
     {
       id: 'consultants',
       label: 'مشاوران',
       icon: CalendarClock,
       badge: 'نوبت‌ها',
-    },
-    {
-      id: 'media',
-      label: 'مرکز اسناد و فایل‌های پیوست',
-      icon: FileCheck,
-      badge: null,
-    },
-    {
-      id: 'chat',
-      label: 'گفتگوی آنلاین با مراجعین',
-      icon: Sparkles,
-      badge: 'زنده',
     },
     {
       id: 'analytics',
@@ -109,13 +88,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'templates',
-      label: 'قالب‌های آماده فرم',
+      label: 'قالب‌های آماده',
       icon: Sparkles,
       badge: '۴ قالب',
     },
     {
       id: 'settings',
-      label: 'تنظیمات و وب‌هوک‌ها',
+      label: 'تنظیمات',
       icon: Settings,
       badge: null,
     },

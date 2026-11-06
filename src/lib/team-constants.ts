@@ -2,16 +2,13 @@ import { TeamMember } from '@/types/advanced';
 
 export const AVAILABLE_SIDEBAR_TABS = [
   { id: 'dashboard', label: 'داشبورد مدیریت' },
-  { id: 'forms', label: 'فرم‌ها و پرسشنامه‌ها' },
-  { id: 'builder', label: 'استودیو طراحی فرم' },
-  { id: 'runner', label: 'پیش‌نمایش فرم زنده' },
-  { id: 'submissions', label: 'پرونده مراجعین' },
+  { id: 'submissions', label: 'پرونده مراجعان' },
+  { id: 'builder', label: 'طراحی فرم' },
+  { id: 'runner', label: 'پیش‌نمایش' },
   { id: 'consultants', label: 'مشاوران' },
-  { id: 'media', label: 'مرکز اسناد و فایل‌های پیوست' },
-  { id: 'chat', label: 'گفتگوی آنلاین با مراجعین' },
   { id: 'analytics', label: 'آمارها و تحلیل‌های بالینی' },
-  { id: 'templates', label: 'قالب‌های آماده فرم' },
-  { id: 'settings', label: 'تنظیمات و وب‌هوک‌ها' },
+  { id: 'templates', label: 'قالب‌های آماده' },
+  { id: 'settings', label: 'تنظیمات' },
 ] as const;
 
 export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
