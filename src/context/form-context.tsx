@@ -667,6 +667,33 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const updateSubmissionData = (submissionId: string, updatedFields: Record<string, any>) => {
+    setSubmissions((prev) =>
+      prev.map((s) => {
+        if (s.id === submissionId || s.trackingCode === submissionId || (s.data && s.data.caseCode === submissionId)) {
+          return {
+            ...s,
+            data: { ...s.data, ...updatedFields },
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return s;
+      })
+    );
+
+    try {
+      fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_submission_data',
+          submissionId,
+          updatedFields,
+        }),
+      }).catch(() => {});
+    } catch {}
+  };
+
   const addSubmissionComment = (
     submissionId: string,
     authorName: string,
@@ -885,6 +912,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         removeRuleFromForm,
         submitFormResponse,
         updateSubmissionStatus,
+        updateSubmissionData,
         addSubmissionComment,
         getSubmissionsByFormId,
         refreshSubmissionsFromDb,

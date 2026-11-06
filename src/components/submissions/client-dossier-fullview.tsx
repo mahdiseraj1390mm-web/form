@@ -43,6 +43,7 @@ import {
   Check,
   Search,
   Plus,
+  Edit,
 } from 'lucide-react';
 import { EvaluationReportView } from '../analytics/evaluation-report-view';
 import { VerticalBarChart } from '../analytics/vertical-bar-chart';
@@ -235,7 +236,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   onClose,
   onStatusChange,
 }) => {
-  const { forms, submissions, updateSubmissionStatus, addSubmissionComment } = useForm();
+  const { forms, submissions, updateSubmissionStatus, updateSubmissionData, addSubmissionComment } = useForm();
   const { currentUser } = useAdminAuth();
 
   // دریافت پیوسته و بلادرنگ سابمیشن‌های پرونده از کانتکست عمومی (جهت نمایش بلادرنگ پیام‌ها، یادداشت‌ها و پیگیری‌ها بدون نیاز به رفرش)
