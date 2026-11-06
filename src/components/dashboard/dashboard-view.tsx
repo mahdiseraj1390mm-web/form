@@ -29,7 +29,7 @@ import {
   Radio,
   FileText
 } from 'lucide-react';
-import { toPersianDigits, formatCurrency, formatPersianDateTime } from '@/lib/persian';
+import { toPersianDigits, formatCurrency, formatPersianDateTime, getTopItemSummary, getJalaliMonthName } from '@/lib/persian';
 import { isAssignedSafaSubmission, filterActiveSubmissions } from '@/lib/safa-utils';
 import { VerticalBarChart, BarChartItem } from '../analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '../analytics/point-line-chart';
@@ -95,52 +95,128 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
   }, [activeSubmissions]);
 
-  // پایش روند پیشرفت ماهانه مرکز بالحق (نمودار نقطه و خط پیشرفت)
+  // پایش روند پیشرفت ماهانه مرکز بالحق (بر اساس ماه‌های واقعی شمسی و داده‌های ثبت‌شده)
   const monthlyProgressData: PointLineChartItem[] = useMemo(() => {
-    const months = ['اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان'];
-    const baseBookings = Math.max(statsOverview.totalBookingsCount, 5);
-    const baseCases = Math.max(statsOverview.totalCasesCount, 8);
+    const PERSIAN_MONTHS = [
+      'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+      'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+    ];
+
+    const now = new Date();
+    let currentMonthName = 'آبان';
+    try {
+      currentMonthName = new Intl.DateTimeFormat('fa-IR', { month: 'long' }).format(now);
+    } catch {}
+
+    const curIdx = PERSIAN_MONTHS.indexOf(currentMonthName);
+    const safeCurIdx = curIdx >= 0 ? curIdx : 7; // آبان
+
+    // ۶ ماه اخیر منتهی به ماه جاری تقویم شمسی
+    const displayMonths: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const mIdx = (safeCurIdx - i + 12) % 12;
+      displayMonths.push(PERSIAN_MONTHS[mIdx]);
+    }
+
+    const monthlyBookings: Record<string, number> = {};
+    const monthlyCases: Record<string, number> = {};
+    const monthlyAdherence: Record<string, number[]> = {};
+
+    displayMonths.forEach((m) => {
+      monthlyBookings[m] = 0;
+      monthlyCases[m] = 0;
+      monthlyAdherence[m] = [];
+    });
+
+    activeSubmissions.forEach((s) => {
+      if (!s.createdAt) return;
+      try {
+        const d = new Date(s.createdAt);
+        if (isNaN(d.getTime())) return;
+        const m = new Intl.DateTimeFormat('fa-IR', { month: 'long' }).format(d);
+        if (!displayMonths.includes(m)) return;
+
+        // شمارش نوبت‌های واقعی
+        const isBooking =
+          s.formId === 'form-belhagh-booking' ||
+          (s.data && typeof s.data === 'object' && Object.keys(s.data).some((k) => (k.startsWith('f_booking_') || k.startsWith('f_counselor')) && s.data[k]));
+        if (isBooking) {
+          monthlyBookings[m] = (monthlyBookings[m] || 0) + 1;
+        }
+
+        // شمارش پرونده‌های واقعی
+        const isCase =
+          s.formId === 'form-belhagh-registration' ||
+          s.data?.f_ebadollah_member !== undefined ||
+          (typeof s.data?.caseCode === 'string' && s.data.caseCode.startsWith('SP'));
+        if (isCase) {
+          monthlyCases[m] = (monthlyCases[m] || 0) + 1;
+        }
+
+        // نمرات پایش ارزیابی آزمون‌ها
+        if (s.evaluationResult?.overallScore && typeof s.evaluationResult.overallScore === 'number') {
+          monthlyAdherence[m].push(s.evaluationResult.overallScore);
+        }
+      } catch {}
+    });
 
     if (progressMetric === 'bookings') {
-      const progressionFactors = [0.28, 0.42, 0.55, 0.68, 0.82, 0.94, 1.0];
-      return months.map((m, idx) => {
-        const val = Math.round(baseBookings * progressionFactors[idx]);
+      return displayMonths.map((m, idx) => {
+        const val = monthlyBookings[m] || 0;
+        const prevVal = idx > 0 ? (monthlyBookings[displayMonths[idx - 1]] || 0) : null;
+        let secondaryLabel = 'آغاز بازه';
+        if (prevVal !== null) {
+          const diff = val - prevVal;
+          if (diff > 0) secondaryLabel = `+${toPersianDigits(diff)} نوبت نسبت به قبل`;
+          else if (diff < 0) secondaryLabel = `-${toPersianDigits(Math.abs(diff))} نوبت`;
+          else secondaryLabel = val > 0 ? 'مشابه ماه قبل' : 'بدون نوبت';
+        }
         return {
           id: `m-book-${idx}`,
           label: m,
           value: val,
-          secondaryLabel: idx > 0 ? `+${toPersianDigits(Math.max(1, Math.round(val * 0.18)))} جلسه` : 'مبنا',
+          secondaryLabel,
           color: '#0284c7',
-          badge: idx === months.length - 1 ? 'ماه جاری' : undefined,
+          badge: idx === displayMonths.length - 1 ? 'ماه جاری' : undefined,
         };
       });
     } else if (progressMetric === 'cases') {
-      const progressionFactors = [0.22, 0.38, 0.52, 0.65, 0.79, 0.90, 1.0];
-      return months.map((m, idx) => {
-        const val = Math.round(baseCases * progressionFactors[idx]);
+      return displayMonths.map((m, idx) => {
+        const val = monthlyCases[m] || 0;
+        const prevVal = idx > 0 ? (monthlyCases[displayMonths[idx - 1]] || 0) : null;
+        let secondaryLabel = 'پذیرش';
+        if (prevVal !== null) {
+          const diff = val - prevVal;
+          if (diff > 0) secondaryLabel = `+${toPersianDigits(diff)} پرونده جدید`;
+          else if (diff < 0) secondaryLabel = `-${toPersianDigits(Math.abs(diff))} پرونده`;
+          else secondaryLabel = val > 0 ? 'مشابه ماه قبل' : 'بدون ثبت پرونده';
+        }
         return {
           id: `m-case-${idx}`,
           label: m,
           value: val,
-          secondaryLabel: idx > 0 ? `+${toPersianDigits(Math.max(1, Math.round(val * 0.15)))} پرونده` : 'آغاز پایش',
+          secondaryLabel,
           color: '#10b981',
-          badge: idx === months.length - 1 ? 'پذیرش فعال' : undefined,
+          badge: idx === displayMonths.length - 1 ? 'پذیرش فعال' : undefined,
         };
       });
     } else {
-      const adherenceTrend = [68, 72, 75, 81, 84, 89, 93];
-      return months.map((m, idx) => ({
-        id: `m-adh-${idx}`,
-        label: m,
-        value: adherenceTrend[idx],
-        secondaryLabel: `پایداری %${toPersianDigits(adherenceTrend[idx])}`,
-        color: '#8b5cf6',
-        badge: idx === months.length - 1 ? 'مطلوب و پایدار' : undefined,
-      }));
+      return displayMonths.map((m, idx) => {
+        const scores = monthlyAdherence[m] || [];
+        const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+        return {
+          id: `m-adh-${idx}`,
+          label: m,
+          value: avg,
+          secondaryLabel: avg > 0 ? `میانگین شاخص %${toPersianDigits(avg)}` : 'بدون ارزیابی',
+          color: '#8b5cf6',
+          badge: idx === displayMonths.length - 1 && avg > 0 ? 'ماه جاری' : undefined,
+        };
+      });
     }
-  }, [statsOverview.totalBookingsCount, statsOverview.totalCasesCount, progressMetric]);
+  }, [activeSubmissions, progressMetric]);
 
-  // ۲-الف. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران
+  // ۲-الف. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران (بدون شبیه‌سازی و داده‌های ساختگی)
   const topRecommendedTopicsData: BarChartItem[] = useMemo(() => {
     const recCounts: Record<string, number> = {
       'مهارت‌های ارتباطی و زوجین': 0,
@@ -150,38 +226,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       'برنامه‌ریزی تحصیلی و انگیزش': 0,
     };
 
-    activeSubmissions.forEach((s, idx) => {
-      const rec = s.data?.f_counselor_recommendation || s.data?.f_next_plan || s.data?.recommendation || '';
+    activeSubmissions.forEach((s) => {
+      const commentTexts = Array.isArray(s.comments) ? s.comments.map((c: any) => c.text || '').join(' ') : '';
+      const rec = `${s.data?.f_counselor_recommendation || ''} ${s.data?.f_next_plan || ''} ${s.data?.recommendation || ''} ${commentTexts}`.trim();
+
       if (rec) {
         if (rec.includes('ارتباط') || rec.includes('زوج')) recCounts['مهارت‌های ارتباطی و زوجین']++;
-        else if (rec.includes('خشم') || rec.includes('پرخاش')) recCounts['مهار خشم و خودتنظیم‌گری']++;
-        else if (rec.includes('فرزند') || rec.includes('تربیت')) recCounts['فرزندپروری و رفتار با فرزند']++;
-        else if (rec.includes('اضطراب') || rec.includes('آرامش') || rec.includes('وسواس')) recCounts['آرام‌سازی و مهار اضطراب']++;
-        else if (rec.includes('تحصیل') || rec.includes('انگیز')) recCounts['برنامه‌ریزی تحصیلی و انگیزش']++;
-      } else {
-        const m = idx % 5;
-        if (m === 0) recCounts['مهارت‌های ارتباطی و زوجین'] += 2;
-        else if (m === 1) recCounts['مهار خشم و خودتنظیم‌گری'] += 2;
-        else if (m === 2) recCounts['فرزندپروری و رفتار با فرزند'] += 1;
-        else if (m === 3) recCounts['آرام‌سازی و مهار اضطراب'] += 1;
-        else recCounts['برنامه‌ریزی تحصیلی و انگیزش'] += 1;
+        if (rec.includes('خشم') || rec.includes('پرخاش')) recCounts['مهار خشم و خودتنظیم‌گری']++;
+        if (rec.includes('فرزند') || rec.includes('تربیت')) recCounts['فرزندپروری و رفتار با فرزند']++;
+        if (rec.includes('اضطراب') || rec.includes('آرامش') || rec.includes('وسواس')) recCounts['آرام‌سازی و مهار اضطراب']++;
+        if (rec.includes('تحصیل') || rec.includes('انگیز')) recCounts['برنامه‌ریزی تحصیلی و انگیزش']++;
       }
     });
 
-    const totalRecs = Object.values(recCounts).reduce((a, b) => a + b, 0) || 1;
+    const totalRecs = Object.values(recCounts).reduce((a, b) => a + b, 0);
     const colors = ['bg-violet-600', 'bg-purple-500', 'bg-indigo-500', 'bg-fuchsia-500', 'bg-pink-500'];
 
     return Object.entries(recCounts).map(([label, val], idx) => ({
       id: `rec-${idx}`,
       label,
       value: val,
-      percentage: Math.round((val / totalRecs) * 100),
+      percentage: totalRecs > 0 ? Math.round((val / totalRecs) * 100) : 0,
       color: colors[idx % colors.length],
       secondaryLabel: `${toPersianDigits(val)} توصیه`,
     }));
   }, [activeSubmissions]);
 
-  // ۲-ب. باکس بیشترین موضوعات مراجعه به مشاوران
+  // ۲-ب. باکس بیشترین موضوعات مراجعه به مشاوران (بر اساس پاسخ‌های واقعی و گزینه‌های رزرو)
   const topReferralTopicsData: BarChartItem[] = useMemo(() => {
     const topicCounts: Record<string, number> = {
       'کودک': 0,
@@ -192,20 +263,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
 
     activeSubmissions.forEach((s) => {
-      const topic = s.data?.f_topic || s.data?.f_counseling_subject;
-      if (!topic) return;
-
-      if (topic.includes('کودک')) topicCounts['کودک']++;
-      else if (topic.includes('نوجوان')) topicCounts['نوجوان']++;
-      else if (topic.includes('تحصیلی')) topicCounts['تحصیلی']++;
-      else if (topic.includes('بالینی') || topic.includes('اضطراب') || topic.includes('وسواس')) {
-        topicCounts['بالینی (اضطراب و وسواس)']++;
-      } else if (topic.includes('ازدواج') || topic.includes('خانواده')) {
-        topicCounts['ازدواج و خانواده']++;
+      const topic = s.data?.f_topic || s.data?.f_counseling_subject || s.data?.topic || '';
+      if (topic) {
+        if (topic.includes('کودک')) topicCounts['کودک']++;
+        else if (topic.includes('نوجوان')) topicCounts['نوجوان']++;
+        else if (topic.includes('تحصیلی')) topicCounts['تحصیلی']++;
+        else if (topic.includes('بالینی') || topic.includes('اضطراب') || topic.includes('وسواس')) {
+          topicCounts['بالینی (اضطراب و وسواس)']++;
+        } else if (topic.includes('ازدواج') || topic.includes('خانواده')) {
+          topicCounts['ازدواج و خانواده']++;
+        }
+      } else if (s.data && typeof s.data === 'object') {
+        const keys = Object.keys(s.data);
+        if (keys.some(k => k.includes('child') || k.includes('shavandi_child') || k.includes('ansari_child') || k.includes('zeynali_child'))) {
+          topicCounts['کودک']++;
+        } else if (keys.some(k => k.includes('teen') || k.includes('borhani_teen') || k.includes('rastgoo_teen') || k.includes('ansari_teen'))) {
+          topicCounts['نوجوان']++;
+        } else if (keys.some(k => k.includes('education') || k.includes('abdi_education') || k.includes('torshizi') || k.includes('yavari'))) {
+          topicCounts['تحصیلی']++;
+        } else if (keys.some(k => k.includes('clinical') || k.includes('rastgoo_clinical') || k.includes('golyayi_clinical'))) {
+          topicCounts['بالینی (اضطراب و وسواس)']++;
+        } else if (keys.some(k => k.includes('family') || k.includes('sedighi_family') || k.includes('borhani_family') || k.includes('karimi_family'))) {
+          topicCounts['ازدواج و خانواده']++;
+        }
       }
     });
 
-    const totalTopics = Object.values(topicCounts).reduce((a, b) => a + b, 0) || 1;
+    const totalTopics = Object.values(topicCounts).reduce((a, b) => a + b, 0);
     const colors = [
       'bg-sky-500',
       'bg-blue-600',
@@ -218,13 +302,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       id: `referral-${idx}`,
       label,
       value: val,
-      percentage: Math.round((val / totalTopics) * 100),
+      percentage: totalTopics > 0 ? Math.round((val / totalTopics) * 100) : 0,
       color: colors[idx % colors.length],
       secondaryLabel: `${toPersianDigits(val)} مراجعه`,
     }));
   }, [activeSubmissions]);
 
-  // ۴. باکس بیشترین نوبت‌ها از مشاوران (رتبه‌بندی اساتید مشاور)
+  // ۴. باکس بیشترین نوبت‌ها از مشاوران (رتبه‌بندی اساتید مشاور بر اساس نوبت‌های واقعی)
   const topCounselorsData: BarChartItem[] = useMemo(() => {
     const counselorCounts: Record<string, number> = {};
 
@@ -248,7 +332,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     const sorted = Object.entries(counselorCounts).sort((a, b) => b[1] - a[1]);
     const top6 = sorted.slice(0, 6);
-    const totalBookings = top6.reduce((acc, curr) => acc + curr[1], 0) || 1;
+    const totalBookings = top6.reduce((acc, curr) => acc + curr[1], 0);
 
     const barColors = [
       'bg-teal-500',
@@ -263,7 +347,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       id: `counselor-${idx}`,
       label: name,
       value: count,
-      percentage: Math.round((count / totalBookings) * 100),
+      percentage: totalBookings > 0 ? Math.round((count / totalBookings) * 100) : 0,
       color: barColors[idx % barColors.length],
       secondaryLabel: `${toPersianDigits(count)} نوبت`,
     }));
@@ -401,12 +485,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     ];
 
     return sorted.map((client, idx) => {
-      const bookingsCount = client.totalBookings > 0 ? client.totalBookings : Math.max(1, 6 - idx);
+      const bookingsCount = client.totalBookings;
       return {
         id: `client-bar-${client.caseCode}`,
         label: client.caseCode,
         value: bookingsCount,
-        percentage: Math.round((bookingsCount / totalTopBookings) * 100),
+        percentage: totalTopBookings > 0 && bookingsCount > 0 ? Math.round((bookingsCount / totalTopBookings) * 100) : 0,
         color: barColors[idx % barColors.length],
         secondaryLabel: `${toPersianDigits(bookingsCount)} نوبت`,
         badge: client.roleInFamily,
@@ -625,7 +709,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
             <span>محورهای تجویزی اساتید</span>
-            <span className="font-bold text-violet-700">بیشترین: مهارت‌های ارتباطی</span>
+            <span className="font-bold text-violet-700">{getTopItemSummary(topRecommendedTopicsData, 'توصیه')}</span>
           </div>
         </div>
 
@@ -658,7 +742,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
             <span>۵ حوزه تقاضای مراجعان</span>
-            <span className="font-bold text-sky-700">بیشترین: بالینی و خانواده</span>
+            <span className="font-bold text-sky-700">{getTopItemSummary(topReferralTopicsData, 'مراجعه')}</span>
           </div>
         </div>
 

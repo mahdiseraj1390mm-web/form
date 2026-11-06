@@ -15,6 +15,7 @@ import {
   Sparkles,
   BarChart3,
   Settings,
+  CalendarClock,
   Lock,
   Phone, 
   Briefcase, 
@@ -43,6 +44,7 @@ const TAB_ICONS: Record<string, React.ElementType> = {
   builder: PenTool,
   runner: Eye,
   submissions: Inbox,
+  consultants: CalendarClock,
   media: FileCheck,
   chat: Sparkles,
   analytics: BarChart3,
@@ -84,6 +86,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const [status, setStatus] = useState<'active' | 'suspended'>('active');
   const [allowedTabs, setAllowedTabs] = useState<string[]>(['submissions']);
   const [requireCaseCode, setRequireCaseCode] = useState(true);
+  const [consultantId, setConsultantId] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -99,6 +102,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
           : ['submissions']
       );
       setRequireCaseCode(editingMember.requireCaseCode !== undefined ? editingMember.requireCaseCode : true);
+      setConsultantId(editingMember.consultantId || '');
     } else {
       setName('');
       setMobile('');
@@ -107,6 +111,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       setStatus('active');
       setAllowedTabs(['submissions']);
       setRequireCaseCode(true);
+      setConsultantId('');
     }
     setErrors({});
   }, [editingMember, isOpen]);
@@ -172,6 +177,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       permissions: DEFAULT_DETAILED_PERMISSIONS,
       allowedTabs,
       requireCaseCode,
+      consultantId: consultantId.trim() || undefined,
     });
 
     onClose();
@@ -251,6 +257,38 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                     className="w-full pr-9 pl-3 py-2 border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 text-xs"
                   />
                 </div>
+              </div>
+
+              {/* مشاور متناظر در سامانه نوبت‌دهی (اختیاری) */}
+              <div className="sm:col-span-2">
+                <label className="block font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <CalendarClock className="w-3.5 h-3.5 text-blue-600" />
+                  <span>انتساب به پروفایل مشاور در سامانه نوبت‌دهی (اختیاری)</span>
+                </label>
+                <select
+                  value={consultantId}
+                  onChange={(e) => setConsultantId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 text-xs cursor-pointer"
+                >
+                  <option value="">تطبیق خودکار و هوشمند بر اساس نام یا شماره همراه مشاور</option>
+                  <option value="f_booking_farahmandi">جناب آقای یاسر فرهمندی (مشاور کودک - ۰۹۳۶۴۲۸۰۳۲۲)</option>
+                  <option value="f_booking_teymourian">سرکار خانم تیموریان (مشاور کودک - ۰۹۱۴۰۲۸۸۹۳۸)</option>
+                  <option value="f_booking_shavandi_child">سرکار خانم شوندی (مشاور کودک و نوجوان - ۰۹۱۲۷۹۴۴۹۸۵)</option>
+                  <option value="f_booking_ansari_child">سرکار خانم انصاری (مشاور کودک و نوجوان - ۰۹۱۲۲۳۰۱۳۸۷)</option>
+                  <option value="f_booking_zeynali_child">سرکار خانم زینلی (مشاور کودک و خانواده - ۰۹۳۷۹۷۰۹۶۳۵)</option>
+                  <option value="f_booking_borhani_teen">جناب آقای علیرضا برهانی (مشاور نوجوان و خانواده - ۰۹۱۲۰۴۴۹۰۹۳)</option>
+                  <option value="f_booking_rastgoo_teen">سرکار خانم راستگو (مشاور نوجوان و بالینی - ۰۹۱۲۳۰۶۹۴۴۷)</option>
+                  <option value="f_booking_abdi_education">جناب آقای عبدی (مشاور تحصیلی - ۰۹۱۲۷۸۵۳۸۴۳)</option>
+                  <option value="f_booking_torshizi">جناب آقای دکتر ترشیزی (مشاور بالینی - ۰۹۱۵۵۵۱۳۷۳۴)</option>
+                  <option value="f_booking_yavari">سرکار خانم یاوری (مشاور بالینی - ۰۹۳۰۷۵۵۶۹۱۹)</option>
+                  <option value="f_booking_golyayi_clinical">سرکار خانم گلیایی (مشاور بالینی - ۰۹۱۲۵۱۴۰۵۵۱)</option>
+                  <option value="f_booking_sedighi_family">جناب آقای دکتر صدیقی (مشاور ازدواج و خانواده - ۰۹۱۵۱۵۳۸۲۲۷)</option>
+                  <option value="f_booking_karimi_family">سرکار خانم کریمی (مشاور خانواده - ۰۹۱۹۲۱۸۰۴۸۱)</option>
+                  <option value="f_booking_abdi_family">سرکار خانم عبدی (مشاور خانواده - ۰۹۱۹۲۸۸۶۲۵۸)</option>
+                </select>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  در صورت انتخاب، پرونده‌ها و تایم‌لاین این مشاور مستقیماً به این حساب کاربری متصل می‌گردد.
+                </p>
               </div>
 
               {/* نام کاربری (شماره تلفن) */}

@@ -70,7 +70,10 @@
       "canManageSms": true,
       "canManageIntegrations": true,
       "canManageTeam": true
-    }
+    },
+    "allowedTabs": [
+      "consultants"
+    ]
   },
   {
     "id": "user-booking-op",
@@ -131,6 +134,211 @@
       "canExportData": true,
       "canAddComments": true,
       "canManageBookings": false,
+      "canRescheduleBookings": false,
+      "canManualBook": false,
+      "canViewFinances": false,
+      "canManageSms": false,
+      "canManageIntegrations": false,
+      "canManageTeam": false
+    }
+  },
+  {
+    "id": "user-counselor-borhani",
+    "name": "علیرضا برهانی",
+    "email": "borhani@psy-belhagh.com",
+    "mobile": "09120449093",
+    "username": "09120449093",
+    "password": "counselor@123",
+    "jobTitle": "مشاور نوجوان و خانواده",
+    "role": "custom",
+    "status": "active",
+    "invitedAt": "2026-02-01T09:00:00Z",
+    "lastActive": "۱ ساعت پیش",
+    "accessibleFormIds": [
+      "all"
+    ],
+    "allowedTabs": [
+      "consultants",
+      "submissions"
+    ],
+    "requireCaseCode": false,
+    "consultantId": "f_booking_borhani_teen",
+    "permissions": {
+      "canCreateForms": false,
+      "canEditForms": false,
+      "canDeleteForms": false,
+      "canPublishForms": false,
+      "canViewSubmissions": true,
+      "canEditSubmissions": true,
+      "canDeleteSubmissions": false,
+      "canChangeStatus": true,
+      "canExportData": true,
+      "canAddComments": true,
+      "canManageBookings": true,
+      "canRescheduleBookings": false,
+      "canManualBook": false,
+      "canViewFinances": false,
+      "canManageSms": false,
+      "canManageIntegrations": false,
+      "canManageTeam": false
+    }
+  },
+  {
+    "id": "user-counselor-farahmandi",
+    "name": "یاسر فرهمندی",
+    "email": "farahmandi@psy-belhagh.com",
+    "mobile": "09364280322",
+    "username": "09364280322",
+    "password": "counselor@123",
+    "jobTitle": "مشاور کودک",
+    "role": "custom",
+    "status": "active",
+    "invitedAt": "2026-02-01T09:00:00Z",
+    "lastActive": "۳ ساعت پیش",
+    "accessibleFormIds": [
+      "all"
+    ],
+    "allowedTabs": [
+      "consultants",
+      "submissions"
+    ],
+    "requireCaseCode": false,
+    "consultantId": "f_booking_farahmandi",
+    "permissions": {
+      "canCreateForms": false,
+      "canEditForms": false,
+      "canDeleteForms": false,
+      "canPublishForms": false,
+      "canViewSubmissions": true,
+      "canEditSubmissions": true,
+      "canDeleteSubmissions": false,
+      "canChangeStatus": true,
+      "canExportData": true,
+      "canAddComments": true,
+      "canManageBookings": true,
+      "canRescheduleBookings": false,
+      "canManualBook": false,
+      "canViewFinances": false,
+      "canManageSms": false,
+      "canManageIntegrations": false,
+      "canManageTeam": false
+    }
+  },
+  {
+    "id": "user-counselor-shavandi",
+    "name": "خانم شوندی",
+    "email": "shavandi@psy-belhagh.com",
+    "mobile": "09127944985",
+    "username": "09127944985",
+    "password": "counselor@123",
+    "jobTitle": "مشاور کودک و نوجوان",
+    "role": "custom",
+    "status": "active",
+    "invitedAt": "2026-02-05T09:00:00Z",
+    "lastActive": "امروز",
+    "accessibleFormIds": [
+      "all"
+    ],
+    "allowedTabs": [
+      "consultants",
+      "submissions"
+    ],
+    "requireCaseCode": false,
+    "consultantId": "f_booking_shavandi_child",
+    "permissions": {
+      "canCreateForms": false,
+      "canEditForms": false,
+      "canDeleteForms": false,
+      "canPublishForms": false,
+      "canViewSubmissions": true,
+      "canEditSubmissions": true,
+      "canDeleteSubmissions": false,
+      "canChangeStatus": true,
+      "canExportData": true,
+      "canAddComments": true,
+      "canManageBookings": true,
+      "canRescheduleBookings": false,
+      "canManualBook": false,
+      "canViewFinances": false,
+      "canManageSms": false,
+      "canManageIntegrations": false,
+      "canManageTeam": false
+    }
+  },
+  {
+    "id": "user-counselor-teymourian",
+    "name": "خانم تیموریان",
+    "email": "teymourian@psy-belhagh.com",
+    "mobile": "09140288938",
+    "username": "09140288938",
+    "password": "counselor@123",
+    "jobTitle": "مشاور کودک",
+    "role": "custom",
+    "status": "active",
+    "invitedAt": "2026-02-05T09:00:00Z",
+    "lastActive": "دیروز",
+    "accessibleFormIds": [
+      "all"
+    ],
+    "allowedTabs": [
+      "consultants",
+      "submissions"
+    ],
+    "requireCaseCode": false,
+    "consultantId": "f_booking_teymourian",
+    "permissions": {
+      "canCreateForms": false,
+      "canEditForms": false,
+      "canDeleteForms": false,
+      "canPublishForms": false,
+      "canViewSubmissions": true,
+      "canEditSubmissions": true,
+      "canDeleteSubmissions": false,
+      "canChangeStatus": true,
+      "canExportData": true,
+      "canAddComments": true,
+      "canManageBookings": true,
+      "canRescheduleBookings": false,
+      "canManualBook": false,
+      "canViewFinances": false,
+      "canManageSms": false,
+      "canManageIntegrations": false,
+      "canManageTeam": false
+    }
+  },
+  {
+    "id": "user-counselor-torshizi",
+    "name": "دکتر جعفر ترشیزی",
+    "email": "torshizi@psy-belhagh.com",
+    "mobile": "09155513734",
+    "username": "09155513734",
+    "password": "counselor@123",
+    "jobTitle": "مشاور و روانشناس بالینی",
+    "role": "custom",
+    "status": "active",
+    "invitedAt": "2026-02-10T09:00:00Z",
+    "lastActive": "دیروز",
+    "accessibleFormIds": [
+      "all"
+    ],
+    "allowedTabs": [
+      "consultants",
+      "submissions"
+    ],
+    "requireCaseCode": false,
+    "consultantId": "f_booking_torshizi",
+    "permissions": {
+      "canCreateForms": false,
+      "canEditForms": false,
+      "canDeleteForms": false,
+      "canPublishForms": false,
+      "canViewSubmissions": true,
+      "canEditSubmissions": true,
+      "canDeleteSubmissions": false,
+      "canChangeStatus": true,
+      "canExportData": true,
+      "canAddComments": true,
+      "canManageBookings": true,
       "canRescheduleBookings": false,
       "canManualBook": false,
       "canViewFinances": false,

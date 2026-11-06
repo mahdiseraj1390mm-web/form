@@ -153,7 +153,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
             <tr>
               <td className="bg-slate-100 p-2 font-bold text-slate-700 border-l border-slate-300">موضوع اولیه مراجعه:</td>
               <td colSpan={3} className="p-2">
-                {combinedData.f_counseling_subject || combinedData.f_topic || 'مشاوره بالینی و خانواده'}
+                {combinedData.f_counseling_subject || combinedData.f_topic || 'ثبت‌نشده'}
               </td>
             </tr>
           </tbody>

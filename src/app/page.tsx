@@ -60,6 +60,10 @@ const AdminChatInboxView = dynamic(
   () => import('@/components/chat/admin-chat-inbox-view').then((m) => m.AdminChatInboxView),
   { loading: () => <ViewSkeleton /> }
 );
+const ConsultantsView = dynamic(
+  () => import('@/components/consultants/consultants-view').then((m) => m.ConsultantsView),
+  { loading: () => <ViewSkeleton /> }
+);
 const NewFormModal = dynamic(
   () => import('@/components/modals/new-form-modal').then((m) => m.NewFormModal),
   { ssr: false }
@@ -201,6 +205,10 @@ export default function AppHome() {
           )}
 
           {currentTab === 'submissions' && isTabAllowed('submissions') && <SubmissionsHub />}
+
+          {currentTab === 'consultants' && isTabAllowed('consultants') && (
+            <ConsultantsView onNavigateTab={handleTabChange} />
+          )}
 
           {currentTab === 'media' && isTabAllowed('media') && <MediaManagerView />}
 

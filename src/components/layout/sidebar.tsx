@@ -11,6 +11,7 @@ import {
   Eye, 
   FileCheck, 
   FolderKanban, 
+  CalendarClock,
   X,
   LogOut,
   User
@@ -81,6 +82,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'پرونده مراجعین',
       icon: Inbox,
       badge: toPersianDigits(totalCasesCount),
+    },
+    {
+      id: 'consultants',
+      label: 'مشاوران',
+      icon: CalendarClock,
+      badge: 'نوبت‌ها',
     },
     {
       id: 'media',

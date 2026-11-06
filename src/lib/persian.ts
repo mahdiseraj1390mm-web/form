@@ -189,3 +189,32 @@ export function formatPersianDateOnly(isoString: string): string {
     return isoString;
   }
 }
+
+/**
+ * دریافت نام ماه شمسی از تاریخ ISO
+ */
+export function getJalaliMonthName(isoString: string): string {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('fa-IR', { month: 'long' }).format(date);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * دریافت خلاصه بیشترین آیتم بر اساس مقادیر واقعی برای نمایش در فوتر نمودارها
+ */
+export function getTopItemSummary(
+  items: Array<{ label: string; value: number }>,
+  defaultUnit: string = 'مورد'
+): string {
+  if (!items || items.length === 0) return 'هنوز داده‌ای ثبت نشده است';
+  const valid = items.filter((it) => it.value > 0);
+  if (valid.length === 0) return 'هنوز داده‌ای ثبت نشده است';
+  const top = [...valid].sort((a, b) => b.value - a.value)[0];
+  return `بیشترین: ${top.label} (${toPersianDigits(top.value)} ${defaultUnit})`;
+}
+

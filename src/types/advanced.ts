@@ -85,4 +85,5 @@ export interface TeamMember {
   permissions: DetailedPermissions;
   allowedTabs: string[]; // شناسه‌های تب‌های مجاز در سایدبار
   requireCaseCode?: boolean; // آیا در صفحه پرونده مراجعین نیاز به وارد کردن کد پرونده دارد؟
+  consultantId?: string; // شناسه یا عنوان مشاور متناظر در سامانه نوبت‌دهی (در صورت انتصاب به عنوان مشاور)
 }
