@@ -115,6 +115,22 @@ export async function POST(req: NextRequest) {
     if (action === 'save_submission') {
       const { submission } = body;
       if (submission) {
+        if (submission.formId === 'form-belhagh-booking') {
+          const subData = submission.data || {};
+          const hasSlot = Object.keys(subData).some(
+            (k) =>
+              k.startsWith('f_booking_') &&
+              !['f_booking_counselor', 'f_booking_date'].includes(k) &&
+              subData[k] &&
+              String(subData[k]).trim() !== ''
+          );
+          if (!hasSlot) {
+            return NextResponse.json(
+              { error: 'انتخاب روز و ساعت جلسه مشاوره الزامی است' },
+              { status: 400 }
+            );
+          }
+        }
         await saveFormSubmissionToDb(submission);
       }
       return NextResponse.json({ success: true });
