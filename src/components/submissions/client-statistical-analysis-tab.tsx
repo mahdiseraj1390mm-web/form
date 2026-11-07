@@ -63,6 +63,7 @@ interface ClientStatisticalAnalysisTabProps {
   };
   onNavigateTab?: (tab: 'overview' | 'profile' | 'forms' | 'followups' | 'finances') => void;
   onOpenAppointmentModal?: (appointment: Appointment) => void;
+  onPrint?: () => void;
 }
 
 type AnalysisFilter = 'all' | 'growth' | 'appointments' | 'health' | 'marital' | 'personality' | 'disorders';
@@ -75,6 +76,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
   smartAnalysis,
   onNavigateTab,
   onOpenAppointmentModal,
+  onPrint,
 }) => {
   const [activeFilter, setActiveFilter] = useState<AnalysisFilter>('all');
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
@@ -801,7 +803,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
             <span className="font-black text-[#173f6b]">{clientCase.caseCode}</span>
           </div>
           <button
-            onClick={() => window.print()}
+            onClick={onPrint || (() => window.print())}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
           >
             <Printer className="size-4 text-slate-500" />

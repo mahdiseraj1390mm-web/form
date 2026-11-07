@@ -917,11 +917,148 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   };
 
   const handlePrintDossier = () => {
-    document.body.classList.add('printing-single-dossier');
-    window.print();
-    setTimeout(() => {
-      document.body.classList.remove('printing-single-dossier');
-    }, 1000);
+    const printElem = document.getElementById('printable-client-dossier-root');
+    if (!printElem) {
+      window.print();
+      return;
+    }
+
+    try {
+      // ۱. پاکسازی آی‌فریم قبلی در صورت وجود
+      const prevFrame = document.getElementById('belhagh-dossier-print-iframe');
+      if (prevFrame && prevFrame.parentNode) {
+        prevFrame.parentNode.removeChild(prevFrame);
+      }
+
+      // ۲. ایجاد یک iframe کاملاً ایزوله در پس‌زمینه بدون نمایش به کاربر
+      const iframe = document.createElement('iframe');
+      iframe.id = 'belhagh-dossier-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.style.opacity = '0';
+      iframe.style.pointerEvents = 'none';
+      iframe.style.zIndex = '-9999';
+      document.body.appendChild(iframe);
+
+      const frameDoc = iframe.contentWindow?.document;
+      if (!frameDoc) {
+        window.print();
+        return;
+      }
+
+      // ۳. تجمیع کلیه استایل‌ها و فونت‌های تعریف‌شده در سند جاری
+      const styleNodes = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+        .map((node) => node.outerHTML)
+        .join('\n');
+
+      const innerContent = printElem.innerHTML;
+
+      frameDoc.open();
+      frameDoc.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="fa">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>پرونده مراجع ${clientCase.caseCode} - ${displayFullName}</title>
+            ${styleNodes}
+            <style>
+              @page {
+                size: A4 portrait;
+                margin: 8mm 8mm 10mm 8mm;
+              }
+              *, *::before, *::after {
+                box-sizing: border-box !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              html, body {
+                width: 100% !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                direction: rtl !important;
+                text-align: right !important;
+                font-family: var(--font-vazirmatn), Vazirmatn, Tahoma, -apple-system, sans-serif !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                font-size: 11pt !important;
+                line-height: 1.5 !important;
+              }
+              #printable-client-dossier-root,
+              .print-dossier-container {
+                display: block !important;
+                visibility: visible !important;
+                width: 100% !important;
+                padding: 2mm !important;
+                margin: 0 auto !important;
+              }
+              .print-avoid-break {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                margin-bottom: 12px !important;
+              }
+              table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-bottom: 8px !important;
+              }
+              th, td {
+                border: 1px solid #cbd5e1 !important;
+                padding: 6px 8px !important;
+              }
+              .bg-slate-800 {
+                background-color: #1e293b !important;
+                color: #ffffff !important;
+              }
+              .bg-slate-100 {
+                background-color: #f1f5f9 !important;
+              }
+              .bg-slate-50 {
+                background-color: #f8fafc !important;
+              }
+              .border-slate-900 {
+                border-color: #0f172a !important;
+              }
+              .border-slate-300 {
+                border-color: #cbd5e1 !important;
+              }
+              .border-slate-200 {
+                border-color: #e2e8f0 !important;
+              }
+              .hidden {
+                display: none !important;
+              }
+              .print\\:block,
+              .print-only {
+                display: block !important;
+              }
+            </style>
+          </head>
+          <body>
+            <div id="printable-client-dossier-root" class="print-dossier-container">
+              ${innerContent}
+            </div>
+          </body>
+        </html>
+      `);
+      frameDoc.close();
+
+      // ۴. فراخوانی دستور چاپ درون آی‌فریم مستقل (تنها پرونده مراجع منتخب بدون هرگونه نشت)
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {
+          window.print();
+        }
+      }, 250);
+    } catch {
+      window.print();
+    }
   };
 
   const handleExportClientExcel = async () => {
@@ -1947,6 +2084,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             smartAnalysis={smartAnalysis}
             onNavigateTab={(tab) => setActiveTab(tab)}
             onOpenAppointmentModal={(app) => openReportModal(app)}
+            onPrint={handlePrintDossier}
           />
         )}
 

@@ -130,19 +130,22 @@ pre {
     display: none !important;
   }
 
-  /* حالت چاپ ایزوله پرونده تکی مراجع: فقط پرونده فعال همان شخص چاپ شود نه کل صفحه */
-  body.printing-single-dossier > *:not(#printable-dossier-wrapper) {
+  /* حالت چاپ ایزوله پرونده تکی مراجع: پنهان‌سازی عناصر تعاملی پرونده هنگام پرینت */
+  .print-hidden-in-dossier {
     display: none !important;
   }
 
-  body.printing-single-dossier #printable-dossier-wrapper {
-    display: block !important;
+  /* کادر مودال پرونده در حالت پرینت به صورت صفحه کامل و بدون اسکرول باز شود */
+  #printable-dossier-wrapper {
     position: static !important;
+    overflow: visible !important;
+    background: #ffffff !important;
     width: 100% !important;
-  }
-
-  body.printing-single-dossier .print-hidden-in-dossier {
-    display: none !important;
+    height: auto !important;
+    min-height: 100% !important;
+    display: block !important;
+    inset: auto !important;
+    z-index: auto !important;
   }
 
   /* اجبار به نمایش کامل محتوای پرینت و برداشتن محدودیت‌های اسکرول */

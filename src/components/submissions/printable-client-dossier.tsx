@@ -28,6 +28,9 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
   safaEvaluationSubmission,
 }) => {
   const currentDatePersian = formatPersianDateTime(new Date().toISOString());
+  const clientFullName = (clientCase.fullName && clientCase.fullName !== 'مراجع مرکز بالحق' && clientCase.fullName !== 'مراجع')
+    ? clientCase.fullName
+    : `${combinedData.f_name || ''} ${combinedData.f_family || ''}`.trim() || clientCase.fullName || 'مراجع محترم';
 
   // دریافت کارنامه و ابعاد بالینی صفا در صورت وجود یا مؤلفه‌های تحلیلی
   const evalResult = safaEvaluationSubmission?.evaluationResult;
@@ -80,26 +83,26 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
         {/* نوار متاداده پرونده */}
         <div className="grid grid-cols-4 gap-3 text-[11px] font-bold text-slate-800">
           <div className="bg-white p-2 rounded-lg border border-slate-300">
+            <span className="text-slate-500 block text-[10px]">نام و نام خانوادگی:</span>
+            <span className="text-sm font-black text-slate-950 truncate block">{clientFullName}</span>
+          </div>
+
+          <div className="bg-white p-2 rounded-lg border border-slate-300">
             <span className="text-slate-500 block text-[10px]">کد یکتای پرونده:</span>
-            <span className="font-mono text-sm font-black text-slate-900">{clientCase.caseCode}</span>
+            <span className="font-mono text-sm font-black text-blue-900">{clientCase.caseCode}</span>
           </div>
 
           <div className="bg-white p-2 rounded-lg border border-slate-300">
             <span className="text-slate-500 block text-[10px]">وضعیت پرونده:</span>
-            <span className="text-slate-900">
+            <span className="text-slate-900 font-bold">
               {clientCase.overallStatus === 'approved' ? 'تأیید شده / فعال' : 'در حال بررسی'}
             </span>
           </div>
 
           <div className="bg-white p-2 rounded-lg border border-slate-300">
-            <span className="text-slate-500 block text-[10px]">نقش در خانواده:</span>
-            <span className="text-slate-900">{clientCase.roleInFamily || 'مراجع'}</span>
-          </div>
-
-          <div className="bg-white p-2 rounded-lg border border-slate-300">
-            <span className="text-slate-500 block text-[10px]">کل فرم‌ها و پرسشنامه‌ها:</span>
+            <span className="text-slate-500 block text-[10px]">کل فرم‌ها و ارزیابی‌ها:</span>
             <span className="font-mono text-sm font-black text-slate-900">
-              {toPersianDigits(submissions.length)} فرم تکمیل‌شده
+              {toPersianDigits(submissions.length)} فرم ثبت‌شده
             </span>
           </div>
         </div>
@@ -115,10 +118,17 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
         <table className="w-full border-collapse border border-slate-300 text-[11px]">
           <tbody>
             <tr className="border-b border-slate-300">
+              <td className="w-1/4 bg-slate-100 p-2 font-bold text-slate-700 border-l border-slate-300">نام و نام خانوادگی مراجع:</td>
+              <td className="w-1/4 p-2 font-black text-slate-950 text-xs border-l border-slate-300">{clientFullName}</td>
               <td className="w-1/4 bg-slate-100 p-2 font-bold text-slate-700 border-l border-slate-300">کد پرونده مراجع:</td>
-              <td className="w-1/4 p-2 font-mono font-bold border-l border-slate-300">{clientCase.caseCode}</td>
-              <td className="w-1/4 bg-slate-100 p-2 font-bold text-slate-700 border-l border-slate-300">شماره تلفن همراه:</td>
-              <td className="w-1/4 p-2 font-mono font-bold">{toPersianDigits(clientCase.mobile)}</td>
+              <td className="w-1/4 p-2 font-mono font-bold text-blue-900">{clientCase.caseCode}</td>
+            </tr>
+
+            <tr className="border-b border-slate-300">
+              <td className="bg-slate-100 p-2 font-bold text-slate-700 border-l border-slate-300">شماره تلفن همراه:</td>
+              <td className="p-2 font-mono font-bold border-l border-slate-300">{toPersianDigits(clientCase.mobile)}</td>
+              <td className="bg-slate-100 p-2 font-bold text-slate-700 border-l border-slate-300">نقش در خانواده:</td>
+              <td className="p-2 font-bold">{clientCase.roleInFamily || 'مراجع'}</td>
             </tr>
 
             <tr className="border-b border-slate-300">
