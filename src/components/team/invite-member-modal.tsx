@@ -88,6 +88,8 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const [allowedTabs, setAllowedTabs] = useState<string[]>(['submissions']);
   const [requireCaseCode, setRequireCaseCode] = useState(true);
   const [consultantId, setConsultantId] = useState('');
+  const [assignedConsultantIds, setAssignedConsultantIds] = useState<string[]>([]);
+  const [allowedTopics, setAllowedTopics] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -104,6 +106,8 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       );
       setRequireCaseCode(editingMember.requireCaseCode !== undefined ? editingMember.requireCaseCode : true);
       setConsultantId(editingMember.consultantId || '');
+      setAssignedConsultantIds(editingMember.assignedConsultantIds || []);
+      setAllowedTopics(editingMember.allowedTopics || []);
     } else {
       setName('');
       setMobile('');
@@ -113,6 +117,8 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       setAllowedTabs(['submissions']);
       setRequireCaseCode(true);
       setConsultantId('');
+      setAssignedConsultantIds([]);
+      setAllowedTopics([]);
     }
     setErrors({});
   }, [editingMember, isOpen]);
@@ -178,9 +184,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   };
 
   const toggleTopic = (topicId: string) => {
-    setAllowedTopics((prev) => {
+    setAllowedTopics((prev: string[]) => {
       if (prev.includes(topicId)) {
-        return prev.filter((t) => t !== topicId);
+        return prev.filter((t: string) => t !== topicId);
       } else {
         return [...prev, topicId];
       }
@@ -229,6 +235,8 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       allowedTabs,
       requireCaseCode,
       consultantId: consultantId.trim() || undefined,
+      assignedConsultantIds: assignedConsultantIds.length > 0 ? assignedConsultantIds : undefined,
+      allowedTopics: allowedTopics.length > 0 ? allowedTopics : undefined,
     });
 
     onClose();
@@ -318,7 +326,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                 </label>
                 <select
                   value={consultantId}
-                  onChange={(e) => setConsultantId(e.target.value)}
+                  onChange={(e) => handleConsultantChange(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 text-xs cursor-pointer"
                 >
                   <option value="">تطبیق خودکار و هوشمند بر اساس نام یا شماره همراه مشاور</option>

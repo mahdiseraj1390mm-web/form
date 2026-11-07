@@ -631,9 +631,10 @@ export function getBookingsForConsultant(
  */
 export function buildWeeklyScheduleForConsultant(
   consultant: ConsultantProfile,
-  submissions: FormSubmission[]
+  submissions: FormSubmission[],
+  allowedTopics?: string[]
 ): ConsultantDaySchedule[] {
-  const bookings = getBookingsForConsultant(consultant, submissions);
+  const bookings = getBookingsForConsultant(consultant, submissions, allowedTopics);
 
   return PERSIAN_WEEK_DAYS.map((day) => {
     // ۱. استخراج اسلات‌های از پیش تعریف‌شده برای این روز
