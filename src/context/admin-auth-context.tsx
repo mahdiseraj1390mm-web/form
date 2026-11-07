@@ -12,6 +12,9 @@ export interface AdminUser {
   allowedTabs?: string[];
   requireCaseCode?: boolean;
   isSuperAdmin?: boolean;
+  consultantId?: string;
+  assignedConsultantIds?: string[];
+  allowedTopics?: string[];
 }
 
 interface AdminAuthContextType {
@@ -163,6 +166,9 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               isSuperAdmin: false,
               allowedTabs: found.allowedTabs || ['submissions'],
               requireCaseCode: found.requireCaseCode !== undefined ? found.requireCaseCode : true,
+              consultantId: found.consultantId,
+              assignedConsultantIds: found.assignedConsultantIds || (found.consultantId ? [found.consultantId] : []),
+              allowedTopics: found.allowedTopics || [],
             };
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(user));
             document.cookie = `${COOKIE_NAME}=${encodeURIComponent(btoa('member:' + found.id + ':' + Date.now()))}; path=/; max-age=2592000; SameSite=Lax`;

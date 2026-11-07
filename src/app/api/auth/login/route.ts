@@ -83,6 +83,9 @@ export async function POST(req: NextRequest) {
           isSuperAdmin: false,
           allowedTabs: userAllowedTabs,
           requireCaseCode: member.requireCaseCode !== undefined ? member.requireCaseCode : true,
+          consultantId: member.consultantId,
+          assignedConsultantIds: member.assignedConsultantIds || (member.consultantId ? [member.consultantId] : []),
+          allowedTopics: member.allowedTopics || [],
         },
       });
 

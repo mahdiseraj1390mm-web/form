@@ -48,7 +48,8 @@ import {
   buildWeeklyScheduleForConsultant,
   buildAllConsultantsWithBookings,
   cleanConsultantName,
-  detectDayIndex
+  detectDayIndex,
+  COUNSELING_TOPICS
 } from '@/lib/consultant-helpers';
 import { ClientDossierFullview, ClientCaseGroup } from '@/components/submissions/client-dossier-fullview';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
@@ -144,17 +145,27 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
     return allConsultantsList[0]?.profile || KNOWN_CONSULTANTS[0];
   }, [isSuperAdmin, currentConsultantProfile, selectedConsultantId, allConsultantsList]);
 
-  // ۴. تایم‌لاین هفتگی مشاور فعال
-  const weeklySchedule = useMemo<ConsultantDaySchedule[]>(() => {
-    return buildWeeklyScheduleForConsultant(activeTimelineConsultant, submissions);
-  }, [activeTimelineConsultant, submissions]);
+  // موضوعات و حوزه‌های مشاوره مجاز برای مشاور جاری
+  const allowedTopics = useMemo<string[]>(() => {
+    if (isSuperAdmin) return [];
+    return (currentMember?.allowedTopics && currentMember.allowedTopics.length > 0)
+      ? currentMember.allowedTopics
+      : (currentUser?.allowedTopics || []);
+  }, [isSuperAdmin, currentMember, currentUser]);
 
-  // ۵. نوبت‌های مشاور فعال جاری
+  // ۴. تایم‌لاین هفتگی مشاور فعال (بدون نشت نوبت‌های سایرین)
+  const weeklySchedule = useMemo<ConsultantDaySchedule[]>(() => {
+    return buildWeeklyScheduleForConsultant(activeTimelineConsultant, submissions, allowedTopics);
+  }, [activeTimelineConsultant, submissions, allowedTopics]);
+
+  // ۵. نوبت‌های مشاور فعال جاری (ایزوله‌سازی دقیق نوبت‌های مراجعان مشاور)
   const activeConsultantBookings = useMemo<ConsultantBookingItem[]>(() => {
-    const found = allConsultantsList.find((c) => c.profile.id === activeTimelineConsultant.id);
-    if (found) return found.bookings;
-    return getBookingsForConsultant(activeTimelineConsultant, submissions);
-  }, [allConsultantsList, activeTimelineConsultant, submissions]);
+    if (isSuperAdmin) {
+      const found = allConsultantsList.find((c) => c.profile.id === activeTimelineConsultant.id);
+      if (found) return found.bookings;
+    }
+    return getBookingsForConsultant(activeTimelineConsultant, submissions, allowedTopics);
+  }, [isSuperAdmin, allConsultantsList, activeTimelineConsultant, submissions, allowedTopics]);
 
   // باز کردن پرونده مراجع
   const handleOpenClientDossier = (booking: ConsultantBookingItem) => {
@@ -603,13 +614,28 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-100 text-blue-800">
                   پنل اختصاصی مشاور
                 </span>
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   حساب کاربری فعال
                 </span>
+                {allowedTopics.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    {allowedTopics.map((topId) => {
+                      const topicObj = COUNSELING_TOPICS.find((t) => t.id === topId);
+                      return (
+                        <span
+                          key={topId}
+                          className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        >
+                          {topicObj?.name || topId}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <h2 className="text-lg font-black text-slate-900 tracking-tight">
                 {currentConsultantProfile.name}

@@ -144,7 +144,9 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     accessibleFormIds: ['all'],
     allowedTabs: ['consultants', 'submissions'],
     requireCaseCode: false,
-    consultantId: 'f_booking_borhani_teen',
+    consultantId: 'f_booking_borhani',
+    assignedConsultantIds: ['f_booking_borhani_teen', 'f_booking_borhani_family'],
+    allowedTopics: ['teen', 'family'],
     permissions: {
       canCreateForms: false,
       canEditForms: false,
@@ -181,6 +183,8 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     allowedTabs: ['consultants', 'submissions'],
     requireCaseCode: false,
     consultantId: 'f_booking_farahmandi',
+    assignedConsultantIds: ['f_booking_farahmandi'],
+    allowedTopics: ['child'],
     permissions: {
       canCreateForms: false,
       canEditForms: false,
@@ -216,7 +220,9 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     accessibleFormIds: ['all'],
     allowedTabs: ['consultants', 'submissions'],
     requireCaseCode: false,
-    consultantId: 'f_booking_shavandi_child',
+    consultantId: 'f_booking_shavandi',
+    assignedConsultantIds: ['f_booking_shavandi_child', 'f_booking_shavandi_teen'],
+    allowedTopics: ['child', 'teen'],
     permissions: {
       canCreateForms: false,
       canEditForms: false,
@@ -253,6 +259,8 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     allowedTabs: ['consultants', 'submissions'],
     requireCaseCode: false,
     consultantId: 'f_booking_teymourian',
+    assignedConsultantIds: ['f_booking_teymourian'],
+    allowedTopics: ['child'],
     permissions: {
       canCreateForms: false,
       canEditForms: false,
@@ -289,6 +297,8 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     allowedTabs: ['consultants', 'submissions'],
     requireCaseCode: false,
     consultantId: 'f_booking_torshizi',
+    assignedConsultantIds: ['f_booking_torshizi'],
+    allowedTopics: ['clinical'],
     permissions: {
       canCreateForms: false,
       canEditForms: false,

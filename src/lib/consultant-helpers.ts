@@ -80,6 +80,40 @@ export interface ConsultantDaySchedule {
 /**
  * فهرست جامع مشاوران مرکز مشاوره و روانشناسی بالحق به همراه زمان‌بندی دقیق
  */
+
+export interface CounselingTopicOption {
+  id: string;
+  name: string;
+  keywords: string[];
+  description: string;
+}
+
+export const COUNSELING_TOPICS: CounselingTopicOption[] = [
+  { id: 'child', name: 'مشاوره کودک', keywords: ['کودک'], description: 'پرونده‌ها و نوبت‌های تخصصی کودک' },
+  { id: 'teen', name: 'مشاوره نوجوان', keywords: ['نوجوان'], description: 'پرونده‌ها و نوبت‌های تخصصی نوجوان' },
+  { id: 'education', name: 'مشاوره تحصیلی', keywords: ['تحصیلی'], description: 'برنامه‌ریزی و هدایت تحصیلی' },
+  { id: 'clinical', name: 'مشاوره بالینی و روان‌درمانی', keywords: ['بالینی', 'روان‌درمانی', 'فردی'], description: 'اضطراب، افسردگی و درمان‌های بالینی' },
+  { id: 'family', name: 'مشاوره ازدواج و خانواده', keywords: ['خانواده', 'ازدواج', 'زوجین', 'زوج'], description: 'مشاوره پیش از ازدواج، زوج‌درمانی و خانواده' },
+];
+
+export const CONSULTANT_DEFAULT_TOPICS: Record<string, string[]> = {
+  f_booking_farahmandi: ['child'],
+  f_booking_teymourian: ['child'],
+  f_booking_shavandi: ['child', 'teen'],
+  f_booking_ansari: ['child', 'teen'],
+  f_booking_zeynali: ['child', 'family'],
+  f_booking_borhani: ['teen', 'family'],
+  f_booking_rastgoo: ['teen', 'clinical'],
+  f_booking_abdi_education: ['education'],
+  f_booking_torshizi: ['clinical'],
+  f_booking_yavari: ['clinical'],
+  f_booking_golyayi: ['clinical'],
+  f_booking_sedighi: ['family'],
+  f_booking_karimi: ['family'],
+  f_booking_abdi_family: ['family'],
+  'user-reviewer': ['clinical'],
+};
+
 export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
   {
     id: 'f_booking_farahmandi',
@@ -350,6 +384,7 @@ export function cleanConsultantName(name: string): string {
   return name
     .replace(/^(جناب\s+)?(آقای|خانم|دکتر|استاد|سرکار\s+خانم)\s+/, '')
     .replace(/\s*\(.*?\)/g, '')
+    .replace(/^(مشاور|روانشناس)\s+/, '')
     .trim();
 }
 
@@ -458,81 +493,137 @@ export function matchMemberToConsultant(
 ): ConsultantProfile {
   const allProfiles = [...KNOWN_CONSULTANTS, ...customProfiles];
 
-  // ۱. انطباق با consultantId صریح
-  if (member.consultantId) {
-    const cId = member.consultantId;
-    const found = allProfiles.find((p) => p.id === cId || p.bookingFieldIds.includes(cId));
+  // ۱. انطباق با consultantId صریح یا شناسه‌های منتسب شده
+  const cIds = [
+    member.consultantId,
+    ...(member.assignedConsultantIds || []),
+  ].filter(Boolean) as string[];
+
+  for (const cId of cIds) {
+    const found = allProfiles.find(
+      (p) => p.id === cId || p.bookingFieldIds.includes(cId)
+    );
     if (found) return found;
   }
 
   // ۲. انطباق با شماره تلفن همراه
   const memberPhone = normalizeMobileNumber(member.mobile || member.username || '');
-  if (memberPhone) {
-    const found = allProfiles.find((p) => normalizeMobileNumber(p.mobile) === memberPhone);
-    if (found) return found;
-  }
-
-  // ۳. انطباق با نام خانوادگی یا نام مشاور
-  const cleanMemName = cleanConsultantName(member.name);
-  if (cleanMemName) {
+  if (memberPhone && memberPhone.length >= 10) {
     const found = allProfiles.find((p) => {
-      const cleanPName = cleanConsultantName(p.name);
-      return cleanMemName.includes(cleanPName) || cleanPName.includes(cleanMemName);
+      const pPhone = normalizeMobileNumber(p.mobile);
+      return pPhone && pPhone === memberPhone;
     });
     if (found) return found;
   }
 
-  // ۴. در غیر این صورت، ساخت یک پروفایل پویا برای این عضو تیم
+  // ۳. انطباق با نام خانوادگی یا نام مشاور (بدون واژه‌های عمومی)
+  const cleanMemName = cleanConsultantName(member.name);
+  const GENERIC_WORDS = ['مشاور', 'مشاوره', 'مرکز', 'بالحق', 'دکتر', 'روانشناس', 'استاد', 'همکار', 'تخصصی', 'عمومی', 'کارشناس'];
+  const isGeneric = (str: string) => !str || str.length < 3 || GENERIC_WORDS.includes(str.trim());
+
+  if (!isGeneric(cleanMemName)) {
+    const found = allProfiles.find((p) => {
+      const cleanPName = cleanConsultantName(p.name);
+      if (isGeneric(cleanPName)) return false;
+      return cleanMemName === cleanPName || cleanMemName.includes(cleanPName) || cleanPName.includes(cleanMemName);
+    });
+    if (found) return found;
+  }
+
+  // ۴. در غیر این صورت ساخت پروفایل با ساعات کاری خالی (دست‌نخورده تا زمان ویرایش توسط کاربر)
   return {
-    id: member.id,
-    name: member.name,
+    id: member.id || 'custom-user',
+    name: member.name || 'مشاور',
     mobile: member.mobile || member.username || '',
     jobTitle: member.jobTitle || 'مشاور',
     specialization: member.jobTitle || 'مشاوره تخصصی',
-    bookingFieldIds: [],
-    definedSlots: [
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'شنبه - ۱۰:۰۰ الی ۱۰:۴۵', category: 'عمومی', fieldId: member.id },
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'شنبه - ۱۱:۰۰ الی ۱۱:۴۵', category: 'عمومی', fieldId: member.id },
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'دوشنبه - ۱۴:۰۰ الی ۱۴:۴۵', category: 'عمومی', fieldId: member.id },
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۵:۰۰ الی ۱۵:۴۵', label: 'دوشنبه - ۱۵:۰۰ الی ۱۵:۴۵', category: 'عمومی', fieldId: member.id },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'چهارشنبه - ۱۰:۰۰ الی ۱۰:۴۵', category: 'عمومی', fieldId: member.id },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'چهارشنبه - ۱۱:۰۰ الی ۱۱:۴۵', category: 'عمومی', fieldId: member.id },
-    ],
+    bookingFieldIds: member.consultantId ? [member.consultantId] : [],
+    definedSlots: [],
   };
 }
 
 /**
  * واکشی تمام نوبت‌های رزرو شده مربوط به یک مشاور خاص
  */
-export function getBookingsForConsultant(
+/**
+ * بررسی قطعی و دقیق اینکه آیا نوبت به یک مشاور خاص یا حوزه‌های مجاز وی تعلق دارد یا خیر.
+ * این متد از نشت نوبت‌های سایر مشاوران اکیداً جلوگیری می‌کند.
+ */
+export function isBookingAssignedToConsultant(
+  booking: ConsultantBookingItem,
   consultant: ConsultantProfile,
-  submissions: FormSubmission[]
-): ConsultantBookingItem[] {
-  const cleanCName = cleanConsultantName(consultant.name);
-  const cleanPhone = normalizeMobileNumber(consultant.mobile);
+  allowedTopics?: string[]
+): boolean {
+  if (!booking || !consultant) return false;
 
-  const results: ConsultantBookingItem[] = [];
+  const rawData = booking.rawSubmission?.data || {};
 
-  for (const sub of submissions) {
-    const item = extractBookingItemFromSubmission(sub);
-    if (!item) continue;
+  // ۱. تطبیق مستقیم بر اساس شناسه‌های فیلد رزرو فرم (مطمئن‌ترین روش)
+  if (consultant.bookingFieldIds && consultant.bookingFieldIds.length > 0) {
+    const fieldMatch = consultant.bookingFieldIds.some((fId) => Boolean(rawData[fId]));
+    if (fieldMatch) return true;
+  }
 
-    // تطبیق بر اساس فیلد نوبت
-    const fieldMatch = consultant.bookingFieldIds.length > 0 && consultant.bookingFieldIds.some((fId) => sub.data?.[fId]);
+  // ۲. تطبیق بر اساس شماره تلفن همراه مشاور (حداقل ۱۰ رقم)
+  const cPhone = normalizeMobileNumber(consultant.mobile);
+  const bPhone = normalizeMobileNumber(booking.consultantMobile);
+  if (cPhone && bPhone && cPhone.length >= 10 && bPhone.length >= 10 && cPhone === bPhone) {
+    return true;
+  }
 
-    // تطبیق بر اساس شماره تلفن
-    const phoneMatch = cleanPhone && normalizeMobileNumber(item.consultantMobile) === cleanPhone;
+  // ۳. تطبیق بر اساس نام اختصاصی مشاور (بدون واژه‌های عمومی)
+  const cleanC = cleanConsultantName(consultant.name);
+  const cleanB = cleanConsultantName(booking.consultantName);
 
-    // تطبیق بر اساس نام مشاور
-    const itemCleanName = cleanConsultantName(item.consultantName);
-    const nameMatch = cleanCName && (itemCleanName.includes(cleanCName) || cleanCName.includes(itemCleanName));
+  const GENERIC_STOPWORDS = ['مشاور', 'مشاوره', 'مرکز', 'بالحق', 'دکتر', 'روانشناس', 'استاد', 'همکار', 'تخصصی', 'عمومی', 'کارشناس'];
+  const isGeneric = (str: string) => !str || str.length < 3 || GENERIC_STOPWORDS.includes(str.trim());
 
-    if (fieldMatch || phoneMatch || nameMatch) {
-      results.push(item);
+  if (!isGeneric(cleanC) && !isGeneric(cleanB)) {
+    // اگر نام‌ها برابر باشند یا نام خانوادگی اختصاصی یکسان باشد
+    if (cleanC === cleanB || cleanB.includes(cleanC) || cleanC.includes(cleanB)) {
+      return true;
     }
   }
 
-  return results;
+  // ۴. تطبیق بر اساس موضوعات مجاز مشاوره (allowedTopics) برای مشاورانی با چند نقش
+  if (allowedTopics && allowedTopics.length > 0) {
+    const topicText = (booking.topic || '').toLowerCase();
+    const isTopicAllowed = allowedTopics.some((tId) => {
+      const topicObj = COUNSELING_TOPICS.find((ct) => ct.id === tId);
+      if (!topicObj) return false;
+      return topicObj.keywords.some((kw) => topicText.includes(kw));
+    });
+
+    if (isTopicAllowed) {
+      // بررسی عدم تعلق صریح به مشاور دیگر
+      const belongsToOther = KNOWN_CONSULTANTS.some((otherC) => {
+        if (otherC.id === consultant.id) return false;
+        if (otherC.bookingFieldIds.some((fId) => Boolean(rawData[fId]))) return true;
+        const otherPhone = normalizeMobileNumber(otherC.mobile);
+        if (otherPhone && bPhone && otherPhone.length >= 10 && otherPhone === bPhone) return true;
+        const otherClean = cleanConsultantName(otherC.name);
+        if (!isGeneric(otherClean) && !isGeneric(cleanB) && (cleanB.includes(otherClean) || otherClean.includes(cleanB))) {
+          return true;
+        }
+        return false;
+      });
+
+      if (!belongsToOther) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function getBookingsForConsultant(
+  consultant: ConsultantProfile,
+  submissions: FormSubmission[],
+  allowedTopics?: string[]
+): ConsultantBookingItem[] {
+  const allBookings = getAllBookingItems(submissions);
+  return allBookings.filter((b) => isBookingAssignedToConsultant(b, consultant, allowedTopics));
 }
 
 /**
@@ -663,19 +754,20 @@ export function buildAllConsultantsWithBookings(
   const allBookings = getAllBookingItems(submissions);
   const consultantsMap = new Map<string, ConsultantListItem>();
 
-  // ۱. اعضای تیم تعریف‌شده در سامانه (به جز سوپرادمین)
+  // ۱. اعضای تیم تعریف‌شده در سامانه که به عنوان مشاور فعالند
   teamMembers.forEach((member) => {
     const isConsultantUser =
       member.allowedTabs?.includes('consultants') ||
       (member.jobTitle && (member.jobTitle.includes('مشاور') || member.jobTitle.includes('روانشناس'))) ||
       Boolean(member.consultantId) ||
+      (member.allowedTopics && member.allowedTopics.length > 0) ||
       KNOWN_CONSULTANTS.some(
         (k) =>
-          normalizeMobileNumber(k.mobile) === normalizeMobileNumber(member.mobile) ||
+          (member.mobile && normalizeMobileNumber(k.mobile) === normalizeMobileNumber(member.mobile)) ||
           cleanConsultantName(k.name) === cleanConsultantName(member.name)
       );
 
-    if (isConsultantUser || member.role !== 'super_admin') {
+    if (isConsultantUser && member.role !== 'super_admin') {
       const prof = matchMemberToConsultant(member);
       consultantsMap.set(prof.id, {
         profile: prof,
@@ -685,11 +777,11 @@ export function buildAllConsultantsWithBookings(
     }
   });
 
-  // ۲. اضافه کردن مشاوران رسمی مرکز بالحق
+  // ۲. اضافه کردن مشاوران رسمی مرکز بالحق (ساعت کاری دست‌نخورده حفظ می‌شود)
   KNOWN_CONSULTANTS.forEach((kc) => {
     const cleanKPhone = normalizeMobileNumber(kc.mobile);
     const existing = Array.from(consultantsMap.values()).find(
-      (c) => normalizeMobileNumber(c.profile.mobile) === cleanKPhone
+      (c) => normalizeMobileNumber(c.profile.mobile) === cleanKPhone || c.profile.id === kc.id
     );
 
     if (!existing) {
@@ -697,93 +789,59 @@ export function buildAllConsultantsWithBookings(
         profile: kc,
         bookings: [],
       });
+    } else {
+      // ساعت کاری دقیقاً همان زمان‌بندی تعیین‌شده رسمی حفظ می‌شود
+      if (existing.profile.definedSlots.length === 0 && kc.definedSlots.length > 0) {
+        existing.profile.definedSlots = kc.definedSlots;
+      }
+      if (existing.profile.bookingFieldIds.length === 0 && kc.bookingFieldIds.length > 0) {
+        existing.profile.bookingFieldIds = kc.bookingFieldIds;
+      }
     }
   });
 
-  // ۳. تخصیص تک‌تک نوبت‌های ثبت‌شده به مشاوران
+  // ۳. تخصیص ایمن نوبت‌ها بر اساس فیلتر قطعی بدون نشت
   for (const booking of allBookings) {
     let assigned = false;
-    const cleanBName = cleanConsultantName(booking.consultantName);
-    const cleanBMobile = normalizeMobileNumber(booking.consultantMobile);
-
     for (const item of consultantsMap.values()) {
-      // الف: تطبیق بر اساس فیلد رزرو فرم (مثلاً f_booking_farahmandi)
-      const fieldMatch =
-        booking.rawSubmission.data &&
-        item.profile.bookingFieldIds.some((fId) => booking.rawSubmission.data[fId]);
-
-      // ب: تطبیق بر اساس شماره تلفن همراه مشاور
-      const itemPhone = normalizeMobileNumber(item.profile.mobile);
-      const phoneMatch = cleanBMobile && itemPhone && cleanBMobile === itemPhone;
-
-      // ج: تطبیق بر اساس نام مشاور
-      const cleanPName = cleanConsultantName(item.profile.name);
-      const nameMatch =
-        cleanBName &&
-        cleanPName &&
-        (cleanBName.includes(cleanPName) || cleanPName.includes(cleanBName));
-
-      if (fieldMatch || phoneMatch || nameMatch) {
+      const memberAllowedTopics = item.member?.allowedTopics;
+      if (isBookingAssignedToConsultant(booking, item.profile, memberAllowedTopics)) {
         item.bookings.push(booking);
         assigned = true;
         break;
       }
     }
 
-    // د: اگر نوبت به مشاور دیگری اختصاص داشت (مثلاً نام متنی مشاور مثل «دکتر علوی» که در لیست پیش‌فرض نیست):
-    // ایجاد مشاور جدید با همان نام واقعی تا نوبت به مشاور مربوطه نمایش داده شود
-    if (!assigned && cleanBName && !cleanBName.includes('مشاور مرکز')) {
-      const dynamicKey = `dyn_${cleanBName}`;
-      let dynamicEntry = consultantsMap.get(dynamicKey);
-      if (!dynamicEntry) {
-        const dynProfile: ConsultantProfile = {
-          id: dynamicKey,
-          name: booking.consultantName,
-          mobile: booking.consultantMobile || '',
-          jobTitle: 'مشاور',
-          specialization: booking.topic || 'مشاوره تخصصی',
-          bookingFieldIds: [],
-          definedSlots: [
-            {
-              dayIndex: booking.dayIndex,
-              dayName: booking.dayName,
-              timeRange: booking.timeRange,
-              label: booking.slotValue,
-              category: booking.topic,
-              fieldId: dynamicKey,
-            },
-          ],
-        };
-        dynamicEntry = {
-          profile: dynProfile,
-          bookings: [],
-        };
-        consultantsMap.set(dynamicKey, dynamicEntry);
+    // در صورتی که نوبت برای مشاوری باشد که در سیستم پیش‌فرض نیست اما نام صریح دارد
+    if (!assigned) {
+      const cleanBName = cleanConsultantName(booking.consultantName);
+      const GENERIC_WORDS = ['مشاور', 'مشاوره', 'مرکز', 'بالحق', 'دکتر', 'روانشناس', 'استاد', 'همکار', 'تخصصی', 'عمومی'];
+      if (cleanBName && cleanBName.length >= 3 && !GENERIC_WORDS.includes(cleanBName)) {
+        const dynamicKey = `dyn_${cleanBName}`;
+        let dynamicEntry = consultantsMap.get(dynamicKey);
+        if (!dynamicEntry) {
+          const dynProfile: ConsultantProfile = {
+            id: dynamicKey,
+            name: booking.consultantName,
+            mobile: booking.consultantMobile || '',
+            jobTitle: 'مشاور',
+            specialization: booking.topic || 'مشاوره تخصصی',
+            bookingFieldIds: [],
+            definedSlots: [],
+          };
+          dynamicEntry = {
+            profile: dynProfile,
+            bookings: [],
+          };
+          consultantsMap.set(dynamicKey, dynamicEntry);
+        }
+        dynamicEntry.bookings.push(booking);
       }
-      dynamicEntry.bookings.push(booking);
     }
   }
 
-  // ۴. مرتب‌سازی لیست مشاوران:
-  // اولویت اول با مشاورانی که نوبت رزرو شده دارند (تعداد بیشتر نوبت‌ها)
-  // اولویت دوم با اعضای تیم تعریف‌شده
-  const consultantsList = Array.from(consultantsMap.values()).sort((a, b) => {
-    if (b.bookings.length !== a.bookings.length) {
-      return b.bookings.length - a.bookings.length;
-    }
-    if (a.member && !b.member) return -1;
-    if (!a.member && b.member) return 1;
-    return a.profile.name.localeCompare(b.profile.name, 'fa');
-  });
-
-  const uniqueClients = new Set<string>();
-  allBookings.forEach((b) => {
-    if (b.caseCode && b.caseCode !== 'ثبت‌نشده') {
-      uniqueClients.add(b.caseCode);
-    } else if (b.clientMobile) {
-      uniqueClients.add(b.clientMobile);
-    }
-  });
+  const consultantsList = Array.from(consultantsMap.values());
+  const uniqueClients = new Set(allBookings.map((b) => b.caseCode || b.clientMobile).filter(Boolean));
 
   return {
     consultantsList,

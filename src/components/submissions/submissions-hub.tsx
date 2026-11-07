@@ -41,6 +41,13 @@ import {
 } from 'lucide-react';
 import { formatPersianDateTime, formatCurrency, toPersianDigits, getFieldDisplayValue } from '@/lib/persian';
 import { isUnassignedSafaSubmission } from '@/lib/safa-utils';
+import { 
+  ConsultantProfile, 
+  matchMemberToConsultant, 
+  extractBookingItemFromSubmission, 
+  isBookingAssignedToConsultant, 
+  COUNSELING_TOPICS 
+} from '@/lib/consultant-helpers';
 
 interface ClientCaseGroup {
   caseCode: string;
@@ -128,6 +135,49 @@ export const SubmissionsHub: React.FC = () => {
     return submissions.filter(isUnassignedSafaSubmission).length;
   }, [submissions]);
 
+
+  // بررسی انتساب کاربر جاری به عنوان مشاور
+  const isConsultantUser = !isSuperAdmin && Boolean(
+    currentMember?.consultantId ||
+    (currentMember?.allowedTopics && currentMember.allowedTopics.length > 0) ||
+    (currentUser?.allowedTopics && currentUser.allowedTopics.length > 0) ||
+    currentMember?.jobTitle?.includes('مشاور') ||
+    currentMember?.jobTitle?.includes('روانشناس') ||
+    currentUser?.jobTitle?.includes('مشاور') ||
+    currentUser?.jobTitle?.includes('روانشناس')
+  );
+
+  const consultantAllowedTopics = useMemo<string[]>(() => {
+    if (isSuperAdmin) return [];
+    return (currentMember?.allowedTopics && currentMember.allowedTopics.length > 0)
+      ? currentMember.allowedTopics
+      : (currentUser?.allowedTopics || []);
+  }, [isSuperAdmin, currentMember, currentUser]);
+
+  const currentConsultantProfile = useMemo<ConsultantProfile | null>(() => {
+    if (!isConsultantUser) return null;
+    if (currentMember) return matchMemberToConsultant(currentMember);
+    if (currentUser) {
+      return matchMemberToConsultant({
+        id: currentUser.id || 'custom-user',
+        name: currentUser.name,
+        mobile: currentUser.mobile || currentUser.username,
+        email: '',
+        jobTitle: currentUser.jobTitle || 'مشاور',
+        role: 'custom',
+        status: 'active',
+        invitedAt: '',
+        accessibleFormIds: ['all'],
+        permissions: {} as any,
+        allowedTabs: currentUser.allowedTabs || [],
+        consultantId: currentUser.consultantId,
+        assignedConsultantIds: currentUser.assignedConsultantIds,
+        allowedTopics: currentUser.allowedTopics,
+      });
+    }
+    return null;
+  }, [isConsultantUser, currentMember, currentUser]);
+
   const clientCases: ClientCaseGroup[] = useMemo(() => {
     const caseMap = new Map<string, ClientCaseGroup>();
 
@@ -211,10 +261,41 @@ export const SubmissionsHub: React.FC = () => {
       }
     });
 
-    return Array.from(caseMap.values()).sort(
+    const allCases = Array.from(caseMap.values()).sort(
       (a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime()
     );
-  }, [submissions, forms]);
+
+    // اگر کاربر مشاور باشد، فقط پرونده‌های مراجعان خودش و حوزه‌های مجاز تخصصی‌اش را مشاهده می‌کند
+    if (isConsultantUser && currentConsultantProfile) {
+      return allCases.filter((c) => {
+        return c.submissions.some((sub) => {
+          const bookingItem = extractBookingItemFromSubmission(sub);
+          if (bookingItem && isBookingAssignedToConsultant(bookingItem, currentConsultantProfile, consultantAllowedTopics)) {
+            return true;
+          }
+          if (currentConsultantProfile.bookingFieldIds.length > 0) {
+            const hasField = currentConsultantProfile.bookingFieldIds.some((fId) => Boolean(sub.data?.[fId]));
+            if (hasField) return true;
+          }
+          // بررسی موضوعات مجاز مشاوره (مثلاً اگر مشاور ازدواج است فقط پرونده‌های ازدواج را ببیند)
+          if (consultantAllowedTopics.length > 0) {
+            const subTopic = String(sub.data?.f_topic || sub.data?.f_counseling_subject || sub.data?.topic || '').toLowerCase();
+            const matchesTopic = consultantAllowedTopics.some((tId) => {
+              const topicObj = COUNSELING_TOPICS.find((t) => t.id === tId);
+              return topicObj && topicObj.keywords.some((kw) => subTopic.includes(kw));
+            });
+            if (matchesTopic) {
+              if (!bookingItem) return true;
+              return isBookingAssignedToConsultant(bookingItem, currentConsultantProfile, consultantAllowedTopics);
+            }
+          }
+          return false;
+        });
+      });
+    }
+
+    return allCases;
+  }, [submissions, forms, isConsultantUser, currentConsultantProfile, consultantAllowedTopics]);
 
 function normalizeSearchText(str: string): string {
   if (!str) return '';

@@ -162,7 +162,7 @@
       "submissions"
     ],
     "requireCaseCode": false,
-    "consultantId": "f_booking_borhani_teen",
+    "consultantId": "f_booking_borhani",
     "permissions": {
       "canCreateForms": false,
       "canEditForms": false,
@@ -181,7 +181,15 @@
       "canManageSms": false,
       "canManageIntegrations": false,
       "canManageTeam": false
-    }
+    },
+    "assignedConsultantIds": [
+      "f_booking_borhani_teen",
+      "f_booking_borhani_family"
+    ],
+    "allowedTopics": [
+      "teen",
+      "family"
+    ]
   },
   {
     "id": "user-counselor-farahmandi",
@@ -222,7 +230,13 @@
       "canManageSms": false,
       "canManageIntegrations": false,
       "canManageTeam": false
-    }
+    },
+    "assignedConsultantIds": [
+      "f_booking_farahmandi"
+    ],
+    "allowedTopics": [
+      "child"
+    ]
   },
   {
     "id": "user-counselor-shavandi",
@@ -244,7 +258,7 @@
       "submissions"
     ],
     "requireCaseCode": false,
-    "consultantId": "f_booking_shavandi_child",
+    "consultantId": "f_booking_shavandi",
     "permissions": {
       "canCreateForms": false,
       "canEditForms": false,
@@ -263,7 +277,15 @@
       "canManageSms": false,
       "canManageIntegrations": false,
       "canManageTeam": false
-    }
+    },
+    "assignedConsultantIds": [
+      "f_booking_shavandi_child",
+      "f_booking_shavandi_teen"
+    ],
+    "allowedTopics": [
+      "child",
+      "teen"
+    ]
   },
   {
     "id": "user-counselor-teymourian",
@@ -304,7 +326,13 @@
       "canManageSms": false,
       "canManageIntegrations": false,
       "canManageTeam": false
-    }
+    },
+    "assignedConsultantIds": [
+      "f_booking_teymourian"
+    ],
+    "allowedTopics": [
+      "child"
+    ]
   },
   {
     "id": "user-counselor-torshizi",
@@ -345,6 +373,12 @@
       "canManageSms": false,
       "canManageIntegrations": false,
       "canManageTeam": false
-    }
+    },
+    "assignedConsultantIds": [
+      "f_booking_torshizi"
+    ],
+    "allowedTopics": [
+      "clinical"
+    ]
   }
 ]

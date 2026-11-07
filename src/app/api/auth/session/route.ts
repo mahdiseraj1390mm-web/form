@@ -47,6 +47,9 @@ export async function GET(req: NextRequest) {
                 isSuperAdmin: false,
                 allowedTabs: member.allowedTabs || ['submissions'],
                 requireCaseCode: member.requireCaseCode !== undefined ? member.requireCaseCode : true,
+                consultantId: member.consultantId,
+                assignedConsultantIds: member.assignedConsultantIds || (member.consultantId ? [member.consultantId] : []),
+                allowedTopics: member.allowedTopics || [],
               },
             });
           }

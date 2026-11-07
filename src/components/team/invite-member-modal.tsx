@@ -29,6 +29,7 @@ import {
 import { TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { Form } from '@/types/form';
 import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
+import { COUNSELING_TOPICS, CONSULTANT_DEFAULT_TOPICS, KNOWN_CONSULTANTS } from '@/lib/consultant-helpers';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
@@ -134,6 +135,56 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
 
   const deselectAllTabs = () => {
     setAllowedTabs([]);
+  };
+
+
+  const handleConsultantChange = (selectedId: string) => {
+    setConsultantId(selectedId);
+    if (!selectedId) {
+      setAssignedConsultantIds([]);
+      return;
+    }
+
+    const prof = KNOWN_CONSULTANTS.find(
+      (c) => c.id === selectedId || c.bookingFieldIds.includes(selectedId)
+    );
+
+    if (prof) {
+      if (!name.trim()) {
+        setName(prof.name);
+      }
+      if (!mobile.trim() && prof.mobile) {
+        setMobile(prof.mobile);
+      }
+      if (!jobTitle.trim() || jobTitle === 'همکار اداری و پذیرش') {
+        setJobTitle(prof.jobTitle || 'مشاور');
+      }
+      setAssignedConsultantIds(prof.bookingFieldIds);
+
+      const defaultTopics = CONSULTANT_DEFAULT_TOPICS[prof.id] || [];
+      if (defaultTopics.length > 0) {
+        setAllowedTopics(defaultTopics);
+      }
+
+      setAllowedTabs((prev) => {
+        const next = new Set(prev);
+        next.add('consultants');
+        next.add('submissions');
+        return Array.from(next);
+      });
+    } else {
+      setAssignedConsultantIds([selectedId]);
+    }
+  };
+
+  const toggleTopic = (topicId: string) => {
+    setAllowedTopics((prev) => {
+      if (prev.includes(topicId)) {
+        return prev.filter((t) => t !== topicId);
+      } else {
+        return [...prev, topicId];
+      }
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
