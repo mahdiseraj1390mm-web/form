@@ -69,6 +69,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
   const [editingScheduleConsultant, setEditingScheduleConsultant] = useState<{
     id: string;
     name: string;
+    topics?: string[];
     schedule: AppointmentData;
   } | null>(null);
 
@@ -1413,9 +1414,13 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                             <button
                               type="button"
                               onClick={() => {
+                                const consultantTopics = (consultant as any).allowedTopics || [];
+                                const enabledTopics = cConfig?.enabledTopics || [];
+                                const topicsToPass = enabledTopics.length > 0 ? enabledTopics : consultantTopics;
                                 setEditingScheduleConsultant({
                                   id: consultant.id,
                                   name: fullName,
+                                  topics: topicsToPass,
                                   schedule: cConfig?.customWorkingHours || (consultant as any).workingHours || field.appointmentData || {
                                     slotDurationMinutes: 45,
                                     restTimeMinutes: 15,
@@ -1666,6 +1671,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
         description="ساعات کاری تنظیم‌شده در این بخش صرفاً برای همین فرم اعمال می‌گردد."
         consultantName={editingScheduleConsultant?.name}
         initialSchedule={editingScheduleConsultant?.schedule}
+        topics={editingScheduleConsultant?.topics}
         onSave={handleSaveCustomConsultantSchedule}
       />
     </>

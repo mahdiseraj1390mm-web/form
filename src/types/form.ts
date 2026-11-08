@@ -117,6 +117,7 @@ export interface FormConsultantBookingConfig {
   enabled: boolean; // فعال بودن این مشاور در این فرم
   enabledTopics: string[]; // موضوعات فعال این مشاور در این فرم
   customWorkingHours?: AppointmentData; // ساعات کاری سفارشی برای این فرم خاص (در صورت ویرایش)
+  topicSchedules?: Record<string, AppointmentData>; // ساعات کاری تفکیک‌شده به ازای هر موضوع برای این فرم
 }
 
 export interface AppointmentData {
@@ -130,6 +131,7 @@ export interface AppointmentData {
   capacityPerSlot?: number; // ظرفیت هر اسلات (پیش‌فرض ۱)
   maxAdvanceDays?: number; // حداکثر روزهای آتی قابل رزرو
   selectedConsultants?: FormConsultantBookingConfig[]; // لیست مشاوران و موضوعات انتخابی برای این فرم
+  topicSchedules?: Record<string, AppointmentData>; // ساعات کاری تفکیک‌شده به ازای هر موضوع مشاوره (مثلاً کودک، نوجوان و...)
 }
 
 export interface FormField {

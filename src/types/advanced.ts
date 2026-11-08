@@ -92,5 +92,6 @@ export interface TeamMember {
   consultantId?: string; // شناسه یا عنوان مشاور متناظر در سامانه نوبت‌دهی (در صورت انتصاب به عنوان مشاور)
   assignedConsultantIds?: string[]; // شناسه‌های مشاورین متصل به این کاربر در سامانه نوبت‌دهی
   allowedTopics?: string[]; // موضوعات و حوزه‌های مشاوره مجاز (مثلاً کودک، نوجوان، تحصیلی، بالینی، ازدواج و خانواده)
-  workingHours?: AppointmentData; // ساعت کاری و روزبندی حضور مشاور
+  workingHours?: AppointmentData; // ساعت کاری و روزبندی حضور مشاور (شامل topicSchedules برای هر موضوع)
+  topicWorkingHours?: Record<string, AppointmentData>; // ساعات کاری تفکیک‌شده به ازای هر موضوع مشاوره
 }

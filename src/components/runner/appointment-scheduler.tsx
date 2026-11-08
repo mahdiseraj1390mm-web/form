@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { useForm } from '@/context/form-context';
-import { COUNSELING_TOPICS, COUNSELOR_MAP, isConsultantMember, cleanConsultantName } from '@/lib/consultant-helpers';
+import { COUNSELING_TOPICS, COUNSELOR_MAP, isConsultantMember, cleanConsultantName, getScheduleForTopic, matchCounselingTopic } from '@/lib/consultant-helpers';
 
 interface AppointmentSchedulerProps {
   field: FormField;
@@ -206,15 +206,19 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     return '';
   }, [matchingMember, activeConsultantConfig]);
 
-  // تنظیمات نوبت‌دهی موثر (ساعت سفارشی فرم > ساعت مشاور > تنظیمات عمومی فیلد)
+  // تنظیمات نوبت‌دهی موثر (ساعت سفارشی فرم یا ساعت مشاور در سیستم، تطبیق‌یافته بر اساس موضوع انتخابی)
   const appointmentConfig = useMemo(() => {
     if (!hasMultiConsultantMode) return field.appointmentData;
-    return (
+
+    // ۱. ساعات کاری سفارشی این فرم یا ساعات کاری تعریف‌شده مشاور در سامانه
+    const baseSchedule =
       activeConsultantConfig?.customWorkingHours ||
       matchingMember?.workingHours ||
-      field.appointmentData
-    );
-  }, [hasMultiConsultantMode, activeConsultantConfig, matchingMember, field.appointmentData]);
+      field.appointmentData;
+
+    // ۲. استخراج دقیق ساعات و روزبندی اختصاصی برای موضوع انتخابی مراجع
+    return getScheduleForTopic(baseSchedule, selectedTopicId) || baseSchedule;
+  }, [hasMultiConsultantMode, activeConsultantConfig, matchingMember, field.appointmentData, selectedTopicId]);
 
   const slotDuration = appointmentConfig?.slotDurationMinutes ?? 30;
   const restDuration = appointmentConfig?.restTimeMinutes ?? 5;
@@ -424,6 +428,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                     onClick={() => {
                       setSelectedTopicId(topId);
                       setSelectedConsultantId('');
+                      if (value) onChange('');
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       isSelected
@@ -461,7 +466,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                     <button
                       key={consultant.consultantId}
                       type="button"
-                      onClick={() => setSelectedConsultantId(consultant.consultantId)}
+                      onClick={() => {
+                        setSelectedConsultantId(consultant.consultantId);
+                        if (value) onChange('');
+                      }}
                       className={`p-3 rounded-2xl border text-right transition-all cursor-pointer flex items-center justify-between gap-2 ${
                         isSelected
                           ? 'border-blue-500 bg-white shadow-sm ring-2 ring-blue-300 text-blue-950'
@@ -544,7 +552,11 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                   <span className="text-xs font-extrabold text-slate-900 block">
                     {hasMultiConsultantMode ? '۳. انتخاب روز و ساعت نوبت مشاوره' : 'انتخاب روز و ساعت نوبت مشاوره'}
                   </span>
-                  <span className="text-[10px] text-slate-500">برای مشاهده ساعات آزاد، روز کاری مورد نظر را انتخاب فرمایید</span>
+                  <span className="text-[10px] text-slate-500 block">
+                    {hasMultiConsultantMode && selectedTopicId
+                      ? `ساعات کاری بر اساس موضوع «${matchCounselingTopic(selectedTopicId)?.name || selectedTopicId}» بارگذاری شده است`
+                      : 'برای مشاهده ساعات آزاد، روز کاری مورد نظر را انتخاب فرمایید'}
+                  </span>
                 </div>
               </div>
 

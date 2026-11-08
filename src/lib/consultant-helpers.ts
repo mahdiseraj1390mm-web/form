@@ -108,20 +108,47 @@ export function appointmentDataToDefinedSlots(
   fieldId: string = 'custom_field'
 ): DefinedSlot[] {
   const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
-  const opts = generateSlotsFromAppointmentData(config, fieldId);
-  return opts.map((opt) => {
-    const parts = opt.id.split('_');
-    const dayIndex = Number(parts[1]) || 0;
-    const timeMatch = opt.label.match(/ساعت\s+(.+)$/);
-    const timeRange = timeMatch ? timeMatch[1] : opt.label;
-    return {
-      dayIndex,
-      dayName: dayNames[dayIndex] || 'شنبه',
-      timeRange,
-      label: opt.label,
-      fieldId,
-    };
-  });
+  const results: DefinedSlot[] = [];
+  const seenSlotKeys = new Set<string>();
+
+  const addSlots = (opts: SelectOption[], category?: string) => {
+    opts.forEach((opt) => {
+      const parts = opt.id.split('_');
+      const dayIndex = Number(parts[1]) || 0;
+      const timeMatch = opt.label.match(/ساعت\s+(.+)$/);
+      const timeRange = timeMatch ? timeMatch[1] : opt.label;
+      const key = `${dayIndex}_${timeRange}_${category || ''}`;
+      if (!seenSlotKeys.has(key)) {
+        seenSlotKeys.add(key);
+        results.push({
+          dayIndex,
+          dayName: dayNames[dayIndex] || 'شنبه',
+          timeRange,
+          label: opt.label,
+          category,
+          fieldId,
+        });
+      }
+    });
+  };
+
+  // اگر برنامه‌ریزی تفکیک‌شده بر اساس موضوع وجود دارد
+  if (config.topicSchedules && typeof config.topicSchedules === 'object' && Object.keys(config.topicSchedules).length > 0) {
+    Object.entries(config.topicSchedules).forEach(([topicKey, topicConfig]) => {
+      if (topicConfig) {
+        const topicObj = matchCounselingTopic(topicKey);
+        const topicName = topicObj ? topicObj.name : topicKey;
+        const topicOpts = generateSlotsFromAppointmentData(topicConfig, `${fieldId}_${topicKey}`);
+        addSlots(topicOpts, topicName);
+      }
+    });
+  }
+
+  // اسلات‌های عمومی مشاور
+  const generalOpts = generateSlotsFromAppointmentData(config, fieldId);
+  addSlots(generalOpts);
+
+  return results;
 }
 
 export interface ConsultantBookingItem {
@@ -181,6 +208,69 @@ export const COUNSELING_TOPICS: CounselingTopicOption[] = [
   { id: 'clinical', name: 'مشاوره بالینی و روان‌درمانی', keywords: ['بالینی', 'روان‌درمانی', 'فردی'], description: 'اضطراب، افسردگی و درمان‌های بالینی' },
   { id: 'family', name: 'مشاوره ازدواج و خانواده', keywords: ['خانواده', 'ازدواج', 'زوجین', 'زوج'], description: 'مشاوره پیش از ازدواج، زوج‌درمانی و خانواده' },
 ];
+
+/**
+ * تطبیق هوشمند عنوان یا شناسه موضوع با گزینه‌های مشاوره رسمی
+ */
+export function matchCounselingTopic(topicKey: string): CounselingTopicOption | undefined {
+  if (!topicKey) return undefined;
+  const cleanKey = topicKey.trim();
+  return COUNSELING_TOPICS.find(
+    (t) =>
+      t.id === cleanKey ||
+      t.name === cleanKey ||
+      t.name.includes(cleanKey) ||
+      cleanKey.includes(t.name) ||
+      t.keywords.some((kw) => cleanKey.includes(kw) || kw.includes(cleanKey))
+  );
+}
+
+/**
+ * دریافت ساعات کاری اختصاصی یک موضوع از تنظیمات یا بازگشت به ساعات کاری عمومی
+ */
+export function getScheduleForTopic(
+  schedule: AppointmentData | undefined,
+  topicKey?: string
+): AppointmentData | undefined {
+  if (!schedule) return undefined;
+  if (!topicKey) return schedule;
+
+  const topicSchedules = schedule.topicSchedules;
+  if (topicSchedules && typeof topicSchedules === 'object' && Object.keys(topicSchedules).length > 0) {
+    // ۱. بررسی تطبیق مستقیم کلید
+    if (topicSchedules[topicKey]) {
+      return topicSchedules[topicKey];
+    }
+
+    // ۲. بررسی تطبیق با موضوع رسمی
+    const matched = matchCounselingTopic(topicKey);
+    if (matched) {
+      if (topicSchedules[matched.id]) return topicSchedules[matched.id];
+      if (topicSchedules[matched.name]) return topicSchedules[matched.name];
+      for (const kw of matched.keywords) {
+        if (topicSchedules[kw]) return topicSchedules[kw];
+      }
+    }
+
+    // ۳. بررسی معکوس روی تمام کلیدهای topicSchedules
+    for (const [schedKey, sData] of Object.entries(topicSchedules)) {
+      if (!sData) continue;
+      if (schedKey === topicKey) return sData;
+      const keyMatch = matchCounselingTopic(schedKey);
+      if (keyMatch) {
+        if (
+          keyMatch.id === topicKey ||
+          keyMatch.name === topicKey ||
+          keyMatch.keywords.some((kw) => topicKey.includes(kw))
+        ) {
+          return sData;
+        }
+      }
+    }
+  }
+
+  return schedule;
+}
 
 export const CONSULTANT_DEFAULT_TOPICS: Record<string, string[]> = {
   f_booking_farahmandi: ['child'],

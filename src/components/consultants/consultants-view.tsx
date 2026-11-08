@@ -927,9 +927,13 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           title="تنظیم و ویرایش ساعات کاری من"
           description={`تنظیم روزهای حضور، شیفت‌ها و مدت جلسات - ${currentConsultantProfile.name}`}
           initialSchedule={currentMember?.workingHours}
+          topics={currentMember?.allowedTopics}
           onSave={(newSchedule) => {
             if (currentMember) {
-              updateTeamMember(currentMember.id, { workingHours: newSchedule });
+              updateTeamMember(currentMember.id, { 
+                workingHours: newSchedule,
+                topicWorkingHours: newSchedule.topicSchedules 
+              });
             }
           }}
         />
