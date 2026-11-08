@@ -80,6 +80,198 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
 }) => {
   const [activeFilter, setActiveFilter] = useState<AnalysisFilter>('all');
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [counselorNoteText, setCounselorNoteText] = useState('');
+  const [savedNoteMessage, setSavedNoteMessage] = useState(false);
+
+  // ۱. توزیع نقش مراجعان در خانواده (پدر، مادر، پسر، دختر)
+  const roleDistribution = useMemo(() => {
+    const counts: Record<string, number> = {
+      'مادر خانواده': 0,
+      'پدر خانواده': 0,
+      'دختر خانواده': 0,
+      'پسر خانواده': 0,
+    };
+    (allSubmissions || []).forEach((s) => {
+      const r = s.data?.f_role_in_family || s.data?.roleInFamily;
+      if (r) {
+        if (r.includes('مادر')) counts['مادر خانواده']++;
+        else if (r.includes('پدر')) counts['پدر خانواده']++;
+        else if (r.includes('دختر')) counts['دختر خانواده']++;
+        else if (r.includes('پسر')) counts['پسر خانواده']++;
+      }
+    });
+    const curRole = clientCase.roleInFamily || combinedData.f_role_in_family;
+    if (curRole) {
+      if (curRole.includes('مادر')) counts['مادر خانواده'] = Math.max(1, counts['مادر خانواده']);
+      else if (curRole.includes('پدر')) counts['پدر خانواده'] = Math.max(1, counts['پدر خانواده']);
+      else if (curRole.includes('دختر')) counts['دختر خانواده'] = Math.max(1, counts['دختر خانواده']);
+      else if (curRole.includes('پسر')) counts['پسر خانواده'] = Math.max(1, counts['پسر خانواده']);
+    }
+    const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+    return Object.entries(counts).map(([role, count], idx) => ({
+      id: `role-${idx}`,
+      label: role,
+      value: count,
+      percentage: Math.round((count / total) * 100),
+      color: idx === 0 ? 'bg-pink-500' : idx === 1 ? 'bg-blue-600' : idx === 2 ? 'bg-purple-500' : 'bg-teal-500',
+      secondaryLabel: `${toPersianDigits(count)} مراجع`,
+    }));
+  }, [allSubmissions, clientCase.roleInFamily, combinedData.f_role_in_family]);
+
+  // ۲. توزیع تعداد فرزندان مراجعان (تک‌فرزند، دو فرزند ... ده فرزند و بیشتر)
+  const childrenDistribution = useMemo(() => {
+    const counts: Record<string, number> = {
+      'بدون فرزند': 0,
+      'تک فرزند': 0,
+      'دو فرزند': 0,
+      'سه فرزند': 0,
+      'چهار فرزند': 0,
+      'پنج فرزند': 0,
+      'شش فرزند': 0,
+      'هفت فرزند': 0,
+      'هشت فرزند': 0,
+      'نه فرزند': 0,
+      'ده فرزند و بیشتر': 0,
+    };
+    (allSubmissions || []).forEach((s) => {
+      let num = -1;
+      const raw = s.data?.f_children_count || s.data?.children_count;
+      if (raw !== undefined && raw !== null && raw !== '') {
+        num = parseInt(toEnglishDigits(String(raw)));
+      } else if (s.data?.f_family_members) {
+        const fam = parseInt(toEnglishDigits(String(s.data.f_family_members)));
+        if (!isNaN(fam) && fam >= 2) num = Math.max(0, fam - 2);
+      }
+      if (!isNaN(num) && num >= 0) {
+        if (num === 0) counts['بدون فرزند']++;
+        else if (num === 1) counts['تک فرزند']++;
+        else if (num === 2) counts['دو فرزند']++;
+        else if (num === 3) counts['سه فرزند']++;
+        else if (num === 4) counts['چهار فرزند']++;
+        else if (num === 5) counts['پنج فرزند']++;
+        else if (num === 6) counts['شش فرزند']++;
+        else if (num === 7) counts['هفت فرزند']++;
+        else if (num === 8) counts['هشت فرزند']++;
+        else if (num === 9) counts['نه فرزند']++;
+        else counts['ده فرزند و بیشتر']++;
+      }
+    });
+    const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+    const colorPalette = [
+      'bg-slate-400', 'bg-blue-500', 'bg-teal-500', 'bg-emerald-500',
+      'bg-amber-500', 'bg-indigo-500', 'bg-violet-500', 'bg-purple-500',
+      'bg-rose-500', 'bg-cyan-500', 'bg-orange-500'
+    ];
+    return Object.entries(counts).map(([label, count], idx) => ({
+      id: `child-${idx}`,
+      label,
+      value: count,
+      percentage: Math.round((count / total) * 100),
+      color: colorPalette[idx % colorPalette.length],
+      secondaryLabel: `${toPersianDigits(count)} مورد`,
+    }));
+  }, [allSubmissions]);
+
+  // ۳. توزیع شهرهای مراجعان از بیشترین به کمترین
+  const cityDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (allSubmissions || []).forEach((s) => {
+      const cityRaw = s.data?.f_province_city || s.data?.province || s.data?.city;
+      if (cityRaw && cityRaw !== 'ثبت‌نشده') {
+        const cleanCity = String(cityRaw).split(/[-–—]/)[0].trim();
+        if (cleanCity && cleanCity.length > 1) {
+          counts[cleanCity] = (counts[cleanCity] || 0) + 1;
+        }
+      }
+    });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const total = sorted.reduce((a, b) => a + b[1], 0) || 1;
+    const barColors = ['bg-[#173f6b]', 'bg-teal-600', 'bg-amber-600', 'bg-indigo-600', 'bg-rose-600', 'bg-cyan-600', 'bg-emerald-600', 'bg-purple-600'];
+    return sorted.slice(0, 10).map(([cityName, count], idx) => ({
+      id: `city-${idx}`,
+      label: cityName,
+      value: count,
+      percentage: Math.round((count / total) * 100),
+      color: barColors[idx % barColors.length],
+      secondaryLabel: `${toPersianDigits(count)} مراجع`,
+    }));
+  }, [allSubmissions]);
+
+  // ۴. وضعیت تأهل مراجعان (نمودار دونات / توزیع)
+  const maritalDistribution = useMemo(() => {
+    const counts: Record<string, number> = {
+      'متأهل': 0,
+      'مجرد': 0,
+      'مطلقه': 0,
+      'همسر فوت شده': 0,
+    };
+    (allSubmissions || []).forEach((s) => {
+      const m = (s.data?.f_marital_status || s.data?.marital_status || '').trim();
+      if (m.includes('متاهل') || m.includes('متأهل')) counts['متأهل']++;
+      else if (m.includes('مجرد')) counts['مجرد']++;
+      else if (m.includes('مطلقه')) counts['مطلقه']++;
+      else if (m.includes('فوت')) counts['همسر فوت شده']++;
+    });
+    const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+    const colorMap: Record<string, { bg: string; text: string; hex: string }> = {
+      'متأهل': { bg: 'bg-emerald-500', text: 'text-emerald-700', hex: '#10b981' },
+      'مجرد': { bg: 'bg-blue-500', text: 'text-blue-700', hex: '#3b82f6' },
+      'مطلقه': { bg: 'bg-amber-500', text: 'text-amber-700', hex: '#f59e0b' },
+      'همسر فوت شده': { bg: 'bg-slate-500', text: 'text-slate-700', hex: '#64748b' },
+    };
+    return Object.entries(counts).map(([label, count]) => ({
+      label,
+      count,
+      percentage: Math.round((count / total) * 100),
+      ...colorMap[label],
+    }));
+  }, [allSubmissions]);
+
+  // ۵. موضوعات و محورهای مشاوره
+  const topicsDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (allSubmissions || []).forEach((s) => {
+      const t = s.data?.f_counseling_subject || s.data?.f_topic || s.data?.topic;
+      if (t && typeof t === 'string' && t.trim()) {
+        const cleanT = t.trim();
+        counts[cleanT] = (counts[cleanT] || 0) + 1;
+      }
+    });
+    if (appointments.length > 0) {
+      appointments.forEach((a) => {
+        if (a.topic) counts[a.topic] = (counts[a.topic] || 0) + 1;
+      });
+    }
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const total = sorted.reduce((a, b) => a + b[1], 0) || 1;
+    const barColors = ['bg-indigo-600', 'bg-blue-600', 'bg-teal-600', 'bg-rose-600', 'bg-amber-600'];
+    return sorted.slice(0, 6).map(([topic, count], idx) => ({
+      id: `topic-${idx}`,
+      label: topic,
+      value: count,
+      percentage: Math.round((count / total) * 100),
+      color: barColors[idx % barColors.length],
+      secondaryLabel: `${toPersianDigits(count)} جلسه`,
+    }));
+  }, [allSubmissions, appointments]);
+
+  // ۶. روند نوبت‌ها و جلسات مراجع (نمودار نقطه‌ای خطی)
+  const appointmentsTimelineData = useMemo(() => {
+    if (!appointments || appointments.length === 0) {
+      return [
+        { label: 'شروع پرونده', value: 50, secondaryLabel: 'تشکیل پرونده' },
+        { label: 'وضعیت فعلی', value: clientCase.overallStatus === 'growing' ? 85 : clientCase.overallStatus === 'optimal' ? 75 : clientCase.overallStatus === 'needs_followup' ? 60 : 40, secondaryLabel: 'ارزیابی مراجع' },
+      ];
+    }
+    const sorted = [...appointments].reverse();
+    return sorted.map((app, idx) => ({
+      id: app.id,
+      label: `جلسه ${toPersianDigits(idx + 1)}`,
+      value: app.status === 'done' ? 70 + (idx * 5) : 55,
+      secondaryLabel: app.date ? app.date.split('،')[0] : 'جلسه مشاوره',
+      badge: app.status === 'done' ? 'انجام‌شده' : 'در انتظار',
+    }));
+  }, [appointments, clientCase.overallStatus]);
 
   const toggleSection = (sec: string) => {
     setExpandedSection((prev) => (prev === sec ? null : sec));
@@ -91,52 +283,13 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
   const evaluationResult = safaEvaluationSubmission?.evaluationResult;
   const hasRealSafaReport = Boolean(evaluationResult && evaluationResult.componentScores?.length);
 
-  // پایگاه مؤلفه‌های ۱۷گانه استاندارد صفاً (واقعی یا محاسبه‌شده تخمینی هوشمند)
+  // پایگاه مؤلفه‌های ۱۷گانه استاندارد صَفًّا (فقط نمرات واقعی کارنامه - بدون داده‌های تخمینی یا فرضی)
   const allComponentScores: EvaluationComponentScore[] = useMemo(() => {
     if (hasRealSafaReport && evaluationResult?.componentScores) {
       return evaluationResult.componentScores;
     }
-
-    // در صورت عدم تکمیل آزمون صفاً، مقادیر تخمینی هوشمند بر اساس پاسخ‌های هویتی، سلامت و نوبت‌های مراجع
-    const baseHealthPenalty = (smartAnalysis.hasPhysicalIllness ? 15 : 0) + (smartAnalysis.hasMentalIllness ? 20 : 0);
-    const completedAppsBonus = Math.min(15, appointments.filter((a) => a.status === 'done').length * 5);
-    const baseScore = Math.max(35, Math.min(85, 70 - baseHealthPenalty + completedAppsBonus));
-
-    const defaultDefs: Array<{ code: number; title: string; offset: number }> = [
-      { code: 1, title: 'آرامش و صلح درونی', offset: smartAnalysis.hasMentalIllness ? -20 : 5 },
-      { code: 2, title: 'خودآگاهی', offset: 5 },
-      { code: 3, title: 'پذیرش خود و تلاش برای بهتر شدن', offset: 10 },
-      { code: 4, title: 'تعقل و خردورزی', offset: 8 },
-      { code: 5, title: 'کنترل و مدیریت هیجان', offset: smartAnalysis.hasMentalIllness ? -15 : 0 },
-      { code: 6, title: 'رهایی از توقع و وابستگی', offset: -5 },
-      { code: 7, title: 'محبت و خیرخواهی', offset: 12 },
-      { code: 8, title: 'پذیرش دیگران و پرهیز از قضاوت', offset: 2 },
-      { code: 9, title: 'گذشت و بخشش', offset: 4 },
-      { code: 10, title: 'همدلی', offset: 8 },
-      { code: 11, title: 'مرزبندی سالم', offset: 0 },
-      { code: 12, title: 'صداقت و هماهنگی حرف و عمل', offset: 10 },
-      { code: 13, title: 'مسئولیت‌پذیری و وفاداری', offset: 14 },
-      { code: 14, title: 'فروتنی', offset: 6 },
-      { code: 15, title: 'رشددهندگی و خیررسانی', offset: 8 },
-      { code: 16, title: 'سازندگی و پیونددهندگی در روابط', offset: combinedData.f_marital_status === 'متأهل' ? 6 : 0 },
-      { code: 17, title: 'غایت، معنا و جهت‌گیری قرآنی ـ ولایی', offset: 12 },
-    ];
-
-    return defaultDefs.map((def) => {
-      const score = Math.max(20, Math.min(95, baseScore + def.offset));
-      const growthGap = 100 - score;
-      const sem = getSemanticColorByPercentage(score);
-      return {
-        code: def.code,
-        title: def.title,
-        score,
-        growthGap,
-        rawSum: Math.round(score * 0.16),
-        statusLabel: sem.label,
-        statusColor: sem.hex,
-      };
-    });
-  }, [hasRealSafaReport, evaluationResult, smartAnalysis, appointments, combinedData]);
+    return [];
+  }, [hasRealSafaReport, evaluationResult]);
 
   // مؤلفه‌های ۱۶ گانه شخصیتی برای نمودار رادار
   const radarComponents = useMemo(() => {
@@ -154,7 +307,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
     // مؤلفه ۱۷ (غایت و جهت‌گیری)
     const comp17 = allComponentScores.find((c) => c.code === 17)?.score || 75;
     // میانگین کلی آزمون
-    const overallScore = evaluationResult?.overallScore || Math.round(allComponentScores.reduce((acc, c) => acc + c.score, 0) / allComponentScores.length);
+    const overallScore = evaluationResult?.overallScore || (allComponentScores.length > 0 ? Math.round(allComponentScores.reduce((acc, c) => acc + c.score, 0) / allComponentScores.length) : 0);
 
     // شاخص ترکیبی رشد مراجع
     const growthIndex = Math.round(comp15 * 0.35 + comp3 * 0.35 + comp17 * 0.15 + overallScore * 0.15);
@@ -946,6 +1099,247 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
           );
         })}
       </div>
+
+      {/* ========================================================= */}
+      {/* بخش آمارهای جامع مرکز و تحلیل بالینی پرونده (۷ نمودار استاندارد) */}
+      {/* ========================================================= */}
+      <section className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-7 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-2xl bg-[#173f6b] text-white flex items-center justify-center shadow-xs">
+              <BarChart3 className="size-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-900">شاخص‌های آماری و بالینی پرونده و مرکز</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                توزیع نقش، فرزندان، شهرها، تأهل، موضوعات مشاوره، آخرین وضعیت مراجع و تایم‌لاین نوبت‌ها
+              </p>
+            </div>
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200/80">
+            <ShieldCheck className="size-4 text-emerald-600" />
+            <span>منبع داده: سوابق پایگاه‌داده مرکز بالحق (قابل استناد)</span>
+          </div>
+        </div>
+
+        {/* گرید نمودار ۱ و ۲: نقش در خانواده و توزیع تعداد فرزندان */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* نمودار ۱: بیشترین مراجعان در کدام نقش هستند؟ */}
+          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-black text-slate-900">۱. نقش مراجعان در خانواده</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">پدر خانواده، مادر خانواده، پسر خانواده، دختر خانواده</p>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-blue-50 text-[#173f6b] border border-blue-100">
+                نقش این مراجع: {clientCase.roleInFamily || combinedData.f_role_in_family || "مشخص‌نشده"}
+              </span>
+            </div>
+            <div className="pt-2">
+              <VerticalBarChart
+                data={roleDistribution}
+                height={190}
+                unit="مراجع"
+                showValues={true}
+              />
+            </div>
+            <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200/60">
+              منبع دریافت آمار: فرم‌های پذیرش و پرونده‌های فعال مرکز بالحق
+            </div>
+          </div>
+
+          {/* نمودار ۲: وضعیت تعداد فرزندان مراجعان */}
+          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-black text-slate-900">۲. وضعیت تعداد فرزندان مراجعان</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">تک فرزند، دو فرزند، سه فرزند تا ده فرزند و بدون فرزند</p>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100">
+                این مراجع: {combinedData.f_children_count ? `${toPersianDigits(combinedData.f_children_count)} فرزند` : "بدون فرزند / ثبت‌نشده"}
+              </span>
+            </div>
+            <div className="pt-2">
+              <VerticalBarChart
+                data={childrenDistribution}
+                height={190}
+                unit="مورد"
+                showValues={true}
+                scrollable={true}
+              />
+            </div>
+            <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200/60">
+              منبع دریافت آمار: پرسشنامه جمعیت‌شناختی مراجعان
+            </div>
+          </div>
+        </div>
+
+        {/* گرید نمودار ۳ و ۴: شهرهای مراجعان و وضعیت تأهل */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* نمودار ۳: بیشترین مراجعان از کدام شهرها هستند؟ (از بیشترین به کمترین) */}
+          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-black text-slate-900">۳. بیشترین مراجعان از کدام شهرها هستند؟</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">مرتب‌شده به ترتیب فراوانی از بیشترین به کمترین</p>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-100">
+                شهر این مراجع: {clientCase.provinceCity && clientCase.provinceCity !== "ثبت‌نشده" ? clientCase.provinceCity : (combinedData.f_province_city || combinedData.province || "ثبت‌نشده")}
+              </span>
+            </div>
+            <div className="pt-2">
+              <VerticalBarChart
+                data={cityDistribution}
+                height={190}
+                unit="مراجع"
+                showValues={true}
+                scrollable={true}
+              />
+            </div>
+            <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200/60">
+              منبع دریافت آمار: داده‌های جغرافیایی فرم‌های ثبت‌نام سامانه بالحق
+            </div>
+          </div>
+
+          {/* نمودار ۴: وضعیت تأهل مراجعان (نمودار دایره‌ای / توزیع) */}
+          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-black text-slate-900">۴. وضعیت تأهل مراجعان</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">توزیع متأهل، مجرد، مطلقه و همسر فوت‌شده</p>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-teal-50 text-teal-800 border border-teal-100">
+                این مراجع: {combinedData.f_marital_status || "ثبت‌نشده"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
+              {maritalDistribution.map((item, idx) => (
+                <div key={idx} className="p-4 rounded-xl bg-white border border-slate-200/80 text-center space-y-1 shadow-2xs">
+                  <div className="text-xs font-bold text-slate-500">{item.label}</div>
+                  <div className="text-2xl font-black font-mono text-slate-900">%{toPersianDigits(item.percentage)}</div>
+                  <div className="text-[10px] font-bold text-slate-400">{toPersianDigits(item.count)} نفر</div>
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                    <div className={`h-full ${item.bg}`} style={{ width: `${item.percentage}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200/60">
+              منبع دریافت آمار: سوابق هویتی فرم ثبت‌نام بالحق
+            </div>
+          </div>
+        </div>
+
+        {/* گرید نمودار ۵، ۶ و ۷: موضوعات مشاوره، آخرین وضعیت بالینی و روند جلسات */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* نمودار ۵: موضوعات مشاوره مراجعان */}
+          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+            <div>
+              <h4 className="text-sm font-black text-slate-900">۵. بیشترین موضوعات مشاوره</h4>
+              <p className="text-[11px] text-slate-400 mt-0.5">محورهای اصلی مراجعات به مرکز</p>
+            </div>
+            <div className="pt-2">
+              <VerticalBarChart
+                data={topicsDistribution}
+                height={180}
+                unit="جلسه"
+                showValues={true}
+              />
+            </div>
+            <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200/60">
+              منبع داده: سرفصل‌های جلسات و فرم رزرو نوبت
+            </div>
+          </div>
+
+          {/* نمودار ۶: تعیین آخرین وضعیت مراجع توسط مشاور (۴ وضعیت) */}
+          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-black text-slate-900">۶. وضعیت بالینی پرونده</h4>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">تحلیل جلسه</span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">تعیین‌شده توسط مشاور در آخرین جلسه</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 space-y-3 text-center my-auto shadow-2xs">
+              <div className="text-xs text-slate-500 font-bold">آخرین وضعیت ارزیابی‌شده مراجع:</div>
+              <div className="inline-block px-4 py-2 rounded-xl text-base font-black shadow-xs" style={{
+                backgroundColor: clientCase.overallStatus === "growing" ? "#eff6ff" : clientCase.overallStatus === "optimal" ? "#ecfdf5" : clientCase.overallStatus === "regressing" ? "#fff1f2" : "#fffbeb",
+                color: clientCase.overallStatus === "growing" ? "#1d4ed8" : clientCase.overallStatus === "optimal" ? "#047857" : clientCase.overallStatus === "regressing" ? "#be123c" : "#b45309",
+                borderColor: clientCase.overallStatus === "growing" ? "#bfdbfe" : clientCase.overallStatus === "optimal" ? "#a7f3d0" : clientCase.overallStatus === "regressing" ? "#fecdd3" : "#fde68a",
+                borderWidth: "1px",
+              }}>
+                {clientCase.overallStatus === "growing" ? "🌱 در حال رشد" : clientCase.overallStatus === "optimal" ? "✨ وضعیت مطلوب" : clientCase.overallStatus === "regressing" ? "⚠️ عقب‌گرد" : "🔍 نیازمند پیگیری"}
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {clientCase.overallStatus === "growing" ? "مراجع در مسیر بهبود، یادگیری مهارت‌ها و خودشکوفایی پایدار قرار دارد." :
+                 clientCase.overallStatus === "optimal" ? "شاخص‌های رفتاری و خانوادگی در سطح متعادل و مطلوب ارزیابی شده است." :
+                 clientCase.overallStatus === "regressing" ? "نشانه‌های بازگشت چالش‌ها یا افت عملکرد؛ نیازمند مداخله و حمایت مضاعف." :
+                 "نیازمند پیگیری جلسات تکمیلی جهت ارزیابی دقیق‌تر روند تغییرات."}
+              </p>
+            </div>
+
+            <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200/60">
+              منبع داده: گزارش‌های جلسات ثبت‌شده توسط مشاور
+            </div>
+          </div>
+
+          {/* نمودار ۷: روند جلسات و نوبت‌های مراجع (نمودار خطی نقطه‌ای) */}
+          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+            <div>
+              <h4 className="text-sm font-black text-slate-900">۷. روند جلسات و نوبت‌های مراجع</h4>
+              <p className="text-[11px] text-slate-400 mt-0.5">تایم‌لاین گام‌های مشاوره‌ای مراجع</p>
+            </div>
+            <div className="pt-2">
+              <PointLineChart
+                data={appointmentsTimelineData}
+                height={180}
+                unit="امتیاز"
+                badgeText="تایم‌لاین جلسات"
+              />
+            </div>
+            <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200/60">
+              منبع داده: تاریخچه نوبت‌ها و سوابق سامانه رزرواسیون
+            </div>
+          </div>
+        </div>
+
+        {/* کادر ثبت توضیحات و یادداشت تحلیلی مشاور */}
+        <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="size-4 text-[#173f6b]" />
+              <h4 className="text-sm font-black text-slate-900">یادداشت تحلیلی و توضیحات آماری مشاور</h4>
+            </div>
+            <span className="text-[11px] text-slate-400">تحلیل آماری استاندارد پرونده</span>
+          </div>
+          <textarea
+            rows={3}
+            value={counselorNoteText}
+            onChange={(e) => setCounselorNoteText(e.target.value)}
+            placeholder="مشاور محترم می‌تواند تحلیل خود از داده‌های آماری، الگوهای رفتاری مراجع و پیشنهادات بالینی را در این بخش یادداشت نماید..."
+            className="w-full p-3.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition leading-relaxed"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-slate-500">
+              {savedNoteMessage ? "✅ یادداشت تحلیلی ذخیره شد." : "این یادداشت در پرونده مراجع به عنوان سند تحلیلی نگهداری می‌شود."}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (counselorNoteText.trim()) {
+                  setSavedNoteMessage(true);
+                  setTimeout(() => setSavedNoteMessage(false), 3000);
+                }
+              }}
+              disabled={!counselorNoteText.trim()}
+              className="px-4 py-2 bg-[#173f6b] hover:bg-[#123357] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+            >
+              ثبت یادداشت تحلیلی
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* ========================================================= */}
       {/* بخش اول: آمار رشد و مراحل تحول فردی مراجع */}

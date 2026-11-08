@@ -95,7 +95,11 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
           <div className="bg-white p-2 rounded-lg border border-slate-300">
             <span className="text-slate-500 block text-[10px]">وضعیت پرونده:</span>
             <span className="text-slate-900 font-bold">
-              {clientCase.overallStatus === 'approved' ? 'تأیید شده / فعال' : 'در حال بررسی'}
+              {clientCase.overallStatus === 'growing' ? 'در حال رشد' :
+   clientCase.overallStatus === 'optimal' ? 'وضعیت مطلوب' :
+   clientCase.overallStatus === 'regressing' ? 'عقب‌گرد' :
+   clientCase.overallStatus === 'needs_followup' ? 'نیازمند پیگیری' :
+   clientCase.overallStatus === 'approved' ? 'تأیید شده / فعال' : 'در حال بررسی'}
             </span>
           </div>
 

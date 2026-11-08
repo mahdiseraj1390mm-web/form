@@ -389,7 +389,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
       if (counselor && typeof counselor === 'string' && counselor.trim()) {
         const cleanName = counselor.replace(/^(آقای|خانم|دکتر)\s+/, '').replace(/\s*\(.*?\)/, '').trim();
-        const fullClean = `استاد ${cleanName}`;
+        const isFemale = cleanName.includes('شوندی') || cleanName.includes('خانم') || counselor.includes('خانم');
+        const prefix = isFemale ? 'خانم' : 'آقای';
+        const fullClean = `${prefix} ${cleanName}`;
         counselorCounts[fullClean] = (counselorCounts[fullClean] || 0) + 1;
       }
     });
