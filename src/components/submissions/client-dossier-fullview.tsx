@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Form, FormSubmission, SubmissionStatus, FormField } from '@/types/form';
+import {
+  Trash2,
+  Edit3, Form, FormSubmission, SubmissionStatus, FormField } from '@/types/form';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import {
@@ -237,7 +239,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   onClose,
   onStatusChange,
 }) => {
-  const { forms, submissions, updateSubmissionStatus, updateSubmissionData, addSubmissionComment } = useForm();
+  const { forms, submissions, updateSubmissionStatus, updateSubmissionData, addSubmissionComment, editSubmissionComment, deleteSubmissionComment } = useForm();
   const { currentUser } = useAdminAuth();
 
   // دریافت پیوسته و بلادرنگ سابمیشن‌های پرونده از کانتکست عمومی (جهت نمایش بلادرنگ پیام‌ها، یادداشت‌ها و پیگیری‌ها بدون نیاز به رفرش)
@@ -381,30 +383,28 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       clientCase.provinceCity = editProfileForm.f_province_city;
     }
 
+    const payloadToSave = {
+      ...editProfileForm,
+      ...(newFullName ? { fullName: newFullName, f_fullname: newFullName, name: newFullName } : {}),
+      ...(editProfileForm.f_mobile ? { mobile: editProfileForm.f_mobile, f_mobile: editProfileForm.f_mobile } : {}),
+    };
+
     // 3. اعمال و همگام‌سازی روی تمام ارسالی‌ها و فرم‌های این مراجع در کانتکست
     currentSubmissions.forEach((sub) => {
-      updateSubmissionData(sub.id, editProfileForm);
+      updateSubmissionData(sub.id, payloadToSave);
     });
 
     // 4. ثبت تاریخچه تغییرات در پرونده
     const changes: string[] = [];
-    if (editProfileForm.f_physical_illness !== combinedData.f_physical_illness) {
-      changes.push(`بیماری جسمی: ${editProfileForm.f_physical_illness || 'ندارد'}`);
-    }
-    if (editProfileForm.f_mental_illness !== combinedData.f_mental_illness) {
-      changes.push(`بیماری روحی: ${editProfileForm.f_mental_illness || 'ندارد'}`);
-    }
-    if (editProfileForm.f_medications !== combinedData.f_medications) {
-      changes.push(`داروها: ${editProfileForm.f_medications || 'ندارد'}`);
-    }
-    if (editProfileForm.f_marital_status !== combinedData.f_marital_status) {
-      changes.push(`وضعیت تاهل: ${editProfileForm.f_marital_status}`);
-    }
-    if (editProfileForm.f_school_name !== combinedData.f_school_name) {
-      changes.push(`مدرسه: ${editProfileForm.f_school_name}`);
-    }
+    if (newFullName) changes.push(`نام: ${newFullName}`);
+    if (editProfileForm.f_birth_date) changes.push(`تاریخ تولد: ${editProfileForm.f_birth_date}`);
+    if (editProfileForm.f_physical_illness) changes.push(`بیماری جسمی: ${editProfileForm.f_physical_illness}`);
+    if (editProfileForm.f_mental_illness) changes.push(`بیماری روحی: ${editProfileForm.f_mental_illness}`);
+    if (editProfileForm.f_medications) changes.push(`داروها: ${editProfileForm.f_medications}`);
+    if (editProfileForm.f_marital_status) changes.push(`وضعیت تاهل: ${editProfileForm.f_marital_status}`);
+    if (editProfileForm.f_school_name) changes.push(`مدرسه: ${editProfileForm.f_school_name}`);
 
-    const summary = changes.length > 0 ? changes.join(' | ') : 'ویرایش پرونده مراجع توسط مشاور';
+    const summary = changes.length > 0 ? changes.join(' | ') : 'ویرایش مشخصات پرونده مراجع توسط مشاور';
     const primarySub = currentSubmissions[0];
     if (primarySub) {
       addSubmissionComment(primarySub.id, adminName, adminRole, `✏️ ${summary}`);
@@ -577,6 +577,11 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   // مودال ثبت/ویرایش گزارش جلسه مشاوره
   const [editing, setEditing] = useState<Appointment | null>(null);
+  const [selectedClinicalCategory, setSelectedClinicalCategory] = useState<string>('');
+  const [selectedAppointmentStatus, setSelectedAppointmentStatus] = useState<'regressing' | 'needs_followup' | 'optimal' | 'growing'>('needs_followup');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [isDeletingComment, setIsDeletingComment] = useState<string | null>(null);
   const [isNewAppointmentModalOpen, setIsNewAppointmentModalOpen] = useState(false);
   const [newAppointmentData, setNewAppointmentData] = useState({
     date: '',
@@ -635,26 +640,25 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     return 'ثبت‌نشده';
   }, [combinedData, clientCase.roleInFamily]);
 
-  // سن مراجع (محاسبه دقیق و استاندارد از سال تولد یا تاریخ تولد شمسی)
-  const clientAge = useMemo(() => {
-    if (combinedData.f_age || combinedData.age) {
-      const rawAge = combinedData.f_age || combinedData.age;
-      const numAge = parseInt(toEnglishDigits(String(rawAge)));
-      if (!isNaN(numAge) && numAge > 0 && numAge < 120) {
-        return `${toPersianDigits(numAge)} سال`;
-      }
-    }
+  // تاریخ تولد مراجع
+  const clientBirthDateDisplay = useMemo(() => {
+    const raw = combinedData.f_birth_date || combinedData.birth_date || combinedData.birthDate || combinedData.birth_year || combinedData.f_birth_year || '';
+    if (!raw) return 'ثبت‌نشده';
+    return toPersianDigits(String(raw).trim());
+  }, [combinedData]);
 
+  // سن مراجع (محاسبه ۱۰۰٪ دقیق بر مبنای تاریخ یا سال تولد شمسی واقعی مراجع)
+  const clientAge = useMemo(() => {
     let bYear: number | null = null;
     const candidates = [
-      combinedData.birth_year,
-      combinedData.f_birth_year,
-      combinedData.birthYear,
       combinedData.f_birth_date,
       combinedData.birth_date,
       combinedData.birthDate,
-      ...currentSubmissions.map((s) => s.data?.birth_year),
+      combinedData.birth_year,
+      combinedData.f_birth_year,
+      combinedData.birthYear,
       ...currentSubmissions.map((s) => s.data?.f_birth_date),
+      ...currentSubmissions.map((s) => s.data?.birth_year),
       ...currentSubmissions.map((s) => s.data?.f_birth_year),
     ];
 
@@ -669,9 +673,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       const parts = str.split(/[\/\-\.\s]/).filter(Boolean);
       for (const p of parts) {
         const num = parseInt(p);
-        if (!isNaN(num) && num >= 1320 && num <= 1440) {
-          bYear = num;
-          break;
+        if (!isNaN(num)) {
+          if (num >= 1320 && num <= 1404) {
+            bYear = num;
+            break;
+          } else if (num >= 20 && num <= 99) {
+            bYear = 1300 + num;
+            break;
+          } else if (num >= 0 && num <= 15) {
+            bYear = 1400 + num;
+            break;
+          }
         }
       }
       if (bYear) break;
@@ -681,6 +693,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       const currentJalaliYear = 1403;
       const calculatedAge = Math.max(1, currentJalaliYear - bYear);
       return `${toPersianDigits(calculatedAge)} سال`;
+    }
+
+    if (combinedData.f_age || combinedData.age) {
+      const rawAge = combinedData.f_age || combinedData.age;
+      const numAge = parseInt(toEnglishDigits(String(rawAge)));
+      if (!isNaN(numAge) && numAge > 0 && numAge < 110) {
+        return `${toPersianDigits(numAge)} سال`;
+      }
     }
 
     return 'ثبت‌نشده';
@@ -887,28 +907,54 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   };
 
   const submitReport = () => {
-    if (!editing || !reportForm.reviewed.trim() || !reportForm.challenges.trim() || !reportForm.recommendation.trim()) return;
+    if (!editing) return;
+    const catPrefix = selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}] ` : '';
+    const fullRecommendation = `${catPrefix}${reportForm.recommendation.trim()}`;
 
-    setAppointments((current) =>
-      current.map((item) =>
-        item.id === editing.id
-          ? {
-              ...item,
-              ...reportForm,
-              status: 'done',
-            }
-          : item
-      )
-    );
+    const updatedAppointments = appointments.map((item) => {
+      if (item.id === editing.id) {
+        return {
+          ...item,
+          status: 'done' as const,
+          category: selectedClinicalCategory || item.category,
+          report: {
+            counselor: editing.counselor,
+            date: editing.date,
+            reviewed: reportForm.reviewed.trim(),
+            challenges: reportForm.challenges.trim(),
+            recommendation: fullRecommendation,
+          },
+        };
+      }
+      return item;
+    });
 
-    // ثبت لاگ پیگیری ذیل همین گزارش جلسه به صورت خودکار
+    setAppointments(updatedAppointments);
+    setCustomRecommendations((prev) => [
+      {
+        id: `rec-${Date.now()}`,
+        counselor: editing.counselor,
+        date: editing.date,
+        recommendation: fullRecommendation,
+        category: selectedClinicalCategory || 'مشاوره بالینی',
+      },
+      ...prev,
+    ]);
+
+    // به‌روزرسانی وضعیت پرونده به وضعیت بالینی انتخابی
+    clientCase.overallStatus = selectedAppointmentStatus;
     const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
     if (targetSubId) {
+      updateSubmissionStatus(targetSubId, selectedAppointmentStatus);
       addSubmissionComment(
         targetSubId,
-        editing.counselor || 'مشاور مرکز بالحق',
+        adminName,
         'مشاور ارشد پرونده',
-        `🤝 ثبت گزارش جلسه مشاوره (${editing.topic} - ${editing.date.split('،')[0]}): ${reportForm.recommendation.trim()}`
+        `🤝 ثبت گزارش جلسه مشاوره (${editing.topic} - ${editing.date.split('،')[0]}): وضعیت بالینی: ${
+          selectedAppointmentStatus === 'growing' ? 'در حال رشد' :
+          selectedAppointmentStatus === 'optimal' ? 'وضعیت مطلوب' :
+          selectedAppointmentStatus === 'regressing' ? 'عقب‌گرد' : 'نیازمند پیگیری'
+        }${selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''} | توصیه: ${reportForm.recommendation.trim()}`
       );
     }
 
@@ -938,10 +984,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       iframe.style.position = 'fixed';
       iframe.style.right = '0';
       iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
+      iframe.style.width = '1024px';
+      iframe.style.height = '1024px';
       iframe.style.border = 'none';
-      iframe.style.opacity = '0';
+      iframe.style.opacity = '0.01';
       iframe.style.pointerEvents = 'none';
       iframe.style.zIndex = '-9999';
       document.body.appendChild(iframe);
@@ -1057,7 +1103,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         } catch {
           window.print();
         }
-      }, 250);
+      }, 500);
     } catch {
       window.print();
     }
@@ -1553,6 +1599,16 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 </div>
 
+                {/* ۳.۵. تاریخ تولد */}
+                <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
+                    <Calendar className="size-3.5 text-indigo-600 shrink-0" />
+                    <span className="font-medium">تاریخ تولد:</span>
+                  </div>
+                  <div className="font-bold text-slate-800 text-sm font-mono truncate" title={clientBirthDateDisplay}>
+                    {clientBirthDateDisplay}
+                  </div>
+                </div>
                 {/* ۴. سن */}
                 <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
                   <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
@@ -1609,6 +1665,36 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               </div>
 
+              {/* اطلاعات مدرسه معارفی در باکس مشخصات فردی */}
+              <div className="mt-3.5 p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-9 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <GraduationCap className="size-4" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold text-emerald-800">اطلاعات مدرسه معارفی مراجع</div>
+                    <div className="text-xs font-black text-emerald-950 mt-0.5">
+                      {combinedData.f_school_name || "مدرسه معارفی ثبت نشده است"}
+                      {combinedData.f_school_grade ? ` (${combinedData.f_school_grade})` : ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-emerald-900">
+                  {combinedData.f_school_supervisor && (
+                    <span className="bg-white/80 px-2.5 py-1 rounded-lg border border-emerald-200">
+                      ناظم مدرسه: <strong>{combinedData.f_school_supervisor}</strong>
+                    </span>
+                  )}
+                  {combinedData.f_mentor_name && (
+                    <span className="bg-white/80 px-2.5 py-1 rounded-lg border border-emerald-200">
+                      مربی تربیتی: <strong>{combinedData.f_mentor_name}</strong>
+                    </span>
+                  )}
+                  {!combinedData.f_school_supervisor && !combinedData.f_mentor_name && (
+                    <span className="text-[11px] text-emerald-700">فاقد نام ناظم و مربی در فرم</span>
+                  )}
+                </div>
+              </div>
               {/* مشاوران طرف مراجعه و موضوعات اصلی */}
               <div className="mt-3.5 grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* ۹. مشاوره با کدام مشاوران داشته */}
@@ -1758,13 +1844,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
                       <Calendar className="size-7 mx-auto text-slate-300" />
                       <p className="text-xs font-bold text-slate-600">هنوز نوبت مشاوره‌ای برای این مراجع ثبت نشده است.</p>
-                      <button
-                        onClick={() => setIsNewAppointmentModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#173f6b] text-white rounded-xl text-xs font-bold hover:bg-[#123357] transition cursor-pointer"
-                      >
-                        <Plus className="size-3.5" />
-                        <span>ثبت نوبت مشاوره جدید</span>
-                      </button>
+                      <div className="text-[11px] text-slate-500 font-medium">نوبت‌های مشاوره از طریق بخش رزرو نوبت سامانه تنظیم و ثبت می‌گردند.</div>
                     </div>
                   )}
                 </div>
@@ -1773,13 +1853,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   {appointments.length > 0 ? (
                     <>
                       <span>روی هر نوبت جهت ثبت گزارش کلیک کنید</span>
-                      <button
-                        onClick={() => setIsNewAppointmentModalOpen(true)}
-                        className="text-[#173f6b] font-bold hover:underline cursor-pointer flex items-center gap-1"
-                      >
-                        <Plus className="size-3" />
-                        <span>افزودن نوبت</span>
-                      </button>
+                      <span>سامانه خدمات نوبت‌دهی مشاوره بالحق</span>
                     </>
                   ) : (
                     <span>سامانه نوبت‌دهی مشاوره بالحق</span>
@@ -1787,48 +1861,53 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               </article>
 
-              {/* کارت ۳: نام مدرسه معارفی */}
+              {/* کارت ۳: ارجاعات و پیگیری‌ها */}
               <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
                 <div>
-                  <div className="mb-5 flex items-center gap-3">
-                    <div className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
-                      <GraduationCap className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900">نام مدرسه معارفی</h3>
-                      <p className="mt-1 text-[11px] text-slate-400">اطلاعات ارتباطی مدرسه مراجع</p>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-emerald-50/60 p-4">
-                    <div className="text-sm font-black text-emerald-900">
-                      {combinedData.f_school_name || 'مدرسه معارفی ثبت نشده است'}
-                    </div>
-                    <div className="mt-1 text-[11px] text-emerald-700">
-                      {combinedData.f_school_grade
-                        ? combinedData.f_school_grade
-                        : combinedData.f_school_name
-                        ? `شهر/استان مراجع: ${clientCase.provinceCity && clientCase.provinceCity !== 'ثبت‌نشده' ? clientCase.provinceCity : (combinedData.f_province_city || combinedData.province || 'ثبت‌نشده')}`
-                        : 'اطلاعاتی در فرم ثبت‌نام ثبت نشده است'}
-                    </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl border border-slate-100 p-3">
-                      <div className="text-[10px] text-slate-400">ناظم مدرسه</div>
-                      <div className="mt-1.5 text-xs font-bold text-slate-800">
-                        {combinedData.f_school_supervisor || 'ثبت‌نشده توسط مراجع'}
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-700">
+                        <MessageSquare className="size-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900">ارجاعات و پیگیری‌ها</h3>
+                        <p className="mt-1 text-[11px] text-slate-400">یادداشت‌ها و اقدامات ثبت‌شده</p>
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-slate-100 p-3">
-                      <div className="text-[10px] text-slate-400">مربی تربیتی</div>
-                      <div className="mt-1.5 text-xs font-bold text-slate-800">
-                        {combinedData.f_mentor_name || 'ثبت‌نشده توسط مراجع'}
-                      </div>
-                    </div>
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800 font-mono">
+                      {toPersianDigits(allFollowupComments.length)} اقدام
+                    </span>
                   </div>
+
+                  {allFollowupComments.length > 0 ? (
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto pr-0.5">
+                      {allFollowupComments.slice(0, 3).map((item) => (
+                        <div key={item.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+                          <div className="flex items-center justify-between text-[11px] text-slate-500">
+                            <span className="font-bold text-slate-800">{item.authorName} ({item.authorRole})</span>
+                            <span className="font-mono text-[10px]">{formatPersianDateTime(item.createdAt)}</span>
+                          </div>
+                          <p className="text-slate-700 line-clamp-2 leading-relaxed">{item.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs space-y-1">
+                      <p className="font-bold">هیچ ارجاع یا پیگیری ثبت نشده است.</p>
+                      <p className="text-[11px]">اقدامات و تماس‌ها را در تب پیگیری‌ها ثبت فرمایید.</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 mt-4 text-[11px] text-slate-400">
-                  {combinedData.f_school_name ? 'معرف و رابط معارفی مدرسه به مرکز' : 'فاقد اطلاعات مدرسه معارفی'}
+                <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">تایم‌لاین ارجاعات بالینی</span>
+                  <button
+                    onClick={() => setActiveTab('followups')}
+                    className="text-[#173f6b] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <span>مشاهده همه پیگیری‌ها</span>
+                    <ArrowLeft className="size-3" />
+                  </button>
                 </div>
               </article>
             </div>
@@ -3437,13 +3516,73 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                 {item.formTitle}
                               </span>
                             </div>
-                            <span className="text-xs text-slate-400 font-mono">
-                              {formatPersianDateTime(item.createdAt)}
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-slate-400 font-mono">
+                                {formatPersianDateTime(item.createdAt)}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingCommentId(item.id);
+                                    setEditingCommentText(item.content);
+                                  }}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
+                                  title="ویرایش اقدام"
+                                >
+                                  <Edit className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (window.confirm('آیا از حذف این اقدام/پیگیری از پرونده مراجع اطمینان دارید؟')) {
+                                      deleteSubmissionComment(item.submissionId, item.id);
+                                    }
+                                  }}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                  title="حذف اقدام"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-slate-800 text-xs sm:text-sm leading-relaxed font-medium">
-                            {item.content}
-                          </p>
+
+                          {editingCommentId === item.id ? (
+                            <div className="space-y-2 pt-1">
+                              <textarea
+                                rows={3}
+                                value={editingCommentText}
+                                onChange={(e) => setEditingCommentText(e.target.value)}
+                                className="w-full p-3 text-xs sm:text-sm bg-white border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition leading-relaxed"
+                              />
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingCommentId(null)}
+                                  className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-200 rounded-lg font-bold transition cursor-pointer"
+                                >
+                                  انصراف
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (editingCommentText.trim()) {
+                                      editSubmissionComment(item.submissionId, item.id, editingCommentText.trim());
+                                      setEditingCommentId(null);
+                                    }
+                                  }}
+                                  className="px-4 py-1.5 text-xs bg-[#173f6b] hover:bg-[#123357] text-white rounded-lg font-bold shadow-xs transition cursor-pointer"
+                                >
+                                  ذخیره ویرایش
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-slate-800 text-xs sm:text-sm leading-relaxed font-medium">
+                              {item.content}
+                            </p>
+                          )}
                         </div>
                       ))
                     )}
@@ -3532,13 +3671,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     <p className="text-xs text-slate-400 mt-0.5">برای مشاهده یا ثبت گزارش بالینی هر جلسه، روی دکمه عملیات کلیک کنید.</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsNewAppointmentModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#173f6b] text-white rounded-xl text-xs font-bold hover:bg-[#123357] transition cursor-pointer self-start sm:self-auto shadow-xs"
-                >
-                  <Plus className="size-4" />
-                  <span>ثبت نوبت مشاوره جدید</span>
-                </button>
+                <div className="text-xs text-slate-500 font-bold bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">سامانه جامع نوبت‌دهی بالحق</div>
               </div>
 
               {appointments.length === 0 ? (
@@ -3838,29 +3971,116 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </div>
 
               <div className="space-y-5">
-                {[
-                  ['reviewed', 'موارد بررسی‌شده', 'مباحث، شرح‌حال و سرفصل‌های گفت‌وگو شده در جلسه...'],
-                  ['challenges', 'معضلات و چالش‌های مراجع', 'مشکلات رفتاری، خانوادگی یا تحصیلی تشخیص داده‌شده...'],
-                  ['recommendation', 'نسخه و توصیه‌های تجویزی مشاور', 'راهکارها، تمرین‌ها و پروتکل پیشنهادی برای ادامه مسیر...'],
-                ].map(([key, label, placeholder], index) => (
-                  <label key={key} className="block">
-                    <span className="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
-                      <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">
-                        {toPersianDigits(index + 1)}
-                      </span>
-                      {label}
-                    </span>
-                    <textarea
-                      value={reportForm[key as keyof typeof reportForm]}
-                      onChange={(event) =>
-                        setReportForm((old) => ({ ...old, [key]: event.target.value }))
-                      }
-                      placeholder={placeholder}
-                      rows={index === 2 ? 4 : 3}
-                      className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 outline-none transition placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                    />
-                  </label>
-                ))}
+                {/* بخش ۱: موارد بررسی‌شده */}
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
+                    <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۱</span>
+                    موارد بررسی‌شده در جلسه
+                  </span>
+                  <textarea
+                    value={reportForm.reviewed}
+                    onChange={(e) => setReportForm((old) => ({ ...old, reviewed: e.target.value }))}
+                    placeholder="مباحث، شرح‌حال و سرفصل‌های گفت‌وگو شده در جلسه..."
+                    rows={3}
+                    className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 outline-none transition placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  />
+                </label>
+
+                {/* بخش ۲: معضلات و چالش‌ها */}
+                <label className="block">
+                  <span className="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
+                    <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۲</span>
+                    معضلات و چالش‌های مراجع
+                  </span>
+                  <textarea
+                    value={reportForm.challenges}
+                    onChange={(e) => setReportForm((old) => ({ ...old, challenges: e.target.value }))}
+                    placeholder="مشکلات رفتاری، خانوادگی، روحی یا تحصیلی تشخیص داده‌شده..."
+                    rows={3}
+                    className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 outline-none transition placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  />
+                </label>
+
+                {/* بخش ۳: نسخه و توصیه‌های تجویزی مشاور با محورهای بالینی */}
+                <div className="space-y-2">
+                  <span className="flex items-center gap-2 text-xs font-black text-slate-700">
+                    <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۳</span>
+                    نسخه و توصیه‌های تجویزی مشاور (انتخاب سرفصل بالینی):
+                  </span>
+                  
+                  {/* چیپ‌های دسته‌بندی موضوعی توصیه */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {[
+                      'تقویت رابطه زوجین',
+                      'تاب‌آوری',
+                      'نشخوار فکری',
+                      'وسواس فکری',
+                      'کنترل هیجان',
+                      'مهارت‌های حل مسئله',
+                      'اضطراب و استرس',
+                      'سایر موارد',
+                    ].map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSelectedClinicalCategory((prev) => (prev === cat ? '' : cat))}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                          selectedClinicalCategory === cat
+                            ? 'bg-[#173f6b] text-white border-[#173f6b] shadow-xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    value={reportForm.recommendation}
+                    onChange={(e) => setReportForm((old) => ({ ...old, recommendation: e.target.value }))}
+                    placeholder="راهکارها، تمرین‌ها و پروتکل تجویزی برای مراجع (ذیل سرفصل انتخابی بالا)..."
+                    rows={4}
+                    className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 outline-none transition placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                  />
+                </div>
+
+                {/* بخش ۴: آخرین وضعیت بالینی مراجع (۴ دکمه استاندارد) */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <span className="flex items-center gap-2 text-xs font-black text-slate-700">
+                    <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۴</span>
+                    تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'regressing', label: 'عقب‌گرد', color: 'rose' },
+                      { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'amber' },
+                      { id: 'optimal', label: 'وضعیت مطلوب', color: 'emerald' },
+                      { id: 'growing', label: 'در حال رشد', color: 'blue' },
+                    ].map((st) => {
+                      const isSel = selectedAppointmentStatus === st.id;
+                      return (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setSelectedAppointmentStatus(st.id as any)}
+                          className={`py-2.5 px-2 rounded-xl text-xs font-black transition-all cursor-pointer border text-center ${
+                            isSel
+                              ? st.color === 'rose'
+                                ? 'bg-rose-600 text-white border-rose-600 shadow-xs ring-2 ring-rose-200'
+                                : st.color === 'amber'
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-200'
+                                : st.color === 'emerald'
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-200'
+                                : 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-200'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-slate-100 p-4 text-xs">
@@ -3879,7 +4099,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               {savedReport && (
                 <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
                   <Check className="size-4" />
-                  گزارش ثبت شد و آخرین توصیه‌ها به‌روزرسانی شد.
+                  گزارش جلسه و وضعیت بالینی پرونده با موفقیت ذخیره گردید.
                 </div>
               )}
 
@@ -3893,7 +4113,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#173f6b] px-5 py-4 text-sm font-black text-white transition hover:bg-[#0f3155] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
               >
                 <Check className="size-4" />
-                ثبت گزارش ذیل همین نوبت
+                ثبت گزارش جلسه و تعیین وضعیت مراجع
               </button>
             </div>
           </section>

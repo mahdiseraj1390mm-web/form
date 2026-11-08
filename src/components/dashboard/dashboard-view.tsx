@@ -325,7 +325,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       if (counselor && typeof counselor === 'string' && counselor.trim()) {
         const cleanName = counselor.replace(/^(آقای|خانم|دکتر)\s+/, '').replace(/\s*\(.*?\)/, '').trim();
-        const fullClean = `استاد ${cleanName}`;
+        const isFemale = cleanName.includes('شوندی') || cleanName.includes('خانم') || counselor.includes('خانم');
+        const prefix = isFemale ? 'خانم' : 'آقای';
+        const fullClean = `${prefix} ${cleanName}`;
         counselorCounts[fullClean] = (counselorCounts[fullClean] || 0) + 1;
       }
     });
@@ -383,7 +385,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       }
 
       if (s.formId === 'form-belhagh-booking' || s.data?.f_topic) {
-        let counselor = s.data?.f_counselor || 'استاد مشاور';
+        let counselor = s.data?.f_counselor || 'مشاور محترم';
         for (const k of Object.keys(s.data || {})) {
           if (k.startsWith('f_counselor_') && s.data[k]) {
             counselor = s.data[k];
