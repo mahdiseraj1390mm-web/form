@@ -4186,7 +4186,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
-                      { id: 'regressing', label: 'عقب‌گرد', color: 'rose' },
+                      { id: 'regressing', label: 'عقب گرد', color: 'rose' },
                       { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'amber' },
                       { id: 'optimal', label: 'وضعیت مطلوب', color: 'emerald' },
                       { id: 'growing', label: 'در حال رشد', color: 'blue' },
