@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTeamMembersFromDb, saveTeamMembersToDb } from '@/lib/team-store';
+import { getTeamMembersFromDb, saveTeamMembersToDb, deleteTeamMemberFromDb } from '@/lib/team-store';
 import { TeamMember } from '@/types/advanced';
 
 export async function GET() {
@@ -14,6 +14,11 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    if (body.action === 'delete' && body.id) {
+      const updated = await deleteTeamMemberFromDb(body.id);
+      return NextResponse.json({ success: true, teamMembers: updated });
+    }
 
     if (Array.isArray(body.teamMembers)) {
       await saveTeamMembersToDb(body.teamMembers);
@@ -31,13 +36,6 @@ export async function POST(req: NextRequest) {
       } else {
         updated = [member, ...current];
       }
-      await saveTeamMembersToDb(updated);
-      return NextResponse.json({ success: true, teamMembers: updated });
-    }
-
-    if (body.action === 'delete' && body.id) {
-      const current = await getTeamMembersFromDb();
-      const updated = current.filter((m) => m.id !== body.id);
       await saveTeamMembersToDb(updated);
       return NextResponse.json({ success: true, teamMembers: updated });
     }

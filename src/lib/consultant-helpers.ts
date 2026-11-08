@@ -197,7 +197,6 @@ export const CONSULTANT_DEFAULT_TOPICS: Record<string, string[]> = {
   f_booking_sedighi: ['family'],
   f_booking_karimi: ['family'],
   f_booking_abdi_family: ['family'],
-  'user-reviewer': ['clinical'],
 };
 
 export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
@@ -327,15 +326,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     bookingFieldIds: ['f_booking_abdi_family'],
     definedSlots: [],
   },
-  {
-    id: 'user-reviewer',
-    name: 'سارا سعادت',
-    mobile: '09193334455',
-    jobTitle: 'کارشناس بررسی و مشاور فردی',
-    specialization: 'مشاوره فردی، بررسی پرونده‌ها و خودشناسی',
-    bookingFieldIds: ['f_counselor_saadat'],
-    definedSlots: [],
-  },
+
 ];
 
 /**
@@ -463,7 +454,22 @@ export function extractBookingItemFromSubmission(sub: FormSubmission): Consultan
     }
 
     if (d.f_booking && typeof d.f_booking === 'string') {
-      slotValue = String(d.f_booking);
+      const bookingStr = String(d.f_booking);
+      slotValue = bookingStr;
+      if (bookingStr.includes('|')) {
+        const parts = bookingStr.split('|').map((s) => s.trim());
+        for (const part of parts) {
+          if (!consultantName && (part.startsWith('مشاور:') || part.includes('مشاور:'))) {
+            consultantName = part.replace(/.*مشاور:\s*/, '').trim();
+          }
+          if (part.startsWith('نوبت:') || part.includes('نوبت:')) {
+            slotValue = part.replace(/.*نوبت:\s*/, '').trim();
+          }
+          if (!d.f_topic && !d.topic && (part.startsWith('موضوع:') || part.includes('موضوع:'))) {
+            d.topic = part.replace(/.*موضوع:\s*/, '').trim();
+          }
+        }
+      }
     } else if (d.slot && typeof d.slot === 'string') {
       slotValue = String(d.slot);
     } else if (d.f_booking_datetime) {

@@ -14,6 +14,13 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const TEAM_MEMBERS_FILE = path.join(DATA_DIR, 'team_members.json');
 
 /**
+ * فیلتر کردن قطعی کاربران تستی قدیمی
+ */
+function filterOutLegacyTestMembers(members: TeamMember[]): TeamMember[] {
+  return members.filter((m) => m.id !== 'user-booking-op' && m.id !== 'user-reviewer');
+}
+
+/**
  * ایجاد جدول team_members در پایگاه داده PostgreSQL در صورت عدم وجود
  */
 async function ensureDbTable(): Promise<boolean> {
@@ -42,17 +49,22 @@ async function saveTeamMembersToPostgres(members: TeamMember[]): Promise<void> {
     const isReady = await ensureDbTable();
     if (!isReady) return;
 
-    const currentIds = members.map((m) => m.id);
+    const cleanMembers = filterOutLegacyTestMembers(members);
+    const currentIds = cleanMembers.map((m) => m.id);
+
+    // حذف قطعی کاربران تستی نمونه از دیتابیس
+    await sql`DELETE FROM team_members WHERE id IN ('user-booking-op', 'user-reviewer')`;
+
     if (currentIds.length > 0) {
       await sql(
-        `DELETE FROM team_members WHERE NOT (id = ANY($1))`,
+        `DELETE FROM team_members WHERE NOT (id = ANY($1::varchar[]))`,
         [currentIds]
       );
     } else {
       await sql`DELETE FROM team_members`;
     }
 
-    for (const m of members) {
+    for (const m of cleanMembers) {
       await sql(
         `INSERT INTO team_members (id, mobile, username, name, data, updated_at)
          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
@@ -80,9 +92,11 @@ export async function getTeamMembersFromDb(): Promise<TeamMember[]> {
     if (isReady) {
       const rows = await sql`SELECT data FROM team_members ORDER BY updated_at DESC`;
       if (rows && Array.isArray(rows) && rows.length > 0) {
-        const members: TeamMember[] = rows.map((r: any) =>
+        const rawMembers: TeamMember[] = rows.map((r: any) =>
           typeof r.data === 'string' ? JSON.parse(r.data) : r.data
         );
+        const members = filterOutLegacyTestMembers(rawMembers);
+
         // پشتیبان‌گیری در فایل محلی
         await fs.mkdir(DATA_DIR, { recursive: true });
         await fs.writeFile(TEAM_MEMBERS_FILE, JSON.stringify(members, null, 2), 'utf8');
@@ -99,7 +113,8 @@ export async function getTeamMembersFromDb(): Promise<TeamMember[]> {
     const content = await fs.readFile(TEAM_MEMBERS_FILE, 'utf8');
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      const mapped = parsed.map((m: any) => ({
+      const clean = filterOutLegacyTestMembers(parsed);
+      const mapped = clean.map((m: any) => ({
         ...m,
         allowedTabs: Array.isArray(m.allowedTabs) ? m.allowedTabs : ['submissions'],
         requireCaseCode: m.requireCaseCode !== undefined ? m.requireCaseCode : true,
@@ -113,29 +128,52 @@ export async function getTeamMembersFromDb(): Promise<TeamMember[]> {
   }
 
   // ۳. اولویت سوم: مقداردهی اولیه با اعضای پیش‌فرض
+  const defaults = filterOutLegacyTestMembers(DEFAULT_INITIAL_TEAM_MEMBERS);
   try {
-    await saveTeamMembersToDb(DEFAULT_INITIAL_TEAM_MEMBERS);
+    await saveTeamMembersToDb(defaults);
   } catch (e) {
     console.warn('Could not initialize team members file:', e);
   }
 
-  return DEFAULT_INITIAL_TEAM_MEMBERS;
+  return defaults;
 }
 
 /**
  * ذخیره اعضای تیم در دیتابیس و فایل محلی به صورت همزمان
  */
 export async function saveTeamMembersToDb(members: TeamMember[]): Promise<void> {
+  const cleanMembers = filterOutLegacyTestMembers(members);
+
   // ۱. ذخیره بی‌درنگ در فایل پایدار سرور
   await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(TEAM_MEMBERS_FILE, JSON.stringify(members, null, 2), 'utf8');
+  await fs.writeFile(TEAM_MEMBERS_FILE, JSON.stringify(cleanMembers, null, 2), 'utf8');
 
   // ۲. ذخیره در پایگاه داده PostgreSQL
   try {
-    await saveTeamMembersToPostgres(members);
+    await saveTeamMembersToPostgres(cleanMembers);
   } catch (err) {
     console.warn('Failed to sync team members to Postgres:', err);
   }
+}
+
+/**
+ * حذف قطعی عضو تیم از فایل و پایگاه داده
+ */
+export async function deleteTeamMemberFromDb(id: string): Promise<TeamMember[]> {
+  const current = await getTeamMembersFromDb();
+  const updated = current.filter((m) => m.id !== id);
+  await saveTeamMembersToDb(updated);
+
+  try {
+    const isReady = await ensureDbTable();
+    if (isReady) {
+      await sql`DELETE FROM team_members WHERE id = ${id}`;
+    }
+  } catch (err) {
+    console.warn('PostgreSQL deleteTeamMember error:', err);
+  }
+
+  return updated;
 }
 
 export async function findTeamMemberByCredentials(

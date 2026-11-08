@@ -35,78 +35,8 @@
       "consultants"
     ],
     "genderPrefix": "آقا",
-    "clientDossierAccess": "unrestricted"
-  },
-  {
-    "id": "user-booking-op",
-    "name": "مریم نوری",
-    "email": "m.nouri@psy-belhagh.com",
-    "mobile": "09358889900",
-    "jobTitle": "مسئول پذیرش و نوبت‌دهی تلفنی",
-    "role": "booking_operator",
-    "status": "active",
-    "invitedAt": "2026-03-01T10:30:00Z",
-    "lastActive": "۲ ساعت پیش",
-    "accessibleFormIds": [
-      "form-belhagh-booking",
-      "form-belhagh-registration"
-    ],
-    "permissions": {
-      "canCreateForms": false,
-      "canEditForms": false,
-      "canDeleteForms": false,
-      "canPublishForms": false,
-      "canViewSubmissions": true,
-      "canEditSubmissions": true,
-      "canDeleteSubmissions": false,
-      "canChangeStatus": true,
-      "canExportData": true,
-      "canAddComments": true,
-      "canManageBookings": true,
-      "canRescheduleBookings": true,
-      "canManualBook": true,
-      "canViewFinances": false,
-      "canManageSms": false,
-      "canManageIntegrations": false,
-      "canManageTeam": false
-    },
-    "genderPrefix": "خانم",
-    "clientDossierAccess": "restricted"
-  },
-  {
-    "id": "user-reviewer",
-    "name": "سارا سعادت",
-    "email": "sara@paya.ir",
-    "mobile": "09193334455",
-    "jobTitle": "کارشناس بررسی پرونده‌های روانشناسی",
-    "role": "reviewer",
-    "status": "active",
-    "invitedAt": "2026-02-15T12:00:00Z",
-    "lastActive": "دیروز",
-    "accessibleFormIds": [
-      "all"
-    ],
-    "permissions": {
-      "canCreateForms": false,
-      "canEditForms": false,
-      "canDeleteForms": false,
-      "canPublishForms": false,
-      "canViewSubmissions": true,
-      "canEditSubmissions": true,
-      "canDeleteSubmissions": false,
-      "canChangeStatus": true,
-      "canExportData": true,
-      "canAddComments": true,
-      "canManageBookings": false,
-      "canRescheduleBookings": false,
-      "canManualBook": false,
-      "canViewFinances": false,
-      "canManageSms": false,
-      "canManageIntegrations": false,
-      "canManageTeam": false
-    },
-    "genderPrefix": "خانم",
-    "clientDossierAccess": "unrestricted"
+    "clientDossierAccess": "unrestricted",
+    "requireCaseCode": true
   },
   {
     "id": "user-counselor-sedighi",
