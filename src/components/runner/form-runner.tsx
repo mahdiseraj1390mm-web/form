@@ -3713,6 +3713,55 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
+                {/* فیلد مبلغ اختیاری در انتهای فرم‌ها همراه با شماره کارت (درخواست کاربر) */}
+        {((form.mode !== 'wizard' || currentStepIndex === (form.steps?.length || 1) - 1) &&
+          (activePageIndex >= pages.length - 1)) && (
+          <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-3 animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-xl bg-amber-100 text-amber-800 grid place-items-center">
+                <CreditCard className="size-4" />
+              </div>
+              <div>
+                <span className="text-xs font-black text-amber-950 block">مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)</span>
+                <span className="text-[11px] text-amber-700">در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+              <div className="p-3 bg-white rounded-xl border border-amber-200/70 space-y-1">
+                <span className="text-[10px] text-slate-400 block">شماره کارت جهت واریز اختیاری:</span>
+                <span className="font-mono font-bold text-slate-900 text-sm tracking-wider block" dir="ltr">
+                  ۶۰۳۷ - ۹۹۷۹ - ۱۲۳۴ - ۵۶۷۸
+                </span>
+                <span className="text-[11px] text-slate-500 block">به نام: مرکز خدمات روانشناسی بالحق</span>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[11px] text-slate-600 font-bold block">مبلغ دلخواه پرداختی (تومان):</span>
+                <input
+                  type="text"
+                  placeholder="مثال: ۵۰,۰۰۰"
+                  value={formData['f_optional_contribution'] || ''}
+                  onChange={(e) => handleFieldChange('f_optional_contribution', e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                />
+                <div className="flex gap-1.5 pt-0.5">
+                  {['۳۰,۰۰۰', '۵۰,۰۰۰', '۱۰۰,۰۰۰', '۲۰۰,۰۰۰'].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => handleFieldChange('f_optional_contribution', amt)}
+                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 transition cursor-pointer"
+                    >
+                      {amt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* دکمه‌های ناوبری مرحله‌ای و ثبت فرم با چیدمان لمسی بهینه‌شده موبایل */}
         <div className="pt-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">

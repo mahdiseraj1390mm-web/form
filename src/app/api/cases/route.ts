@@ -8,6 +8,21 @@ import {
   getFormSubmissionsFromDb,
 } from '@/lib/db';
 
+
+// نگاشت فیلدهای مرتبط مشاورانی که چند نقش دارند (مانند نوجوان + خانواده) جهت جلوگیری از تداخل نوبت در یک ساعت
+const RELATED_COUNSELOR_FIELDS: Record<string, string[]> = {
+  f_booking_borhani_teen: ['f_booking_borhani_teen', 'f_booking_borhani_family'],
+  f_booking_borhani_family: ['f_booking_borhani_teen', 'f_booking_borhani_family'],
+  f_booking_shavandi_child: ['f_booking_shavandi_child', 'f_booking_shavandi_teen'],
+  f_booking_shavandi_teen: ['f_booking_shavandi_child', 'f_booking_shavandi_teen'],
+  f_booking_ansari_child: ['f_booking_ansari_child', 'f_booking_ansari_teen'],
+  f_booking_ansari_teen: ['f_booking_ansari_child', 'f_booking_ansari_teen'],
+  f_booking_zeynali_child: ['f_booking_zeynali_child', 'f_booking_zeynali_family'],
+  f_booking_zeynali_family: ['f_booking_zeynali_child', 'f_booking_zeynali_family'],
+  f_booking_rastgoo_teen: ['f_booking_rastgoo_teen', 'f_booking_rastgoo_clinical'],
+  f_booking_rastgoo_clinical: ['f_booking_rastgoo_teen', 'f_booking_rastgoo_clinical'],
+};
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const mobile = searchParams.get('mobile');
@@ -17,21 +32,27 @@ export async function GET(req: NextRequest) {
 
   try {
     // دریافت تمامی نوبت‌های از قبل رزرو شده جهت جلوگیری از ثبت تکراری نوبت در یک زمان
+    // دریافت تمامی نوبت‌های از قبل رزرو شده جهت جلوگیری از ثبت تکراری نوبت در یک زمان
     if (action === 'booked_slots') {
-      const targetFormId = formId || 'form-belhagh-booking';
       const counselorField = searchParams.get('counselorField');
-      const submissions = await getFormSubmissionsFromDb(targetFormId);
+      // جستجو در کلیه پاسخ‌های ثبت‌شده (شامل تمامی فرم‌های رزرو نوبت مانند form-belhagh-booking و 3uu4z)
+      const submissions = await getFormSubmissionsFromDb('all');
       const bookedSlots: string[] = [];
+
+      // اگر این مشاور در نقش‌های دیگر نیز فیلد نوبت دارد، تمام فیلدهای مرتبط بررسی می‌شوند
+      const targetFields = counselorField && RELATED_COUNSELOR_FIELDS[counselorField]
+        ? RELATED_COUNSELOR_FIELDS[counselorField]
+        : (counselorField ? [counselorField] : null);
 
       submissions.forEach((s) => {
         if (s.data && typeof s.data === 'object') {
           Object.entries(s.data).forEach(([key, val]) => {
-            if (val && typeof val === 'string') {
-              if (counselorField) {
-                if (key === counselorField) {
+            if (val && typeof val === 'string' && val.trim()) {
+              if (targetFields) {
+                if (targetFields.includes(key)) {
                   bookedSlots.push(val.trim());
                 }
-              } else if (key.startsWith('f_booking_')) {
+              } else if (key.startsWith('f_booking_') && !['f_booking_counselor', 'f_booking_date', 'f_booking_datetime'].includes(key)) {
                 bookedSlots.push(val.trim());
               }
             }
@@ -39,7 +60,7 @@ export async function GET(req: NextRequest) {
         }
       });
 
-      return NextResponse.json({ success: true, bookedSlots });
+      return NextResponse.json({ success: true, bookedSlots: Array.from(new Set(bookedSlots)) });
     }
 
     if (mobile) {
@@ -133,6 +154,36 @@ export async function POST(req: NextRequest) {
         }
         await saveFormSubmissionToDb(submission);
       }
+      return NextResponse.json({ success: true });
+    }
+
+    // ۴. به‌روزرسانی اطلاعات ویرایش‌شده پرونده توسط مشاور
+    if (action === 'update_submission_data') {
+      const { submissionId, updatedFields } = body;
+      if (!submissionId || !updatedFields) {
+        return NextResponse.json({ error: 'شناسه یا فیلدهای ارسالی ناقص است' }, { status: 400 });
+      }
+      await updateSubmissionDataInDb(submissionId, updatedFields);
+      return NextResponse.json({ success: true });
+    }
+
+    // ۵. ویرایش متن یادداشت / پیگیری مراجع
+    if (action === 'edit_submission_comment') {
+      const { submissionId, commentId, newContent } = body;
+      if (!submissionId || !commentId || !newContent) {
+        return NextResponse.json({ error: 'اطلاعات ویرایش پیگیری ناقص است' }, { status: 400 });
+      }
+      await editSubmissionCommentInDb(submissionId, commentId, newContent);
+      return NextResponse.json({ success: true });
+    }
+
+    // ۶. حذف یادداشت / پیگیری مراجع
+    if (action === 'delete_submission_comment') {
+      const { submissionId, commentId } = body;
+      if (!submissionId || !commentId) {
+        return NextResponse.json({ error: 'اطلاعات حذف پیگیری ناقص است' }, { status: 400 });
+      }
+      await deleteSubmissionCommentInDb(submissionId, commentId);
       return NextResponse.json({ success: true });
     }
 

@@ -452,6 +452,213 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
 /**
  * استخراج همه پاسخ‌های فرم‌ها همراه با پشتیبانی از فیلتر فرم، جستجو و انعطاف‌پذیری ۱۰۰٪
  */
+
+/**
+ * به‌روزرسانی فیلدهای داده پرونده/پاسخ فرم در دیتابیس و فایل پایدار
+ */
+export async function updateSubmissionDataInDb(
+  submissionId: string,
+  updatedFields: Record<string, any>
+): Promise<boolean> {
+  if (!submissionId || !updatedFields) return false;
+
+  const cleanId = submissionId.trim();
+  const cCode = updatedFields.caseCode || cleanId;
+  const newFullName = `${updatedFields.f_name || ''} ${updatedFields.f_family || ''}`.trim();
+  const newMobile = normalizeMobile(updatedFields.f_mobile || updatedFields.mobile || '');
+
+  // ۱. به‌روزرسانی در مخزن فایل محلی
+  try {
+    const local = readLocalSubmissions();
+    let updatedCount = 0;
+    for (let i = 0; i < local.length; i++) {
+      const s = local[i];
+      if (
+        s.id === cleanId ||
+        s.trackingCode === cleanId ||
+        s.data?.caseCode === cleanId ||
+        (cCode && (s.trackingCode === cCode || s.data?.caseCode === cCode))
+      ) {
+        local[i] = {
+          ...s,
+          mobile: newMobile || s.mobile,
+          data: {
+            ...(s.data || {}),
+            ...updatedFields,
+            ...(newFullName ? { fullName: newFullName } : {}),
+            ...(cCode ? { caseCode: cCode } : {}),
+          },
+        };
+        updatedCount++;
+      }
+    }
+    if (updatedCount > 0) {
+      writeLocalSubmissions(local);
+    }
+  } catch (err) {
+    console.warn('Local updateSubmissionData warning:', err);
+  }
+
+  // ۲. به‌روزرسانی در پایگاه‌داده PostgreSQL
+  try {
+    await executeNeonQueryWithTimeout(
+      `UPDATE form_submissions 
+       SET data = data || $1::jsonb,
+           mobile = COALESCE($2, mobile)
+       WHERE id = $3 OR tracking_code = $3 OR data->>'caseCode' = $3`,
+      [JSON.stringify(updatedFields), newMobile || null, cleanId]
+    );
+
+    if (newFullName || newMobile) {
+      const parts = newFullName.split(' ');
+      const fName = parts[0] || '';
+      const lName = parts.slice(1).join(' ') || '';
+      await executeNeonQueryWithTimeout(
+        `UPDATE belhagh_cases 
+         SET first_name = COALESCE($1, first_name),
+             last_name = COALESCE($2, last_name),
+             mobile = COALESCE($3, mobile),
+             data = data || $4::jsonb
+         WHERE case_code = $5 OR mobile = $3`,
+        [fName || null, lName || null, newMobile || null, JSON.stringify(updatedFields), cleanId]
+      ).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('DB updateSubmissionData warning:', err);
+  }
+
+  return true;
+}
+
+/**
+ * ویرایش متن یادداشت/پیگیری در پرونده مراجع
+ */
+export async function editSubmissionCommentInDb(
+  submissionId: string,
+  commentId: string,
+  newContent: string
+): Promise<boolean> {
+  if (!submissionId || !commentId || !newContent.trim()) return false;
+  const cleanId = submissionId.trim();
+
+  // ۱. فایل محلی
+  try {
+    const local = readLocalSubmissions();
+    let found = false;
+    for (const s of local) {
+      if (
+        s.id === cleanId ||
+        s.trackingCode === cleanId ||
+        s.data?.caseCode === cleanId
+      ) {
+        if (Array.isArray(s.comments)) {
+          const c = s.comments.find((item) => item.id === commentId);
+          if (c) {
+            c.content = newContent.trim();
+            c.updatedAt = new Date().toISOString();
+            found = true;
+          }
+        }
+        if (s.data && Array.isArray(s.data.comments)) {
+          const c = s.data.comments.find((item) => item.id === commentId);
+          if (c) {
+            c.content = newContent.trim();
+            c.updatedAt = new Date().toISOString();
+            found = true;
+          }
+        }
+      }
+    }
+    if (found) writeLocalSubmissions(local);
+  } catch (err) {
+    console.warn('Local editSubmissionComment warning:', err);
+  }
+
+  // ۲. دیتابیس
+  try {
+    const rows = await executeNeonQueryWithTimeout(
+      `SELECT id, data FROM form_submissions WHERE id = $1 OR tracking_code = $1 OR data->>'caseCode' = $1 LIMIT 1`,
+      [cleanId]
+    );
+    if (rows && rows[0]) {
+      const dataObj = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data || {};
+      if (Array.isArray(dataObj.comments)) {
+        const c = dataObj.comments.find((item) => item.id === commentId);
+        if (c) {
+          c.content = newContent.trim();
+          c.updatedAt = new Date().toISOString();
+          await executeNeonQueryWithTimeout(
+            `UPDATE form_submissions SET data = $1 WHERE id = $2`,
+            [JSON.stringify(dataObj), rows[0].id]
+          );
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('DB editSubmissionComment warning:', err);
+  }
+
+  return true;
+}
+
+/**
+ * حذف یادداشت/پیگیری از پرونده مراجع
+ */
+export async function deleteSubmissionCommentInDb(
+  submissionId: string,
+  commentId: string
+): Promise<boolean> {
+  if (!submissionId || !commentId) return false;
+  const cleanId = submissionId.trim();
+
+  // ۱. فایل محلی
+  try {
+    const local = readLocalSubmissions();
+    let found = false;
+    for (const s of local) {
+      if (
+        s.id === cleanId ||
+        s.trackingCode === cleanId ||
+        s.data?.caseCode === cleanId
+      ) {
+        if (Array.isArray(s.comments)) {
+          s.comments = s.comments.filter((item) => item.id !== commentId);
+          found = true;
+        }
+        if (s.data && Array.isArray(s.data.comments)) {
+          s.data.comments = s.data.comments.filter((item) => item.id !== commentId);
+          found = true;
+        }
+      }
+    }
+    if (found) writeLocalSubmissions(local);
+  } catch (err) {
+    console.warn('Local deleteSubmissionComment warning:', err);
+  }
+
+  // ۲. دیتابیس
+  try {
+    const rows = await executeNeonQueryWithTimeout(
+      `SELECT id, data FROM form_submissions WHERE id = $1 OR tracking_code = $1 OR data->>'caseCode' = $1 LIMIT 1`,
+      [cleanId]
+    );
+    if (rows && rows[0]) {
+      const dataObj = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data || {};
+      if (Array.isArray(dataObj.comments)) {
+        dataObj.comments = dataObj.comments.filter((item) => item.id !== commentId);
+        await executeNeonQueryWithTimeout(
+          `UPDATE form_submissions SET data = $1 WHERE id = $2`,
+          [JSON.stringify(dataObj), rows[0].id]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('DB deleteSubmissionComment warning:', err);
+  }
+
+  return true;
+}
+
 export async function getFormSubmissionsFromDb(formId?: string, search?: string): Promise<FormSubmission[]> {
   // الف) تلاش برای واکشی از پایگاه‌داده PostgreSQL
   try {

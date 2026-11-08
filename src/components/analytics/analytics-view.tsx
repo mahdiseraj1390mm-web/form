@@ -104,7 +104,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
   const currentForm = forms.find((f) => f.id === selectedFormId) || forms[0];
 
-    // اعمال فیلتر زمانی روی کل سابمیشن‌های معتبر (کارنامه‌های متصل‌نشده صفان از آمار و تحلیل‌ها خارج می‌شوند)
+    // اعمال فیلتر زمانی روی کل سابمیشن‌های معتبر (کارنامه‌های متصل‌نشده صَفًّا از آمار و تحلیل‌ها خارج می‌شوند)
   const filteredSubmissions = useMemo(() => {
     const activeBase = filterActiveSubmissions(submissions);
     if (timeRange === 'all') return activeBase;
@@ -454,7 +454,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
       // رویداد نوبت مشاوره
       if (isRealBookingSubmission(s)) {
-        let counselor = s.data?.f_counselor || 'استاد مشاور';
+        let counselor = s.data?.f_counselor || 'مشاور محترم';
         for (const k of Object.keys(s.data || {})) {
           if (k.startsWith('f_counselor_') && s.data[k]) {
             counselor = s.data[k];
@@ -488,7 +488,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
         list.push({
           id: `act-quiz-${s.id}`,
           type: 'quiz',
-          title: 'تکمیل آزمون خودسنجی صفان',
+          title: 'تکمیل آزمون خودسنجی صَفًّا',
           clientName,
           caseCode,
           detail: `نمره کل ارزیابی: ${toPersianDigits(score)} از ۱۰۰ | مؤلفه‌های رشد ثبت شد`,
@@ -744,6 +744,46 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     ];
   }, [filteredSubmissions]);
 
+  
+  // توزیع دقیق تعداد فرزندان مراجعان (تک فرزند، دو فرزند، سه فرزند، چهار فرزند، پنج فرزند، شش فرزند، هفت فرزند، هشت فرزند، نه فرزند)
+  const childrenDistribution = useMemo(() => {
+    const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+    const labelNames: Record<number, string> = {
+      1: 'تک فرزند',
+      2: 'دو فرزند',
+      3: 'سه فرزند',
+      4: 'چهار فرزند',
+      5: 'پنج فرزند',
+      6: 'شش فرزند',
+      7: 'هفت فرزند',
+      8: 'هشت فرزند',
+      9: 'نه فرزند',
+    };
+
+    filteredSubmissions.forEach((s) => {
+      const d = s.data || {};
+      let c = parseInt(d.f_children_count || d.children_count || d.f_children || '0');
+      if (!c && d.f_family_members) {
+        const mem = parseInt(d.f_family_members);
+        if (mem >= 3) c = mem - 2;
+      }
+      if (c >= 1 && c <= 9) {
+        counts[c] = (counts[c] || 0) + 1;
+      }
+    });
+
+    const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+    return Object.entries(counts).map(([numStr, count]) => {
+      const num = Number(numStr);
+      return {
+        num,
+        label: labelNames[num],
+        count,
+        percentage: Math.round((count / total) * 100),
+      };
+    });
+  }, [filteredSubmissions]);
+
   // ۵. بعد خانوار (بر اساس داده‌های واقعی)
   const familySizeDistribution = useMemo(() => {
     let f2 = 0, f3 = 0, f4 = 0, f5plus = 0;
@@ -810,7 +850,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
       'سرکار خانم زینلی': { count: 0, specialty: 'مشاوره خانواده و روابط' },
       'سرکار خانم شوندی': { count: 0, specialty: 'کودک و بازی‌درمانی' },
       'سرکار خانم کریمی': { count: 0, specialty: 'مشاوره خانواده' },
-      'دکتر علوی': { count: 0, specialty: 'مشاوره تحصیلی و انگیزشی' },
+      
     };
 
     filteredSubmissions.forEach((s) => {
@@ -1094,7 +1134,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                 {toPersianDigits(statsOverview.totalQuizzesCount)}
               </div>
               <div className="text-[11px] text-purple-700 font-semibold flex items-center gap-1 pt-1 border-t border-slate-100">
-                <span>ارزیابی صفان و خودسنجی بالینی</span>
+                <span>ارزیابی صَفًّا و خودسنجی بالینی</span>
               </div>
             </div>
 

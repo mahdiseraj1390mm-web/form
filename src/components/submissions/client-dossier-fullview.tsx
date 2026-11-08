@@ -305,6 +305,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   // استیت فرم ثبت پیگیری جدید
   const [newFollowupType, setNewFollowupType] = useState<'call' | 'meeting' | 'sms' | 'note' | 'referral'>('call');
   const [newFollowupText, setNewFollowupText] = useState('');
+  const [editingComment, setEditingComment] = useState<{ id: string; subId: string; content: string } | null>(null);
+  const [deletingComment, setDeletingComment] = useState<{ id: string; subId: string } | null>(null);
   const [isSubmittingFollowup, setIsSubmittingFollowup] = useState(false);
 
   // استیت وضعیت فعلی پرونده
@@ -2012,6 +2014,72 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               </article>
             </div>
+
+            
+            {/* نمودار وضعیت مراجع بر اساس تعیین وضعیت مشاور (درخواست کاربر) */}
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-700">
+                    <Activity className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">وضعیت مراجع بر اساس تعیین وضعیت مشاور</h3>
+                    <p className="mt-0.5 text-[11px] text-slate-400">سنجش بالینی و برآیند وضعیت کلی مراجع پس از جلسات مشاوره</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400">آخرین ارزیابی:</span>
+                  <span className={`px-3 py-1 rounded-xl text-xs font-black border ${
+                    clientCase.overallStatus === 'growing'
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    {clientCase.overallStatus === 'growing'
+                      ? 'در حال رشد'
+                      : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
+                      ? 'وضعیت مطلوب'
+                      : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
+                      ? 'عقب‌گرد'
+                      : 'نیازمند پیگیری'}
+                  </span>
+                </div>
+              </div>
+
+              {/* نوار روند پیشرفت وضعیت بالینی */}
+              <div className="grid grid-cols-4 gap-2 pt-2">
+                {[
+                  { id: 'regressing', label: 'عقب‌گرد', color: 'bg-rose-500', light: 'bg-rose-50 border-rose-200 text-rose-800' },
+                  { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'bg-amber-500', light: 'bg-amber-50 border-amber-200 text-amber-800' },
+                  { id: 'growing', label: 'در حال رشد', color: 'bg-blue-500', light: 'bg-blue-50 border-blue-200 text-blue-800' },
+                  { id: 'optimal', label: 'وضعیت مطلوب', color: 'bg-emerald-500', light: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+                ].map((step, idx) => {
+                  const isCurrent = (
+                    clientCase.overallStatus === step.id ||
+                    (step.id === 'optimal' && clientCase.overallStatus === 'approved') ||
+                    (step.id === 'needs_followup' && (clientCase.overallStatus === 'new' || clientCase.overallStatus === 'reviewing'))
+                  );
+                  return (
+                    <div
+                      key={step.id}
+                      className={`p-3 rounded-2xl border text-center transition-all ${
+                        isCurrent ? step.light + ' ring-2 ring-indigo-400/30 font-black' : 'bg-slate-50 border-slate-200/80 text-slate-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <span className={`size-2 rounded-full ${isCurrent ? step.color : 'bg-slate-300'}`} />
+                        <span className="text-[10px] font-mono opacity-70">سطح {toPersianDigits(idx + 1)}</span>
+                      </div>
+                      <span className="text-xs font-bold block">{step.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
 
             {/* گرید پایینی: دکمه‌های اقدام و هدایت سریع */}
             <div className="grid gap-4 md:grid-cols-3">

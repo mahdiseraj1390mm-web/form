@@ -4,7 +4,8 @@ import React from 'react';
 import { 
   LayoutDashboard, 
   PenTool, 
-  Inbox, 
+  Inbox,
+  FileSpreadsheet, 
   BarChart3, 
   Settings, 
   Sparkles, 

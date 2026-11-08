@@ -43,6 +43,8 @@ interface FormContextType {
   updateSubmissionStatus: (submissionId: string, newStatus: SubmissionStatus) => void;
   updateSubmissionData: (submissionId: string, updatedFields: Record<string, any>) => void;
   addSubmissionComment: (submissionId: string, authorName: string, authorRole: string, content: string) => void;
+  editSubmissionComment: (submissionId: string, commentId: string, newContent: string) => void;
+  deleteSubmissionComment: (submissionId: string, commentId: string) => void;
   getSubmissionsByFormId: (formId: string) => FormSubmission[];
   refreshSubmissionsFromDb: (formId?: string) => Promise<void>;
   sendChatMessage: (formId: string, sender: 'respondent' | 'admin', senderName: string, text: string) => void;
@@ -761,6 +763,72 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     }, 50);
   };
 
+  
+  const editSubmissionComment = (submissionId: string, commentId: string, newContent: string) => {
+    setSubmissions((prev) =>
+      prev.map((s) => {
+        if (
+          s.id === submissionId ||
+          s.trackingCode === submissionId ||
+          s.data?.caseCode === submissionId
+        ) {
+          const currentComments = Array.isArray(s.comments) ? s.comments : [];
+          return {
+            ...s,
+            comments: currentComments.map((c) =>
+              c.id === commentId ? { ...c, content: newContent, updatedAt: new Date().toISOString() } : c
+            ),
+          };
+        }
+        return s;
+      })
+    );
+
+    try {
+      fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'edit_submission_comment',
+          submissionId,
+          commentId,
+          newContent,
+        }),
+      }).catch(() => {});
+    } catch {}
+  };
+
+  const deleteSubmissionComment = (submissionId: string, commentId: string) => {
+    setSubmissions((prev) =>
+      prev.map((s) => {
+        if (
+          s.id === submissionId ||
+          s.trackingCode === submissionId ||
+          s.data?.caseCode === submissionId
+        ) {
+          const currentComments = Array.isArray(s.comments) ? s.comments : [];
+          return {
+            ...s,
+            comments: currentComments.filter((c) => c.id !== commentId),
+          };
+        }
+        return s;
+      })
+    );
+
+    try {
+      fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete_submission_comment',
+          submissionId,
+          commentId,
+        }),
+      }).catch(() => {});
+    } catch {}
+  };
+
   const getSubmissionsByFormId = (formId: string) => submissions.filter((s) => s.formId === formId);
 
   // واکشی پاسخ‌های فرم از دیتابیس ابری Neon و ادغام با وضعیت موجود
@@ -914,6 +982,8 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         updateSubmissionStatus,
         updateSubmissionData,
         addSubmissionComment,
+        editSubmissionComment,
+        deleteSubmissionComment,
         getSubmissionsByFormId,
         refreshSubmissionsFromDb,
         sendChatMessage,

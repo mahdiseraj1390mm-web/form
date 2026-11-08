@@ -206,7 +206,7 @@ export function extractBookingDetails(formData: Record<string, any>) {
   // مشخص کردن دقیق صبح یا شب
   const timePart = formatExactTime(rawTimePart);
 
-  const clientName = `${formData.f_name || ''} ${formData.f_family || ''}`.trim() || formData.f_applicant_name || 'مُراجع محترم';
+  const clientName = (formData.fullName || formData.f_fullname || formData.name || formData.f_client_name || `${formData.f_name || ''} ${formData.f_family || ''}`.trim() || formData.f_applicant_name || 'مراجع محترم').trim();
   const clientMobile = formData.f_mobile || formData.mobile || formData.f_phone || '';
 
   // استخراج استان و شهر مراجع

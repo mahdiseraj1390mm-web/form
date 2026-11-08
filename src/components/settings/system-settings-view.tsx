@@ -193,35 +193,70 @@ export const SystemSettingsView: React.FC = () => {
         {activeTab === 'sms' && <SmsSettingsTab />}
 
         {activeTab === 'payment' && (
-          <div className="space-y-4 max-w-xl">
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
-              <div className="font-bold text-emerald-900">اتصال به درگاه‌های بانکی شاپرک</div>
+          <div className="space-y-5 max-w-xl">
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-1">
+              <div className="font-black text-emerald-950 text-xs sm:text-sm">اتصال به درگاه‌های بانکی شاپرک و شماره کارت مرکز</div>
               <p className="text-[11px] text-emerald-700 leading-relaxed">
-                ترمینال‌های ثبت‌شده به طور خودکار اعتبارسنجی شده و مبالغ واریزی بدون کارمزد اضافی به حساب شبای تجاری شما منتقل می‌شوند.
+                ترمینال‌های ثبت‌شده به طور خودکار اعتبارسنجی شده و مبالغ واریزی بدون کارمزد اضافی به حساب تجاری منتقل می‌شوند.
               </p>
             </div>
 
+            {/* بخش تنظیمات مشارکت مالی اختیاری در انتهای فرم‌ها */}
+            <div className="p-5 bg-amber-50/70 border border-amber-200/90 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-black text-slate-900 text-xs sm:text-sm">فیلد مبلغ و مشارکت مالی اختیاری</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">نمایش فیلد پرداخت اختیاری همراه با شماره کارت در انتهای فرم‌ها</p>
+                </div>
+                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">فعال در فرم‌ها</span>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">شماره کارت مرکز جهت نمایش به مراجعان:</label>
+                  <input
+                    type="text"
+                    defaultValue="6037-9979-1234-5678"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-mono text-left text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    dir="ltr"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">نام صاحب حساب:</label>
+                  <input
+                    type="text"
+                    defaultValue="مرکز خدمات روانشناسی بالحق"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
-              <label className="block font-bold text-slate-800 mb-1">کد ترمینال به‌پرداخت ملت (Terminal ID)</label>
+              <label className="block font-bold text-slate-800 mb-1 text-xs">کد ترمینال به‌پرداخت ملت (Terminal ID)</label>
               <input
                 type="text"
                 defaultValue="8912401"
-                className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white font-mono text-left text-xs"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-mono text-left text-xs focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-800 mb-1">شناسه پذیرنده زرین‌پال (Merchant ID)</label>
+              <label className="block font-bold text-slate-800 mb-1 text-xs">شناسه پذیرنده زرین‌پال (Merchant ID)</label>
               <input
                 type="text"
                 defaultValue="zarin_109283-49210-91820"
-                className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white font-mono text-left text-xs"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-mono text-left text-xs focus:outline-none"
               />
             </div>
 
-            <div className="pt-3">
-              <button className="px-5 py-2 bg-slate-900 text-white font-bold rounded-md hover:bg-slate-800">
-                ذخیره تنظیمات درگاه
+            <div className="pt-2">
+              <button 
+                type="button"
+                onClick={() => alert('تنظیمات مالی و شماره کارت با موفقیت ذخیره شد.')}
+                className="px-5 py-2.5 bg-[#173f6b] text-white font-bold rounded-xl hover:bg-[#123357] transition cursor-pointer text-xs shadow-sm"
+              >
+                ذخیره تنظیمات درگاه و شماره کارت
               </button>
             </div>
           </div>
