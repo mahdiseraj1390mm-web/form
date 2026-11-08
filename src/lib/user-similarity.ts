@@ -1,3 +1,4 @@
+import { extractBirthYear } from '@/lib/persian';
 import { FormSubmission, SimilarityCandidateMatch, SimilarityNotification } from '@/types/form';
 
 /**
