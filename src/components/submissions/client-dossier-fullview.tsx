@@ -92,6 +92,7 @@ export type Appointment = {
   reviewed?: string;
   challenges?: string;
   recommendation?: string;
+  report?: any;
 };
 
 // فیلتر هوشمند ضد داده‌های فیک و موک برای جلوگیری از آلودگی صفحه پرونده
