@@ -123,10 +123,10 @@ export const SubmissionsHub: React.FC = () => {
     approved: { label: 'تأیید شده / فعال', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
     rejected: { label: 'رد شده', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
-    optimal: { label: 'مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+    optimal: { label: 'وضعیت مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
     growing: { label: 'در حال رشد', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
     needs_followup: { label: 'نیازمند پیگیری', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
-    regressing: { label: 'رو به افول', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
+    regressing: { label: 'عقب گرد', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
   };
 
   // گروه‌بندی هوشمند پاسخ‌ها به پرونده‌های مراجعین
@@ -242,7 +242,7 @@ export const SubmissionsHub: React.FC = () => {
           formTitles: [formTitle],
           totalFormsCount: 1,
           latestDate: sub.createdAt,
-          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.caseStatus || sub.status) ? (sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'needs_followup')) as any,
+          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.caseStatus || sub.status) ? (sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'new')) as any,
           totalPaidAmount: sub.paymentStatus === 'paid' ? (sub.paymentAmount || 0) : 0,
           roleInFamily,
         });
@@ -319,7 +319,12 @@ function normalizeSearchText(str: string): string {
     return clientCases.filter((c) => {
       const q = normalizeSearchText(searchQuery);
       if (!q) {
-        return statusFilter === 'all' || c.overallStatus === statusFilter;
+        return (
+          statusFilter === 'all' ||
+          c.overallStatus === statusFilter ||
+          (statusFilter === 'optimal' && c.overallStatus === 'approved') ||
+          (statusFilter === 'regressing' && c.overallStatus === 'rejected')
+        );
       }
       const strippedQ = q.replace(/^(sf|sp|case)-/i, '').replace(/^(sf|sp|case)/i, '');
 
@@ -348,7 +353,11 @@ function normalizeSearchText(str: string): string {
           );
         });
 
-      const matchesStatus = statusFilter === 'all' || c.overallStatus === statusFilter;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        c.overallStatus === statusFilter ||
+        (statusFilter === 'optimal' && c.overallStatus === 'approved') ||
+        (statusFilter === 'regressing' && c.overallStatus === 'rejected');
       return matchesSearch && matchesStatus;
     });
   }, [clientCases, searchQuery, statusFilter]);
@@ -363,7 +372,13 @@ function normalizeSearchText(str: string): string {
       const matchesForm = selectedFormId === 'all' || s.formId === selectedFormId;
       const q = normalizeSearchText(searchQuery);
       if (!q) {
-        return matchesForm && (statusFilter === 'all' || s.status === statusFilter);
+        const sStatus = s.data?.caseStatus || s.status;
+        const matchesStatus =
+          statusFilter === 'all' ||
+          sStatus === statusFilter ||
+          (statusFilter === 'optimal' && sStatus === 'approved') ||
+          (statusFilter === 'regressing' && sStatus === 'rejected');
+        return matchesForm && matchesStatus;
       }
       const strippedQ = q.replace(/^(sf|sp|case)-/i, '').replace(/^(sf|sp|case)/i, '');
 
@@ -377,7 +392,12 @@ function normalizeSearchText(str: string): string {
         dataStr.includes(q) ||
         sMob.includes(q);
 
-      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+      const sStatus = s.data?.caseStatus || s.status;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        sStatus === statusFilter ||
+        (statusFilter === 'optimal' && sStatus === 'approved') ||
+        (statusFilter === 'regressing' && sStatus === 'rejected');
       return matchesForm && matchesSearch && matchesStatus;
     });
   }, [submissions, selectedFormId, searchQuery, statusFilter]);
@@ -591,9 +611,10 @@ function normalizeSearchText(str: string): string {
             <span className="text-slate-500 text-xs">وضعیت:</span>
             {[
               { id: 'all', label: 'همه' },
-              { id: 'new', label: 'جدید' },
-              { id: 'reviewing', label: 'در حال بررسی' },
-              { id: 'approved', label: 'تأیید شده' },
+              { id: 'regressing', label: 'عقب گرد' },
+              { id: 'needs_followup', label: 'نیازمند پیگیری' },
+              { id: 'optimal', label: 'وضعیت مطلوب' },
+              { id: 'growing', label: 'در حال رشد' },
             ].map((st) => (
               <button
                 key={st.id}

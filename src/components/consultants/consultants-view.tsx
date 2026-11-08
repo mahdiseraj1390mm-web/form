@@ -499,14 +499,25 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                               </div>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleOpenClientDossier(b)}
-                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center gap-1 shrink-0 cursor-pointer"
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>مشاهده پرونده</span>
-                            </button>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setViewingBooking(b)}
+                                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg font-bold text-xs shadow-2xs transition flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <CalendarClock className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>مشاهده نوبت</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenClientDossier(b)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>مشاهده پرونده</span>
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -602,6 +613,109 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           </div>
         )}
 
+      </div>
+    );
+  };
+
+  // -------------------------------------------------------------
+  // مودال مشاهده جزئیات نوبت اخذ شده
+  // -------------------------------------------------------------
+  const renderBookingDetailsModal = () => {
+    if (!viewingBooking) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in" dir="rtl">
+        <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+          <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
+                <CalendarClock className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900">مشاهده مشخصات نوبت رزرو شده</h3>
+                <p className="text-[11px] text-slate-400">اطلاعات جلسه و زمان‌بندی مشاوره مراجع</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setViewingBooking(null)}
+              className="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition flex items-center justify-center cursor-pointer text-lg font-bold"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[11px] text-slate-400 block mb-1">نام و نام خانوادگی مراجع:</span>
+                <span className="font-black text-slate-900 text-sm">{viewingBooking.clientName}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[11px] text-slate-400 block mb-1">کد پرونده:</span>
+                <span className="font-mono font-bold text-[#173f6b] text-sm">{viewingBooking.caseCode || 'فاقد کد'}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[11px] text-slate-400 block mb-1">شماره تماس:</span>
+                <span className="font-mono font-bold text-slate-800 text-xs">{viewingBooking.clientMobile || 'ثبت‌نشده'}</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[11px] text-slate-400 block mb-1">استان و شهر:</span>
+                <span className="font-bold text-slate-800 text-xs">{viewingBooking.provinceCity || 'ثبت‌نشده'}</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">زمان جلسه مشاوره:</span>
+                <span className="font-black text-blue-900 font-mono">
+                  {toPersianDigits(viewingBooking.slotValue || `${viewingBooking.dayName} - ${viewingBooking.timeRange}`)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">موضوع مشاوره:</span>
+                <span className="font-bold text-blue-900">{viewingBooking.topic}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-bold">مشاور مربوطه:</span>
+                <span className="font-bold text-blue-900">{viewingBooking.consultantName}</span>
+              </div>
+              {(viewingBooking.createdAt || viewingBooking.submissionDate) && (
+                <div className="flex items-center justify-between pt-1 border-t border-blue-200/50 text-[11px]">
+                  <span className="text-slate-400">تاریخ ثبت در سامانه:</span>
+                  <span className="font-mono text-slate-600">
+                    {toPersianDigits(
+                      viewingBooking.createdAt
+                        ? formatPersianDateTime(viewingBooking.createdAt)
+                        : viewingBooking.submissionDate
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setViewingBooking(null)}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-bold transition cursor-pointer"
+            >
+              بستن
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const b = viewingBooking;
+                setViewingBooking(null);
+                handleOpenClientDossier(b);
+              }}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              <span>مشاهده پرونده کامل مراجع</span>
+            </button>
+          </div>
+        </div>
       </div>
     );
   };
@@ -800,14 +914,25 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                             {b.provinceCity || '—'}
                           </td>
                           <td className="py-3.5 px-4 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenClientDossier(b)}
-                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-2xs flex items-center justify-center gap-1 mx-auto cursor-pointer"
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>مشاهده پرونده کامل</span>
-                            </button>
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setViewingBooking(b)}
+                                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg font-bold text-xs transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <CalendarClock className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>مشاهده نوبت</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenClientDossier(b)}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>مشاهده پرونده کامل</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -822,95 +947,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
 
         
       {/* مودال مشاهده نوبت اخذ شده */}
-      {viewingBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in" dir="rtl">
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
-            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
-                  <CalendarClock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-900">مشاهده مشخصات نوبت رزرو شده</h3>
-                  <p className="text-[11px] text-slate-400">اطلاعات جلسه و زمان‌بندی مشاوره مراجع</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setViewingBooking(null)}
-                className="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition flex items-center justify-center cursor-pointer text-lg font-bold"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[11px] text-slate-400 block mb-1">نام و نام خانوادگی مراجع:</span>
-                  <span className="font-black text-slate-900 text-sm">{viewingBooking.clientName}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[11px] text-slate-400 block mb-1">کد پرونده:</span>
-                  <span className="font-mono font-bold text-[#173f6b] text-sm">{viewingBooking.caseCode || 'فاقد کد'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[11px] text-slate-400 block mb-1">شماره تماس:</span>
-                  <span className="font-mono font-bold text-slate-800 text-xs">{viewingBooking.clientMobile || 'ثبت‌نشده'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <span className="text-[11px] text-slate-400 block mb-1">استان و شهر:</span>
-                  <span className="font-bold text-slate-800 text-xs">{viewingBooking.provinceCity || 'ثبت‌نشده'}</span>
-                </div>
-              </div>
-
-              <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-bold">زمان جلسه مشاوره:</span>
-                  <span className="font-black text-blue-900 font-mono">
-                    {toPersianDigits(viewingBooking.slotValue || `${viewingBooking.dayName} - ${viewingBooking.timeRange}`)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-bold">موضوع مشاوره:</span>
-                  <span className="font-bold text-blue-900">{viewingBooking.topic}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500 font-bold">مشاور مربوطه:</span>
-                  <span className="font-bold text-blue-900">{viewingBooking.consultantName}</span>
-                </div>
-                {viewingBooking.createdAt && (
-                  <div className="flex items-center justify-between pt-1 border-t border-blue-200/50 text-[11px]">
-                    <span className="text-slate-400">تاریخ ثبت در سامانه:</span>
-                    <span className="font-mono text-slate-600">{toPersianDigits(formatPersianDateTime(viewingBooking.createdAt))}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setViewingBooking(null)}
-                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 text-xs font-bold transition cursor-pointer"
-              >
-                بستن
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const b = viewingBooking;
-                  setViewingBooking(null);
-                  handleOpenClientDossier(b);
-                }}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-              >
-                <FileText className="w-4 h-4" />
-                <span>مشاهده پرونده کامل مراجع</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderBookingDetailsModal()}
 
         {/* مودال مشاهده پرونده کامل مراجع */}
         {selectedClientGroup && (
@@ -965,8 +1002,8 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
         </div>
 
         {/* دکمه‌های اقدام ادمین */}
-        <div className="flex items-center gap-2">
-          {adminViewMode === 'timeline' ? (
+        {adminViewMode === 'timeline' && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setAdminViewMode('list')}
@@ -975,19 +1012,8 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
               <ArrowRight className="w-4 h-4" />
               <span>بازگشت به لیست همه مشاوران</span>
             </button>
-          ) : null}
-
-          {onNavigateTab && (
-            <button
-              type="button"
-              onClick={() => onNavigateTab('settings')}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
-            >
-              <Users className="w-4 h-4" />
-              <span>مدیریت مشاوران در تنظیمات</span>
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* کارت‌های آمار کلی */}
@@ -1235,11 +1261,20 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                                 </div>
                               </div>
 
-                              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-end">
+                              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingBooking(b)}
+                                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer transition"
+                                >
+                                  <CalendarClock className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>مشاهده نوبت</span>
+                                </button>
+
                                 <button
                                   type="button"
                                   onClick={() => handleOpenClientDossier(b)}
-                                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer transition"
                                 >
                                   <span>مشاهده پرونده مراجع</span>
                                   <ExternalLink className="w-3 h-3" />
@@ -1258,6 +1293,9 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
 
         </div>
       )}
+
+      {/* مودال مشاهده نوبت اخذ شده */}
+      {renderBookingDetailsModal()}
 
       {/* مودال مشاهده پرونده کامل مراجع */}
       {selectedClientGroup && (

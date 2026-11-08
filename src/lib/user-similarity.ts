@@ -1,3 +1,4 @@
+import { extractBirthYear } from '@/lib/persian';
 import { FormSubmission, SimilarityCandidateMatch, SimilarityNotification } from '@/types/form';
 
 /**
@@ -509,13 +510,7 @@ export function reconcilePendingDossiersNightly(
 
     if (!isSafaForm && cCode) {
       if (!clientGroups.has(cCode)) {
-        let bYear = sub.data?.birth_year ? parseInt(sub.data.birth_year) : undefined;
-        if (!bYear && sub.data?.f_birth_date) {
-          const parts = String(sub.data.f_birth_date).split(/[/-]/);
-          if (parts.length >= 1 && parseInt(parts[0]) > 1300 && parseInt(parts[0]) < 1450) {
-            bYear = parseInt(parts[0]);
-          }
-        }
+        let bYear = extractBirthYear(sub.data?.birth_year || sub.data?.f_birth_date) || undefined;
 
         const gender =
           sub.data?.gender ||
@@ -722,13 +717,7 @@ export function extractClientProfiles(submissions: FormSubmission[]): ClientProf
   submissions.forEach((s) => {
     const cCode = s.data?.caseCode || s.trackingCode;
     if (cCode && !profileMap.has(cCode)) {
-      let bYear = s.data?.birth_year ? parseInt(s.data.birth_year) : undefined;
-      if (!bYear && s.data?.f_birth_date) {
-        const parts = String(s.data.f_birth_date).split(/[\/\-]/);
-        if (parts.length >= 1 && parseInt(parts[0]) > 1300 && parseInt(parts[0]) < 1450) {
-          bYear = parseInt(parts[0]);
-        }
-      }
+      let bYear = extractBirthYear(s.data?.birth_year || s.data?.f_birth_date) || undefined;
 
       const gender = s.data?.gender || s.data?.f_gender || (
         s.data?.f_role_in_family?.includes('مادر') || s.data?.f_role_in_family?.includes('دختر') || s.data?.f_role_in_family?.includes('زن') ? 'خانم' :

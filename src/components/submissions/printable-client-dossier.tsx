@@ -8,6 +8,7 @@ import {
   formatPersianDateOnly,
   toPersianDigits,
   getFieldDisplayValue,
+  formatClientAge,
 } from '@/lib/persian';
 
 interface PrintableClientDossierProps {
@@ -97,7 +98,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
             <span className="text-slate-900 font-bold">
               {clientCase.overallStatus === 'growing' ? 'در حال رشد' :
    clientCase.overallStatus === 'optimal' ? 'وضعیت مطلوب' :
-   clientCase.overallStatus === 'regressing' ? 'عقب‌گرد' :
+   clientCase.overallStatus === 'regressing' ? 'عقب گرد' :
    clientCase.overallStatus === 'needs_followup' ? 'نیازمند پیگیری' :
    clientCase.overallStatus === 'approved' ? 'تأیید شده / فعال' : 'در حال بررسی'}
             </span>
@@ -138,7 +139,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
             <tr className="border-b border-slate-300">
               <td className="bg-slate-100 p-2 font-bold text-slate-700 border-l border-slate-300">تاریخ تولد / سن:</td>
               <td className="p-2 font-mono border-l border-slate-300">
-                {combinedData.f_birth_date ? toPersianDigits(combinedData.f_birth_date) : 'ثبت‌نشده'}
+                {combinedData.f_birth_date ? `${toPersianDigits(combinedData.f_birth_date)} (سن: ${formatClientAge(combinedData.f_birth_date, combinedData.f_age)})` : (combinedData.f_age ? `${toPersianDigits(combinedData.f_age)} سال` : 'ثبت‌نشده')}
               </td>
               <td className="bg-slate-100 p-2 font-bold text-slate-700 border-l border-slate-300">وضعیت تأهل:</td>
               <td className="p-2">{combinedData.f_marital_status || 'ثبت‌نشده'}</td>
