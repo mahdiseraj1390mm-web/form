@@ -123,10 +123,10 @@ export const SubmissionsHub: React.FC = () => {
     approved: { label: 'تأیید شده / فعال', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
     rejected: { label: 'رد شده', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
-    optimal: { label: 'مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+    optimal: { label: 'وضعیت مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
     growing: { label: 'در حال رشد', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
     needs_followup: { label: 'نیازمند پیگیری', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
-    regressing: { label: 'رو به افول', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
+    regressing: { label: 'عقب گرد', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
   };
 
   // گروه‌بندی هوشمند پاسخ‌ها به پرونده‌های مراجعین
