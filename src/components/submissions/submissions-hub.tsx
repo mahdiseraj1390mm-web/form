@@ -392,7 +392,12 @@ function normalizeSearchText(str: string): string {
         dataStr.includes(q) ||
         sMob.includes(q);
 
-      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+      const sStatus = s.data?.caseStatus || s.status;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        sStatus === statusFilter ||
+        (statusFilter === 'optimal' && sStatus === 'approved') ||
+        (statusFilter === 'regressing' && sStatus === 'rejected');
       return matchesForm && matchesSearch && matchesStatus;
     });
   }, [submissions, selectedFormId, searchQuery, statusFilter]);
