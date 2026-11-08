@@ -14,7 +14,7 @@ async function main() {
   console.log(`Found ${members.length} members in team_members.json`);
 
   // حذف کاربران تستی و نمونه قدیمی از پایگاه داده
-  await pool.query("DELETE FROM team_members WHERE id IN ('user-booking-op', 'user-reviewer')");
+  await pool.query("DELETE FROM team_members WHERE id IN ('user-booking-op', 'user-reviewer', 'user-admin')");
 
   const validIds = members.map((m) => m.id);
   if (validIds.length > 0) {

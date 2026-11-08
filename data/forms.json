@@ -4600,7 +4600,7 @@
     },
     "notifications": {
       "smsAdminEnabled": true,
-      "adminMobile": "09121112233",
+      "adminMobile": "",
       "smsUserEnabled": true,
       "userMobileFieldId": "f_mobile",
       "smsTemplateText": "متقاضی گرامی، درخواست استخدام شما با کد پیگیری {trackingCode} دریافت شد.",
@@ -4956,7 +4956,7 @@
     },
     "notifications": {
       "smsAdminEnabled": true,
-      "adminMobile": "09121112233",
+      "adminMobile": "",
       "smsUserEnabled": true,
       "userMobileFieldId": "ord_mobile",
       "smsTemplateText": "سفارش شما با موفقیت ثبت و پرداخت گردید. شناسه پیگیری پرداخت: {trackingCode}",
@@ -5084,7 +5084,7 @@
     },
     "notifications": {
       "smsAdminEnabled": true,
-      "adminMobile": "09121112233",
+      "adminMobile": "",
       "smsUserEnabled": true,
       "userMobileFieldId": "bk_mobile",
       "smsTemplateText": "وقت شما با موفقیت ثبت شد. تاریخ و ساعت: {appointmentTime} - کد پرونده: {trackingCode}",

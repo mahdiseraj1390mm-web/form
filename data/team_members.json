@@ -1,44 +1,5 @@
 [
   {
-    "id": "user-admin",
-    "name": "امیرحسین رضایی",
-    "email": "a.rezaei@paya.ir",
-    "mobile": "09121112233",
-    "jobTitle": "مدیر ارشد سامانه",
-    "role": "super_admin",
-    "status": "active",
-    "invitedAt": "2026-01-10T08:00:00Z",
-    "lastActive": "هم‌اکنون آنلاین",
-    "accessibleFormIds": [
-      "all"
-    ],
-    "permissions": {
-      "canCreateForms": true,
-      "canEditForms": true,
-      "canDeleteForms": true,
-      "canPublishForms": true,
-      "canViewSubmissions": true,
-      "canEditSubmissions": true,
-      "canDeleteSubmissions": true,
-      "canChangeStatus": true,
-      "canExportData": true,
-      "canAddComments": true,
-      "canManageBookings": true,
-      "canRescheduleBookings": true,
-      "canManualBook": true,
-      "canViewFinances": true,
-      "canManageSms": true,
-      "canManageIntegrations": true,
-      "canManageTeam": true
-    },
-    "allowedTabs": [
-      "consultants"
-    ],
-    "genderPrefix": "آقا",
-    "clientDossierAccess": "unrestricted",
-    "requireCaseCode": true
-  },
-  {
     "id": "user-counselor-sedighi",
     "name": "دکتر صدیقی",
     "genderPrefix": "آقا",

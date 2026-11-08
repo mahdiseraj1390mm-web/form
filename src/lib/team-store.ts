@@ -17,7 +17,9 @@ const TEAM_MEMBERS_FILE = path.join(DATA_DIR, 'team_members.json');
  * فیلتر کردن قطعی کاربران تستی قدیمی
  */
 function filterOutLegacyTestMembers(members: TeamMember[]): TeamMember[] {
-  return members.filter((m) => m.id !== 'user-booking-op' && m.id !== 'user-reviewer');
+  return members.filter(
+    (m) => m.id !== 'user-booking-op' && m.id !== 'user-reviewer' && m.id !== 'user-admin'
+  );
 }
 
 /**
@@ -53,7 +55,7 @@ async function saveTeamMembersToPostgres(members: TeamMember[]): Promise<void> {
     const currentIds = cleanMembers.map((m) => m.id);
 
     // حذف قطعی کاربران تستی نمونه از دیتابیس
-    await sql`DELETE FROM team_members WHERE id IN ('user-booking-op', 'user-reviewer')`;
+    await sql`DELETE FROM team_members WHERE id IN ('user-booking-op', 'user-reviewer', 'user-admin')`;
 
     if (currentIds.length > 0) {
       await sql(
