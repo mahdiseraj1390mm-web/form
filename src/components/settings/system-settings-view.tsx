@@ -66,6 +66,52 @@ export const SystemSettingsView: React.FC = () => {
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [donationSettings, setDonationSettings] = useState({
+    enabled: true,
+    cardNumber: '6037-9979-1234-5678',
+    cardHolder: 'مرکز خدمات روانشناسی بالحق',
+    title: 'مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)',
+    description: 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید',
+  });
+  const [savingDonation, setSavingDonation] = useState(false);
+  const [donationSavedMsg, setDonationSavedMsg] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      const local = localStorage.getItem('belhagh_donation_settings');
+      if (local) setDonationSettings((prev) => ({ ...prev, ...JSON.parse(local) }));
+    } catch {}
+
+    fetch('/api/settings/donation')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res?.success && res.settings) {
+          setDonationSettings(res.settings);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveDonationSettings = async () => {
+    try {
+      setSavingDonation(true);
+      const res = await fetch('/api/settings/donation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(donationSettings),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        localStorage.setItem('belhagh_donation_settings', JSON.stringify(donationSettings));
+        setDonationSavedMsg(true);
+        setTimeout(() => setDonationSavedMsg(false), 3500);
+      }
+    } catch (e) {
+      alert('خطا در ذخیره تنظیمات شماره کارت');
+    } finally {
+      setSavingDonation(false);
+    }
+  };
 
   const togglePasswordVisibility = (id: string) => {
     setVisiblePasswords((prev) => ({
@@ -211,20 +257,33 @@ export const SystemSettingsView: React.FC = () => {
 
             {/* بخش تنظیمات مشارکت مالی اختیاری در انتهای فرم‌ها */}
             <div className="p-5 bg-amber-50/70 border border-amber-200/90 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h4 className="font-black text-slate-900 text-xs sm:text-sm">فیلد مبلغ و مشارکت مالی اختیاری</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">نمایش فیلد پرداخت اختیاری همراه با شماره کارت در انتهای فرم‌ها</p>
+                  <h4 className="font-black text-slate-900 text-xs sm:text-sm">تنظیمات و فعال‌سازی شماره کارت و مشارکت اختیاری</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">کنترل نمایش شماره کارت جهت واریز هدیه و مشارکت در انتهای فرم‌ها</p>
                 </div>
-                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">فعال در فرم‌ها</span>
+                <button
+                  type="button"
+                  onClick={() => setDonationSettings((prev) => ({ ...prev, enabled: !prev.enabled }))}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-2 border ${
+                    donationSettings.enabled
+                      ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border-emerald-300'
+                      : 'bg-rose-100 hover:bg-rose-200 text-rose-800 border-rose-300'
+                  }`}
+                >
+                  <span className={`size-2 rounded-full ${donationSettings.enabled ? 'bg-emerald-600 animate-pulse' : 'bg-rose-600'}`} />
+                  <span>{donationSettings.enabled ? 'فعال است (نمایش در فرم‌ها)' : 'غیرفعال است (پنهان از فرم‌ها)'}</span>
+                </button>
               </div>
 
               <div className="space-y-3 pt-1">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1 text-xs">شماره کارت مرکز جهت نمایش به مراجعان:</label>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">شماره کارت مرکز (جهت نمایش به مراجعان):</label>
                   <input
                     type="text"
-                    defaultValue="6037-9979-1234-5678"
+                    value={donationSettings.cardNumber}
+                    onChange={(e) => setDonationSettings({ ...donationSettings, cardNumber: e.target.value })}
+                    placeholder="6037-9979-1234-5678"
                     className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-mono text-left text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
                     dir="ltr"
                   />
@@ -233,39 +292,53 @@ export const SystemSettingsView: React.FC = () => {
                   <label className="block font-bold text-slate-700 mb-1 text-xs">نام صاحب حساب:</label>
                   <input
                     type="text"
-                    defaultValue="مرکز خدمات روانشناسی بالحق"
+                    value={donationSettings.cardHolder}
+                    onChange={(e) => setDonationSettings({ ...donationSettings, cardHolder: e.target.value })}
+                    placeholder="مرکز خدمات روانشناسی بالحق"
                     className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   />
                 </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">عنوان نمایشی بخش در فرم:</label>
+                  <input
+                    type="text"
+                    value={donationSettings.title}
+                    onChange={(e) => setDonationSettings({ ...donationSettings, title: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">متن راهنما و توضیحات اختیاری:</label>
+                  <textarea
+                    rows={2}
+                    value={donationSettings.description}
+                    onChange={(e) => setDonationSettings({ ...donationSettings, description: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none leading-relaxed"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block font-bold text-slate-800 mb-1 text-xs">کد ترمینال به‌پرداخت ملت (Terminal ID)</label>
-              <input
-                type="text"
-                defaultValue="8912401"
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-mono text-left text-xs focus:outline-none"
-              />
-            </div>
+              {donationSavedMsg && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-2">
+                  <CheckCircle2 className="size-4" />
+                  <span>تنظیمات شماره کارت و وضعیت مشارکت مالی با موفقیت ذخیره شد.</span>
+                </div>
+              )}
 
-            <div>
-              <label className="block font-bold text-slate-800 mb-1 text-xs">شناسه پذیرنده زرین‌پال (Merchant ID)</label>
-              <input
-                type="text"
-                defaultValue="zarin_109283-49210-91820"
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-mono text-left text-xs focus:outline-none"
-              />
-            </div>
-
-            <div className="pt-2">
-              <button 
-                type="button"
-                onClick={() => alert('تنظیمات مالی و شماره کارت با موفقیت ذخیره شد.')}
-                className="px-5 py-2.5 bg-[#173f6b] text-white font-bold rounded-xl hover:bg-[#123357] transition cursor-pointer text-xs shadow-sm"
-              >
-                ذخیره تنظیمات درگاه و شماره کارت
-              </button>
+              <div className="pt-1 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400">
+                  {donationSettings.enabled ? 'کارت به صورت زنده در انتهای فرم‌ها فعال است.' : 'کارت در تمام فرم‌ها پنهان شده است.'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSaveDonationSettings}
+                  disabled={savingDonation}
+                  className="px-5 py-2.5 bg-[#173f6b] hover:bg-[#123357] text-white font-bold rounded-xl transition cursor-pointer text-xs shadow-sm flex items-center gap-1.5"
+                >
+                  <Check className="size-4" />
+                  <span>{savingDonation ? 'در حال ذخیره‌سازی...' : 'ذخیره تنظیمات شماره کارت'}</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
