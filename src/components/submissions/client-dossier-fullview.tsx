@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  Trash2,
-  Edit3, Form, FormSubmission, SubmissionStatus, FormField } from '@/types/form';
+import { Form, FormSubmission, SubmissionStatus, FormField } from '@/types/form';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import {
@@ -47,6 +45,9 @@ import {
   Search,
   Plus,
   Edit,
+  Trash2,
+  Edit3,
+  ArrowLeft,
 } from 'lucide-react';
 import { EvaluationReportView } from '../analytics/evaluation-report-view';
 import { VerticalBarChart } from '../analytics/vertical-bar-chart';
@@ -87,6 +88,7 @@ export type Appointment = {
   topic: string;
   counselor: string;
   status: 'new' | 'done';
+  category?: string;
   reviewed?: string;
   challenges?: string;
   recommendation?: string;
@@ -942,16 +944,6 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     });
 
     setAppointments(updatedAppointments);
-    setCustomRecommendations((prev) => [
-      {
-        id: `rec-${Date.now()}`,
-        counselor: editing.counselor,
-        date: editing.date,
-        recommendation: fullRecommendation,
-        category: selectedClinicalCategory || 'مشاوره بالینی',
-      },
-      ...prev,
-    ]);
 
     // به‌روزرسانی وضعیت پرونده به وضعیت بالینی انتخابی
     if (selectedAppointmentStatus) {

@@ -217,7 +217,16 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       if (storedChat) setChatMessages(JSON.parse(storedChat));
       if (storedLogs) setWebhookLogs(JSON.parse(storedLogs));
       if (storedTeam) {
-        setTeamMembers(JSON.parse(storedTeam));
+        try {
+          const parsed = JSON.parse(storedTeam);
+          const clean = Array.isArray(parsed)
+            ? parsed.filter((m: any) => m.id !== 'user-booking-op' && m.id !== 'user-reviewer' && m.id !== 'user-admin')
+            : initialTeamMembers;
+          setTeamMembers(clean);
+          localStorage.setItem('formafzar_team_members', JSON.stringify(clean));
+        } catch {
+          setTeamMembers(initialTeamMembers);
+        }
       } else {
         setTeamMembers(initialTeamMembers);
       }
@@ -270,9 +279,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       .then((res) => res.json())
       .then((data) => {
         if (data?.teamMembers && Array.isArray(data.teamMembers) && data.teamMembers.length > 0) {
-          setTeamMembers(data.teamMembers);
+          const clean = data.teamMembers.filter((m: any) => m.id !== 'user-booking-op' && m.id !== 'user-reviewer' && m.id !== 'user-admin');
+          setTeamMembers(clean);
           try {
-            localStorage.setItem('formafzar_team_members', JSON.stringify(data.teamMembers));
+            localStorage.setItem('formafzar_team_members', JSON.stringify(clean));
           } catch {}
         }
       })
@@ -938,7 +948,14 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   const deleteTeamMember = (id: string) => {
     setTeamMembers((prev) => {
       const next = prev.filter((m) => m.id !== id);
-      syncTeamToServer(next);
+      try {
+        localStorage.setItem('formafzar_team_members', JSON.stringify(next));
+      } catch {}
+      fetch('/api/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id }),
+      }).catch((err) => console.warn('Error deleting team member on server:', err));
       return next;
     });
   };

@@ -469,58 +469,597 @@ export const belhaghBookingForm: Form = {
 
     // مرحله ۴: موضوع و زمان مشاوره (فیلد یکپارچه و هوشمند رزرو نوبت)
     {
-      id: 'f_booking',
-      type: 'appointmentBooking',
-      label: 'موضوع مشاوره، انتخاب مشاور و رزرو نوبت',
-      placeholder: 'موضوع و مشاور مورد نظر را انتخاب و نوبت خود را تعیین فرمایید',
-      helpText: 'لطفاً موضوع مشاوره، مشاور و زمان مورد نظر خود را برای جلسه مشاوره تلفنی انتخاب فرمایید.',
-      stepId: 'step-4',
-      gridCols: 12,
-      validations: { required: true },
-      appointmentData: {
-        slotDurationMinutes: 45,
-        restTimeMinutes: 15,
-        availableDays: [0, 1, 2, 3, 4],
-        startHour: '09:00',
-        endHour: '20:30',
-        selectedConsultants: [
-          {
-            consultantId: 'user-counselor-borhani',
-            consultantName: 'علیرضا برهانی',
-            genderPrefix: 'آقا',
-            enabled: true,
-            enabledTopics: ['نوجوان', 'خانواده'],
+          "id": "f_booking",
+          "type": "appointmentBooking",
+          "label": "موضوع مشاوره، انتخاب مشاور و رزرو نوبت",
+          "placeholder": "موضوع و مشاور مورد نظر را انتخاب و نوبت خود را تعیین فرمایید",
+          "helpText": "لطفاً موضوع مشاوره، مشاور و زمان مورد نظر خود را برای جلسه مشاوره تلفنی انتخاب فرمایید.",
+          "stepId": "step-4",
+          "gridCols": 12,
+          "validations": {
+                "required": true
           },
-          {
-            consultantId: 'user-counselor-farahmandi',
-            consultantName: 'یاسر فرهمندی',
-            genderPrefix: 'آقا',
-            enabled: true,
-            enabledTopics: ['کودک'],
-          },
-          {
-            consultantId: 'user-counselor-shavandi',
-            consultantName: 'شوندی',
-            genderPrefix: 'خانم',
-            enabled: true,
-            enabledTopics: ['کودک', 'نوجوان'],
-          },
-          {
-            consultantId: 'user-counselor-teymourian',
-            consultantName: 'تیموریان',
-            genderPrefix: 'خانم',
-            enabled: true,
-            enabledTopics: ['کودک'],
-          },
-          {
-            consultantId: 'user-counselor-torshizi',
-            consultantName: 'جعفر ترشیزی',
-            genderPrefix: 'آقا',
-            enabled: true,
-            enabledTopics: ['بالینی', 'فردی'],
-          },
-        ],
-      },
+          "appointmentData": {
+                "slotDurationMinutes": 45,
+                "restTimeMinutes": 15,
+                "availableDays": [
+                      0,
+                      1,
+                      2,
+                      3,
+                      4
+                ],
+                "startHour": "09:00",
+                "endHour": "20:30",
+                "selectedConsultants": [
+                      {
+                            "consultantId": "user-counselor-sedighi",
+                            "consultantName": "دکتر صدیقی",
+                            "genderPrefix": "آقا",
+                            "enabled": false,
+                            "enabledTopics": [
+                                  "خانواده",
+                                  "ازدواج"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [],
+                                  "startHour": "17:00",
+                                  "endHour": "18:00",
+                                  "daySchedules": {}
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-torshizi",
+                            "consultantName": "دکتر ترشیزی",
+                            "genderPrefix": "آقا",
+                            "enabled": false,
+                            "enabledTopics": [
+                                  "بالینی",
+                                  "فردی"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [],
+                                  "startHour": "10:00",
+                                  "endHour": "14:00",
+                                  "daySchedules": {}
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-borhani",
+                            "consultantName": "علیرضا برهانی",
+                            "genderPrefix": "آقا",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "نوجوان",
+                                  "خانواده"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        0,
+                                        1,
+                                        2,
+                                        3,
+                                        4
+                                  ],
+                                  "startHour": "16:00",
+                                  "endHour": "20:30",
+                                  "daySchedules": {
+                                        "0": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "16:00",
+                                                          "endHour": "20:30"
+                                                    }
+                                              ]
+                                        },
+                                        "1": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "16:00",
+                                                          "endHour": "20:30"
+                                                    }
+                                              ]
+                                        },
+                                        "2": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "16:00",
+                                                          "endHour": "20:30"
+                                                    }
+                                              ]
+                                        },
+                                        "3": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "16:00",
+                                                          "endHour": "20:30"
+                                                    }
+                                              ]
+                                        },
+                                        "4": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "16:00",
+                                                          "endHour": "20:30"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-abdi",
+                            "consultantName": "آقای عبدی",
+                            "genderPrefix": "آقا",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "تحصیلی"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        3,
+                                        4
+                                  ],
+                                  "startHour": "16:00",
+                                  "endHour": "18:00",
+                                  "daySchedules": {
+                                        "3": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "16:00",
+                                                          "endHour": "18:00"
+                                                    }
+                                              ]
+                                        },
+                                        "4": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "16:00",
+                                                          "endHour": "18:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-farahmandi",
+                            "consultantName": "یاسر فرهمندی",
+                            "genderPrefix": "آقا",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "کودک"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        6
+                                  ],
+                                  "startHour": "09:00",
+                                  "endHour": "12:00",
+                                  "daySchedules": {
+                                        "6": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "09:00",
+                                                          "endHour": "12:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-karimi",
+                            "consultantName": "خانم کریمی",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "خانواده"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        1,
+                                        3
+                                  ],
+                                  "startHour": "10:00",
+                                  "endHour": "12:00",
+                                  "daySchedules": {
+                                        "1": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "10:00",
+                                                          "endHour": "12:00"
+                                                    }
+                                              ]
+                                        },
+                                        "3": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "10:00",
+                                                          "endHour": "12:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-ansari",
+                            "consultantName": "خانم انصاری",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "کودک",
+                                  "نوجوان"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        0,
+                                        1,
+                                        2,
+                                        3,
+                                        4
+                                  ],
+                                  "startHour": "10:00",
+                                  "endHour": "19:00",
+                                  "daySchedules": {
+                                        "0": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "15:00",
+                                                          "endHour": "19:00"
+                                                    }
+                                              ]
+                                        },
+                                        "1": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "10:00",
+                                                          "endHour": "12:00"
+                                                    },
+                                                    {
+                                                          "startHour": "15:00",
+                                                          "endHour": "16:00"
+                                                    }
+                                              ]
+                                        },
+                                        "2": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "10:00",
+                                                          "endHour": "12:00"
+                                                    },
+                                                    {
+                                                          "startHour": "15:00",
+                                                          "endHour": "17:00"
+                                                    }
+                                              ]
+                                        },
+                                        "3": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "15:00",
+                                                          "endHour": "17:00"
+                                                    },
+                                                    {
+                                                          "startHour": "18:00",
+                                                          "endHour": "19:00"
+                                                    }
+                                              ]
+                                        },
+                                        "4": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "10:00",
+                                                          "endHour": "12:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-teymourian",
+                            "consultantName": "خانم تیموریان",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "کودک"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        4
+                                  ],
+                                  "startHour": "10:00",
+                                  "endHour": "13:00",
+                                  "daySchedules": {
+                                        "4": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "10:00",
+                                                          "endHour": "13:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-abdi-family",
+                            "consultantName": "خانم عبدی",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "خانواده"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        4
+                                  ],
+                                  "startHour": "08:00",
+                                  "endHour": "13:00",
+                                  "daySchedules": {
+                                        "4": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "08:00",
+                                                          "endHour": "13:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-golyayi",
+                            "consultantName": "خانم گلیایی",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "بالینی"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        2
+                                  ],
+                                  "startHour": "11:00",
+                                  "endHour": "12:00",
+                                  "daySchedules": {
+                                        "2": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "11:00",
+                                                          "endHour": "12:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-yavari",
+                            "consultantName": "خانم یاوری",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "بالینی"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        0,
+                                        3
+                                  ],
+                                  "startHour": "11:00",
+                                  "endHour": "14:00",
+                                  "daySchedules": {
+                                        "0": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "11:00",
+                                                          "endHour": "12:00"
+                                                    }
+                                              ]
+                                        },
+                                        "3": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "13:00",
+                                                          "endHour": "14:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-rastgoo",
+                            "consultantName": "خانم راستگو",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "نوجوان",
+                                  "بالینی"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        1
+                                  ],
+                                  "startHour": "10:00",
+                                  "endHour": "20:00",
+                                  "daySchedules": {
+                                        "1": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "10:00",
+                                                          "endHour": "14:00"
+                                                    },
+                                                    {
+                                                          "startHour": "18:00",
+                                                          "endHour": "20:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-zeynali",
+                            "consultantName": "خانم زینلی",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "کودک",
+                                  "خانواده",
+                                  "ازدواج"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        3,
+                                        5
+                                  ],
+                                  "startHour": "09:00",
+                                  "endHour": "18:00",
+                                  "daySchedules": {
+                                        "3": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "17:00",
+                                                          "endHour": "18:00"
+                                                    }
+                                              ]
+                                        },
+                                        "5": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "09:00",
+                                                          "endHour": "11:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      },
+                      {
+                            "consultantId": "user-counselor-shavandi",
+                            "consultantName": "خانم شوندی",
+                            "genderPrefix": "خانم",
+                            "enabled": true,
+                            "enabledTopics": [
+                                  "کودک",
+                                  "نوجوان"
+                            ],
+                            "customWorkingHours": {
+                                  "slotDurationMinutes": 45,
+                                  "restTimeMinutes": 15,
+                                  "availableDays": [
+                                        0,
+                                        1,
+                                        2,
+                                        3,
+                                        4
+                                  ],
+                                  "startHour": "13:00",
+                                  "endHour": "15:00",
+                                  "daySchedules": {
+                                        "0": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "13:00",
+                                                          "endHour": "15:00"
+                                                    }
+                                              ]
+                                        },
+                                        "1": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "13:00",
+                                                          "endHour": "15:00"
+                                                    }
+                                              ]
+                                        },
+                                        "2": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "13:00",
+                                                          "endHour": "15:00"
+                                                    }
+                                              ]
+                                        },
+                                        "3": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "13:00",
+                                                          "endHour": "15:00"
+                                                    }
+                                              ]
+                                        },
+                                        "4": {
+                                              "enabled": true,
+                                              "periods": [
+                                                    {
+                                                          "startHour": "13:00",
+                                                          "endHour": "15:00"
+                                                    }
+                                              ]
+                                        }
+                                  }
+                            }
+                      }
+                ]
+          }
     },
 
     // راهنمای عمومی و تعهدنامه

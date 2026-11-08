@@ -126,7 +126,7 @@ export const AdminLoginView: React.FC = () => {
                       setUsername(e.target.value);
                       if (errorMessage) setErrorMessage(null);
                     }}
-                    placeholder="شماره تلفن (مثال: 09121112233) یا admin"
+                    placeholder="شماره تلفن مشاور یا admin"
                     dir="ltr"
                     autoFocus
                     required

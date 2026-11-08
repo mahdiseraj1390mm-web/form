@@ -97,42 +97,32 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   // بررسی حالت چندمشاوره‌ای (رزرو نوبت منحصراً از میان مشاوران تعریف‌شده در سامانه امکان‌پذیر است)
   const selectedConsultants = useMemo(() => {
     const definedConsultants = (teamMembers || []).filter(isConsultantMember);
-    const configuredList = (field.appointmentData?.selectedConsultants || []).filter((sc) => sc.enabled);
 
-    // فیلتر کردن مشاوران انتخابی فیلد تا فقط افرادی که در سامانه به عنوان مشاور تعریف شده‌اند مجاز باشند
-    const validList = configuredList.filter((sc) =>
-      definedConsultants.some(
-        (m) =>
-          m.id === sc.consultantId ||
-          m.consultantId === sc.consultantId ||
-          m.name === sc.consultantName ||
-          (m.genderPrefix && `${m.genderPrefix} ${m.name}` === sc.consultantName) ||
-          cleanConsultantName(m.name) === cleanConsultantName(sc.consultantName)
-      )
-    );
-
-    if (validList.length > 0) return validList;
-
-    // در صورتی که هیچ مشاوری به صورت صریح تیک نخورده، تمام مشاوران تعریف‌شده در سامانه به عنوان گزینه‌های مجاز پیش‌فرض قرار گیرند
+    // اولویت قطعی با مشاوران ثبت‌شده در دیتابیس سامانه با ساعات کاری فعال است
     if (definedConsultants.length > 0) {
-      return definedConsultants.map((m) => {
-        const prefix = m.genderPrefix || (m.name.startsWith('خانم') ? 'خانم' : 'آقا');
-        const cleanName = m.name.replace(/^(خانم|آقای?)\s+/, '');
-        const topics = (m.allowedTopics && m.allowedTopics.length > 0)
-          ? m.allowedTopics
-          : ['مشاوره تخصصی'];
-        return {
-          consultantId: m.id,
-          consultantName: cleanName,
-          genderPrefix: prefix as 'آقا' | 'خانم',
-          enabled: true,
-          enabledTopics: topics,
-          customWorkingHours: m.workingHours,
-        };
-      });
+      return definedConsultants
+        .filter((m) => {
+          const hasAvailableDays = Array.isArray(m.workingHours?.availableDays) && m.workingHours.availableDays.length > 0;
+          return m.status === 'active' && hasAvailableDays;
+        })
+        .map((m) => {
+          const prefix = m.genderPrefix || (m.name.startsWith('خانم') ? 'خانم' : 'آقا');
+          const topics = (m.allowedTopics && m.allowedTopics.length > 0)
+            ? m.allowedTopics
+            : ['مشاوره تخصصی'];
+          return {
+            consultantId: m.id,
+            consultantName: m.name,
+            genderPrefix: prefix as 'آقا' | 'خانم',
+            enabled: true,
+            enabledTopics: topics,
+            customWorkingHours: m.workingHours,
+          };
+        });
     }
 
-    return [];
+    const configuredList = (field.appointmentData?.selectedConsultants || []).filter((sc) => sc.enabled);
+    return configuredList;
   }, [field.appointmentData?.selectedConsultants, teamMembers]);
 
   const hasMultiConsultantMode = selectedConsultants.length > 0;
@@ -162,7 +152,19 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   // مشاوران پوشش‌دهنده موضوع انتخابی
   const consultantsForTopic = useMemo(() => {
     if (!selectedTopicId) return selectedConsultants;
-    return selectedConsultants.filter((c) => (c.enabledTopics || []).includes(selectedTopicId));
+    return selectedConsultants.filter((c) => {
+      const topics = c.enabledTopics || [];
+      return topics.some((t) => {
+        if (t === selectedTopicId) return true;
+        const topicObj = COUNSELING_TOPICS.find(
+          (ct) => ct.id === selectedTopicId || ct.name === selectedTopicId || ct.keywords.includes(selectedTopicId)
+        );
+        if (topicObj) {
+          if (topicObj.id === t || topicObj.name === t || topicObj.keywords.includes(t)) return true;
+        }
+        return false;
+      });
+    });
   }, [selectedConsultants, selectedTopicId]);
 
   useEffect(() => {
@@ -413,7 +415,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
             <div className="flex flex-wrap gap-2">
               {availableTopicIds.map((topId) => {
-                const topicObj = COUNSELING_TOPICS.find((t) => t.id === topId);
+                const topicObj = COUNSELING_TOPICS.find((t) => t.id === topId || t.name === topId || t.keywords.includes(topId));
                 const isSelected = selectedTopicId === topId;
                 return (
                   <button
