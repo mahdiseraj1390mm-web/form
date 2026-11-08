@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { useForm } from '@/context/form-context';
-import { COUNSELING_TOPICS, COUNSELOR_MAP } from '@/lib/consultant-helpers';
+import { COUNSELING_TOPICS, COUNSELOR_MAP, isConsultantMember, cleanConsultantName } from '@/lib/consultant-helpers';
 
 interface AppointmentSchedulerProps {
   field: FormField;
@@ -94,17 +94,28 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 }) => {
   const { teamMembers } = useForm();
 
-  // بررسی حالت چندمشاوره‌ای
+  // بررسی حالت چندمشاوره‌ای (رزرو نوبت منحصراً از میان مشاوران تعریف‌شده در سامانه امکان‌پذیر است)
   const selectedConsultants = useMemo(() => {
-    const list = (field.appointmentData?.selectedConsultants || []).filter((sc) => sc.enabled);
-    if (list.length > 0) return list;
+    const definedConsultants = (teamMembers || []).filter(isConsultantMember);
+    const configuredList = (field.appointmentData?.selectedConsultants || []).filter((sc) => sc.enabled);
 
-    // در صورتی که هیچ مشاوری به صورت صریح تیک نخورده، تمام مشاوران فعال سیستم به عنوان گزینه‌های مجاز پیش‌فرض قرار گیرند
-    const activeMembers = (teamMembers || []).filter(
-      (m) => m.status !== 'suspended' && (m.allowedTopics?.length || m.workingHours || m.consultantId)
+    // فیلتر کردن مشاوران انتخابی فیلد تا فقط افرادی که در سامانه به عنوان مشاور تعریف شده‌اند مجاز باشند
+    const validList = configuredList.filter((sc) =>
+      definedConsultants.some(
+        (m) =>
+          m.id === sc.consultantId ||
+          m.consultantId === sc.consultantId ||
+          m.name === sc.consultantName ||
+          (m.genderPrefix && `${m.genderPrefix} ${m.name}` === sc.consultantName) ||
+          cleanConsultantName(m.name) === cleanConsultantName(sc.consultantName)
+      )
     );
-    if (activeMembers.length > 0) {
-      return activeMembers.map((m) => {
+
+    if (validList.length > 0) return validList;
+
+    // در صورتی که هیچ مشاوری به صورت صریح تیک نخورده، تمام مشاوران تعریف‌شده در سامانه به عنوان گزینه‌های مجاز پیش‌فرض قرار گیرند
+    if (definedConsultants.length > 0) {
+      return definedConsultants.map((m) => {
         const prefix = m.genderPrefix || (m.name.startsWith('خانم') ? 'خانم' : 'آقا');
         const cleanName = m.name.replace(/^(خانم|آقای?)\s+/, '');
         const topics = (m.allowedTopics && m.allowedTopics.length > 0)
@@ -172,13 +183,16 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const matchingMember = useMemo(() => {
     if (!activeConsultantConfig) return null;
-    return teamMembers.find(
-      (m) =>
-        m.id === activeConsultantConfig.consultantId ||
-        m.consultantId === activeConsultantConfig.consultantId ||
-        m.name === activeConsultantConfig.consultantName ||
-        (m.genderPrefix && `${m.genderPrefix} ${m.name}` === activeConsultantConfig.consultantName)
-    ) || null;
+    return (
+      (teamMembers || []).find(
+        (m) =>
+          m.id === activeConsultantConfig.consultantId ||
+          m.consultantId === activeConsultantConfig.consultantId ||
+          m.name === activeConsultantConfig.consultantName ||
+          (m.genderPrefix && `${m.genderPrefix} ${m.name}` === activeConsultantConfig.consultantName) ||
+          cleanConsultantName(m.name) === cleanConsultantName(activeConsultantConfig.consultantName)
+      ) || null
+    );
   }, [teamMembers, activeConsultantConfig]);
 
   const consultantMobile = useMemo(() => {

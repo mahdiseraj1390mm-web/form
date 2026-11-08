@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   FormField, 
   SelectOption, 
@@ -41,7 +41,7 @@ import {
 import { toPersianDigits } from '@/lib/persian';
 import { predefinedLists, iranProvinces } from '@/lib/iran-geo';
 import { useForm } from '@/context/form-context';
-import { COUNSELING_TOPICS, KNOWN_CONSULTANTS } from '@/lib/consultant-helpers';
+import { COUNSELING_TOPICS, isConsultantMember } from '@/lib/consultant-helpers';
 import { ConsultantScheduleModal } from '@/components/consultants/consultant-schedule-modal';
 
 interface FieldEditorDrawerProps {
@@ -300,9 +300,10 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
     onUpdate({ options: newOpts });
   };
 
-  // مشاوران فعال سیستم
-  const activeSystemConsultants = teamMembers.filter((m) => m.status !== 'suspended');
-  const availableConsultantsList = activeSystemConsultants.length > 0 ? activeSystemConsultants : KNOWN_CONSULTANTS;
+  // فقط مشاوران تعریف‌شده در سامانه (رزرو نوبت و گزینه‌ها منحصراً از این افراد مجاز است)
+  const availableConsultantsList = useMemo(() => {
+    return (teamMembers || []).filter(isConsultantMember);
+  }, [teamMembers]);
 
   // تاگل کردن مشاور برای این فرم
   const handleToggleConsultantForBooking = (consultant: any) => {
@@ -406,7 +407,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
 
   // انتخاب همه مشاوران سیستم برای این فرم
   const handleSelectAllConsultants = () => {
-    const updated = availableConsultantsList.map((c) => {
+    const updated = availableConsultantsList.map((c: any) => {
       const existing = (field.appointmentData?.selectedConsultants || []).find(
         (sc) => sc.consultantId === c.id
       );
@@ -456,8 +457,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
 
   // بارگذاری از لیست مشاوران سیستم در فیلدهای گزینه‌ای
   const handleLoadConsultants = () => {
-    const activeMembers = teamMembers.filter((m) => m.status !== 'suspended');
-    const consultantsToUse = activeMembers.length > 0 ? activeMembers : KNOWN_CONSULTANTS;
+    const consultantsToUse = (teamMembers || []).filter(isConsultantMember);
     const newOpts: SelectOption[] = consultantsToUse.map((c, idx) => {
       const prefix = (c as any).genderPrefix || (c.name.startsWith('خانم') ? 'خانم' : (c.name.startsWith('آقا') ? 'آقا' : ''));
       const cleanName = c.name.replace(/^(خانم|آقای?)\s+/, '');
@@ -1382,7 +1382,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
               </div>
 
               <div className="space-y-2.5">
-                {availableConsultantsList.map((consultant) => {
+                {availableConsultantsList.map((consultant: any) => {
                   const prefix = (consultant as any).genderPrefix || (consultant.name.startsWith('خانم') ? 'خانم' : (consultant.name.startsWith('آقا') ? 'آقا' : ''));
                   const cleanName = consultant.name.replace(/^(خانم|آقای?)\s+/, '');
                   const fullName = prefix ? `${prefix} ${cleanName}` : consultant.name;

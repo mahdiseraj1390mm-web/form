@@ -37,7 +37,6 @@ import {
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import { 
-  KNOWN_CONSULTANTS, 
   PERSIAN_WEEK_DAYS, 
   ConsultantProfile, 
   ConsultantBookingItem, 
@@ -145,7 +144,16 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
       );
       if (found) return found.profile;
     }
-    return allConsultantsList[0]?.profile || KNOWN_CONSULTANTS[0];
+    const fallbackProfile: ConsultantProfile = {
+      id: 'empty',
+      name: 'مشاوری یافت نشد',
+      mobile: '',
+      jobTitle: 'مشاور',
+      specialization: '',
+      bookingFieldIds: [],
+      definedSlots: [],
+    };
+    return allConsultantsList[0]?.profile || fallbackProfile;
   }, [isSuperAdmin, currentConsultantProfile, selectedConsultantId, allConsultantsList]);
 
   // موضوعات و حوزه‌های مشاوره مجاز برای مشاور جاری
@@ -1036,7 +1044,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
               >
                 {allConsultantsList.map((item) => (
                   <option key={item.profile.id} value={item.profile.id}>
-                    {item.profile.name} ({item.bookings.length} نوبت)
+                    {item.profile.genderPrefix ? `${item.profile.genderPrefix} ` : ''}{item.profile.name} ({toPersianDigits(item.bookings.length)} نوبت)
                   </option>
                 ))}
               </select>
@@ -1117,19 +1125,28 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                     {/* مشخصات مشاور */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                       <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200 border border-slate-300 text-slate-800 font-black flex items-center justify-center text-sm shadow-xs shrink-0">
-                          {prof.name.slice(0, 2)}
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-100 to-indigo-100 border border-slate-300 text-indigo-950 font-black flex items-center justify-center text-sm shadow-xs shrink-0">
+                          {prof.genderPrefix ? prof.genderPrefix : prof.name.slice(0, 2)}
                         </div>
 
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-extrabold text-sm text-slate-900">{prof.name}</span>
+                            {prof.genderPrefix && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                prof.genderPrefix === 'خانم'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                  : 'bg-blue-50 text-blue-700 border-blue-200'
+                              }`}>
+                                {prof.genderPrefix}
+                              </span>
+                            )}
+                            <span className="font-extrabold text-sm text-slate-900">{prof.genderPrefix ? `${prof.genderPrefix} ` : ''}{prof.name}</span>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
                               {prof.jobTitle}
                             </span>
                             {mem && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                عضو تیم سامانه
+                                مشاور رسمی سامانه
                               </span>
                             )}
                           </div>
