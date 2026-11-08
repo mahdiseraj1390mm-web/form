@@ -2,12 +2,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { FormSubmission, EvaluationComponentScore } from '@/types/form';
+import { useForm } from '@/context/form-context';
 import { ClientCaseGroup, Appointment } from './client-dossier-fullview';
 import { SvgRadarChart } from '@/components/analytics/radar-chart';
 import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '@/components/analytics/point-line-chart';
 import {
   toPersianDigits,
+  toEnglishDigits,
   formatPersianDateTime,
   formatPersianDateOnly,
 } from '@/lib/persian';
@@ -82,6 +84,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [counselorNoteText, setCounselorNoteText] = useState('');
   const [savedNoteMessage, setSavedNoteMessage] = useState(false);
+
+  const { submissions: allSubmissions = [] } = useForm();
 
   // ۱. توزیع نقش مراجعان در خانواده (پدر، مادر، پسر، دختر)
   const roleDistribution = useMemo(() => {
