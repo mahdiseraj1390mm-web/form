@@ -84,6 +84,101 @@ export function generateTrackingCode(prefix: string = 'SP'): string {
 }
 
 /**
+ * دریافت سال جاری شمسی به صورت کاملاً پویا و بر مبنای تقویم رسمی
+ */
+export function getCurrentJalaliYear(): number {
+  try {
+    const formatted = new Intl.DateTimeFormat('fa-IR-u-ca-persian-nu-latn', { year: 'numeric' }).format(new Date());
+    const match = formatted.match(/\d{4}/);
+    if (match) {
+      const year = parseInt(match[0], 10);
+      if (year >= 1400 && year <= 1500) {
+        return year;
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return 1405;
+}
+
+/**
+ * استخراج دقیق سال تولد شمسی از ورودی‌های گوناگون (مانند 1374/09/07، 74، 1374، 07/09/1374، 74/09/07 و ...)
+ */
+export function extractBirthYear(raw: any): number | null {
+  if (!raw) return null;
+  const str = toEnglishDigits(String(raw)).trim();
+  if (!str) return null;
+
+  // ۱. اگر رشته حاوی ۴ رقم سال شمسی باشد (۱۳۰۰ تا ۱۴۹۹)
+  const match4 = str.match(/(13\d{2}|14\d{2})/);
+  if (match4) {
+    return parseInt(match4[1], 10);
+  }
+
+  // ۲. تفکیک بخش‌ها بر اساس جداکننده‌ها
+  const parts = str.split(/[\/\-\.\s]/).filter(Boolean);
+  if (parts.length === 1) {
+    const num = parseInt(parts[0], 10);
+    if (!isNaN(num)) {
+      if (num >= 1300 && num <= 1499) return num;
+      if (num >= 20 && num <= 99) return 1300 + num; // مثال: متولدین ۱۳۲۰ تا ۱۳۹۹
+      if (num >= 0 && num < 20) return 1400 + num;  // مثال: متولدین ۱۴۰۰ تا ۱۴۱۹
+    }
+  } else if (parts.length >= 2) {
+    const first = parseInt(parts[0], 10);
+    const last = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(first) && first >= 1300 && first <= 1499) return first;
+    if (!isNaN(last) && last >= 1300 && last <= 1499) return last;
+    if (!isNaN(first) && first >= 20 && first <= 99 && (isNaN(last) || last <= 31)) return 1300 + first;
+    if (!isNaN(last) && last >= 20 && last <= 99 && (isNaN(first) || first <= 31)) return 1300 + last;
+    if (!isNaN(first) && first >= 0 && first < 20 && last > 12) return 1400 + first;
+    if (!isNaN(last) && last >= 0 && last < 20 && first > 12) return 1400 + last;
+  }
+
+  return null;
+}
+
+/**
+ * محاسبه دقیق سن شمسی
+ * مطابق با عرف ایران و سیستم‌های پرونده: سال جاری منهای سال تولد
+ * مثال برای متولد ۷۴ (۱۳۷۴) در سال جاری (۱۴۰۵): ۱۴۰۵ - ۱۳۷۴ = ۳۱ سال
+ */
+export function calculateJalaliAge(birthDateOrYear: any, fallbackAge?: any): number | null {
+  const bYear = extractBirthYear(birthDateOrYear);
+  if (bYear) {
+    const currentYear = getCurrentJalaliYear();
+    const age = currentYear - bYear;
+    return Math.max(0, age);
+  }
+
+  // اگر سن مستقیماً به عنوان عدد وارد شده باشد
+  if (fallbackAge !== undefined && fallbackAge !== null && fallbackAge !== '') {
+    const num = parseInt(toEnglishDigits(String(fallbackAge)), 10);
+    if (!isNaN(num) && num > 0 && num < 125) {
+      return num;
+    }
+  }
+
+  const directNum = parseInt(toEnglishDigits(String(birthDateOrYear || '')), 10);
+  if (!isNaN(directNum) && directNum > 0 && directNum < 125) {
+    return directNum;
+  }
+
+  return null;
+}
+
+/**
+ * نمایش متنی و فارسی سن مراجع (مانند: «۳۱ سال» یا «ثبت‌نشده»)
+ */
+export function formatClientAge(birthDateOrYear: any, fallbackAge?: any): string {
+  const age = calculateJalaliAge(birthDateOrYear, fallbackAge);
+  if (age === null) return 'ثبت‌نشده';
+  if (age === 0) return 'کمتر از یک سال';
+  return `${toPersianDigits(age)} سال`;
+}
+
+/**
  * تبدیل مقادیر انگلیسی و شناسه‌ها به برچسب فارسی خوانا و شکیل
  */
 export function getFieldDisplayValue(field?: any, val?: any): string {
@@ -165,9 +260,6 @@ export function formatPersianDateTime(isoString: string): string {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date);
-
-    // اصلاح تاریخ در صورتی که ساعت یا تقویم سیستم روی سال ۲۰۲۶ تنظیم باشد
-    formatted = formatted.replace('۱۴۰۵', '۱۴۰۳').replace('1405', '1403');
     return formatted;
   } catch {
     return isoString;
@@ -183,7 +275,6 @@ export function formatPersianDateOnly(isoString: string): string {
       month: 'long',
       day: 'numeric',
     }).format(date);
-    formatted = formatted.replace('۱۴۰۵', '۱۴۰۳').replace('1405', '1403');
     return formatted;
   } catch {
     return isoString;
@@ -217,4 +308,3 @@ export function getTopItemSummary(
   const top = [...valid].sort((a, b) => b.value - a.value)[0];
   return `بیشترین: ${top.label} (${toPersianDigits(top.value)} ${defaultUnit})`;
 }
-
