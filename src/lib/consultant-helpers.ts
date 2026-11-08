@@ -208,11 +208,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور کودک',
     specialization: 'مشاوره و روانشناسی کودک',
     bookingFieldIds: ['f_booking_farahmandi'],
-    definedSlots: [
-      { dayIndex: 6, dayName: 'جمعه', timeRange: '۰۹:۰۰ الی ۰۹:۴۵', label: 'جمعه - ساعت ۰۹:۰۰ الی ۰۹:۴۵', category: 'کودک', fieldId: 'f_booking_farahmandi' },
-      { dayIndex: 6, dayName: 'جمعه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'جمعه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', category: 'کودک', fieldId: 'f_booking_farahmandi' },
-      { dayIndex: 6, dayName: 'جمعه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'جمعه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'کودک', fieldId: 'f_booking_farahmandi' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_teymourian',
@@ -221,11 +217,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور کودک',
     specialization: 'مشاوره و روانشناسی کودک',
     bookingFieldIds: ['f_booking_teymourian'],
-    definedSlots: [
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'چهارشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', category: 'کودک', fieldId: 'f_booking_teymourian' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'چهارشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'کودک', fieldId: 'f_booking_teymourian' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۲:۰۰ الی ۱۲:۴۵', label: 'چهارشنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵', category: 'کودک', fieldId: 'f_booking_teymourian' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_shavandi',
@@ -234,18 +226,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور کودک و نوجوان',
     specialization: 'مشاوره کودک و نوجوان',
     bookingFieldIds: ['f_booking_shavandi_child', 'f_booking_shavandi_teen'],
-    definedSlots: [
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۳:۰۰ الی ۱۳:۴۵', label: 'شنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵', category: 'کودک', fieldId: 'f_booking_shavandi_child' },
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'شنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'کودک', fieldId: 'f_booking_shavandi_child' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۳:۰۰ الی ۱۳:۴۵', label: 'یکشنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵', category: 'نوجوان', fieldId: 'f_booking_shavandi_teen' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'یکشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'نوجوان', fieldId: 'f_booking_shavandi_teen' },
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۳:۰۰ الی ۱۳:۴۵', label: 'دوشنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵', category: 'کودک', fieldId: 'f_booking_shavandi_child' },
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'دوشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'کودک', fieldId: 'f_booking_shavandi_child' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۳:۰۰ الی ۱۳:۴۵', label: 'سه شنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵', category: 'نوجوان', fieldId: 'f_booking_shavandi_teen' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'سه شنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'نوجوان', fieldId: 'f_booking_shavandi_teen' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۳:۰۰ الی ۱۳:۴۵', label: 'چهارشنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵', category: 'کودک', fieldId: 'f_booking_shavandi_child' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'چهارشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'کودک', fieldId: 'f_booking_shavandi_child' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_ansari',
@@ -254,17 +235,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور کودک و نوجوان',
     specialization: 'مشاوره کودک و هدایت نوجوان',
     bookingFieldIds: ['f_booking_ansari_child', 'f_booking_ansari_teen'],
-    definedSlots: [
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'شنبه - نوبت اول: ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'نوجوان', fieldId: 'f_booking_ansari_teen' },
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'شنبه - نوبت دوم: ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'نوجوان', fieldId: 'f_booking_ansari_teen' },
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۵:۰۰ الی ۱۵:۴۵', label: 'شنبه - نوبت دوم: ساعت ۱۵:۰۰ الی ۱۵:۴۵', category: 'نوجوان', fieldId: 'f_booking_ansari_teen' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۶:۰۰ الی ۱۶:۴۵', label: 'یکشنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵', category: 'کودک', fieldId: 'f_booking_ansari_child' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۷:۰۰ الی ۱۷:۴۵', label: 'یکشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵', category: 'کودک', fieldId: 'f_booking_ansari_child' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۸:۰۰ الی ۱۸:۴۵', label: 'یکشنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵', category: 'کودک', fieldId: 'f_booking_ansari_child' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'سه شنبه - نوبت اول: ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'نوجوان', fieldId: 'f_booking_ansari_teen' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'سه شنبه - نوبت دوم: ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'نوجوان', fieldId: 'f_booking_ansari_teen' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۵:۰۰ الی ۱۵:۴۵', label: 'سه شنبه - نوبت دوم: ساعت ۱۵:۰۰ الی ۱۵:۴۵', category: 'نوجوان', fieldId: 'f_booking_ansari_teen' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_zeynali',
@@ -273,11 +244,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور کودک و خانواده',
     specialization: 'مشاوره کودک و خانواده',
     bookingFieldIds: ['f_booking_zeynali_child', 'f_booking_zeynali_family'],
-    definedSlots: [
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۷:۰۰ الی ۱۷:۴۵', label: 'سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵', category: 'خانواده', fieldId: 'f_booking_zeynali_family' },
-      { dayIndex: 5, dayName: 'پنج‌شنبه', timeRange: '۰۹:۰۰ الی ۰۹:۴۵', label: 'پنجشنبه - ساعت ۰۹:۰۰ الی ۰۹:۴۵', category: 'کودک', fieldId: 'f_booking_zeynali_child' },
-      { dayIndex: 5, dayName: 'پنج‌شنبه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'پنجشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', category: 'کودک', fieldId: 'f_booking_zeynali_child' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_borhani',
@@ -286,17 +253,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور نوجوان و خانواده',
     specialization: 'مشاوره نوجوان، ازدواج و خانواده',
     bookingFieldIds: ['f_booking_borhani_teen', 'f_booking_borhani_family'],
-    definedSlots: [
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'شنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'نوجوان', fieldId: 'f_booking_borhani_teen' },
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۸:۰۰ الی ۱۸:۴۵', label: 'شنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵', category: 'خانواده', fieldId: 'f_booking_borhani_family' },
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۹:۰۰ الی ۱۹:۴۵', label: 'شنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵', category: 'خانواده', fieldId: 'f_booking_borhani_family' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'یکشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'نوجوان', fieldId: 'f_booking_borhani_teen' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۸:۰۰ الی ۱۸:۴۵', label: 'یکشنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵', category: 'خانواده', fieldId: 'f_booking_borhani_family' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۹:۰۰ الی ۱۹:۴۵', label: 'یکشنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵', category: 'خانواده', fieldId: 'f_booking_borhani_family' },
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۴:۰۰ الی ۱۴:۴۵', label: 'دوشنبه - ساعت ۱۴:۰۰ الی ۱۴:۴۵', category: 'نوجوان', fieldId: 'f_booking_borhani_teen' },
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۸:۰۰ الی ۱۸:۴۵', label: 'دوشنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵', category: 'خانواده', fieldId: 'f_booking_borhani_family' },
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۹:۰۰ الی ۱۹:۴۵', label: 'دوشنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵', category: 'خانواده', fieldId: 'f_booking_borhani_family' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_rastgoo',
@@ -305,14 +262,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور نوجوان و بالینی',
     specialization: 'مشاوره نوجوان و بالینی',
     bookingFieldIds: ['f_booking_rastgoo_teen', 'f_booking_rastgoo_clinical'],
-    definedSlots: [
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'یکشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', category: 'نوجوان', fieldId: 'f_booking_rastgoo_teen' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'یکشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'نوجوان', fieldId: 'f_booking_rastgoo_teen' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۲:۰۰ الی ۱۲:۴۵', label: 'یکشنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵', category: 'نوجوان', fieldId: 'f_booking_rastgoo_teen' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۳:۰۰ الی ۱۳:۴۵', label: 'یکشنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵', category: 'نوجوان', fieldId: 'f_booking_rastgoo_teen' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۸:۰۰ الی ۱۸:۴۵', label: 'یکشنبه - ساعت ۱۸:۰۰ الی ۱۸:۴۵', category: 'بالینی', fieldId: 'f_booking_rastgoo_clinical' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۹:۰۰ الی ۱۹:۴۵', label: 'یکشنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵', category: 'بالینی', fieldId: 'f_booking_rastgoo_clinical' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_abdi_education',
@@ -321,12 +271,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور تحصیلی',
     specialization: 'برنامه‌ریزی و مشاوره تحصیلی',
     bookingFieldIds: ['f_booking_abdi_education'],
-    definedSlots: [
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۶:۰۰ الی ۱۶:۴۵', label: 'سه شنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵', category: 'تحصیلی', fieldId: 'f_booking_abdi_education' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۷:۰۰ الی ۱۷:۴۵', label: 'سه شنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵', category: 'تحصیلی', fieldId: 'f_booking_abdi_education' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۶:۰۰ الی ۱۶:۴۵', label: 'چهارشنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵', category: 'تحصیلی', fieldId: 'f_booking_abdi_education' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۷:۰۰ الی ۱۷:۴۵', label: 'چهارشنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵', category: 'تحصیلی', fieldId: 'f_booking_abdi_education' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_torshizi',
@@ -335,9 +280,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور و روانشناس بالینی',
     specialization: 'مشاوره بالینی و روان‌درمانی',
     bookingFieldIds: ['f_booking_torshizi'],
-    definedSlots: [
-      { dayIndex: 4, dayName: 'پنج‌شنبه', timeRange: '۱۰:۳۰ الی ۱۱:۱۵', label: 'پنج‌شنبه - ساعت ۱۰:۳۰ الی ۱۱:۱۵', category: 'بالینی', fieldId: 'f_booking_torshizi' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_yavari',
@@ -346,10 +289,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور بالینی',
     specialization: 'مشاوره بالینی، اضطراب و افسردگی',
     bookingFieldIds: ['f_booking_yavari'],
-    definedSlots: [
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'بالینی', fieldId: 'f_booking_yavari' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۳:۰۰ الی ۱۳:۴۵', label: 'سه شنبه - ساعت ۱۳:۰۰ الی ۱۳:۴۵', category: 'بالینی', fieldId: 'f_booking_yavari' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_golyayi',
@@ -358,10 +298,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور بالینی',
     specialization: 'مشاوره فردی و بالینی',
     bookingFieldIds: ['f_booking_golyayi_clinical'],
-    definedSlots: [
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'دوشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'بالینی', fieldId: 'f_booking_golyayi_clinical' },
-      { dayIndex: 2, dayName: 'دوشنبه', timeRange: '۱۶:۰۰ الی ۱۶:۴۵', label: 'دوشنبه - ساعت ۱۶:۰۰ الی ۱۶:۴۵', category: 'بالینی', fieldId: 'f_booking_golyayi_clinical' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_sedighi',
@@ -370,9 +307,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور ازدواج و خانواده',
     specialization: 'مشاوره ازدواج، زوج‌درمانی و خانواده',
     bookingFieldIds: ['f_booking_sedighi_family'],
-    definedSlots: [
-      { dayIndex: 0, dayName: 'شنبه', timeRange: '۱۷:۰۰ الی ۱۷:۴۵', label: 'شنبه - ساعت ۱۷:۰۰ الی ۱۷:۴۵', category: 'خانواده', fieldId: 'f_booking_sedighi_family' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_karimi',
@@ -381,12 +316,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور خانواده',
     specialization: 'مشاوره خانواده و زوجین',
     bookingFieldIds: ['f_booking_karimi_family'],
-    definedSlots: [
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'یکشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', category: 'خانواده', fieldId: 'f_booking_karimi_family' },
-      { dayIndex: 1, dayName: 'یکشنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'یکشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'خانواده', fieldId: 'f_booking_karimi_family' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'سه شنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', category: 'خانواده', fieldId: 'f_booking_karimi_family' },
-      { dayIndex: 3, dayName: 'سه‌شنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'سه شنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'خانواده', fieldId: 'f_booking_karimi_family' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'f_booking_abdi_family',
@@ -395,13 +325,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'مشاور خانواده',
     specialization: 'مشاوره خانواده و مهارت‌های ارتباطی',
     bookingFieldIds: ['f_booking_abdi_family'],
-    definedSlots: [
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۰۸:۰۰ الی ۰۸:۴۵', label: 'چهارشنبه - ساعت ۰۸:۰۰ الی ۰۸:۴۵', category: 'خانواده', fieldId: 'f_booking_abdi_family' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۰۹:۰۰ الی ۰۹:۴۵', label: 'چهارشنبه - ساعت ۰۹:۰۰ الی ۰۹:۴۵', category: 'خانواده', fieldId: 'f_booking_abdi_family' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۰:۰۰ الی ۱۰:۴۵', label: 'چهارشنبه - ساعت ۱۰:۰۰ الی ۱۰:۴۵', category: 'خانواده', fieldId: 'f_booking_abdi_family' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'چهارشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'خانواده', fieldId: 'f_booking_abdi_family' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۲:۰۰ الی ۱۲:۴۵', label: 'چهارشنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵', category: 'خانواده', fieldId: 'f_booking_abdi_family' },
-    ],
+    definedSlots: [],
   },
   {
     id: 'user-reviewer',
@@ -410,10 +334,7 @@ export const KNOWN_CONSULTANTS: ConsultantProfile[] = [
     jobTitle: 'کارشناس بررسی و مشاور فردی',
     specialization: 'مشاوره فردی، بررسی پرونده‌ها و خودشناسی',
     bookingFieldIds: ['f_counselor_saadat'],
-    definedSlots: [
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۱:۰۰ الی ۱۱:۴۵', label: 'چهارشنبه - ساعت ۱۱:۰۰ الی ۱۱:۴۵', category: 'فردی', fieldId: 'f_counselor_saadat' },
-      { dayIndex: 4, dayName: 'چهارشنبه', timeRange: '۱۲:۰۰ الی ۱۲:۴۵', label: 'چهارشنبه - ساعت ۱۲:۰۰ الی ۱۲:۴۵', category: 'فردی', fieldId: 'f_counselor_saadat' },
-    ],
+    definedSlots: [],
   },
 ];
 
@@ -676,7 +597,7 @@ export function matchMemberToConsultant(
     jobTitle: member.jobTitle || matchedKnown?.jobTitle || 'مشاور',
     specialization: member.jobTitle || matchedKnown?.specialization || 'مشاوره تخصصی',
     bookingFieldIds: uniqueBookingFieldIds,
-    definedSlots: customSlots.length > 0 ? customSlots : (matchedKnown?.definedSlots || []),
+    definedSlots: customSlots,
   };
 }
 
@@ -735,7 +656,8 @@ export function isBookingAssignedToConsultant(
   if (allowedTopics && allowedTopics.length > 0) {
     const topicText = (booking.topic || '').toLowerCase();
     const isTopicAllowed = allowedTopics.some((tId) => {
-      const topicObj = COUNSELING_TOPICS.find((ct) => ct.id === tId);
+      if (topicText.includes(tId.toLowerCase())) return true;
+      const topicObj = COUNSELING_TOPICS.find((ct) => ct.id === tId || ct.name.includes(tId) || ct.keywords.includes(tId));
       if (!topicObj) return false;
       return topicObj.keywords.some((kw) => topicText.includes(kw));
     });
