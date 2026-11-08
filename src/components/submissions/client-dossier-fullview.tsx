@@ -61,6 +61,9 @@ import {
   toPersianDigits,
   toEnglishDigits,
   getFieldDisplayValue,
+  formatClientAge,
+  extractBirthYear,
+  getCurrentJalaliYear,
 } from '@/lib/persian';
 
 export interface ClientCaseGroup {
@@ -106,9 +109,7 @@ function isMockAppointment(item: any): boolean {
     str.includes('بررسی ریشه‌های کمال‌گرایی') ||
     str.includes('ارجاع به کارگاه مهارت‌های زندگی') ||
     str.includes('علوی') ||
-    str.includes('Alavi') ||
-    str.includes('1405') ||
-    str.includes('۱۴۰۵')
+    str.includes('Alavi')
   );
 }
 
@@ -1180,10 +1181,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     approved: { label: 'تأیید شده', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
     rejected: { label: 'نیازمند اقدام', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200', ring: 'ring-slate-200' },
-    optimal: { label: 'مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
+    optimal: { label: 'وضعیت مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
     growing: { label: 'در حال رشد', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', ring: 'ring-teal-200' },
     needs_followup: { label: 'نیازمند پیگیری', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', ring: 'ring-amber-200' },
-    regressing: { label: 'رو به افول', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-200' },
+    regressing: { label: 'عقب گرد', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-200' },
   };
 
   // دریافت فرم و ارسالی انتخاب شده جهت نمایش گزارش نموداری
@@ -1492,6 +1493,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     statusConfigs[currentStatus].ring
                   }`}
                 >
+                  <option value="regressing">عقب گرد</option>
+                  <option value="needs_followup">نیازمند پیگیری</option>
+                  <option value="optimal">وضعیت مطلوب</option>
+                  <option value="growing">در حال رشد</option>
                   <option value="new">جدید</option>
                   <option value="reviewing">در حال بررسی</option>
                   <option value="approved">تأیید شده</option>
@@ -2160,7 +2165,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
                       ? 'وضعیت مطلوب'
                       : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
-                      ? 'عقب‌گرد'
+                      ? 'عقب گرد'
                       : clientCase.overallStatus === 'needs_followup'
                       ? 'نیازمند پیگیری'
                       : 'در انتظار ارزیابی اولیه مشاور'}
@@ -2171,7 +2176,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               {/* نوار روند پیشرفت وضعیت بالینی */}
               <div className="grid grid-cols-4 gap-2 pt-2">
                 {[
-                  { id: 'regressing', label: 'عقب‌گرد', color: 'bg-rose-500', light: 'bg-rose-50 border-rose-200 text-rose-800' },
+                  { id: 'regressing', label: 'عقب گرد', color: 'bg-rose-500', light: 'bg-rose-50 border-rose-200 text-rose-800' },
                   { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'bg-amber-500', light: 'bg-amber-50 border-amber-200 text-amber-800' },
                   { id: 'growing', label: 'در حال رشد', color: 'bg-blue-500', light: 'bg-blue-50 border-blue-200 text-blue-800' },
                   { id: 'optimal', label: 'وضعیت مطلوب', color: 'bg-emerald-500', light: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
@@ -3995,14 +4000,151 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </button>
             </div>
             <div className="p-5">
+              {/* وضعیت نوبت */}
               <div
-                className={`mb-5 rounded-2xl p-4 text-xs ${
-                  editing.status === 'new' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'
+                className={`mb-4 flex items-center justify-between rounded-2xl px-4 py-2.5 text-xs font-bold ${
+                  editing.status === 'new'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                    : 'bg-slate-100 text-slate-600 border border-slate-200/60'
                 }`}
               >
-                {editing.status === 'new'
-                  ? 'این نوبت هنوز بررسی نشده است. با ثبت گزارش، وضعیت آن به «انجام‌شده» تغییر می‌کند.'
-                  : 'گزارش این جلسه قبلاً ثبت شده است و می‌توانید آن را تکمیل یا اصلاح کنید.'}
+                <span>
+                  {editing.status === 'new'
+                    ? '📌 این نوبت هنوز بررسی نشده است (با ثبت، وضعیت به انجام‌شده تغییر می‌کند).'
+                    : '✓ گزارش این جلسه قبلاً ثبت شده است و می‌توانید آن را تکمیل یا اصلاح کنید.'}
+                </span>
+              </div>
+
+              {/* بخش هایلایت ویژه: نسخه و توصیه‌های تجویزی مشاور */}
+              <div className="mb-5 rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-orange-50/30 p-4.5 shadow-sm ring-4 ring-amber-500/5">
+                <div className="flex items-center justify-between pb-3 border-b border-amber-200/80 mb-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="grid size-7 place-items-center rounded-xl bg-amber-500 text-white shadow-xs">
+                      <Sparkles className="size-4" />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-black text-amber-950">نسخه و توصیه‌های تجویزی مشاور</h3>
+                      <p className="text-[11px] text-amber-800/80">راهکارها، تمرین‌ها و پروتکل تجویزی جلسه</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-amber-200/90 px-2.5 py-0.5 text-[10px] font-black text-amber-900 border border-amber-300">
+                    بخش هایلایت بالینی
+                  </span>
+                </div>
+
+                {/* منوی کشویی / کرکره‌ای انتخاب سرفصل بالینی */}
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                      <span>سرفصل بالینی توصیه (انتخاب کشویی / کرکره‌ای):</span>
+                    </span>
+                    {selectedClinicalCategory && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClinicalCategory('')}
+                        className="text-[11px] text-amber-800 hover:text-rose-600 font-bold flex items-center gap-1 cursor-pointer transition"
+                        title="حذف سرفصل انتخابی"
+                      >
+                        حذف انتخاب سرفصل ×
+                      </button>
+                    )}
+                  </div>
+
+                  {/* دکمه ماشه‌ای باز و بسته کردن منوی کشویی / کرکره‌ای */}
+                  <button
+                    type="button"
+                    onClick={() => setIsClinicalCategoryOpen((prev) => !prev)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      isClinicalCategoryOpen
+                        ? 'bg-white border-amber-400 ring-2 ring-amber-200 shadow-sm'
+                        : selectedClinicalCategory
+                        ? 'bg-amber-100/90 border-amber-300 text-amber-950 hover:bg-amber-100 shadow-xs'
+                        : 'bg-white border-amber-200/90 text-slate-600 hover:bg-white hover:border-amber-300 shadow-xs'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                      {selectedClinicalCategory ? (
+                        <span className="font-black text-amber-950 truncate">
+                          سرفصل انتخاب‌شده: <span className="text-[#173f6b] font-black">{selectedClinicalCategory}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-500 font-medium truncate">
+                          جهت انتخاب سرفصل بالینی کلیک کنید (منوی کشویی / کرکره‌ای)...
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0 text-amber-800 mr-2">
+                      <span className="text-[11px] font-bold hidden sm:inline">
+                        {isClinicalCategoryOpen ? 'بستن منو' : 'باز کردن گزینه‌ها (کشویی)'}
+                      </span>
+                      <ChevronDown
+                        className={`size-4 transition-transform duration-300 ${
+                          isClinicalCategoryOpen ? 'rotate-180 text-amber-950' : 'text-amber-700'
+                        }`}
+                      />
+                    </div>
+                  </button>
+
+                  {/* پنل کشویی / کرکره‌ای بازشونده گزینه‌ها */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isClinicalCategoryOpen
+                        ? 'max-h-96 mt-2 opacity-100'
+                        : 'max-h-0 opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    <div className="rounded-xl border border-amber-200 bg-white/95 p-3 shadow-md backdrop-blur-xs">
+                      <div className="text-[11px] font-bold text-amber-900/80 mb-2 px-1 flex items-center justify-between">
+                        <span>یکی از سرفصل‌های بالینی زیر را انتخاب فرمایید:</span>
+                        <span className="text-[10px] text-amber-700">کلیک جهت انتخاب و بستن منو</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          'تقویت رابطه زوجین',
+                          'تاب‌آوری',
+                          'نشخوار فکری',
+                          'وسواس فکری',
+                          'کنترل هیجان',
+                          'مهارت‌های حل مسئله',
+                          'اضطراب و استرس',
+                          'سایر موارد',
+                        ].map((cat) => {
+                          const isSel = selectedClinicalCategory === cat;
+                          return (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => {
+                                setSelectedClinicalCategory(isSel ? '' : cat);
+                                setIsClinicalCategoryOpen(false);
+                              }}
+                              className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-between gap-1 border ${
+                                isSel
+                                  ? 'bg-[#173f6b] text-white border-[#173f6b] shadow-sm ring-2 ring-blue-200'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-900'
+                              }`}
+                            >
+                              <span className="truncate">{cat}</span>
+                              {isSel && <Check className="size-3.5 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* کادر متنی نسخه و توصیه‌های تجویزی */}
+                <div className="mt-3.5">
+                  <textarea
+                    value={reportForm.recommendation}
+                    onChange={(e) => setReportForm((old) => ({ ...old, recommendation: e.target.value }))}
+                    placeholder="راهکارها، تمرین‌ها و پروتکل تجویزی برای مراجع (ذیل سرفصل انتخابی)..."
+                    rows={4}
+                    className="w-full resize-none rounded-xl border border-amber-300/80 bg-white p-3.5 text-sm leading-7 outline-none transition placeholder:text-slate-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-200/50 text-slate-800 shadow-xs"
+                  />
+                </div>
               </div>
 
               <div className="space-y-5">
@@ -4036,53 +4178,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   />
                 </label>
 
-                {/* بخش ۳: نسخه و توصیه‌های تجویزی مشاور با محورهای بالینی */}
-                <div className="space-y-2">
-                  <span className="flex items-center gap-2 text-xs font-black text-slate-700">
-                    <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۳</span>
-                    نسخه و توصیه‌های تجویزی مشاور (انتخاب سرفصل بالینی):
-                  </span>
-                  
-                  {/* چیپ‌های دسته‌بندی موضوعی توصیه */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {[
-                      'تقویت رابطه زوجین',
-                      'تاب‌آوری',
-                      'نشخوار فکری',
-                      'وسواس فکری',
-                      'کنترل هیجان',
-                      'مهارت‌های حل مسئله',
-                      'اضطراب و استرس',
-                      'سایر موارد',
-                    ].map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setSelectedClinicalCategory((prev) => (prev === cat ? '' : cat))}
-                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                          selectedClinicalCategory === cat
-                            ? 'bg-[#173f6b] text-white border-[#173f6b] shadow-xs'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-
-                  <textarea
-                    value={reportForm.recommendation}
-                    onChange={(e) => setReportForm((old) => ({ ...old, recommendation: e.target.value }))}
-                    placeholder="راهکارها، تمرین‌ها و پروتکل تجویزی برای مراجع (ذیل سرفصل انتخابی بالا)..."
-                    rows={4}
-                    className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 outline-none transition placeholder:text-slate-300 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50"
-                  />
-                </div>
-
-                {/* بخش ۴: آخرین وضعیت بالینی مراجع (۴ دکمه استاندارد) */}
+                {/* بخش ۳: آخرین وضعیت بالینی مراجع (۴ دکمه استاندارد) */}
                 <div className="pt-2 border-t border-slate-100 space-y-2">
                   <span className="flex items-center gap-2 text-xs font-black text-slate-700">
-                    <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۴</span>
+                    <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۳</span>
                     تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه:
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

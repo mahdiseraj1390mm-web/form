@@ -593,7 +593,8 @@ function normalizeSearchText(str: string): string {
               { id: 'all', label: 'همه' },
               { id: 'regressing', label: 'عقب گرد' },
               { id: 'needs_followup', label: 'نیازمند پیگیری' },
-              { id: 'approved', label: 'تأیید شده' },
+              { id: 'optimal', label: 'وضعیت مطلوب' },
+              { id: 'growing', label: 'در حال رشد' },
             ].map((st) => (
               <button
                 key={st.id}
