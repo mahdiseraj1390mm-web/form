@@ -16,16 +16,26 @@ import {
   CalendarOff,
   User,
   UserCheck,
-  Check
+  Check,
+  PhoneCall
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { useForm } from '@/context/form-context';
-import { COUNSELING_TOPICS } from '@/lib/consultant-helpers';
+import { COUNSELING_TOPICS, COUNSELOR_MAP } from '@/lib/consultant-helpers';
 
 interface AppointmentSchedulerProps {
   field: FormField;
   value: any;
-  onChange: (slotString: string) => void;
+  onChange: (
+    slotString: string,
+    meta?: {
+      topic?: string;
+      counselorName?: string;
+      consultantId?: string;
+      slot?: string;
+      phone?: string;
+    }
+  ) => void;
   themeColor?: string;
   error?: string;
 }
@@ -86,8 +96,33 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   // بررسی حالت چندمشاوره‌ای
   const selectedConsultants = useMemo(() => {
-    return (field.appointmentData?.selectedConsultants || []).filter((sc) => sc.enabled);
-  }, [field.appointmentData?.selectedConsultants]);
+    const list = (field.appointmentData?.selectedConsultants || []).filter((sc) => sc.enabled);
+    if (list.length > 0) return list;
+
+    // در صورتی که هیچ مشاوری به صورت صریح تیک نخورده، تمام مشاوران فعال سیستم به عنوان گزینه‌های مجاز پیش‌فرض قرار گیرند
+    const activeMembers = (teamMembers || []).filter(
+      (m) => m.status !== 'suspended' && (m.allowedTopics?.length || m.workingHours || m.consultantId)
+    );
+    if (activeMembers.length > 0) {
+      return activeMembers.map((m) => {
+        const prefix = m.genderPrefix || (m.name.startsWith('خانم') ? 'خانم' : 'آقا');
+        const cleanName = m.name.replace(/^(خانم|آقای?)\s+/, '');
+        const topics = (m.allowedTopics && m.allowedTopics.length > 0)
+          ? m.allowedTopics
+          : ['مشاوره تخصصی'];
+        return {
+          consultantId: m.id,
+          consultantName: cleanName,
+          genderPrefix: prefix as 'آقا' | 'خانم',
+          enabled: true,
+          enabledTopics: topics,
+          customWorkingHours: m.workingHours,
+        };
+      });
+    }
+
+    return [];
+  }, [field.appointmentData?.selectedConsultants, teamMembers]);
 
   const hasMultiConsultantMode = selectedConsultants.length > 0;
 
@@ -137,8 +172,23 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const matchingMember = useMemo(() => {
     if (!activeConsultantConfig) return null;
-    return teamMembers.find((m) => m.id === activeConsultantConfig.consultantId) || null;
+    return teamMembers.find(
+      (m) =>
+        m.id === activeConsultantConfig.consultantId ||
+        m.consultantId === activeConsultantConfig.consultantId ||
+        m.name === activeConsultantConfig.consultantName ||
+        (m.genderPrefix && `${m.genderPrefix} ${m.name}` === activeConsultantConfig.consultantName)
+    ) || null;
   }, [teamMembers, activeConsultantConfig]);
+
+  const consultantMobile = useMemo(() => {
+    if (matchingMember?.mobile) return matchingMember.mobile;
+    if (activeConsultantConfig?.consultantId) {
+      const info = COUNSELOR_MAP[activeConsultantConfig.consultantId];
+      if (info?.mobile) return info.mobile;
+    }
+    return '';
+  }, [matchingMember, activeConsultantConfig]);
 
   // تنظیمات نوبت‌دهی موثر (ساعت سفارشی فرم > ساعت مشاور > تنظیمات عمومی فیلد)
   const appointmentConfig = useMemo(() => {
@@ -317,9 +367,15 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         ? `${prefix}${activeConsultantConfig.consultantName}`
         : 'مشاور';
       const formatted = `موضوع: ${topicName} | مشاور: ${consultantFullName} | نوبت: ${slotLabel}`;
-      onChange(formatted);
+      onChange(formatted, {
+        topic: topicName,
+        counselorName: consultantFullName,
+        consultantId: activeConsultantConfig?.consultantId,
+        slot: slotLabel,
+        phone: consultantMobile,
+      });
     } else {
-      onChange(slotLabel);
+      onChange(slotLabel, { slot: slotLabel });
     }
   };
 
@@ -416,6 +472,37 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* زیرفیلد ۳: اطلاعات تماس و راهنمای ارتباط با مشاور */}
+          {activeConsultantConfig && (
+            <div className="pt-2 border-t border-indigo-100/70">
+              <div className="p-3.5 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-indigo-50/90 border border-blue-200/90 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
+                    <PhoneCall className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-blue-950 text-xs">
+                        مشاور انتخاب‌شده: {activeConsultantConfig.genderPrefix ? `${activeConsultantConfig.genderPrefix} ` : ''}{activeConsultantConfig.consultantName}
+                      </span>
+                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200">
+                        مشاوره تلفنی
+                      </span>
+                    </div>
+                    {consultantMobile ? (
+                      <span className="text-[11px] text-blue-800 font-mono mt-1 block">
+                        📞 شماره تماس مستقیم: <strong className="font-bold text-blue-950">{toPersianDigits(consultantMobile)}</strong>
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="text-[11px] text-slate-600 font-medium bg-white/80 px-3 py-1.5 rounded-xl border border-blue-100">
+                  جلسه مشاوره به صورت تماس تلفنی در ساعت مقرر رزرو شده با این شماره انجام می‌شود.
+                </div>
               </div>
             </div>
           )}

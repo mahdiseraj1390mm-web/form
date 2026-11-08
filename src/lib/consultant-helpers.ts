@@ -3,6 +3,7 @@ import { TeamMember } from '@/types/advanced';
 import { normalizeMobileNumber } from './team-constants';
 import { toPersianDigits } from './persian';
 import { COUNSELOR_MAP } from './belhagh-sms-helper';
+export { COUNSELOR_MAP };
 
 export interface PersianWeekDay {
   index: number;

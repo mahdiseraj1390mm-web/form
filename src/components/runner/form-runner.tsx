@@ -1630,7 +1630,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         let bookingFieldKey = '';
         for (const key of Object.keys(formData)) {
           const matchingField = form.fields.find((f) => f.id === key);
-          const isBooking = key.startsWith('f_booking_') || matchingField?.type === 'appointmentBooking';
+          const isBooking = key.startsWith('f_booking_') || key === 'f_booking' || matchingField?.type === 'appointmentBooking';
           if (isBooking && isFieldVisible(key) && formData[key] && String(formData[key]).trim() !== '') {
             selectedSlotVal = String(formData[key]).trim();
             bookingFieldKey = key;
@@ -3431,7 +3431,32 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     key={field.id}
                     field={field}
                     value={formData[field.id]}
-                    onChange={(val) => handleFieldChange(field.id, val)}
+                    onChange={(val, meta) => {
+                      handleFieldChange(field.id, val);
+                      if (meta) {
+                        if (meta.topic) {
+                          handleFieldChange('f_topic', meta.topic);
+                          handleFieldChange('topic', meta.topic);
+                        }
+                        if (meta.counselorName) {
+                          handleFieldChange('counselorName', meta.counselorName);
+                          handleFieldChange('counselor', meta.counselorName);
+                          handleFieldChange('f_counselor', meta.counselorName);
+                        }
+                        if (meta.consultantId) {
+                          handleFieldChange(meta.consultantId, meta.slot || val);
+                          handleFieldChange('counselorId', meta.consultantId);
+                          handleFieldChange('counselorField', meta.consultantId);
+                        }
+                        if (meta.slot) {
+                          handleFieldChange('f_booking_slot', meta.slot);
+                        }
+                        if (meta.phone) {
+                          handleFieldChange('f_phone', meta.phone);
+                          handleFieldChange('counselorPhone', meta.phone);
+                        }
+                      }
+                    }}
                     themeColor={theme?.themeColor || '#00897b'}
                     error={errors[field.id]}
                   />

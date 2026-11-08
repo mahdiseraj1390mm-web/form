@@ -832,59 +832,77 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                 <span>شرایط و قوانین را می‌پذیرم.</span>
                               </div>
                             ) : field.type === 'appointmentBooking' ? (
-                              <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-2">
+                              <div className="p-3.5 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-blue-50/60 border border-emerald-300/80 rounded-2xl space-y-3 shadow-2xs">
+                                {/* سربرگ هوشمند فیلد رزرو */}
                                 <div className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-1.5 font-bold text-emerald-950">
-                                    <Calendar className="w-4 h-4 text-emerald-600" />
-                                    <span>تنظیمات زمان‌بندی و نوبت‌دهی مشاور</span>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+                                      <Calendar className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <span className="font-extrabold text-emerald-950 block text-xs">فیلد جامع نوبت‌دهی چندمشاوره‌ای</span>
+                                      <span className="text-[10px] text-emerald-700 font-medium">شامل مراحل داخلی: موضوع مراجعه ← انتخاب مشاور ← اطلاعات تماس مشاور ← تقویم اسلات‌ها</span>
+                                    </div>
                                   </div>
-                                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                                    {toPersianDigits(field.appointmentData?.slotDurationMinutes || 30)} دقیقه‌ای
+                                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
+                                    هوشمند ۴ در ۱
                                   </span>
                                 </div>
 
-                                {/* روزهای کاری */}
-                                <div className="flex flex-wrap items-center gap-1 text-[11px]">
-                                  <span className="font-bold text-emerald-800 flex items-center gap-0.5">
-                                    <CalendarCheck className="w-3 h-3 text-emerald-600" />
-                                    <span>روزهای کاری:</span>
-                                  </span>
-                                  {(field.appointmentData?.availableDays || [0, 1, 2, 3, 4]).map((dIdx) => {
-                                    const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
-                                    return (
-                                      <span key={dIdx} className="bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold text-[10px]">
-                                        {dayNames[dIdx]}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-
-                                {/* روزهای تعطیل */}
-                                <div className="flex flex-wrap items-center gap-1 text-[11px]">
-                                  <span className="font-bold text-rose-700 flex items-center gap-0.5">
-                                    <CalendarOff className="w-3 h-3 text-rose-500" />
-                                    <span>روزهای تعطیل:</span>
-                                  </span>
-                                  {[0, 1, 2, 3, 4, 5, 6]
-                                    .filter((dIdx) => !(field.appointmentData?.availableDays || [0, 1, 2, 3, 4]).includes(dIdx))
-                                    .map((dIdx) => {
-                                      const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
-                                      return (
-                                        <span key={dIdx} className="bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded font-medium text-[10px]">
-                                          {dayNames[dIdx]}
+                                {/* نمایش مشاوران تیک‌خورده */}
+                                <div className="p-2.5 bg-white/90 rounded-xl border border-emerald-100 space-y-1.5">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-bold text-slate-700 flex items-center gap-1">
+                                      <CalendarCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span>مشاوران مجاز برای این فرم:</span>
+                                    </span>
+                                    <span className="text-[10px] text-emerald-700 font-bold">
+                                      {toPersianDigits((field.appointmentData?.selectedConsultants || []).filter(c => c.enabled).length)} مشاور فعال
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                    {(field.appointmentData?.selectedConsultants || []).filter(c => c.enabled).length > 0 ? (
+                                      (field.appointmentData?.selectedConsultants || []).filter(c => c.enabled).map((c, idx) => (
+                                        <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 text-[10px] font-bold">
+                                          <span>{c.genderPrefix ? `${c.genderPrefix} ` : ''}{c.consultantName}</span>
+                                          {(c.enabledTopics || []).length > 0 && (
+                                            <span className="text-[9px] text-emerald-600 font-medium">({toPersianDigits(c.enabledTopics?.length || 0)} موضوع)</span>
+                                          )}
                                         </span>
-                                      );
-                                    })}
+                                      ))
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400 italic">تمام مشاوران فعال سامانه مجاز خواهند بود (کلیک برای ویرایش مشاوران)</span>
+                                    )}
+                                  </div>
                                 </div>
 
+                                {/* مراحل فرعی ۴ گانه داخلی */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
+                                  <div className="p-1.5 rounded-lg bg-white/70 border border-slate-200 text-center">
+                                    <span className="font-bold text-slate-700 block">۱. موضوع مراجعه</span>
+                                    <span className="text-[9px] text-slate-400">فیلتر خودکار</span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-white/70 border border-slate-200 text-center">
+                                    <span className="font-bold text-slate-700 block">۲. مشاوران متخصص</span>
+                                    <span className="text-[9px] text-slate-400">کارت با آقا/خانم</span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-white/70 border border-slate-200 text-center">
+                                    <span className="font-bold text-slate-700 block">۳. تماس و راهنما</span>
+                                    <span className="text-[9px] text-slate-400">باکس تلفن مستقیم</span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-white/70 border border-slate-200 text-center">
+                                    <span className="font-bold text-slate-700 block">۴. تقویم اسلات‌ها</span>
+                                    <span className="text-[9px] text-slate-400">بر اساس ساعت کاری</span>
+                                  </div>
+                                </div>
+
+                                {/* فوتر تنظیمات */}
                                 <div className="flex items-center justify-between pt-1 border-t border-emerald-200/70 text-[10px] text-slate-500">
                                   <span>
-                                    ساعات کاری: {toPersianDigits(field.appointmentData?.startHour || '09:00')} الی {toPersianDigits(field.appointmentData?.endHour || '17:00')}
-                                    {Object.values(field.appointmentData?.daySchedules || {}).some((d: any) => (d.periods?.length || 0) > 1) ? ' (چندنوبته)' : ''}
-                                    {field.appointmentData?.restTimeMinutes ? ` (استراحت: ${toPersianDigits(field.appointmentData.restTimeMinutes)} دقیقه)` : ''}
+                                    مدت جلسه: {toPersianDigits(field.appointmentData?.slotDurationMinutes || 45)} دقیقه | استراحت: {toPersianDigits(field.appointmentData?.restTimeMinutes || 15)} دقیقه
                                   </span>
-                                  <span className="text-emerald-700 font-bold">
-                                    کلیک برای ویرایش تقویم
+                                  <span className="text-emerald-700 font-bold hover:underline cursor-pointer">
+                                    ✏️ کلیک برای تنظیم مشاوران و ساعات کاری
                                   </span>
                                 </div>
                               </div>

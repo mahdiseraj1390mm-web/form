@@ -404,6 +404,56 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
     setEditingScheduleConsultant(null);
   };
 
+  // انتخاب همه مشاوران سیستم برای این فرم
+  const handleSelectAllConsultants = () => {
+    const updated = availableConsultantsList.map((c) => {
+      const existing = (field.appointmentData?.selectedConsultants || []).find(
+        (sc) => sc.consultantId === c.id
+      );
+      const prefix = (c as any).genderPrefix || (c.name.startsWith('خانم') ? 'خانم' : (c.name.startsWith('آقا') ? 'آقا' : ''));
+      const cleanName = c.name.replace(/^(خانم|آقای?)\s+/, '');
+      const consultantTopics = (c as any).allowedTopics?.length > 0
+        ? (c as any).allowedTopics
+        : COUNSELING_TOPICS.map((t) => t.id);
+
+      return {
+        consultantId: c.id,
+        consultantName: cleanName,
+        genderPrefix: (prefix || 'آقا') as 'آقا' | 'خانم',
+        enabled: true,
+        enabledTopics: existing?.enabledTopics?.length ? existing.enabledTopics : consultantTopics,
+        customWorkingHours: existing?.customWorkingHours,
+      };
+    });
+
+    onUpdate({
+      appointmentData: {
+        ...field.appointmentData,
+        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 45,
+        restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 15,
+        availableDays: field.appointmentData?.availableDays ?? [0, 1, 2, 3, 4],
+        startHour: field.appointmentData?.startHour ?? '09:00',
+        endHour: field.appointmentData?.endHour ?? '20:30',
+        selectedConsultants: updated,
+      },
+    });
+  };
+
+  // لغو انتخاب همه مشاوران
+  const handleDeselectAllConsultants = () => {
+    const updated = (field.appointmentData?.selectedConsultants || []).map((sc) => ({
+      ...sc,
+      enabled: false,
+    }));
+    onUpdate({
+      appointmentData: {
+        ...field.appointmentData,
+        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 45,
+        selectedConsultants: updated,
+      },
+    });
+  };
+
   // بارگذاری از لیست مشاوران سیستم در فیلدهای گزینه‌ای
   const handleLoadConsultants = () => {
     const activeMembers = teamMembers.filter((m) => m.status !== 'suspended');
@@ -1305,12 +1355,30 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
 
             {/* بخش ۱: مشاوران و موضوعات مجاز در این فرم */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
                   <UserCheck className="w-4 h-4 text-emerald-700" />
-                  <span>۱. مشاوران و موضوعات مجاز در این فرم</span>
-                </span>
-                <span className="text-[10px] text-slate-500 font-medium">تیک بزنید</span>
+                  <span className="font-bold text-xs text-slate-800">۱. مشاوران مجاز برای این فرم:</span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full">
+                    {toPersianDigits((field.appointmentData?.selectedConsultants || []).filter((sc) => sc.enabled).length)} از {toPersianDigits(availableConsultantsList.length)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleSelectAllConsultants}
+                    className="text-[10px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 font-bold transition cursor-pointer"
+                  >
+                    انتخاب همه
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeselectAllConsultants}
+                    className="text-[10px] text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded border border-slate-200 font-medium transition cursor-pointer"
+                  >
+                    لغو همه
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2.5">
