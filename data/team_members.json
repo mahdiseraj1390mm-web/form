@@ -164,8 +164,9 @@
       "all"
     ],
     "allowedTabs": [
-      "consultants",
-      "submissions"
+      "dashboard",
+      "submissions",
+      "consultants"
     ],
     "requireCaseCode": false,
     "consultantId": "f_booking_borhani",
@@ -275,8 +276,9 @@
       "all"
     ],
     "allowedTabs": [
-      "consultants",
-      "submissions"
+      "dashboard",
+      "submissions",
+      "consultants"
     ],
     "requireCaseCode": false,
     "consultantId": "f_booking_farahmandi",
@@ -364,8 +366,9 @@
       "all"
     ],
     "allowedTabs": [
-      "consultants",
-      "submissions"
+      "dashboard",
+      "submissions",
+      "consultants"
     ],
     "requireCaseCode": false,
     "consultantId": "f_booking_shavandi",
@@ -455,8 +458,9 @@
       "all"
     ],
     "allowedTabs": [
-      "consultants",
-      "submissions"
+      "dashboard",
+      "submissions",
+      "consultants"
     ],
     "requireCaseCode": false,
     "consultantId": "f_booking_teymourian",
@@ -564,8 +568,9 @@
       "all"
     ],
     "allowedTabs": [
-      "consultants",
-      "submissions"
+      "dashboard",
+      "submissions",
+      "consultants"
     ],
     "requireCaseCode": false,
     "consultantId": "f_booking_torshizi",

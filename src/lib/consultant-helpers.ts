@@ -138,6 +138,7 @@ export interface ConsultantBookingItem {
   dayName: string;
   timeRange: string;
   submissionDate: string;
+  createdAt?: string;
   status: string;
   rawSubmission: FormSubmission;
 }
@@ -563,6 +564,7 @@ export function extractBookingItemFromSubmission(sub: FormSubmission): Consultan
     dayName,
     timeRange,
     submissionDate: sub.createdAt || '',
+    createdAt: sub.createdAt || '',
     status: sub.status || 'approved',
     rawSubmission: sub,
   };

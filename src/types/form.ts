@@ -348,7 +348,7 @@ export interface SubmissionComment {
   createdAt: string;
 }
 
-export type SubmissionStatus = 'new' | 'reviewing' | 'approved' | 'rejected' | 'archived';
+export type SubmissionStatus = 'regressing' | 'needs_followup' | 'optimal' | 'growing' | 'new' | 'reviewing' | 'approved' | 'rejected' | 'archived';
 
 export interface FormSubmission {
   id: string;

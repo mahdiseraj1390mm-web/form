@@ -123,10 +123,14 @@ export const SubmissionsHub: React.FC = () => {
     approved: { label: 'تأیید شده / فعال', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
     rejected: { label: 'رد شده', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
+    optimal: { label: 'مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+    growing: { label: 'در حال رشد', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
+    needs_followup: { label: 'نیازمند پیگیری', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+    regressing: { label: 'رو به افول', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
   };
 
   // گروه‌بندی هوشمند پاسخ‌ها به پرونده‌های مراجعین
-  // پرونده‌های صفان تا وقتی که به کسی نسبت داده نشده‌اند در لیست پرونده‌ها نمایش داده نمی‌شوند
+  // پرونده‌های صَفًّا تا وقتی که به کسی نسبت داده نشده‌اند در لیست پرونده‌ها نمایش داده نمی‌شوند
   const activeSubmissions = useMemo(() => {
     return submissions.filter((s) => !isUnassignedSafaSubmission(s));
   }, [submissions]);
@@ -238,7 +242,7 @@ export const SubmissionsHub: React.FC = () => {
           formTitles: [formTitle],
           totalFormsCount: 1,
           latestDate: sub.createdAt,
-          overallStatus: sub.status,
+          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.caseStatus || sub.status) ? (sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'needs_followup')) as any,
           totalPaidAmount: sub.paymentStatus === 'paid' ? (sub.paymentAmount || 0) : 0,
           roleInFamily,
         });
@@ -352,7 +356,7 @@ function normalizeSearchText(str: string): string {
   // فیلتر ارسالی‌های تکی فرم‌ها
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((s) => {
-      // کارنامه‌های صفان تا وقتی که به کسی نسبت داده نشده‌اند، در نمای کلی پاسخ‌ها نیز مگر در صورت انتخاب صریح فرم صفان پنهان باشند
+      // کارنامه‌های صَفًّا تا وقتی که به کسی نسبت داده نشده‌اند، در نمای کلی پاسخ‌ها نیز مگر در صورت انتخاب صریح فرم صَفًّا پنهان باشند
       if (isUnassignedSafaSubmission(s) && selectedFormId !== 'form-safaan-assessment') {
         return false;
       }
@@ -516,7 +520,7 @@ function normalizeSearchText(str: string): string {
           {unassignedSafaCount > 0 && (
             <div className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 rounded-xl text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-              <span>{toPersianDigits(unassignedSafaCount)} کارنامه صفان در انتظار انتساب</span>
+              <span>{toPersianDigits(unassignedSafaCount)} کارنامه صَفًّا در انتظار انتساب</span>
             </div>
           )}
 
@@ -533,10 +537,10 @@ function normalizeSearchText(str: string): string {
             onClick={handleRunReconcile}
             disabled={isReconciling}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
-            title="اجرای تطبیق شبانه و پیوند کارنامه‌های صفان به پرونده‌های مراجعین"
+            title="اجرای تطبیق شبانه و پیوند کارنامه‌های صَفًّا به پرونده‌های مراجعین"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{isReconciling ? 'در حال تطبیق...' : 'تطبیق کارنامه‌های صفان'}</span>
+            <span>{isReconciling ? 'در حال تطبیق...' : 'تطبیق کارنامه‌های صَفًّا'}</span>
           </button>
 
           <button

@@ -236,7 +236,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
               <tr className="bg-slate-100 border-b border-slate-300 font-black text-slate-800">
                 <th className="p-2 border-l border-slate-300 text-center w-8">#</th>
                 <th className="p-2 border-l border-slate-300 text-right">تاریخ و زمان نوبت</th>
-                <th className="p-2 border-l border-slate-300 text-right">استاد مشاور</th>
+                <th className="p-2 border-l border-slate-300 text-right">مشاور محترم</th>
                 <th className="p-2 border-l border-slate-300 text-right">موضوع مشاوره</th>
                 <th className="p-2 border-l border-slate-300 text-center w-24">وضعیت</th>
                 <th className="p-2 text-right">توصیه / گزارش جلسه</th>
@@ -391,7 +391,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
             if (Array.isArray(s.comments)) {
               s.comments.forEach((c) => {
                 allComments.push({
-                  author: c.authorName || 'استاد مشاور',
+                  author: c.authorName || 'مشاور محترم',
                   role: c.authorRole || 'مشاور مرکز',
                   date: c.createdAt,
                   text: c.content || (c as any).commentText || "",
@@ -436,7 +436,7 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
       <div className="border-t-2 border-slate-900 pt-4 mt-6 print-avoid-break">
         <div className="grid grid-cols-2 gap-8 text-center text-[11px]">
           <div className="border border-slate-300 p-4 rounded-xl min-h-[90px] flex flex-col justify-between">
-            <span className="font-bold text-slate-800">استاد مشاور و روانشناس پرونده</span>
+            <span className="font-bold text-slate-800">مشاور محترم و روانشناس پرونده</span>
             <span className="text-[10px] text-slate-400">نام، امضا و مهر مشاور</span>
           </div>
 

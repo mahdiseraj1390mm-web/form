@@ -1,7 +1,7 @@
 import { FormSubmission } from '@/types/form';
 
 /**
- * تشخیص اینکه آیا یک ارسالی مربوط به پرسشنامه یا آزمون صفان است یا خیر
+ * تشخیص اینکه آیا یک ارسالی مربوط به پرسشنامه یا آزمون صَفًّا است یا خیر
  */
 export function isSafaSubmission(s: FormSubmission | any): boolean {
   if (!s) return false;
@@ -9,7 +9,7 @@ export function isSafaSubmission(s: FormSubmission | any): boolean {
   const trackingCode = typeof s.trackingCode === 'string' ? s.trackingCode : '';
   const caseCode = typeof s.data?.caseCode === 'string' ? s.data.caseCode : '';
 
-  // فرم‌های تشکیل پرونده یا رزرو نوبت متعلق به صفان نیستند
+  // فرم‌های تشکیل پرونده یا رزرو نوبت متعلق به صَفًّا نیستند
   if (
     formId === 'form-belhagh-registration' ||
     formId === 'form-belhagh-booking' ||
@@ -29,7 +29,7 @@ export function isSafaSubmission(s: FormSubmission | any): boolean {
 }
 
 /**
- * تشخیص اینکه آیا پرونده یا کارنامه صفان به فردی نسبت داده شده است (پیوند خورده به مراجع واقعی)
+ * تشخیص اینکه آیا پرونده یا کارنامه صَفًّا به فردی نسبت داده شده است (پیوند خورده به مراجع واقعی)
  */
 export function isAssignedSafaSubmission(s: FormSubmission | any): boolean {
   if (!isSafaSubmission(s)) return false;
@@ -43,20 +43,20 @@ export function isAssignedSafaSubmission(s: FormSubmission | any): boolean {
   const isNotAnonymous =
     !s.data?.fullName?.includes('مراجع صفاً') &&
     !s.data?.fullName?.includes('مراجع صفا') &&
-    !s.data?.fullName?.includes('کارنامه آزمون صفان');
+    !s.data?.fullName?.includes('کارنامه آزمون صَفًّا');
 
   return Boolean(isLinked && hasRealCaseCode && isNotAnonymous);
 }
 
 /**
- * آیا این کارنامه صفان هنوز معلق است و به هیچ فرد یا پرونده‌ای نسبت داده نشده؟
+ * آیا این کارنامه صَفًّا هنوز معلق است و به هیچ فرد یا پرونده‌ای نسبت داده نشده؟
  */
 export function isUnassignedSafaSubmission(s: FormSubmission | any): boolean {
   return isSafaSubmission(s) && !isAssignedSafaSubmission(s);
 }
 
 /**
- * فیلتر کردن کلیه ارسالی‌های معتبر و فعال (حذف موارد انتساب‌نیافته صفان)
+ * فیلتر کردن کلیه ارسالی‌های معتبر و فعال (حذف موارد انتساب‌نیافته صَفًّا)
  * جهت نمایش صحیح پرونده‌ها و دقت ۱۰۰٪ در آمارها و گزارش‌های بالینی
  */
 export function filterActiveSubmissions(submissions: FormSubmission[]): FormSubmission[] {

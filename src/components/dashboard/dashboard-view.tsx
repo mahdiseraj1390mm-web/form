@@ -47,7 +47,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [activityFilter, setActivityFilter] = useState<'all' | 'cases' | 'bookings' | 'quizzes'>('all');
   const [progressMetric, setProgressMetric] = useState<'bookings' | 'cases' | 'attendance'>('bookings');
 
-  // ارسالی‌های فعال و انتساب‌یافته (حذف پرونده‌های متصل‌نشده صفان از تحلیل‌ها و آمارگیری)
+  // ارسالی‌های فعال و انتساب‌یافته (حذف پرونده‌های متصل‌نشده صَفًّا از تحلیل‌ها و آمارگیری)
   const activeSubmissions = useMemo(() => filterActiveSubmissions(submissions), [submissions]);
 
   // ۱. محاسبات باکس آمار کلی سامانه (تعداد ثبت پرونده، نوبت‌های دریافتی، فرم‌های پرسشنامه)
@@ -415,7 +415,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         list.push({
           id: `act-quiz-${s.id}`,
           type: 'quiz',
-          title: 'تکمیل آزمون خودسنجی صفان',
+          title: 'تکمیل آزمون خودسنجی صَفًّا',
           caseCode,
           detail: `نمره کل ارزیابی: ${toPersianDigits(score)} از ۱۰۰ | مؤلفه‌های رشد ثبت شد`,
           createdAt: s.createdAt,
@@ -567,7 +567,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {toPersianDigits(statsOverview.totalQuizzesCount)}
           </div>
           <div className="text-[11px] text-purple-700 font-semibold flex items-center gap-1 pt-1 border-t border-slate-100">
-            <span>ارزیابی صفان و خودسنجی تکمیل‌شده</span>
+            <span>ارزیابی صَفًّا و خودسنجی تکمیل‌شده</span>
           </div>
         </div>
 
