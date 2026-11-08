@@ -665,62 +665,46 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   // سن مراجع (محاسبه ۱۰۰٪ دقیق بر مبنای تاریخ یا سال تولد شمسی واقعی مراجع)
   const clientAge = useMemo(() => {
-    let bYear: number | null = null;
     const candidates = [
       combinedData.f_birth_date,
       combinedData.birth_date,
       combinedData.birthDate,
-      combinedData.birth_year,
       combinedData.f_birth_year,
+      combinedData.birth_year,
       combinedData.birthYear,
+      (clientCase as any)?.birthDate,
+      (clientCase as any)?.birthYear,
       ...currentSubmissions.map((s) => s.data?.f_birth_date),
       ...currentSubmissions.map((s) => s.data?.birth_year),
       ...currentSubmissions.map((s) => s.data?.f_birth_year),
+      ...currentSubmissions.map((s) => s.data?.birthDate),
+      ...currentSubmissions.map((s) => s.data?.birth_date),
     ];
 
     for (const cand of candidates) {
       if (!cand) continue;
-      const str = toEnglishDigits(String(cand)).trim();
-      const match4 = str.match(/(13\d{2}|14\d{2})/);
-      if (match4) {
-        bYear = parseInt(match4[1]);
-        break;
+      const bYear = extractBirthYear(cand);
+      if (bYear) {
+        return formatClientAge(bYear);
       }
-      const parts = str.split(/[\/\-\.\s]/).filter(Boolean);
-      for (const p of parts) {
-        const num = parseInt(p);
-        if (!isNaN(num)) {
-          if (num >= 1320 && num <= 1404) {
-            bYear = num;
-            break;
-          } else if (num >= 20 && num <= 99) {
-            bYear = 1300 + num;
-            break;
-          } else if (num >= 0 && num <= 15) {
-            bYear = 1400 + num;
-            break;
-          }
-        }
-      }
-      if (bYear) break;
     }
 
-    if (bYear) {
-      const currentJalaliYear = 1403;
-      const calculatedAge = Math.max(1, currentJalaliYear - bYear);
-      return `${toPersianDigits(calculatedAge)} سال`;
-    }
-
-    if (combinedData.f_age || combinedData.age) {
-      const rawAge = combinedData.f_age || combinedData.age;
-      const numAge = parseInt(toEnglishDigits(String(rawAge)));
-      if (!isNaN(numAge) && numAge > 0 && numAge < 110) {
-        return `${toPersianDigits(numAge)} سال`;
+    // بررسی مستقیم فیلد سن در صورت عدم وجود سال تولد
+    const directAgeCandidates = [
+      combinedData.f_age,
+      combinedData.age,
+      ...currentSubmissions.map((s) => s.data?.f_age),
+      ...currentSubmissions.map((s) => s.data?.age),
+    ];
+    for (const ageCand of directAgeCandidates) {
+      if (ageCand !== undefined && ageCand !== null && ageCand !== '') {
+        const formatted = formatClientAge(null, ageCand);
+        if (formatted !== 'ثبت‌نشده') return formatted;
       }
     }
 
     return 'ثبت‌نشده';
-  }, [combinedData, currentSubmissions]);
+  }, [combinedData, currentSubmissions, clientCase]);
 
   // وضعیت تاهل
   const maritalStatusDisplay = useMemo(() => {
@@ -812,7 +796,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         if (dateStr.includes(pMonths[i])) {
           const digits = eng.match(/\d+/g);
           if (digits && digits.length >= 2) {
-            const y = parseInt(digits.find((n) => n.length === 4) || '1403');
+            const y = parseInt(digits.find((n) => n.length === 4) || String(getCurrentJalaliYear()));
             const d = parseInt(digits.find((n) => n.length <= 2) || '1');
             return y * 100000000 + (i + 1) * 1000000 + d * 10000;
           }
@@ -983,7 +967,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           `🤝 ثبت گزارش جلسه مشاوره (${editing.topic} - ${editing.date.split('،')[0]}): وضعیت بالینی: ${
             selectedAppointmentStatus === 'growing' ? 'در حال رشد' :
             selectedAppointmentStatus === 'optimal' ? 'وضعیت مطلوب' :
-            selectedAppointmentStatus === 'regressing' ? 'عقب‌گرد' :
+            selectedAppointmentStatus === 'regressing' ? 'عقب گرد' :
             selectedAppointmentStatus === 'needs_followup' ? 'نیازمند پیگیری' : 'در انتظار ارزیابی'
           }${selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''} | توصیه: ${reportForm.recommendation.trim()}`
         );

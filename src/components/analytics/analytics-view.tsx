@@ -48,7 +48,7 @@ import {
   PlusCircle,
   ChevronRight
 } from 'lucide-react';
-import { toPersianDigits, formatCurrency, formatPersianDateTime, getFieldDisplayValue, getTopItemSummary, getJalaliMonthName } from '@/lib/persian';
+import { toPersianDigits, formatCurrency, formatPersianDateTime, getFieldDisplayValue, getTopItemSummary, getJalaliMonthName, calculateJalaliAge } from '@/lib/persian';
 import { isAssignedSafaSubmission, filterActiveSubmissions } from '@/lib/safa-utils';
 import { getSemanticColorByPercentage, getFourColorByIndex } from '@/lib/chart-colors';
 import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
@@ -702,9 +702,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     let under18 = 0, age19to28 = 0, age29to42 = 0, age43plus = 0;
     filteredSubmissions.forEach((s) => {
       const d = s.data || {};
-      let year = parseInt(d.birth_year || (d.f_birth_date ? d.f_birth_date.slice(0, 4) : '0'));
-      if (year > 1300 && year < 1410) {
-        const age = 1403 - year;
+      const birthCand = d.f_birth_date || d.birth_date || d.birthDate || d.f_birth_year || d.birth_year || d.birthYear;
+      const age = calculateJalaliAge(birthCand, d.f_age || d.age);
+      if (age !== null) {
         if (age <= 18) under18++;
         else if (age <= 28) age19to28++;
         else if (age <= 42) age29to42++;

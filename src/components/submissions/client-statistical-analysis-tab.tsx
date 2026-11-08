@@ -114,7 +114,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
           : st === 'optimal'
           ? 'وضعیت مطلوب'
           : st === 'regressing'
-          ? 'عقب‌گرد'
+          ? 'عقب گرد'
           : 'نیازمند پیگیری';
       return {
         id: app.id,
@@ -1027,7 +1027,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
                     borderColor: clientCase.overallStatus === "growing" ? "#bfdbfe" : clientCase.overallStatus === "optimal" ? "#a7f3d0" : clientCase.overallStatus === "regressing" ? "#fecdd3" : "#fde68a",
                     borderWidth: "1px",
                   }}>
-                    {clientCase.overallStatus === "growing" ? "🌱 در حال رشد" : clientCase.overallStatus === "optimal" ? "✨ وضعیت مطلوب" : clientCase.overallStatus === "regressing" ? "⚠️ عقب‌گرد" : "🔍 نیازمند پیگیری"}
+                    {clientCase.overallStatus === "growing" ? "🌱 در حال رشد" : clientCase.overallStatus === "optimal" ? "✨ وضعیت مطلوب" : clientCase.overallStatus === "regressing" ? "⚠️ عقب گرد" : "🔍 نیازمند پیگیری"}
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed">
                     {clientCase.overallStatus === "growing" ? "مراجع در مسیر بهبود، یادگیری مهارت‌ها و خودشکوفایی پایدار قرار دارد." :
