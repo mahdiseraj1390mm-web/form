@@ -319,7 +319,12 @@ function normalizeSearchText(str: string): string {
     return clientCases.filter((c) => {
       const q = normalizeSearchText(searchQuery);
       if (!q) {
-        return statusFilter === 'all' || c.overallStatus === statusFilter;
+        return (
+          statusFilter === 'all' ||
+          c.overallStatus === statusFilter ||
+          (statusFilter === 'optimal' && c.overallStatus === 'approved') ||
+          (statusFilter === 'regressing' && c.overallStatus === 'rejected')
+        );
       }
       const strippedQ = q.replace(/^(sf|sp|case)-/i, '').replace(/^(sf|sp|case)/i, '');
 
@@ -348,7 +353,11 @@ function normalizeSearchText(str: string): string {
           );
         });
 
-      const matchesStatus = statusFilter === 'all' || c.overallStatus === statusFilter;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        c.overallStatus === statusFilter ||
+        (statusFilter === 'optimal' && c.overallStatus === 'approved') ||
+        (statusFilter === 'regressing' && c.overallStatus === 'rejected');
       return matchesSearch && matchesStatus;
     });
   }, [clientCases, searchQuery, statusFilter]);
@@ -363,7 +372,13 @@ function normalizeSearchText(str: string): string {
       const matchesForm = selectedFormId === 'all' || s.formId === selectedFormId;
       const q = normalizeSearchText(searchQuery);
       if (!q) {
-        return matchesForm && (statusFilter === 'all' || s.status === statusFilter);
+        const sStatus = s.data?.caseStatus || s.status;
+        const matchesStatus =
+          statusFilter === 'all' ||
+          sStatus === statusFilter ||
+          (statusFilter === 'optimal' && sStatus === 'approved') ||
+          (statusFilter === 'regressing' && sStatus === 'rejected');
+        return matchesForm && matchesStatus;
       }
       const strippedQ = q.replace(/^(sf|sp|case)-/i, '').replace(/^(sf|sp|case)/i, '');
 
