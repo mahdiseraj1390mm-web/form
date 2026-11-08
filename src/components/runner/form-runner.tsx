@@ -1629,7 +1629,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         let selectedSlotVal = '';
         let bookingFieldKey = '';
         for (const key of Object.keys(formData)) {
-          if (key.startsWith('f_booking_') && isFieldVisible(key) && formData[key] && String(formData[key]).trim() !== '') {
+          const matchingField = form.fields.find((f) => f.id === key);
+          const isBooking = key.startsWith('f_booking_') || matchingField?.type === 'appointmentBooking';
+          if (isBooking && isFieldVisible(key) && formData[key] && String(formData[key]).trim() !== '') {
             selectedSlotVal = String(formData[key]).trim();
             bookingFieldKey = key;
             break;

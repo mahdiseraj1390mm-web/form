@@ -110,6 +110,15 @@ export interface DayScheduleConfig {
   periods: WorkDayPeriod[];
 }
 
+export interface FormConsultantBookingConfig {
+  consultantId: string; // شناسه مشاور در سامانه
+  consultantName: string; // نام مشاور
+  genderPrefix?: 'آقا' | 'خانم'; // پیشوند آقا یا خانم
+  enabled: boolean; // فعال بودن این مشاور در این فرم
+  enabledTopics: string[]; // موضوعات فعال این مشاور در این فرم
+  customWorkingHours?: AppointmentData; // ساعات کاری سفارشی برای این فرم خاص (در صورت ویرایش)
+}
+
 export interface AppointmentData {
   slotDurationMinutes: number; // مدت زمان هر جلسه مشاوره به دقیقه (مثلاً ۳۰، ۴۵)
   restTimeMinutes?: number; // زمان استراحت بین جلسات مشاوره به دقیقه (مثلاً ۵، ۱۰)
@@ -120,6 +129,7 @@ export interface AppointmentData {
   holidays?: string[]; // مشخص کردن روزهای تعطیل یا مناسبتی
   capacityPerSlot?: number; // ظرفیت هر اسلات (پیش‌فرض ۱)
   maxAdvanceDays?: number; // حداکثر روزهای آتی قابل رزرو
+  selectedConsultants?: FormConsultantBookingConfig[]; // لیست مشاوران و موضوعات انتخابی برای این فرم
 }
 
 export interface FormField {
@@ -146,6 +156,7 @@ export interface FormField {
     explanation?: string;
   };
   appointmentData?: AppointmentData;
+  consultantId?: string; // شناسه مشاور اختصاصی متصل به این فیلد
   pageBreakAfter?: boolean; // انتقال به صفحه بعد پس از این پرسش (دکمه بعدی)
   nextButtonText?: string; // متن دکمه بعدی (مثلاً "بعدی"، "ادامه")
   autoAdvanceOnSelect?: boolean; // رفتن خودکار به سوال بعد با انتخاب گزینه

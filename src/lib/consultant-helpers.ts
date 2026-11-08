@@ -1,4 +1,4 @@
-import { FormSubmission } from '@/types/form';
+import { FormSubmission, AppointmentData, SelectOption } from '@/types/form';
 import { TeamMember } from '@/types/advanced';
 import { normalizeMobileNumber } from './team-constants';
 import { toPersianDigits } from './persian';
@@ -32,11 +32,95 @@ export interface DefinedSlot {
 export interface ConsultantProfile {
   id: string;
   name: string;
+  genderPrefix?: 'آقا' | 'خانم';
   mobile: string;
   jobTitle: string;
   specialization: string;
   bookingFieldIds: string[];
   definedSlots: DefinedSlot[];
+}
+
+/**
+ * تولید خودکار گزینه‌های نوبت‌دهی از ساختار AppointmentData
+ */
+export function generateSlotsFromAppointmentData(
+  config: AppointmentData,
+  customSlotPrefix: string = 'slot'
+): SelectOption[] {
+  const slotDuration = config.slotDurationMinutes || 30;
+  const restDuration = config.restTimeMinutes ?? 5;
+  const availableDays = config.availableDays || [0, 1, 2, 3, 4];
+  const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+
+  const newOptions: SelectOption[] = [];
+
+  availableDays.forEach((dayIdx) => {
+    const dayName = dayNames[dayIdx] || `روز ${dayIdx}`;
+    const dayConfig = config.daySchedules?.[dayIdx];
+    const periods = (dayConfig?.periods && dayConfig.periods.length > 0)
+      ? dayConfig.periods
+      : [{
+          startHour: config.startHour || '09:00',
+          endHour: config.endHour || '17:00',
+        }];
+
+    periods.forEach((period, pIdx) => {
+      const [startH, startM] = (period.startHour || '09:00').split(':').map(Number);
+      const [endH, endM] = (period.endHour || '17:00').split(':').map(Number);
+      const startMin = (startH || 0) * 60 + (startM || 0);
+      const endMin = (endH || 0) * 60 + (endM || 0);
+
+      let currentMin = startMin;
+      while (currentMin + slotDuration <= endMin) {
+        const sH = Math.floor(currentMin / 60);
+        const sM = currentMin % 60;
+        const eH = Math.floor((currentMin + slotDuration) / 60);
+        const eM = (currentMin + slotDuration) % 60;
+
+        const formatTime = (h: number, m: number) =>
+          `${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}`;
+
+        const timeRange = `${toPersianDigits(formatTime(sH, sM))} الی ${toPersianDigits(formatTime(eH, eM))}`;
+        const shiftPart = periods.length > 1 ? ` (نوبت ${toPersianDigits(pIdx + 1)})` : '';
+        const label = `${dayName}${shiftPart} - ساعت ${timeRange}`;
+        const optId = `${customSlotPrefix}_${dayIdx}_${pIdx}_${currentMin}`;
+
+        newOptions.push({
+          id: optId,
+          label,
+          value: optId,
+        });
+
+        currentMin += slotDuration + restDuration;
+      }
+    });
+  });
+
+  return newOptions;
+}
+
+/**
+ * تبدیل AppointmentData به DefinedSlot[] جهت استفاده در تقویم مشاوران
+ */
+export function appointmentDataToDefinedSlots(
+  config: AppointmentData,
+  fieldId: string = 'custom_field'
+): DefinedSlot[] {
+  const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+  const opts = generateSlotsFromAppointmentData(config, fieldId);
+  return opts.map((opt) => {
+    const parts = opt.id.split('_');
+    const dayIndex = Number(parts[1]) || 0;
+    const timeMatch = opt.label.match(/ساعت\s+(.+)$/);
+    const timeRange = timeMatch ? timeMatch[1] : opt.label;
+    return {
+      dayIndex,
+      dayName: dayNames[dayIndex] || 'شنبه',
+      timeRange,
+      label: opt.label,
+      fieldId,
+    };
+  });
 }
 
 export interface ConsultantBookingItem {
@@ -530,15 +614,20 @@ export function matchMemberToConsultant(
     if (found) return found;
   }
 
-  // ۴. در غیر این صورت ساخت پروفایل با ساعات کاری خالی (دست‌نخورده تا زمان ویرایش توسط کاربر)
+  // ۴. در غیر این صورت ساخت پروفایل با ساعات کاری تعریف‌شده مشاور
+  const customSlots = member.workingHours
+    ? appointmentDataToDefinedSlots(member.workingHours, member.consultantId || member.id)
+    : [];
+
   return {
     id: member.id || 'custom-user',
     name: member.name || 'مشاور',
+    genderPrefix: member.genderPrefix,
     mobile: member.mobile || member.username || '',
     jobTitle: member.jobTitle || 'مشاور',
     specialization: member.jobTitle || 'مشاوره تخصصی',
-    bookingFieldIds: member.consultantId ? [member.consultantId] : [],
-    definedSlots: [],
+    bookingFieldIds: member.consultantId ? [member.consultantId] : (member.id ? [member.id] : []),
+    definedSlots: customSlots,
   };
 }
 

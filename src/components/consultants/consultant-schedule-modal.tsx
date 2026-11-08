@@ -1,0 +1,386 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { 
+  X, 
+  Clock, 
+  Calendar, 
+  Plus, 
+  Trash2, 
+  Sparkles, 
+  CheckCircle2, 
+  Check,
+  AlertCircle 
+} from 'lucide-react';
+import { AppointmentData, WorkDayPeriod, DayScheduleConfig } from '@/types/form';
+import { toPersianDigits } from '@/lib/persian';
+
+interface ConsultantScheduleModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  description?: string;
+  consultantName?: string;
+  initialSchedule?: AppointmentData;
+  onSave: (schedule: AppointmentData) => void;
+}
+
+const WEEK_DAYS = [
+  { dayIdx: 0, label: 'شنبه' },
+  { dayIdx: 1, label: 'یکشنبه' },
+  { dayIdx: 2, label: 'دوشنبه' },
+  { dayIdx: 3, label: 'سه‌شنبه' },
+  { dayIdx: 4, label: 'چهارشنبه' },
+  { dayIdx: 5, label: 'پنج‌شنبه' },
+  { dayIdx: 6, label: 'جمعه' },
+];
+
+export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = ({
+  isOpen,
+  onClose,
+  title = 'تنظیم و ویرایش ساعات کاری',
+  description,
+  consultantName,
+  initialSchedule,
+  onSave,
+}) => {
+  const [slotDurationMinutes, setSlotDurationMinutes] = useState<number>(45);
+  const [restTimeMinutes, setRestTimeMinutes] = useState<number>(15);
+  const [availableDays, setAvailableDays] = useState<number[]>([0, 1, 2, 3, 4]);
+  const [startHour, setStartHour] = useState<string>('09:00');
+  const [endHour, setEndHour] = useState<string>('17:00');
+  const [daySchedules, setDaySchedules] = useState<Record<number, DayScheduleConfig>>({});
+
+  useEffect(() => {
+    if (initialSchedule) {
+      setSlotDurationMinutes(initialSchedule.slotDurationMinutes || 45);
+      setRestTimeMinutes(initialSchedule.restTimeMinutes ?? 15);
+      setAvailableDays(initialSchedule.availableDays || [0, 1, 2, 3, 4]);
+      setStartHour(initialSchedule.startHour || '09:00');
+      setEndHour(initialSchedule.endHour || '17:00');
+      setDaySchedules(initialSchedule.daySchedules || {});
+    } else {
+      setSlotDurationMinutes(45);
+      setRestTimeMinutes(15);
+      setAvailableDays([0, 1, 2, 3, 4]);
+      setStartHour('09:00');
+      setEndHour('17:00');
+      setDaySchedules({});
+    }
+  }, [initialSchedule, isOpen]);
+
+  if (!isOpen) return null;
+
+  const toggleDayAvailable = (dayIdx: number) => {
+    setAvailableDays((prev) => {
+      if (prev.includes(dayIdx)) {
+        return prev.filter((d) => d !== dayIdx);
+      } else {
+        return [...prev, dayIdx].sort((a, b) => a - b);
+      }
+    });
+  };
+
+  const updatePeriod = (dayIdx: number, periodIdx: number, key: 'startHour' | 'endHour', val: string) => {
+    setDaySchedules((prev) => {
+      const currentPeriods = (prev[dayIdx]?.periods && prev[dayIdx].periods.length > 0)
+        ? [...prev[dayIdx].periods]
+        : [{ startHour: startHour || '09:00', endHour: endHour || '17:00' }];
+
+      currentPeriods[periodIdx] = {
+        ...currentPeriods[periodIdx],
+        [key]: val,
+      };
+
+      return {
+        ...prev,
+        [dayIdx]: {
+          enabled: true,
+          periods: currentPeriods,
+        },
+      };
+    });
+  };
+
+  const addPeriodToDay = (dayIdx: number) => {
+    setDaySchedules((prev) => {
+      const currentPeriods = (prev[dayIdx]?.periods && prev[dayIdx].periods.length > 0)
+        ? [...prev[dayIdx].periods]
+        : [{ startHour: startHour || '09:00', endHour: endHour || '17:00' }];
+
+      const lastPeriod = currentPeriods[currentPeriods.length - 1];
+      let newStart = '16:00';
+      let newEnd = '19:00';
+      if (lastPeriod && lastPeriod.endHour) {
+        const [h, m] = lastPeriod.endHour.split(':').map(Number);
+        const nextH = Math.min(20, (h || 14) + 1);
+        const nextEndH = Math.min(22, nextH + 2);
+        newStart = `${nextH < 10 ? '0' + nextH : nextH}:${m < 10 ? '0' + m : m || '00'}`;
+        newEnd = `${nextEndH < 10 ? '0' + nextEndH : nextEndH}:${m < 10 ? '0' + nextEndH : nextEndH || '00'}`;
+      }
+
+      return {
+        ...prev,
+        [dayIdx]: {
+          enabled: true,
+          periods: [...currentPeriods, { startHour: newStart, endHour: newEnd }],
+        },
+      };
+    });
+  };
+
+  const removePeriodFromDay = (dayIdx: number, periodIdx: number) => {
+    setDaySchedules((prev) => {
+      const currentPeriods = prev[dayIdx]?.periods || [];
+      const updated = currentPeriods.filter((_, idx) => idx !== periodIdx);
+      return {
+        ...prev,
+        [dayIdx]: {
+          enabled: updated.length > 0,
+          periods: updated,
+        },
+      };
+    });
+  };
+
+  const applyPresetDays = (presetDays: number[], sH: string, eH: string) => {
+    setAvailableDays(presetDays);
+    const newSchedules: Record<number, DayScheduleConfig> = {};
+    presetDays.forEach((d) => {
+      newSchedules[d] = {
+        enabled: true,
+        periods: [{ startHour: sH, endHour: eH }],
+      };
+    });
+    setDaySchedules(newSchedules);
+  };
+
+  const handleSave = () => {
+    const updated: AppointmentData = {
+      slotDurationMinutes,
+      restTimeMinutes,
+      availableDays,
+      startHour,
+      endHour,
+      daySchedules,
+      holidays: initialSchedule?.holidays || ['جمعه'],
+      capacityPerSlot: initialSchedule?.capacityPerSlot || 1,
+    };
+    onSave(updated);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-slate-900 flex flex-col max-h-[90vh]">
+        
+        {/* سربرگ */}
+        <div className="px-6 py-4 bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 text-white flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-white/10 ring-1 ring-white/20">
+              <Clock className="w-5 h-5 text-emerald-300" />
+            </div>
+            <div>
+              <h2 className="text-base font-extrabold tracking-tight">
+                {title}
+              </h2>
+              <p className="text-xs text-slate-300 mt-0.5">
+                {description || (consultantName ? `تنظیم روزهای حضور و بازه‌های زمانی ${consultantName}` : 'تنظیم روزها، مدت هر جلسه و ساعات کاری')}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* محتوای تنظیمات ساعات کاری */}
+        <div className="p-6 space-y-5 text-xs overflow-y-auto flex-1">
+          
+          {/* مدت جلسه و استراحت */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                مدت زمان هر جلسه (دقیقه):
+              </label>
+              <select
+                value={slotDurationMinutes}
+                onChange={(e) => setSlotDurationMinutes(Number(e.target.value))}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-200 cursor-pointer"
+              >
+                <option value={15}>۱۵ دقیقه</option>
+                <option value={20}>۲۰ دقیقه</option>
+                <option value={30}>۳۰ دقیقه</option>
+                <option value={45}>۴۵ دقیقه (استاندارد)</option>
+                <option value={60}>۶۰ دقیقه (۱ ساعت)</option>
+                <option value={90}>۹۰ دقیقه</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                زمان استراحت بین جلسات:
+              </label>
+              <select
+                value={restTimeMinutes}
+                onChange={(e) => setRestTimeMinutes(Number(e.target.value))}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-200 cursor-pointer"
+              >
+                <option value={0}>بدون استراحت (۰ دقیقه)</option>
+                <option value={5}>۵ دقیقه</option>
+                <option value={10}>۱۰ دقیقه</option>
+                <option value={15}>۱۵ دقیقه</option>
+                <option value={20}>۲۰ دقیقه</option>
+                <option value={30}>۳۰ دقیقه</option>
+              </select>
+            </div>
+          </div>
+
+          {/* الگوهای آماده روزها */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-bold text-slate-600 block">الگوهای سریع روزهای کاری:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: 'شنبه تا چهارشنبه (۰۹-۱۷)', days: [0, 1, 2, 3, 4], s: '09:00', e: '17:00' },
+                { label: 'روزهای زوج (شنبه، دوشنبه، چهارشنبه)', days: [0, 2, 4], s: '10:00', e: '18:00' },
+                { label: 'روزهای فرد (یکشنبه، سه‌شنبه)', days: [1, 3], s: '10:00', e: '18:00' },
+                { label: 'فقط پنج‌شنبه‌ها (۰۹-۱۳)', days: [5], s: '09:00', e: '13:00' },
+                { label: 'فقط جمعه‌ها (۰۹-۱۲)', days: [6], s: '09:00', e: '12:00' },
+                { label: 'همه روزها بجز جمعه', days: [0, 1, 2, 3, 4, 5], s: '09:00', e: '17:00' },
+              ].map((preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => applyPresetDays(preset.days, preset.s, preset.e)}
+                  className="px-2.5 py-1 text-[10px] rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 border border-slate-200 transition-colors cursor-pointer font-medium"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* جدول روزهای کاری */}
+          <div className="space-y-2 pt-1">
+            {WEEK_DAYS.map(({ dayIdx, label }) => {
+              const isDayEnabled = availableDays.includes(dayIdx);
+              const daySchedule = daySchedules[dayIdx];
+              const periods: WorkDayPeriod[] = (daySchedule?.periods && daySchedule.periods.length > 0)
+                ? daySchedule.periods
+                : [{ startHour, endHour }];
+
+              return (
+                <div
+                  key={dayIdx}
+                  className={`p-3 rounded-2xl border transition-all ${
+                    isDayEnabled
+                      ? 'bg-white border-slate-300 shadow-2xs space-y-2'
+                      : 'bg-slate-100/50 border-slate-200 opacity-60 flex items-center justify-between'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 select-none">
+                      <input
+                        type="checkbox"
+                        checked={isDayEnabled}
+                        onChange={() => toggleDayAvailable(dayIdx)}
+                        className="w-4 h-4 text-emerald-600 rounded border-slate-300 cursor-pointer"
+                      />
+                      <span className="text-xs">{label}</span>
+                      {isDayEnabled ? (
+                        <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold border border-emerald-100">
+                          {toPersianDigits(periods.length)} نوبت کاری
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-rose-500 font-semibold">(تعطیل)</span>
+                      )}
+                    </label>
+
+                    {isDayEnabled && (
+                      <button
+                        type="button"
+                        onClick={() => addPeriodToDay(dayIdx)}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-lg border border-emerald-200 transition cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3 text-emerald-600" />
+                        <span>افزودن شیفت</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {isDayEnabled && (
+                    <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
+                      {periods.map((period, pIdx) => (
+                        <div
+                          key={pIdx}
+                          className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px]"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-700 min-w-[50px]">
+                              نوبت {toPersianDigits(pIdx + 1)}:
+                            </span>
+                            <div className="flex items-center gap-1 font-mono">
+                              <span className="text-[10px] text-slate-500">از</span>
+                              <input
+                                type="time"
+                                value={period.startHour || '09:00'}
+                                onChange={(e) => updatePeriod(dayIdx, pIdx, 'startHour', e.target.value)}
+                                className="px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white text-center"
+                              />
+                              <span className="text-[10px] text-slate-500">تا</span>
+                              <input
+                                type="time"
+                                value={period.endHour || '17:00'}
+                                onChange={(e) => updatePeriod(dayIdx, pIdx, 'endHour', e.target.value)}
+                                className="px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white text-center"
+                              />
+                            </div>
+                          </div>
+
+                          {periods.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removePeriodFromDay(dayIdx, pIdx)}
+                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                              title="حذف این نوبت"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+
+        {/* دکمه‌های فوتر */}
+        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition cursor-pointer"
+          >
+            انصراف
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-bold rounded-xl hover:from-emerald-700 hover:to-teal-800 shadow-md shadow-emerald-600/20 transition cursor-pointer"
+          >
+            ذخیره ساعات کاری
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};

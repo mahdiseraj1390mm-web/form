@@ -53,6 +53,7 @@ import {
 } from '@/lib/consultant-helpers';
 import { ClientDossierFullview, ClientCaseGroup } from '@/components/submissions/client-dossier-fullview';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
+import { ConsultantScheduleModal } from './consultant-schedule-modal';
 
 interface ConsultantsViewProps {
   onNavigateTab?: (tab: string) => void;
@@ -60,7 +61,7 @@ interface ConsultantsViewProps {
 
 export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab }) => {
   const { currentUser } = useAdminAuth();
-  const { teamMembers, submissions, forms } = useForm();
+  const { teamMembers, submissions, forms, updateTeamMember } = useForm();
 
   const isSuperAdmin = !!(
     currentUser?.isSuperAdmin ||
@@ -76,6 +77,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
   const [consultantTab, setConsultantTab] = useState<'timeline' | 'clients'>('timeline');
   const [activeDayIndex, setActiveDayIndex] = useState<number>(0);
   const [timelineMode, setTimelineMode] = useState<'day' | 'week'>('day');
+  const [isSelfScheduleModalOpen, setIsSelfScheduleModalOpen] = useState(false);
 
   // فیلتر و جستجو
   const [searchQuery, setSearchQuery] = useState('');
@@ -666,6 +668,15 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                 {toPersianDigits(activeConsultantBookings.length)} نوبت
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsSelfScheduleModalOpen(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs rounded-2xl shadow-sm hover:from-emerald-700 hover:to-teal-800 transition flex items-center gap-2 cursor-pointer self-stretch sm:self-auto justify-center"
+            >
+              <Clock className="w-4 h-4" />
+              <span>تنظیم و ویرایش ساعات کاری من</span>
+            </button>
           </div>
         </div>
 
@@ -806,6 +817,20 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           />
         )}
 
+        {/* مودال ویرایش ساعات کاری مشاور جاری */}
+        <ConsultantScheduleModal
+          isOpen={isSelfScheduleModalOpen}
+          onClose={() => setIsSelfScheduleModalOpen(false)}
+          title="تنظیم و ویرایش ساعات کاری من"
+          description={`تنظیم روزهای حضور، شیفت‌ها و مدت جلسات - ${currentConsultantProfile.name}`}
+          initialSchedule={currentMember?.workingHours}
+          onSave={(newSchedule) => {
+            if (currentMember) {
+              updateTeamMember(currentMember.id, { workingHours: newSchedule });
+            }
+          }}
+        />
+
       </div>
     );
   }
@@ -828,7 +853,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
             </h1>
           </div>
           <p className="text-xs text-slate-500">
-            مشاهده مشاوران تعریف‌شده در اعضای تیم و دسترسی‌ها، پرونده‌های رزرو شده هر مشاور و تقویم اشغال زمانی
+            مشاهده مشاوران تعریف‌شده در تنظیمات، پرونده‌های رزرو شده هر مشاور و تقویم اشغال زمانی
           </p>
         </div>
 
@@ -852,7 +877,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
               className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
             >
               <Users className="w-4 h-4" />
-              <span>مدیریت مشاوران در اعضای تیم</span>
+              <span>مدیریت مشاوران در تنظیمات</span>
             </button>
           )}
         </div>

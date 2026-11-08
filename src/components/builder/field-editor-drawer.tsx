@@ -1,7 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FormField, SelectOption, Form, ConditionalRule, ConditionOperator, ConditionAction, WorkDayPeriod } from '@/types/form';
+import { 
+  FormField, 
+  SelectOption, 
+  Form, 
+  ConditionalRule, 
+  ConditionOperator, 
+  ConditionAction, 
+  WorkDayPeriod,
+  FormConsultantBookingConfig,
+  AppointmentData 
+} from '@/types/form';
 import { 
   X, 
   Trash2, 
@@ -21,10 +31,18 @@ import {
   Edit2,
   GitBranch,
   Sliders,
-  Copy
+  Copy,
+  UserCheck,
+  CheckSquare,
+  Square,
+  RefreshCw,
+  User
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { predefinedLists, iranProvinces } from '@/lib/iran-geo';
+import { useForm } from '@/context/form-context';
+import { COUNSELING_TOPICS, KNOWN_CONSULTANTS } from '@/lib/consultant-helpers';
+import { ConsultantScheduleModal } from '@/components/consultants/consultant-schedule-modal';
 
 interface FieldEditorDrawerProps {
   field: FormField | null;
@@ -46,6 +64,13 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
   onUpdateForm,
 }) => {
   if (!field) return null;
+
+  const { teamMembers } = useForm();
+  const [editingScheduleConsultant, setEditingScheduleConsultant] = useState<{
+    id: string;
+    name: string;
+    schedule: AppointmentData;
+  } | null>(null);
 
   const [activeTab, setActiveTab] = useState<'general' | 'validation' | 'rules' | 'options' | 'formula' | 'quiz' | 'style' | 'booking'>(
     field.type === 'appointmentBooking' ? 'booking' : 'general'
@@ -272,6 +297,129 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
       score: 0,
     }));
 
+    onUpdate({ options: newOpts });
+  };
+
+  // مشاوران فعال سیستم
+  const activeSystemConsultants = teamMembers.filter((m) => m.status !== 'suspended');
+  const availableConsultantsList = activeSystemConsultants.length > 0 ? activeSystemConsultants : KNOWN_CONSULTANTS;
+
+  // تاگل کردن مشاور برای این فرم
+  const handleToggleConsultantForBooking = (consultant: any) => {
+    const currentSelected = field.appointmentData?.selectedConsultants || [];
+    const prefix = consultant.genderPrefix || (consultant.name.startsWith('خانم') ? 'خانم' : (consultant.name.startsWith('آقا') ? 'آقا' : ''));
+    const cleanName = consultant.name.replace(/^(خانم|آقای?)\s+/, '');
+    const fullName = prefix ? `${prefix} ${cleanName}` : consultant.name;
+    const topics = consultant.allowedTopics?.length > 0 ? consultant.allowedTopics : ['clinical', 'family'];
+
+    const existingIndex = currentSelected.findIndex((sc) => sc.consultantId === consultant.id);
+    let updated: FormConsultantBookingConfig[];
+
+    if (existingIndex >= 0) {
+      updated = currentSelected.map((sc, idx) =>
+        idx === existingIndex ? { ...sc, enabled: !sc.enabled } : sc
+      );
+    } else {
+      updated = [
+        ...currentSelected,
+        {
+          consultantId: consultant.id,
+          consultantName: fullName,
+          genderPrefix: prefix as any,
+          enabled: true,
+          enabledTopics: topics,
+          customWorkingHours: consultant.workingHours,
+        },
+      ];
+    }
+
+    onUpdate({
+      appointmentData: {
+        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 45,
+        restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 15,
+        availableDays: field.appointmentData?.availableDays ?? [0, 1, 2, 3, 4],
+        ...field.appointmentData,
+        selectedConsultants: updated,
+      },
+    });
+  };
+
+  // تاگل کردن موضوع خاص برای یک مشاور در این فرم
+  const handleToggleTopicForConsultant = (consultantId: string, topicId: string) => {
+    const currentSelected = field.appointmentData?.selectedConsultants || [];
+    const updated = currentSelected.map((sc) => {
+      if (sc.consultantId !== consultantId) return sc;
+      const curTopics = sc.enabledTopics || [];
+      const nextTopics = curTopics.includes(topicId)
+        ? curTopics.filter((t) => t !== topicId)
+        : [...curTopics, topicId];
+      return { ...sc, enabledTopics: nextTopics };
+    });
+
+    onUpdate({
+      appointmentData: {
+        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 45,
+        restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 15,
+        ...field.appointmentData,
+        selectedConsultants: updated,
+      },
+    });
+  };
+
+  // بازنشانی ساعت سفارشی مشاور به ساعت کاری اصلی در تنظیمات
+  const handleResetConsultantSchedule = (consultantId: string) => {
+    const currentSelected = field.appointmentData?.selectedConsultants || [];
+    const updated = currentSelected.map((sc) => {
+      if (sc.consultantId !== consultantId) return sc;
+      return { ...sc, customWorkingHours: undefined };
+    });
+
+    onUpdate({
+      appointmentData: {
+        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 45,
+        restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 15,
+        ...field.appointmentData,
+        selectedConsultants: updated,
+      },
+    });
+  };
+
+  // ذخیره ساعت سفارشی مشاور برای این فرم خاص
+  const handleSaveCustomConsultantSchedule = (schedule: AppointmentData) => {
+    if (!editingScheduleConsultant) return;
+    const currentSelected = field.appointmentData?.selectedConsultants || [];
+    const updated = currentSelected.map((sc) => {
+      if (sc.consultantId !== editingScheduleConsultant.id) return sc;
+      return { ...sc, customWorkingHours: schedule };
+    });
+
+    onUpdate({
+      appointmentData: {
+        slotDurationMinutes: field.appointmentData?.slotDurationMinutes ?? 45,
+        restTimeMinutes: field.appointmentData?.restTimeMinutes ?? 15,
+        ...field.appointmentData,
+        selectedConsultants: updated,
+      },
+    });
+    setEditingScheduleConsultant(null);
+  };
+
+  // بارگذاری از لیست مشاوران سیستم در فیلدهای گزینه‌ای
+  const handleLoadConsultants = () => {
+    const activeMembers = teamMembers.filter((m) => m.status !== 'suspended');
+    const consultantsToUse = activeMembers.length > 0 ? activeMembers : KNOWN_CONSULTANTS;
+    const newOpts: SelectOption[] = consultantsToUse.map((c, idx) => {
+      const prefix = (c as any).genderPrefix || (c.name.startsWith('خانم') ? 'خانم' : (c.name.startsWith('آقا') ? 'آقا' : ''));
+      const cleanName = c.name.replace(/^(خانم|آقای?)\s+/, '');
+      const fullName = prefix ? `${prefix} ${cleanName}` : c.name;
+      return {
+        id: `opt_c_${c.id || idx}`,
+        label: fullName,
+        value: fullName,
+        price: 0,
+        score: 0,
+      };
+    });
     onUpdate({ options: newOpts });
   };
 
@@ -902,6 +1050,15 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                   گروه‌های خونی
                 </button>
                 <button
+                  type="button"
+                  onClick={handleLoadConsultants}
+                  className="px-2.5 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-700 hover:from-blue-100 hover:to-indigo-100 rounded text-[10px] font-bold hover:border-blue-400 flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>لیست مشاوران</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleLoadPredefined('maritalStatus')}
                   className="px-2 py-1 bg-white border border-slate-200 rounded text-[10px] font-medium hover:border-blue-400"
                 >
@@ -1139,16 +1296,150 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 space-y-1">
               <div className="flex items-center gap-2 font-bold text-xs">
                 <Clock className="w-4 h-4 text-emerald-600" />
-                <span>تعیین هوشمند زمان‌بندی، روزبندی و استراحت</span>
+                <span>تعیین هوشمند مشاوران، موضوعات و زمان‌بندی رزرو</span>
               </div>
               <p className="text-[11px] text-emerald-800 leading-relaxed">
-                مدت زمان هر جلسه مشاوره، استراحت بین جلسات، ساعات کاری روزانه و روزهای تعطیل را تعیین فرمایید.
+                مشاورانی که مراجع می‌تواند از آن‌ها در این فرم نوبت رزرو کند را تیک بزنید و موضوعات هر کدام را مشخص فرمایید. همچنین می‌توانید ساعات کاری مشاور را اختصاصاً برای این فرم تغییر دهید.
               </p>
             </div>
 
-            {/* بخش ۱: مدت جلسه و زمان استراحت */}
+            {/* بخش ۱: مشاوران و موضوعات مجاز در این فرم */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-              <span className="font-bold text-xs text-slate-800 block">۱. مدت مشاوره و استراحت بین جلسات</span>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                  <UserCheck className="w-4 h-4 text-emerald-700" />
+                  <span>۱. مشاوران و موضوعات مجاز در این فرم</span>
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">تیک بزنید</span>
+              </div>
+
+              <div className="space-y-2.5">
+                {availableConsultantsList.map((consultant) => {
+                  const prefix = (consultant as any).genderPrefix || (consultant.name.startsWith('خانم') ? 'خانم' : (consultant.name.startsWith('آقا') ? 'آقا' : ''));
+                  const cleanName = consultant.name.replace(/^(خانم|آقای?)\s+/, '');
+                  const fullName = prefix ? `${prefix} ${cleanName}` : consultant.name;
+                  
+                  const cConfig = (field.appointmentData?.selectedConsultants || []).find(
+                    (sc) => sc.consultantId === consultant.id
+                  );
+                  const isEnabled = !!cConfig?.enabled;
+                  const enabledTopics = cConfig?.enabledTopics || [];
+                  const hasCustomHours = !!cConfig?.customWorkingHours;
+
+                  // تمام موضوعات مرتبط با این مشاور
+                  const consultantTopics = (consultant as any).allowedTopics?.length > 0
+                    ? (consultant as any).allowedTopics
+                    : COUNSELING_TOPICS.map((t) => t.id);
+
+                  return (
+                    <div
+                      key={consultant.id}
+                      className={`p-3 rounded-xl border transition-all ${
+                        isEnabled
+                          ? 'bg-white border-emerald-400 shadow-xs space-y-2.5'
+                          : 'bg-white/60 border-slate-200 opacity-70'
+                      }`}
+                    >
+                      {/* ردیف انتخاب مشاور */}
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isEnabled}
+                            onChange={() => handleToggleConsultantForBooking(consultant)}
+                            className="w-4 h-4 text-emerald-600 rounded border-slate-300 cursor-pointer"
+                          />
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-extrabold text-xs text-slate-900">{fullName}</span>
+                              <span className="text-[10px] text-slate-500 font-medium">({consultant.jobTitle || 'مشاور'})</span>
+                            </div>
+                          </div>
+                        </label>
+
+                        {/* نشانگر ساعت کاری سفارشی */}
+                        {isEnabled && hasCustomHours && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                            ساعت کاری سفارشی فرم
+                          </span>
+                        )}
+                      </div>
+
+                      {/* موضوعات و دکمه ویرایش ساعت کاری اختصاصی در صورت فعال بودن */}
+                      {isEnabled && (
+                        <div className="pt-2 border-t border-slate-100 space-y-2">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-600 block mb-1">
+                              موضوعات مشاوره فعال این مشاور در این فرم:
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {consultantTopics.map((topId: string) => {
+                                const topObj = COUNSELING_TOPICS.find((t) => t.id === topId);
+                                const isTopSelected = enabledTopics.includes(topId);
+                                return (
+                                  <button
+                                    key={topId}
+                                    type="button"
+                                    onClick={() => handleToggleTopicForConsultant(consultant.id, topId)}
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-medium border transition-colors flex items-center gap-1 cursor-pointer ${
+                                      isTopSelected
+                                        ? 'bg-indigo-50 border-indigo-300 text-indigo-800'
+                                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                                    }`}
+                                  >
+                                    {isTopSelected ? <Check className="w-3 h-3 text-indigo-600" /> : null}
+                                    <span>{topObj ? topObj.name : topId}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* دکمه ویرایش ساعت کاری برای این فرم */}
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingScheduleConsultant({
+                                  id: consultant.id,
+                                  name: fullName,
+                                  schedule: cConfig?.customWorkingHours || (consultant as any).workingHours || field.appointmentData || {
+                                    slotDurationMinutes: 45,
+                                    restTimeMinutes: 15,
+                                    availableDays: [0, 1, 2, 3, 4],
+                                    startHour: '09:00',
+                                    endHour: '17:00',
+                                  },
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-[10px] font-bold transition cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3 text-emerald-600" />
+                              <span>ویرایش ساعت کاری برای این فرم خاص</span>
+                            </button>
+
+                            {hasCustomHours && (
+                              <button
+                                type="button"
+                                onClick={() => handleResetConsultantSchedule(consultant.id)}
+                                className="text-[10px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                                title="حذف تنظیمات اختصاصی این فرم و بازگشت به ساعات کاری سراسری مشاور"
+                              >
+                                بازنشانی به ساعت اصلی
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* بخش ۲: مدت جلسه و زمان استراحت عمومی */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <span className="font-bold text-xs text-slate-800 block">۲. تنظیمات عمومی مدت جلسه و استراحت</span>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1979,6 +2270,16 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
         </div>
       </div>
     )}
+      {/* مودال تنظیم ساعات کاری سفارشی مشاور برای این فرم */}
+      <ConsultantScheduleModal
+        isOpen={!!editingScheduleConsultant}
+        onClose={() => setEditingScheduleConsultant(null)}
+        title={`ساعت کاری برای این فرم - ${editingScheduleConsultant?.name}`}
+        description="ساعات کاری تنظیم‌شده در این بخش صرفاً برای همین فرم اعمال می‌گردد."
+        consultantName={editingScheduleConsultant?.name}
+        initialSchedule={editingScheduleConsultant?.schedule}
+        onSave={handleSaveCustomConsultantSchedule}
+      />
     </>
   );
 };
