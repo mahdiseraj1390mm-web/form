@@ -959,8 +959,8 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
         </div>
 
         {/* دکمه‌های اقدام ادمین */}
-        <div className="flex items-center gap-2">
-          {adminViewMode === 'timeline' ? (
+        {adminViewMode === 'timeline' && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setAdminViewMode('list')}
@@ -969,19 +969,8 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
               <ArrowRight className="w-4 h-4" />
               <span>بازگشت به لیست همه مشاوران</span>
             </button>
-          ) : null}
-
-          {onNavigateTab && (
-            <button
-              type="button"
-              onClick={() => onNavigateTab('settings')}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
-            >
-              <Users className="w-4 h-4" />
-              <span>مدیریت مشاوران در تنظیمات</span>
-            </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* کارت‌های آمار کلی */}

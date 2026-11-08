@@ -591,8 +591,8 @@ function normalizeSearchText(str: string): string {
             <span className="text-slate-500 text-xs">وضعیت:</span>
             {[
               { id: 'all', label: 'همه' },
-              { id: 'new', label: 'جدید' },
-              { id: 'reviewing', label: 'در حال بررسی' },
+              { id: 'regressing', label: 'عقب گرد' },
+              { id: 'needs_followup', label: 'نیازمند پیگیری' },
               { id: 'approved', label: 'تأیید شده' },
             ].map((st) => (
               <button
