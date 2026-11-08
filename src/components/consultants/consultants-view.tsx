@@ -36,12 +36,14 @@ import {
 } from 'lucide-react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
-import { 
-  PERSIAN_WEEK_DAYS, 
+import type { 
   ConsultantProfile, 
   ConsultantBookingItem, 
   ConsultantDaySchedule,
   ConsultantListItem,
+} from '@/lib/consultant-helpers';
+import { 
+  PERSIAN_WEEK_DAYS, 
   matchMemberToConsultant, 
   getBookingsForConsultant, 
   buildWeeklyScheduleForConsultant,

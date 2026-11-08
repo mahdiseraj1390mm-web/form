@@ -41,8 +41,8 @@ import {
 } from 'lucide-react';
 import { formatPersianDateTime, formatCurrency, toPersianDigits, getFieldDisplayValue } from '@/lib/persian';
 import { isUnassignedSafaSubmission } from '@/lib/safa-utils';
+import type { ConsultantProfile } from '@/lib/consultant-helpers';
 import { 
-  ConsultantProfile, 
   matchMemberToConsultant, 
   extractBookingItemFromSubmission, 
   isBookingAssignedToConsultant, 

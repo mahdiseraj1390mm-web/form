@@ -448,7 +448,7 @@
     "submissionCount": 89,
     "viewCount": 1420,
     "createdAt": "2026-03-01T08:30:00Z",
-    "updatedAt": "2026-04-15T12:00:00Z",
+    "updatedAt": "2026-11-08T15:01:00.696Z",
     "steps": [
       {
         "id": "step-1",
@@ -656,7 +656,7 @@
               "consultantId": "user-counselor-farahmandi",
               "consultantName": "یاسر فرهمندی",
               "genderPrefix": "آقا",
-              "enabled": true,
+              "enabled": false,
               "enabledTopics": [
                 "کودک"
               ]
@@ -667,8 +667,7 @@
               "genderPrefix": "خانم",
               "enabled": true,
               "enabledTopics": [
-                "کودک",
-                "نوجوان"
+                "کودک"
               ]
             },
             {
