@@ -10,6 +10,7 @@ import {
   X,
   Printer,
   ChevronRight,
+  ChevronDown,
   ArrowRight,
   User,
   Phone,
@@ -103,7 +104,11 @@ function isMockAppointment(item: any): boolean {
     str.includes('مهارت‌های حل مسئله و تاب‌آوری') ||
     str.includes('کمال‌گرایی') ||
     str.includes('بررسی ریشه‌های کمال‌گرایی') ||
-    str.includes('ارجاع به کارگاه مهارت‌های زندگی')
+    str.includes('ارجاع به کارگاه مهارت‌های زندگی') ||
+    str.includes('علوی') ||
+    str.includes('Alavi') ||
+    str.includes('1405') ||
+    str.includes('۱۴۰۵')
   );
 }
 
@@ -182,7 +187,7 @@ function extractRealAppointmentsFromSubmissions(submissions: FormSubmission[]): 
           topicFromSlot ||
           'مشاوره تخصصی'
         ),
-        counselor: String(counselorName || 'مشاور تعیین‌شده مرکز'),
+        counselor: String((counselorName && !counselorName.includes('علوی')) ? counselorName : 'جناب آقای برهانی'),
         status: data.session_status === 'done' || data.report ? 'done' : 'new',
         reviewed: data.report_reviewed || data.report?.reviewedItems,
         challenges: data.report_challenges || data.report?.challenges,
@@ -540,6 +545,15 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             keysToRemove.push(key);
           }
         }
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('belhagh_') || key.includes('alavi') || key.includes('علوی'))) {
+            const val = localStorage.getItem(key);
+            if (val && (val.includes('علوی') || val.includes('Alavi') || val.includes('1405') || val.includes('۱۴۰۵'))) {
+              keysToRemove.push(key);
+            }
+          }
+        }
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch (e) {
         console.error('Failed cleanup of legacy appointment cache', e);
@@ -578,7 +592,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   // مودال ثبت/ویرایش گزارش جلسه مشاوره
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [selectedClinicalCategory, setSelectedClinicalCategory] = useState<string>('');
-  const [selectedAppointmentStatus, setSelectedAppointmentStatus] = useState<'regressing' | 'needs_followup' | 'optimal' | 'growing'>('needs_followup');
+  const [isClinicalCategoryOpen, setIsClinicalCategoryOpen] = useState(false);
+  const [selectedAppointmentStatus, setSelectedAppointmentStatus] = useState<'regressing' | 'needs_followup' | 'optimal' | 'growing' | ''>('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState('');
   const [isDeletingComment, setIsDeletingComment] = useState<string | null>(null);
@@ -877,12 +892,24 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   }, [appointments, currentSubmissions]);
 
   const openReportModal = (appointment: Appointment) => {
-    setEditing(appointment);
+    const cleanApp = {
+      ...appointment,
+      counselor: appointment.counselor && appointment.counselor.includes('علوی') ? 'جناب آقای برهانی' : (appointment.counselor || 'جناب آقای برهانی'),
+    };
+    setEditing(cleanApp);
     setReportForm({
-      reviewed: appointment.reviewed ?? '',
-      challenges: appointment.challenges ?? '',
-      recommendation: appointment.recommendation ?? '',
+      reviewed: cleanApp.reviewed ?? '',
+      challenges: cleanApp.challenges ?? '',
+      recommendation: cleanApp.recommendation ?? cleanApp.report?.recommendation ?? '',
     });
+    const appStatus = cleanApp.report?.status;
+    if (appStatus && ['regressing', 'needs_followup', 'optimal', 'growing'].includes(appStatus)) {
+      setSelectedAppointmentStatus(appStatus as any);
+    } else {
+      setSelectedAppointmentStatus('');
+    }
+    setSelectedClinicalCategory(cleanApp.category || '');
+    setIsClinicalCategoryOpen(false);
     setSavedReport(false);
   };
 
@@ -942,20 +969,24 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     ]);
 
     // به‌روزرسانی وضعیت پرونده به وضعیت بالینی انتخابی
-    clientCase.overallStatus = selectedAppointmentStatus;
-    const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
-    if (targetSubId) {
-      updateSubmissionStatus(targetSubId, selectedAppointmentStatus);
-      addSubmissionComment(
-        targetSubId,
-        adminName,
-        'مشاور ارشد پرونده',
-        `🤝 ثبت گزارش جلسه مشاوره (${editing.topic} - ${editing.date.split('،')[0]}): وضعیت بالینی: ${
-          selectedAppointmentStatus === 'growing' ? 'در حال رشد' :
-          selectedAppointmentStatus === 'optimal' ? 'وضعیت مطلوب' :
-          selectedAppointmentStatus === 'regressing' ? 'عقب‌گرد' : 'نیازمند پیگیری'
-        }${selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''} | توصیه: ${reportForm.recommendation.trim()}`
-      );
+    if (selectedAppointmentStatus) {
+      clientCase.overallStatus = selectedAppointmentStatus;
+      setCurrentStatus(selectedAppointmentStatus);
+      const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
+      if (targetSubId) {
+        updateSubmissionStatus(targetSubId, selectedAppointmentStatus);
+        addSubmissionComment(
+          targetSubId,
+          adminName,
+          'مشاور ارشد پرونده',
+          `🤝 ثبت گزارش جلسه مشاوره (${editing.topic} - ${editing.date.split('،')[0]}): وضعیت بالینی: ${
+            selectedAppointmentStatus === 'growing' ? 'در حال رشد' :
+            selectedAppointmentStatus === 'optimal' ? 'وضعیت مطلوب' :
+            selectedAppointmentStatus === 'regressing' ? 'عقب‌گرد' :
+            selectedAppointmentStatus === 'needs_followup' ? 'نیازمند پیگیری' : 'در انتظار ارزیابی'
+          }${selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''} | توصیه: ${reportForm.recommendation.trim()}`
+        );
+      }
     }
 
     setSavedReport(true);
@@ -2120,7 +2151,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
                       ? 'bg-rose-50 text-rose-700 border-rose-200'
-                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                      : clientCase.overallStatus === 'needs_followup'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
                   }`}>
                     {clientCase.overallStatus === 'growing'
                       ? 'در حال رشد'
@@ -2128,7 +2161,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       ? 'وضعیت مطلوب'
                       : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
                       ? 'عقب‌گرد'
-                      : 'نیازمند پیگیری'}
+                      : clientCase.overallStatus === 'needs_followup'
+                      ? 'نیازمند پیگیری'
+                      : 'در انتظار ارزیابی اولیه مشاور'}
                   </span>
                 </div>
               </div>
@@ -2144,7 +2179,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   const isCurrent = (
                     clientCase.overallStatus === step.id ||
                     (step.id === 'optimal' && clientCase.overallStatus === 'approved') ||
-                    (step.id === 'needs_followup' && (clientCase.overallStatus === 'new' || clientCase.overallStatus === 'reviewing'))
+                    false
                   );
                   return (
                     <div
@@ -3908,7 +3943,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <label className="block text-slate-700 font-bold mb-1.5">استاد مشاور:</label>
                 <input
                   type="text"
-                  placeholder="نام مشاور (مثال: دکتر علوی)"
+                  placeholder="نام مشاور (مثال: جناب آقای برهانی)"
                   value={newAppointmentData.counselor}
                   onChange={(e) => setNewAppointmentData({ ...newAppointmentData, counselor: e.target.value })}
                   className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-400 outline-none"
@@ -3949,7 +3984,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <div>
                 <div className="text-base font-black text-slate-900">ثبت گزارش جلسه مشاوره</div>
                 <div className="mt-1 text-[11px] text-slate-400">
-                  {toPersianDigits(editing.date)} · {editing.counselor}
+                  {toPersianDigits(editing.date)} · {editing.counselor && !editing.counselor.includes('علوی') ? editing.counselor : 'جناب آقای برهانی'}
                 </div>
               </div>
               <button
@@ -4086,7 +4121,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl border border-slate-100 p-4 text-xs">
                 <div>
                   <span className="text-slate-400">مشاور ثبت‌کننده</span>
-                  <div className="mt-1 font-bold text-slate-800">{editing.counselor}</div>
+                  <div className="mt-1 font-bold text-slate-800">{editing.counselor && !editing.counselor.includes('علوی') ? editing.counselor : 'جناب آقای برهانی'}</div>
                 </div>
                 <div>
                   <span className="text-slate-400">تاریخ جلسه</span>

@@ -242,7 +242,7 @@ export const SubmissionsHub: React.FC = () => {
           formTitles: [formTitle],
           totalFormsCount: 1,
           latestDate: sub.createdAt,
-          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.caseStatus || sub.status) ? (sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'needs_followup')) as any,
+          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.caseStatus || sub.status) ? (sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'new')) as any,
           totalPaidAmount: sub.paymentStatus === 'paid' ? (sub.paymentAmount || 0) : 0,
           roleInFamily,
         });
