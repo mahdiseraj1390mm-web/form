@@ -84,6 +84,56 @@ export default function AppHome() {
   );
   const userAllowedTabs = currentUser?.allowedTabs;
 
+  // گزینه‌های نوار ناوبری اختصاصی پایینی در نمایش موبایل
+  const mobileNavItems = useMemo(() => {
+    const items: Array<{ id: string; label: string; icon: any }> = [];
+
+    // ۱. نوبت‌ها و مشاوران
+    if (isSuperAdmin || userAllowedTabs?.includes('consultants')) {
+      items.push({
+        id: 'consultants',
+        label: 'نوبت‌ها و مشاور',
+        icon: CalendarClock,
+      });
+    }
+
+    // ۲. پرونده مراجعان
+    if (isSuperAdmin || userAllowedTabs?.includes('submissions') || (!userAllowedTabs && !isSuperAdmin)) {
+      items.push({
+        id: 'submissions',
+        label: 'پرونده مراجعان',
+        icon: Inbox,
+      });
+    }
+
+    // ۳. داشبورد مدیریت (در صورت مجاز بودن)
+    if (isSuperAdmin || userAllowedTabs?.includes('dashboard')) {
+      items.push({
+        id: 'dashboard',
+        label: 'داشبورد',
+        icon: LayoutDashboard,
+      });
+    }
+
+    // ۴. طراحی فرم (برای ادمین‌ها)
+    if (isSuperAdmin || userAllowedTabs?.includes('builder')) {
+      items.push({
+        id: 'builder',
+        label: 'طراحی فرم',
+        icon: PenTool,
+      });
+    }
+
+    // ۵. دکمه منوی کشویی جانبی
+    items.push({
+      id: '__menu__',
+      label: 'منو',
+      icon: Menu,
+    });
+
+    return items;
+  }, [isSuperAdmin, userAllowedTabs]);
+
   // انتخاب خودکار اولین تب مجاز برای کاربر
   useEffect(() => {
     if (!currentUser || isSuperAdmin) return;
@@ -148,56 +198,6 @@ export default function AppHome() {
     }
     return tabId === 'submissions';
   };
-
-  // گزینه‌های نوار ناوبری اختصاصی پایینی در نمایش موبایل
-  const mobileNavItems = useMemo(() => {
-    const items: Array<{ id: string; label: string; icon: any }> = [];
-
-    // ۱. نوبت‌ها و مشاوران
-    if (isSuperAdmin || userAllowedTabs?.includes('consultants')) {
-      items.push({
-        id: 'consultants',
-        label: 'نوبت‌ها و مشاور',
-        icon: CalendarClock,
-      });
-    }
-
-    // ۲. پرونده مراجعان
-    if (isSuperAdmin || userAllowedTabs?.includes('submissions') || (!userAllowedTabs && !isSuperAdmin)) {
-      items.push({
-        id: 'submissions',
-        label: 'پرونده مراجعان',
-        icon: Inbox,
-      });
-    }
-
-    // ۳. داشبورد مدیریت (در صورت مجاز بودن)
-    if (isSuperAdmin || userAllowedTabs?.includes('dashboard')) {
-      items.push({
-        id: 'dashboard',
-        label: 'داشبورد',
-        icon: LayoutDashboard,
-      });
-    }
-
-    // ۴. طراحی فرم (برای ادمین‌ها)
-    if (isSuperAdmin || userAllowedTabs?.includes('builder')) {
-      items.push({
-        id: 'builder',
-        label: 'طراحی فرم',
-        icon: PenTool,
-      });
-    }
-
-    // ۵. دکمه منوی کشویی جانبی
-    items.push({
-      id: '__menu__',
-      label: 'منو',
-      icon: Menu,
-    });
-
-    return items;
-  }, [isSuperAdmin, userAllowedTabs]);
 
   return (
     <div className="h-screen h-[100dvh] flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
