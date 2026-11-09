@@ -1514,14 +1514,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         </div>
 
 
-        {/* نوار زبانه‌های ناوبری ۶ گانه */}
-        <nav className="grid grid-cols-6 gap-2 sm:gap-3 w-full p-2 sm:p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm min-h-[58px] select-none">
+        {/* نوار زبانه‌های ناوبری ۶ گانه (اسکرول افقی روان در موبایل و شبکه ۶ ستونه در دسکتاپ) */}
+        <nav className="flex md:grid md:grid-cols-6 overflow-x-auto no-scrollbar gap-2 sm:gap-3 w-full p-1.5 sm:p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm min-h-[50px] sm:min-h-[58px] select-none">
           {[
             ['overview', 'تحلیل در یک نگاه'],
             ['analytics', 'تحلیل‌های آماری'],
             ['profile', 'مشخصات ثبت‌نام'],
             ['forms', 'فرم‌ها و آزمون‌ها'],
-            ['followups', 'پیگیری‌ها'],
+            ['followups', 'پیگیری‌ها و درج لاگ'],
             ['finances', 'مالی و نوبت‌ها'],
           ].map(([key, label]) => (
             <button
@@ -1530,7 +1530,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 setCurrentView('dossier');
                 setActiveTab(key as any);
               }}
-              className={`h-12 w-full rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center text-center whitespace-nowrap cursor-pointer px-2 ${
+              className={`h-10 sm:h-12 shrink-0 md:w-full rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center text-center whitespace-nowrap cursor-pointer px-3.5 sm:px-2 ${
                 (currentView === 'dossier' && activeTab === key) ||
                 (currentView === 'formReport' && key === 'forms')
                   ? 'bg-[#173f6b] text-white shadow-sm ring-1 ring-[#173f6b]'
@@ -3455,7 +3455,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
                   <div className="space-y-2">
                     <span className="text-xs text-slate-500 font-bold block">نوع تعامل / اقدام:</span>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {[
                         { id: 'call', label: '📞 تماس تلفنی' },
                         { id: 'meeting', label: '🤝 جلسه حضوری' },
@@ -3467,7 +3467,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           key={t.id}
                           type="button"
                           onClick={() => setNewFollowupType(t.id as any)}
-                          className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                          className={`px-2.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                             newFollowupType === t.id
                               ? 'bg-[#173f6b] text-white shadow-xs'
                               : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/70'
@@ -3486,7 +3486,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       value={newFollowupText}
                       onChange={(e) => setNewFollowupText(e.target.value)}
                       placeholder="شرح کامل مکالمه، تصمیم اتخاذ شده، یادداشت محرمانه، یا توضیحات جهت پیگیری‌های بعدی..."
-                      className="w-full p-4 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white focus:outline-none transition-all leading-relaxed"
+                      className="w-full p-3.5 text-[15px] sm:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:bg-white focus:outline-none transition-all leading-relaxed"
                     />
                   </div>
 

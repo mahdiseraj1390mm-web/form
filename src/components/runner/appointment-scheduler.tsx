@@ -21,7 +21,17 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { useForm } from '@/context/form-context';
-import { COUNSELING_TOPICS, COUNSELOR_MAP, isConsultantMember, cleanConsultantName, getScheduleForTopic, matchCounselingTopic } from '@/lib/consultant-helpers';
+import { 
+  COUNSELING_TOPICS, 
+  COUNSELOR_MAP, 
+  isConsultantMember, 
+  cleanConsultantName, 
+  getScheduleForTopic, 
+  matchCounselingTopic,
+  matchTimeRanges,
+  extractTimeRange,
+  detectDayIndex
+} from '@/lib/consultant-helpers';
 
 interface AppointmentSchedulerProps {
   field: FormField;
@@ -357,9 +367,17 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         const fullLabel = `${currentDay.name}${shiftPart} - ساعت ${timeRange}`;
         const optId = `slot_${selectedDayIndex}_${pIdx}_${currentMin}`;
 
-        const isTaken = bookedSlots.some(
-          (b) => b === fullLabel || b === optId || (b.includes(currentDay.name) && b.includes(timeRange))
-        );
+        const isTaken = bookedSlots.some((b) => {
+          if (!b) return false;
+          if (b === fullLabel || b === optId) return true;
+          if (b.includes(currentDay.name) && (b.includes(timeRange) || matchTimeRanges(extractTimeRange(b), timeRange))) {
+            return true;
+          }
+          if (detectDayIndex(b) === selectedDayIndex && matchTimeRanges(extractTimeRange(b), timeRange)) {
+            return true;
+          }
+          return false;
+        });
 
         slots.push({
           id: optId,

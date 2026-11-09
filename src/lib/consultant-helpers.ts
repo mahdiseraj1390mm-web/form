@@ -823,7 +823,7 @@ export function buildWeeklyScheduleForConsultant(
         scheduleSlots.push({
           timeRange: ds.timeRange,
           label: ds.label,
-          category: ds.category,
+          category: matchedBooking.topic || ds.category || 'مشاوره',
           isOccupied: true,
           booking: matchedBooking,
         });

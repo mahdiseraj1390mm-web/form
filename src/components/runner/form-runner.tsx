@@ -64,6 +64,7 @@ import {
   getFieldDisplayValue
 } from '@/lib/persian';
 import { extractBookingDetails } from '@/lib/belhagh-sms-helper';
+import { matchTimeRanges, extractTimeRange, detectDayIndex } from '@/lib/consultant-helpers';
 import { iranProvinces } from '@/lib/iran-geo';
 import { PaymentModal } from './payment-modal';
 import { AppointmentScheduler } from './appointment-scheduler';
@@ -1689,26 +1690,55 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
         try {
           let selectedSlotVal = '';
-          let bookingFieldKey = '';
-          for (const key of Object.keys(formData)) {
-            if (key.startsWith('f_booking_') && formData[key] && isFieldVisible(key)) {
-              selectedSlotVal = String(formData[key]).trim();
-              bookingFieldKey = key;
-              break;
+          let bookingCounselorId = '';
+          let errorFieldKey = 'f_booking';
+
+          if (formData.f_booking_slot) {
+            selectedSlotVal = String(formData.f_booking_slot).trim();
+          } else if (formData.f_booking) {
+            const raw = String(formData.f_booking);
+            selectedSlotVal = raw.includes('نوبت:') ? raw.split('نوبت:')[1]?.trim() : raw.trim();
+          }
+
+          if (formData.counselorId) {
+            bookingCounselorId = String(formData.counselorId).trim();
+          } else if (formData.counselorField) {
+            bookingCounselorId = String(formData.counselorField).trim();
+          }
+
+          // جستجو در فیلدهای قدیمی رزرو در صورت عدم وجود فیلد یکپارچه
+          if (!selectedSlotVal || !bookingCounselorId) {
+            for (const key of Object.keys(formData)) {
+              if (key.startsWith('f_booking_') && formData[key] && isFieldVisible(key)) {
+                selectedSlotVal = String(formData[key]).trim();
+                bookingCounselorId = key;
+                errorFieldKey = key;
+                break;
+              }
             }
           }
 
-          if (bookingFieldKey && selectedSlotVal) {
-            const checkRes = await fetch(`/api/cases?action=booked_slots&formId=form-belhagh-booking&counselorField=${encodeURIComponent(bookingFieldKey)}`);
+          if (bookingCounselorId && selectedSlotVal) {
+            const checkRes = await fetch(`/api/cases?action=booked_slots&formId=form-belhagh-booking&counselorField=${encodeURIComponent(bookingCounselorId)}`);
             const checkData = await checkRes.json();
             if (checkData.success && Array.isArray(checkData.bookedSlots)) {
-              if (checkData.bookedSlots.some((b: string) => b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal))) {
+              const conflict = checkData.bookedSlots.some((b: string) => {
+                if (!b) return false;
+                if (b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal)) return true;
+                const bTime = extractTimeRange(b);
+                const sTime = extractTimeRange(selectedSlotVal);
+                const bDay = detectDayIndex(b);
+                const sDay = detectDayIndex(selectedSlotVal);
+                return bDay === sDay && matchTimeRanges(bTime, sTime);
+              });
+
+              if (conflict) {
                 setIsSubmitting(false);
                 setErrors((prev) => ({
                   ...prev,
-                  [bookingFieldKey]: '⚠️ این نوبت قبلاً توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
+                  [errorFieldKey]: '⚠️ این نوبت هم‌اکنون توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
                 }));
-                const el = document.getElementById(`field-${bookingFieldKey}`);
+                const el = document.getElementById(`field-${errorFieldKey}`) || document.getElementById('field-f_booking');
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
               }

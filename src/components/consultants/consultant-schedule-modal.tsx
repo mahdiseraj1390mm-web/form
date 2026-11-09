@@ -542,26 +542,26 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
                       {periods.map((period, pIdx) => (
                         <div
                           key={pIdx}
-                          className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px]"
+                          className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px]"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                             <span className="font-bold text-slate-700 min-w-[50px]">
                               شیفت {toPersianDigits(pIdx + 1)}:
                             </span>
-                            <div className="flex items-center gap-1 font-mono">
+                            <div className="flex items-center gap-1.5 font-mono">
                               <span className="text-[10px] text-slate-500">از</span>
                               <input
                                 type="time"
                                 value={period.startHour || '09:00'}
                                 onChange={(e) => updatePeriod(dayIdx, pIdx, 'startHour', e.target.value)}
-                                className="px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white text-center"
+                                className="px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white text-center font-bold"
                               />
                               <span className="text-[10px] text-slate-500">تا</span>
                               <input
                                 type="time"
                                 value={period.endHour || '17:00'}
                                 onChange={(e) => updatePeriod(dayIdx, pIdx, 'endHour', e.target.value)}
-                                className="px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white text-center"
+                                className="px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white text-center font-bold"
                               />
                             </div>
                           </div>
@@ -570,7 +570,7 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
                             <button
                               type="button"
                               onClick={() => removePeriodFromDay(dayIdx, pIdx)}
-                              className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer self-end sm:self-auto"
                               title="حذف این شیفت"
                             >
                               <Trash2 className="w-3.5 h-3.5" />

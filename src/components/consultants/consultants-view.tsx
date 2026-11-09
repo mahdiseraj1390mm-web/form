@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   CalendarClock, 
   Calendar, 
@@ -50,7 +50,9 @@ import {
   buildAllConsultantsWithBookings,
   cleanConsultantName,
   detectDayIndex,
-  COUNSELING_TOPICS
+  COUNSELING_TOPICS,
+  KNOWN_CONSULTANTS,
+  CONSULTANT_DEFAULT_TOPICS
 } from '@/lib/consultant-helpers';
 import { ClientDossierFullview, ClientCaseGroup } from '@/components/submissions/client-dossier-fullview';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
@@ -181,6 +183,72 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
     return getBookingsForConsultant(activeTimelineConsultant, submissions, allowedTopics);
   }, [isSuperAdmin, allConsultantsList, activeTimelineConsultant, submissions, allowedTopics]);
 
+  // تب موضوع انتخابی جهت تفکیک نوبت‌ها برای مشاورانی که چند موضوع دارند (مانند نوجوان و خانواده)
+  const [selectedTopicTab, setSelectedTopicTab] = useState<string>('all');
+
+  // عضو متناظر مشاور فعال و موضوعات اختصاصی وی
+  const activeConsultantMember = useMemo(() => {
+    return (
+      teamMembers.find(
+        (m) =>
+          m.id === activeTimelineConsultant.id ||
+          m.consultantId === activeTimelineConsultant.id ||
+          (m.assignedConsultantIds && m.assignedConsultantIds.includes(activeTimelineConsultant.id)) ||
+          cleanConsultantName(m.name) === cleanConsultantName(activeTimelineConsultant.name)
+      ) || null
+    );
+  }, [teamMembers, activeTimelineConsultant]);
+
+  const activeConsultantTopics = useMemo<string[]>(() => {
+    const fromMember = activeConsultantMember?.allowedTopics || [];
+    if (fromMember.length > 0) return fromMember;
+    const fromKnown = KNOWN_CONSULTANTS.find(
+      (k) => k.id === activeTimelineConsultant.id || k.bookingFieldIds.includes(activeTimelineConsultant.id)
+    );
+    if (fromKnown && CONSULTANT_DEFAULT_TOPICS[fromKnown.id]) {
+      return CONSULTANT_DEFAULT_TOPICS[fromKnown.id];
+    }
+    return [];
+  }, [activeConsultantMember, activeTimelineConsultant]);
+
+  useEffect(() => {
+    setSelectedTopicTab('all');
+  }, [activeTimelineConsultant.id]);
+
+  // فیلتر کردن نوبت‌های مشاور بر اساس موضوع انتخابی
+  const displayedConsultantBookings = useMemo(() => {
+    if (selectedTopicTab === 'all') return activeConsultantBookings;
+    const topObj = COUNSELING_TOPICS.find((t) => t.id === selectedTopicTab || t.name === selectedTopicTab);
+    const keywords = topObj ? [topObj.id, topObj.name, ...topObj.keywords] : [selectedTopicTab];
+    return activeConsultantBookings.filter((b) => {
+      const t = (b.topic || '').toLowerCase();
+      return keywords.some((kw) => t.includes(kw.toLowerCase()));
+    });
+  }, [activeConsultantBookings, selectedTopicTab]);
+
+  const rawDaySchedule = weeklySchedule[activeDayIndex] || weeklySchedule[0];
+  const currentDaySchedule = useMemo(() => {
+    if (!rawDaySchedule) return rawDaySchedule;
+    if (selectedTopicTab === 'all') return rawDaySchedule;
+
+    const topObj = COUNSELING_TOPICS.find((t) => t.id === selectedTopicTab || t.name === selectedTopicTab);
+    const keywords = topObj ? [topObj.id, topObj.name, ...topObj.keywords] : [selectedTopicTab];
+
+    const filteredSlots = rawDaySchedule.slots.filter((slot) => {
+      if (!slot.isOccupied) return true;
+      const cat = (slot.category || slot.booking?.topic || '').toLowerCase();
+      return keywords.some((kw) => cat.includes(kw.toLowerCase()));
+    });
+
+    const occCount = filteredSlots.filter((s) => s.isOccupied).length;
+    return {
+      ...rawDaySchedule,
+      occupiedCount: occCount,
+      freeCount: filteredSlots.length - occCount,
+      slots: filteredSlots,
+    };
+  }, [rawDaySchedule, selectedTopicTab]);
+
   // باز کردن پرونده مراجع
   const handleOpenClientDossier = (booking: ConsultantBookingItem) => {
     const rawList = submissions.filter(
@@ -287,8 +355,6 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
   // نمای مشترک تایم‌لاین هفتگی مشاور (نمایش اسلات‌های اشغال شده و خالی)
   // -------------------------------------------------------------
   const renderWeeklyTimelineContent = () => {
-    const currentDaySchedule = weeklySchedule[activeDayIndex] || weeklySchedule[0];
-
     return (
       <div className="space-y-5">
         {/* نوار انتخاب روزهای هفته + سوییچ حالت نمایش (روزانه / کل هفته) */}
@@ -366,6 +432,65 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
             </button>
           </div>
         </div>
+
+        {/* نوار تفکیک موضوعی نوبت‌ها برای مشاورانی که چند نوع نوبت دارند (مانند نوجوان و خانواده) */}
+        {activeConsultantTopics.length > 1 && (
+          <div className="flex items-center gap-2 p-2.5 bg-gradient-to-r from-slate-100 via-indigo-50/40 to-slate-100 rounded-2xl border border-slate-200/90 flex-wrap">
+            <span className="text-xs font-extrabold text-slate-800 px-2 flex items-center gap-1.5 shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              <span>تفکیک موضوعی نوبت‌ها:</span>
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setSelectedTopicTab('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                selectedTopicTab === 'all'
+                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200 ring-2 ring-slate-400/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span>همه موضوعات</span>
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-slate-100 text-slate-700 font-mono font-extrabold">
+                {toPersianDigits(activeConsultantBookings.length)}
+              </span>
+            </button>
+
+            {activeConsultantTopics.map((topKey) => {
+              const topObj = COUNSELING_TOPICS.find((t) => t.id === topKey || t.name === topKey);
+              const topName = topObj ? topObj.name : `مشاوره ${topKey}`;
+              const count = activeConsultantBookings.filter((b) => {
+                const t = (b.topic || '').toLowerCase();
+                const kw = topObj ? [topObj.id, topObj.name, ...topObj.keywords] : [topKey];
+                return kw.some((k) => t.includes(k.toLowerCase()));
+              }).length;
+
+              const isSelected = selectedTopicTab === topKey;
+
+              return (
+                <button
+                  key={topKey}
+                  type="button"
+                  onClick={() => setSelectedTopicTab(topKey)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/20'
+                      : 'bg-white/80 text-slate-700 hover:bg-white border border-slate-200'
+                  }`}
+                >
+                  <span>{topName}</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-extrabold ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-700 border border-blue-100'
+                    }`}
+                  >
+                    {toPersianDigits(count)} نوبت
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* حالت ۱: نمایش تفصیلی روز انتخاب‌شده (محور زمانی عمودی) */}
         {timelineMode === 'day' && (
@@ -456,7 +581,19 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                               )}
 
                               {slot.category && (
-                                <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                                <span
+                                  className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-md border ${
+                                    slot.category.includes('نوجوان')
+                                      ? 'bg-sky-50 text-sky-800 border-sky-200'
+                                      : slot.category.includes('خانواده') || slot.category.includes('ازدواج')
+                                      ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                      : slot.category.includes('کودک')
+                                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                      : slot.category.includes('بالینی')
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                                  }`}
+                                >
                                   {slot.category}
                                 </span>
                               )}
@@ -484,10 +621,18 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                               </div>
 
                               <div className="flex items-center gap-3 text-[11px] text-slate-500 flex-wrap">
-                                <span className="font-mono text-slate-700 flex items-center gap-1">
-                                  <Phone className="w-3 h-3 text-blue-500" />
-                                  <span>{b.clientMobile || 'بدون شماره'}</span>
-                                </span>
+                                {b.clientMobile ? (
+                                  <a
+                                    href={`tel:${b.clientMobile}`}
+                                    className="font-mono text-blue-700 hover:underline flex items-center gap-1 font-bold"
+                                    title="تماس مستقیم با مراجع"
+                                  >
+                                    <Phone className="w-3 h-3 text-emerald-600" />
+                                    <span>{b.clientMobile}</span>
+                                  </a>
+                                ) : (
+                                  <span className="font-mono text-slate-400">بدون شماره</span>
+                                )}
                                 {b.provinceCity && (
                                   <>
                                     <span>•</span>
@@ -500,11 +645,11 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-emerald-100">
                               <button
                                 type="button"
                                 onClick={() => setViewingBooking(b)}
-                                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg font-bold text-xs shadow-2xs transition flex items-center justify-center gap-1 cursor-pointer"
+                                className="px-2.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-xs shadow-2xs transition flex items-center justify-center gap-1 cursor-pointer"
                               >
                                 <CalendarClock className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>مشاهده نوبت</span>
@@ -513,7 +658,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                               <button
                                 type="button"
                                 onClick={() => handleOpenClientDossier(b)}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center gap-1 cursor-pointer"
+                                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1 cursor-pointer"
                               >
                                 <FileText className="w-3.5 h-3.5" />
                                 <span>مشاهده پرونده</span>
@@ -691,15 +836,15 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           </div>
 
           {/* آمارهای سریع مشاور */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-center">
               <span className="text-[10px] text-slate-500 font-medium">کل پرونده‌های من</span>
               <div className="text-base font-extrabold text-slate-900 mt-0.5">
                 {toPersianDigits(activeConsultantBookings.length)} مراجع
               </div>
             </div>
 
-            <div className="px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
+            <div className="px-3.5 py-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
               <span className="text-[10px] text-emerald-700 font-medium">نوبت‌های رزرو شده</span>
               <div className="text-base font-extrabold text-emerald-800 mt-0.5">
                 {toPersianDigits(activeConsultantBookings.length)} نوبت
@@ -709,7 +854,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
             <button
               type="button"
               onClick={() => setIsSelfScheduleModalOpen(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs rounded-2xl shadow-sm hover:from-emerald-700 hover:to-teal-800 transition flex items-center gap-2 cursor-pointer self-stretch sm:self-auto justify-center"
+              className="col-span-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs rounded-2xl shadow-sm hover:from-emerald-700 hover:to-teal-800 transition flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"
             >
               <Clock className="w-4 h-4" />
               <span>تنظیم و ویرایش ساعات کاری من</span>
@@ -718,18 +863,18 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
         </div>
 
         {/* سوییچر دو تب اصلی مشاور: تایم‌لاین هفتگی و پرونده‌های مراجعین */}
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <div className="grid grid-cols-2 gap-2 border-b border-slate-200 pb-3 sm:flex sm:items-center">
           <button
             type="button"
             onClick={() => setConsultantTab('timeline')}
-            className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 cursor-pointer ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${
               consultantTab === 'timeline'
                 ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/20'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <CalendarClock className="w-4 h-4" />
-            <span>تایم‌لاین هفتگی نوبت‌ها</span>
+            <CalendarClock className="w-4 h-4 shrink-0" />
+            <span>تایم‌لاین نوبت‌ها</span>
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                 consultantTab === 'timeline' ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-600'
@@ -742,20 +887,20 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           <button
             type="button"
             onClick={() => setConsultantTab('clients')}
-            className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 cursor-pointer ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${
               consultantTab === 'clients'
                 ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/20'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>پرونده‌های مراجعین من</span>
+            <Users className="w-4 h-4 shrink-0" />
+            <span>پرونده مراجعین من</span>
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                 consultantTab === 'clients' ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-600'
               }`}
             >
-              {toPersianDigits(activeConsultantBookings.length)} پرونده
+              {toPersianDigits(activeConsultantBookings.length)}
             </span>
           </button>
         </div>
@@ -768,7 +913,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
             
             {/* لیست پرونده‌های رزرو شده این مشاور */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="font-extrabold text-sm text-slate-900">
                     لیست پرونده‌های مراجعین اختصاصی شما
@@ -777,80 +922,216 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                     مراجعانی که نوبت مشاوره خود را با شما ثبت نموده‌اند
                   </p>
                 </div>
-                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl">
-                  {toPersianDigits(activeConsultantBookings.length)} مراجع ثبت‌شده
+
+                {/* دکمه‌های تفکیک موضوعی در کارتابل پرونده‌ها */}
+                {activeConsultantTopics.length > 1 && (
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTopicTab('all')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                        selectedTopicTab === 'all'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>همه پرونده‌ها</span>
+                      <span className="font-mono text-[10px] text-slate-500">({toPersianDigits(activeConsultantBookings.length)})</span>
+                    </button>
+                    {activeConsultantTopics.map((topKey) => {
+                      const topObj = COUNSELING_TOPICS.find((t) => t.id === topKey || t.name === topKey);
+                      const topName = topObj ? topObj.name : topKey;
+                      const count = activeConsultantBookings.filter((b) => {
+                        const t = (b.topic || '').toLowerCase();
+                        const kw = topObj ? [topObj.id, topObj.name, ...topObj.keywords] : [topKey];
+                        return kw.some((k) => t.includes(k.toLowerCase()));
+                      }).length;
+                      const isSelected = selectedTopicTab === topKey;
+
+                      return (
+                        <button
+                          key={topKey}
+                          type="button"
+                          onClick={() => setSelectedTopicTab(topKey)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                            isSelected
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <span>{topName}</span>
+                          <span className={`font-mono text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>({toPersianDigits(count)})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl shrink-0 self-start sm:self-auto">
+                  {toPersianDigits(displayedConsultantBookings.length)} مراجع در این بخش
                 </span>
               </div>
 
-              {activeConsultantBookings.length === 0 ? (
+              {displayedConsultantBookings.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 space-y-2">
                   <Inbox className="w-10 h-10 mx-auto text-slate-300" />
-                  <p className="font-bold text-xs text-slate-700">تا کنون پرونده‌ای برای شما رزرو نشده است</p>
+                  <p className="font-bold text-xs text-slate-700">پرونده‌ای در این موضوع یافت نشد</p>
                   <p className="text-[11px]">به محض ثبت نوبت توسط مراجع، مشخصات پرونده در این جدول درج می‌گردد.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs">
-                    <thead>
-                      <tr className="bg-slate-50/80 text-slate-600 border-b border-slate-200 font-bold">
-                        <th className="py-3 px-4">کد پرونده</th>
-                        <th className="py-3 px-4">نام و نام خانوادگی</th>
-                        <th className="py-3 px-4">شماره تماس</th>
-                        <th className="py-3 px-4">زمان نوبت رزرو شده</th>
-                        <th className="py-3 px-4">موضوع مشاوره</th>
-                        <th className="py-3 px-4">استان و شهر</th>
-                        <th className="py-3 px-4 text-center">اقدام</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {activeConsultantBookings.map((b) => (
-                        <tr key={b.id} className="hover:bg-slate-50/60 transition">
-                          <td className="py-3.5 px-4 font-mono font-bold text-blue-700">
-                            {b.caseCode}
-                          </td>
-                          <td className="py-3.5 px-4 font-extrabold text-slate-900">
-                            {b.clientName}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono text-slate-600" dir="ltr">
-                            {b.clientMobile}
-                          </td>
-                          <td className="py-3.5 px-4 font-bold text-slate-800">
-                            <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">
-                              {b.slotValue || `${b.dayName} - ${b.timeRange}`}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-600">
-                            {b.topic}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-500">
-                            {b.provinceCity || '—'}
-                          </td>
-                          <td className="py-3.5 px-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setViewingBooking(b)}
-                                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg font-bold text-xs transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
-                              >
-                                <CalendarClock className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>مشاهده نوبت</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleOpenClientDossier(b)}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                                <span>مشاهده پرونده کامل</span>
-                              </button>
-                            </div>
-                          </td>
+                <>
+                  {/* نمایش جدولی استاندارد برای تبلت و دسکتاپ */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead>
+                        <tr className="bg-slate-50/80 text-slate-600 border-b border-slate-200 font-bold">
+                          <th className="py-3 px-4">کد پرونده</th>
+                          <th className="py-3 px-4">نام و نام خانوادگی</th>
+                          <th className="py-3 px-4">شماره تماس</th>
+                          <th className="py-3 px-4">زمان نوبت رزرو شده</th>
+                          <th className="py-3 px-4">موضوع مشاوره</th>
+                          <th className="py-3 px-4">استان و شهر</th>
+                          <th className="py-3 px-4 text-center">اقدام</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {displayedConsultantBookings.map((b) => (
+                          <tr key={b.id} className="hover:bg-slate-50/60 transition">
+                            <td className="py-3.5 px-4 font-mono font-bold text-blue-700">
+                              {b.caseCode}
+                            </td>
+                            <td className="py-3.5 px-4 font-extrabold text-slate-900">
+                              {b.clientName}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono text-slate-600" dir="ltr">
+                              {b.clientMobile}
+                            </td>
+                            <td className="py-3.5 px-4 font-bold text-slate-800">
+                              <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">
+                                {b.slotValue || `${b.dayName} - ${b.timeRange}`}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-600">
+                              <span
+                                className={`text-[11px] font-extrabold px-2 py-0.5 rounded-md border ${
+                                  b.topic.includes('نوجوان')
+                                    ? 'bg-sky-50 text-sky-800 border-sky-200'
+                                    : b.topic.includes('خانواده') || b.topic.includes('ازدواج')
+                                    ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                    : b.topic.includes('کودک')
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : b.topic.includes('بالینی')
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                    : 'bg-blue-50 text-blue-700 border-blue-200'
+                                }`}
+                              >
+                                {b.topic}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-500">
+                              {b.provinceCity || '—'}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingBooking(b)}
+                                  className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg font-bold text-xs transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                  <CalendarClock className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>مشاهده نوبت</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenClientDossier(b)}
+                                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>مشاهده پرونده کامل</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* نمایش کارتی بهینه و لمسی اختصاصی برای موبایل */}
+                  <div className="block md:hidden divide-y divide-slate-100">
+                    {displayedConsultantBookings.map((b) => (
+                      <div key={b.id} className="p-4 space-y-3 bg-white hover:bg-slate-50/70 transition">
+                        {/* سربرگ کارت: نام مراجع و کد پرونده */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 font-bold flex items-center justify-center text-xs shrink-0">
+                              <User className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">{b.clientName}</h4>
+                              <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-0.5 border border-blue-100">
+                                {b.caseCode}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className="text-[10px] font-extrabold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono text-center">
+                            {b.slotValue || `${b.dayName} - ${b.timeRange}`}
+                          </span>
+                        </div>
+
+                        {/* اطلاعات تماس، موضوع و شهر */}
+                        <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                          <div>
+                            <span className="text-slate-400 block text-[10px] mb-0.5">موضوع مشاوره:</span>
+                            <span className="font-bold text-slate-800 truncate block">{b.topic}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px] mb-0.5">شهر / استان:</span>
+                            <span className="font-medium text-slate-700 truncate block">{b.provinceCity || 'ثبت‌نشده'}</span>
+                          </div>
+                          <div className="col-span-2 flex items-center justify-between pt-1.5 border-t border-slate-200/60 mt-0.5">
+                            <span className="text-slate-400 text-[10px]">شماره تماس:</span>
+                            {b.clientMobile ? (
+                              <a
+                                href={`tel:${b.clientMobile}`}
+                                className="font-mono font-bold text-blue-700 flex items-center gap-1.5 hover:underline py-0.5"
+                                title="تماس تلفنی با مراجع"
+                              >
+                                <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>{b.clientMobile}</span>
+                              </a>
+                            ) : (
+                              <span className="text-slate-400">ثبت‌نشده</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* دکمه‌های اقدام لمسی */}
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setViewingBooking(b)}
+                            className="py-2.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <CalendarClock className="w-3.5 h-3.5 text-slate-500" />
+                            <span>مشاهده نوبت</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenClientDossier(b)}
+                            className="py-2.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>پرونده کامل</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
