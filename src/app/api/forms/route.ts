@@ -9,7 +9,74 @@ const DB_PATH = path.join(process.cwd(), 'data', 'forms.json');
 
 // بازگرداندن فرم‌ها بدون حذف تصویر پیش‌فرض
 function sanitizeForms(rawForms: Form[]): Form[] {
-  return rawForms;
+  return rawForms.map((form) => {
+    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
+      const regRequiredFieldIds = [
+        'f_ebadollah_member',
+        'f_name',
+        'f_family',
+        'f_mobile',
+        'f_birth_date',
+        'f_role_in_family',
+        'f_family_members',
+        'f_marital_status',
+        'f_province_city',
+        'f_school_name',
+        'f_school_supervisor',
+        'f_mentor_name',
+        'f_physical_illness',
+        'f_mental_illness',
+        'f_medications',
+      ];
+      const customMsgs: Record<string, string> = {
+        f_ebadollah_member: 'مشخص کردن وضعیت عضویت در سایت عبادالله الزامی است.',
+        f_name: 'درج نام الزامی است.',
+        f_family: 'درج نام خانوادگی الزامی است.',
+        f_mobile: 'شماره تلفن همراه معتبر الزامی است.',
+        f_birth_date: 'انتخاب تاریخ تولد الزامی است.',
+        f_role_in_family: 'انتخاب نقش در خانواده الزامی است.',
+        f_family_members: 'انتخاب تعداد اعضای خانواده الزامی است.',
+        f_marital_status: 'انتخاب وضعیت تاهل الزامی است.',
+        f_province_city: 'انتخاب استان و شهرستان الزامی است.',
+        f_school_name: 'درج نام مدرسه معارفی الزامی است.',
+        f_school_supervisor: 'درج نام ناظم مدرسه الزامی است.',
+        f_mentor_name: 'درج نام مربی تربیتی الزامی است.',
+      };
+      const updatedFields = form.fields.map((f) => {
+        if (regRequiredFieldIds.includes(f.id)) {
+          return {
+            ...f,
+            validations: {
+              ...(f.validations || {}),
+              required: true,
+              customErrorMessage: f.validations?.customErrorMessage || customMsgs[f.id] || 'تکمیل این فیلد الزامی است.',
+            },
+          };
+        }
+        return f;
+      });
+      return { ...form, fields: updatedFields };
+    }
+
+    if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+      const updatedFields = form.fields.map((f) => {
+        if (f.id === 'f_prev_counselor_name') {
+          return {
+            ...f,
+            validations: {
+              ...(f.validations || {}),
+              required: true,
+              customErrorMessage: f.validations?.customErrorMessage || 'درج نام مشاور یا مشاوران سابق الزامی است.',
+            },
+          };
+        }
+        return f;
+      });
+      return { ...form, fields: updatedFields };
+    }
+
+    return form;
+  });
 }
 
 async function loadFormsFromDb(): Promise<Form[]> {

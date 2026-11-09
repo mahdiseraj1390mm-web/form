@@ -162,7 +162,8 @@
         "stepId": "step-2",
         "gridCols": 12,
         "validations": {
-          "required": false
+          "required": true,
+          "customErrorMessage": "انتخاب تعداد اعضای خانواده الزامی است."
         },
         "options": [
           {
@@ -251,7 +252,8 @@
         "stepId": "step-3",
         "gridCols": 12,
         "validations": {
-          "required": false
+          "required": true,
+          "customErrorMessage": "درج نام مدرسه معارفی الزامی است."
         }
       },
       {
@@ -261,7 +263,8 @@
         "stepId": "step-3",
         "gridCols": 12,
         "validations": {
-          "required": false
+          "required": true,
+          "customErrorMessage": "درج نام ناظم مدرسه الزامی است."
         }
       },
       {
@@ -271,7 +274,8 @@
         "stepId": "step-3",
         "gridCols": 12,
         "validations": {
-          "required": false
+          "required": true,
+          "customErrorMessage": "درج نام مربی تربیتی الزامی است."
         }
       },
       {
@@ -593,7 +597,8 @@
         "stepId": "step-3",
         "gridCols": 12,
         "validations": {
-          "required": false
+          "required": true,
+          "customErrorMessage": "درج نام مشاور یا مشاوران سابق الزامی است."
         }
       },
       {
@@ -8882,7 +8887,9 @@
         "label": "وضعیت نظام وظیفه (کارت پایان خدمت یا معافیت دائم)",
         "stepId": "step-2",
         "gridCols": 6,
-        "validations": {}
+        "validations": {
+          "required": true
+        }
       },
       {
         "id": "f_resume_file",
@@ -9280,7 +9287,9 @@
         "label": "آدرس و توضیحات ارسال صورتحساب رسمی",
         "placeholder": "تهران، خیابان ولیعصر...",
         "gridCols": 12,
-        "validations": {}
+        "validations": {
+          "required": true
+        }
       }
     ],
     "rules": [],

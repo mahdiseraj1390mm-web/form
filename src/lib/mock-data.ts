@@ -130,7 +130,7 @@ export const initialForms: Form[] = [
         label: 'وضعیت نظام وظیفه (کارت پایان خدمت یا معافیت دائم)',
         stepId: 'step-2',
         gridCols: 6,
-        validations: {},
+        validations: { required: true },
       },
       {
         id: 'f_resume_file',
@@ -421,7 +421,7 @@ export const initialForms: Form[] = [
         label: 'آدرس و توضیحات ارسال صورتحساب رسمی',
         placeholder: 'تهران، خیابان ولیعصر...',
         gridCols: 12,
-        validations: {},
+        validations: { required: true },
       },
     ],
     rules: [],

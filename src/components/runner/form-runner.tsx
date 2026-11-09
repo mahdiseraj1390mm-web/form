@@ -1383,6 +1383,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     fieldsToValidate.forEach((f) => {
       if (!isFieldVisible(f.id)) return;
+      if (['alertBox', 'divider', 'spacer', 'htmlContent'].includes(f.type)) return;
 
       const val = formData[f.id];
 
@@ -3168,7 +3169,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="block text-xs sm:text-sm font-bold" style={{ color: theme?.labelColor || '#1e293b' }}>
                     {field.label}
-                    {field.validations.required && <span className="text-rose-500 mr-1">*</span>}
+                    {Boolean(field.validations?.required) && <span className="text-rose-500 mr-1">*</span>}
                   </label>
 
                   {field.type === 'nationalCode' && formData[field.id] && (
@@ -3254,7 +3255,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   <select
                     value={formData[field.id] || ''}
                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                    className="w-full px-3.5 py-2.5 sm:py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    className={`w-full px-3.5 py-2.5 sm:py-2 text-sm border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all ${hasError ? 'border-rose-400 focus:ring-rose-500' : 'border-slate-300 focus:ring-blue-600'}`}
                   >
                     <option value="">انتخاب کنید</option>
                     {(field.options || []).map((o) => (

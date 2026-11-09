@@ -169,3 +169,20 @@ pre {
     break-after: page !important;
   }
 }
+
+/* بهینه‌سازی ناوبری لمسی و اسکرول در دستگاه‌های موبایل */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+.bottom-nav-safe {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
