@@ -121,10 +121,10 @@ function DossierContent() {
     if (submissions.length === 0) return null;
 
     // ۱. جستجوی سابمیشن منطبق با کد پرونده، کد پیگیری یا شماره تماس
-    const activeSubs = submissions;
+    const activeSubs = submissions.filter((s) => !isUnassignedSafaSubmission(s));
     let matchSub = caseCodeParam
       ? submissions.find((s) => {
-          // allow all
+          if (isUnassignedSafaSubmission(s)) return false;
           const cCode = s.data?.caseCode || s.trackingCode || s.id;
           const mob = s.data?.f_mobile || s.data?.bk_mobile || s.mobile;
           const cleanParam = caseCodeParam.trim().toLowerCase();
