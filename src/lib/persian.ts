@@ -308,3 +308,94 @@ export function getTopItemSummary(
   const top = [...valid].sort((a, b) => b.value - a.value)[0];
   return `بیشترین: ${top.label} (${toPersianDigits(top.value)} ${defaultUnit})`;
 }
+
+
+/**
+ * تبدیل و اطمینان از درج تاریخ شمسی کامل در نوبت‌های مراجعه
+ * در صورتی که فقط نام روز (مانند «دوشنبه - ساعت ۱۹:۰۰ الی ۱۹:۴۵») درج شده باشد،
+ * تاریخ شمسی دقیق آن را با توجه به تاریخ ثبت فرم یا زمان مبنا محاسبه و درج می‌نماید
+ */
+export function normalizeAppointmentDateToJalali(
+  dateStr?: string | null,
+  referenceDateStr?: string | null
+): string {
+  if (!dateStr || typeof dateStr !== 'string') return 'ثبت‌نشده';
+  const cleanStr = dateStr.trim();
+  if (!cleanStr) return 'ثبت‌نشده';
+
+  const pMonths = [
+    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+  ];
+  const hasJalaliMonth = pMonths.some((m) => cleanStr.includes(m));
+
+  // بررسی وجود سال ۴ رقمی شمسی (مانند ۱۴۰۳، ۱۴۰۴، ۱۴۰۵)
+  const engDigits = toEnglishDigits(cleanStr);
+  const hasJalaliYearPattern = /(?:13|14)[0-9]{2}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}/.test(engDigits);
+
+  if (hasJalaliYearPattern || hasJalaliMonth) {
+    return toPersianDigits(cleanStr);
+  }
+
+  const weekDayDefs = [
+    { name: 'پنج‌شنبه', day: 4 },
+    { name: 'پنج شنبه', day: 4 },
+    { name: 'پنجشنبه', day: 4 },
+    { name: 'چهارشنبه', day: 3 },
+    { name: 'چهار شنبه', day: 3 },
+    { name: 'سه‌شنبه', day: 2 },
+    { name: 'سه شنبه', day: 2 },
+    { name: 'سهشنبه', day: 2 },
+    { name: 'یکشنبه', day: 0 },
+    { name: 'دوشنبه', day: 1 },
+    { name: 'شنبه', day: 6 },
+    { name: 'جمعه', day: 5 },
+  ];
+
+  let matchedDay = null;
+  for (const def of weekDayDefs) {
+    if (cleanStr.includes(def.name)) {
+      matchedDay = def;
+      break;
+    }
+  }
+
+  let baseDate = new Date();
+  if (referenceDateStr) {
+    try {
+      const sanitized = referenceDateStr.includes(' ') && !referenceDateStr.includes('T')
+        ? referenceDateStr.replace(' ', 'T')
+        : referenceDateStr;
+      const parsed = new Date(sanitized);
+      if (!isNaN(parsed.getTime())) baseDate = parsed;
+    } catch {}
+  }
+
+  const formatter = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
+  if (matchedDay) {
+    const baseDay = baseDate.getDay();
+    const diff = (matchedDay.day - baseDay + 7) % 7;
+    const targetDate = new Date(baseDate.getTime() + diff * 24 * 60 * 60 * 1000);
+    const shamsiDate = formatter.format(targetDate);
+
+    return toPersianDigits(cleanStr.replace(matchedDay.name, `${matchedDay.name} ${shamsiDate}`));
+  }
+
+  try {
+    const sanitized = cleanStr.includes(' ') && !cleanStr.includes('T') ? cleanStr.replace(' ', 'T') : cleanStr;
+    const parsedIso = new Date(sanitized);
+    if (!isNaN(parsedIso.getTime())) {
+      const shamsi = formatter.format(parsedIso);
+      const timeFmt = new Intl.DateTimeFormat('fa-IR', { hour: '2-digit', minute: '2-digit' }).format(parsedIso);
+      return toPersianDigits(`${shamsi} - ساعت ${timeFmt}`);
+    }
+  } catch {}
+
+  const fallbackShamsi = formatter.format(baseDate);
+  return toPersianDigits(`${fallbackShamsi} - ${cleanStr}`);
+}

@@ -65,6 +65,7 @@ import {
   formatClientAge,
   extractBirthYear,
   getCurrentJalaliYear,
+  normalizeAppointmentDateToJalali,
 } from '@/lib/persian';
 
 export interface ClientCaseGroup {
@@ -188,9 +189,11 @@ function extractRealAppointmentsFromSubmissions(submissions: FormSubmission[]): 
       (isBookingForm ? formatPersianDateTime(sub.createdAt) : null);
 
     if (bookingTime || isBookingForm) {
+      const rawDate = String(bookingTime || formatPersianDateTime(sub.createdAt));
+      const normalizedDate = normalizeAppointmentDateToJalali(rawDate, sub.createdAt);
       const app: Appointment = {
         id: sub.id || `app-${idx + 1}`,
-        date: String(bookingTime || formatPersianDateTime(sub.createdAt)),
+        date: normalizedDate,
         topic: String(
           data.f_counseling_subject ||
           data.f_topic ||
@@ -574,6 +577,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const fromSubs = extractRealAppointmentsFromSubmissions(currentSubmissions);
+    const refDate = clientCase.firstSubmissionDate || clientCase.latestDate;
 
     // بررسی ذخیره‌ساز محلی پرونده (برای گزارش‌های بالینی ثبت‌شده یا جلسات دستی افزوده شده توسط مدیر)
     if (typeof window !== 'undefined') {
@@ -588,7 +592,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               fromSubs.forEach((subApp) => {
                 if (!ids.has(subApp.id)) cleanSaved.push(subApp);
               });
-              return cleanSaved;
+              return cleanSaved.map((item) => ({
+                ...item,
+                date: normalizeAppointmentDateToJalali(item.date, refDate),
+              }));
             }
           }
         }
@@ -597,7 +604,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       }
     }
 
-    return fromSubs;
+    return fromSubs.map((item) => ({
+      ...item,
+      date: normalizeAppointmentDateToJalali(item.date, refDate),
+    }));
   });
 
   // مودال ثبت/ویرایش گزارش جلسه مشاوره
@@ -766,6 +776,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   // تفکیک و تعیین تاریخ اولین و آخرین نوبت مراجع
   const { firstAppointmentDate, lastAppointmentDate } = useMemo(() => {
+    const refDate = clientCase.firstSubmissionDate || clientCase.latestDate;
+
     if (appointments.length === 0) {
       return {
         firstAppointmentDate: 'فاقد نوبت ثبت‌شده',
@@ -774,10 +786,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     }
 
     if (appointments.length === 1) {
-      const singleDate = toPersianDigits(appointments[0].date);
+      const singleDate = normalizeAppointmentDateToJalali(appointments[0].date, refDate);
       return {
-        firstAppointmentDate: singleDate,
-        lastAppointmentDate: singleDate,
+        firstAppointmentDate: toPersianDigits(singleDate),
+        lastAppointmentDate: toPersianDigits(singleDate),
       };
     }
 
@@ -815,7 +827,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       return 0;
     };
 
-    const sorted = [...appointments].sort((a, b) => {
+    const normalizedAppointments = appointments.map((app) => ({
+      ...app,
+      date: normalizeAppointmentDateToJalali(app.date, refDate),
+    }));
+
+    const sorted = [...normalizedAppointments].sort((a, b) => {
       const wa = parseWeight(a.date);
       const wb = parseWeight(b.date);
       if (wa !== 0 && wb !== 0) return wa - wb;
@@ -826,10 +843,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     const latest = sorted[sorted.length - 1];
 
     return {
-      firstAppointmentDate: toPersianDigits(earliest.date),
-      lastAppointmentDate: toPersianDigits(latest.date),
+      firstAppointmentDate: toPersianDigits(normalizeAppointmentDateToJalali(earliest.date, refDate)),
+      lastAppointmentDate: toPersianDigits(normalizeAppointmentDateToJalali(latest.date, refDate)),
     };
-  }, [appointments]);
+  }, [appointments, clientCase.firstSubmissionDate, clientCase.latestDate]);
 
   // موضوعات اصلی مراجعه
   const mainConsultationTopics = useMemo(() => {
@@ -915,9 +932,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       return;
     }
 
+    const refDate = clientCase.latestDate || clientCase.firstSubmissionDate;
+    const normalizedDate = normalizeAppointmentDateToJalali(newAppointmentData.date.trim(), refDate);
+
     const newApp: Appointment = {
       id: `app-custom-${Date.now()}`,
-      date: newAppointmentData.date.trim(),
+      date: normalizedDate,
       topic: newAppointmentData.topic,
       counselor: newAppointmentData.counselor.trim() || 'مشاور مرکز بالحق',
       status: 'new',

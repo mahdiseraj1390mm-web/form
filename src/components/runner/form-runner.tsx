@@ -1904,12 +1904,28 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       evaluationResult,
       { deviceFingerprint, detectedSafaCode }
     );
+    const isBookingFormSub = form.id === 'form-belhagh-booking' || form.slug === '3uu4z';
+    let bookingDateData: Record<string, any> = {};
+    if (isBookingFormSub) {
+      try {
+        const bDetails = extractBookingDetails({ ...cleanFormData, caseCode: newCaseCode });
+        if (bDetails?.date) {
+          bookingDateData = {
+            f_booking_date: bDetails.date,
+            f_booking_datetime: `${bDetails.date} - ${bDetails.time}`,
+            f_booking_time: bDetails.time,
+          };
+        }
+      } catch (err) {}
+    }
+
     const finalSub: FormSubmission = {
       ...sub,
       id: isRegistrationForm ? ('sub-case-' + newCaseCode) : sub.id,
       trackingCode: newCaseCode,
       data: {
         ...sub.data,
+        ...bookingDateData,
         caseCode: newCaseCode,
       },
     };
