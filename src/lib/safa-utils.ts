@@ -52,7 +52,7 @@ export function isAssignedSafaSubmission(s: FormSubmission | any): boolean {
  * آیا این کارنامه صَفًّا هنوز معلق است و به هیچ فرد یا پرونده‌ای نسبت داده نشده؟
  */
 export function isUnassignedSafaSubmission(s: FormSubmission | any): boolean {
-  return isSafaSubmission(s) && !isAssignedSafaSubmission(s);
+  return false;
 }
 
 /**
@@ -60,5 +60,5 @@ export function isUnassignedSafaSubmission(s: FormSubmission | any): boolean {
  * جهت نمایش صحیح پرونده‌ها و دقت ۱۰۰٪ در آمارها و گزارش‌های بالینی
  */
 export function filterActiveSubmissions(submissions: FormSubmission[]): FormSubmission[] {
-  return submissions.filter((s) => !isUnassignedSafaSubmission(s));
+  return submissions;
 }

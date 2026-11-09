@@ -132,12 +132,10 @@ export const SubmissionsHub: React.FC = () => {
   // گروه‌بندی هوشمند پاسخ‌ها به پرونده‌های مراجعین
   // پرونده‌های صَفًّا تا وقتی که به کسی نسبت داده نشده‌اند در لیست پرونده‌ها نمایش داده نمی‌شوند
   const activeSubmissions = useMemo(() => {
-    return submissions.filter((s) => !isUnassignedSafaSubmission(s));
+    return submissions;
   }, [submissions]);
 
-  const unassignedSafaCount = useMemo(() => {
-    return submissions.filter(isUnassignedSafaSubmission).length;
-  }, [submissions]);
+  const unassignedSafaCount = 0;
 
 
   // بررسی انتساب کاربر جاری به عنوان مشاور
@@ -366,9 +364,7 @@ function normalizeSearchText(str: string): string {
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((s) => {
       // کارنامه‌های صَفًّا تا وقتی که به کسی نسبت داده نشده‌اند، در نمای کلی پاسخ‌ها نیز مگر در صورت انتخاب صریح فرم صَفًّا پنهان باشند
-      if (isUnassignedSafaSubmission(s) && selectedFormId !== 'form-safaan-assessment') {
-        return false;
-      }
+      // کلیه ارسالی‌های واقعی نمایش داده می‌شوند
       const matchesForm = selectedFormId === 'all' || s.formId === selectedFormId;
       const q = normalizeSearchText(searchQuery);
       if (!q) {

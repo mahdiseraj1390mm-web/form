@@ -130,10 +130,7 @@ function readLocalSubmissions(): FormSubmission[] {
   } catch (err) {
     console.warn('Error reading local submissions file:', err);
   }
-  return [...belhaghInitialSubmissions, ...safaanInitialSubmissions].map((s: any) => ({
-    ...s,
-    comments: Array.isArray(s.comments) ? s.comments : [],
-  }));
+  return [];
 }
 
 /**

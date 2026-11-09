@@ -8,10 +8,7 @@ import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
 import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
 
-export const allInitialSubmissions: FormSubmission[] = belhaghInitialSubmissions.map((s) => ({
-  ...s,
-  comments: Array.isArray(s.comments) ? s.comments : [],
-}));
+export const allInitialSubmissions: FormSubmission[] = [];
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 import { DEFAULT_INITIAL_TEAM_MEMBERS } from '@/lib/team-constants';
@@ -123,7 +120,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-11-06-mandatory-fields-v16';
+      const CACHE_VERSION = 'v-2026-11-09-real-data-only-v18';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');
@@ -192,27 +189,25 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
                 !s.id?.startsWith('sub-bh-') &&
                 !s.id?.startsWith('sub-qz-') &&
                 !s.id?.startsWith('sub-rc-') &&
-                !s.id?.startsWith('sub-ord-')
+                !s.id?.startsWith('sub-ord-') &&
+                !s.id?.startsWith('sub-case-100') &&
+                s.id !== 'sub-case-SP642819' &&
+                s.id !== 'sub-case-SP328786'
             );
-            const existingIds = new Set(cleanParsed.map((s: any) => s.id));
-            const merged = [...cleanParsed];
-            allInitialSubmissions.forEach((s) => {
-              if (!existingIds.has(s.id)) merged.push(s);
-            });
             setSubmissions(
-              merged.map((s: any) => ({
+              cleanParsed.map((s: any) => ({
                 ...s,
                 comments: Array.isArray(s.comments) ? s.comments : [],
               }))
             );
           } else {
-            setSubmissions(allInitialSubmissions);
+            setSubmissions([]);
           }
         } catch {
-          setSubmissions(allInitialSubmissions);
+          setSubmissions([]);
         }
       } else {
-        setSubmissions(allInitialSubmissions);
+        setSubmissions([]);
       }
       if (storedChat) setChatMessages(JSON.parse(storedChat));
       if (storedLogs) setWebhookLogs(JSON.parse(storedLogs));
@@ -242,8 +237,18 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         .then((res) => res.json())
         .then((data) => {
           if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
+            const cleanSubs = data.submissions.filter(
+              (s: any) =>
+                !s.id?.startsWith('sub-bh-') &&
+                !s.id?.startsWith('sub-qz-') &&
+                !s.id?.startsWith('sub-rc-') &&
+                !s.id?.startsWith('sub-ord-') &&
+                !s.id?.startsWith('sub-case-100') &&
+                s.id !== 'sub-case-SP642819' &&
+                s.id !== 'sub-case-SP328786'
+            );
             setSubmissions(
-              data.submissions.map((s: any) => ({
+              cleanSubs.map((s: any) => ({
                 ...s,
                 comments: Array.isArray(s.comments) ? s.comments : [],
               }))
@@ -853,8 +858,18 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         ...s,
         comments: Array.isArray(s.comments) ? s.comments : [],
       }));
+      const cleanSubmissions = dbSubmissions.filter(
+        (s: any) =>
+          !s.id?.startsWith('sub-bh-') &&
+          !s.id?.startsWith('sub-qz-') &&
+          !s.id?.startsWith('sub-rc-') &&
+          !s.id?.startsWith('sub-ord-') &&
+          !s.id?.startsWith('sub-case-100') &&
+          s.id !== 'sub-case-SP642819' &&
+          s.id !== 'sub-case-SP328786'
+      );
       if (formId === 'all' || !formId) {
-        setSubmissions(dbSubmissions);
+        setSubmissions(cleanSubmissions);
         return;
       }
       setSubmissions((prev) => {
@@ -863,11 +878,14 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
             !s.id.startsWith('sub-bh-') &&
             !s.id.startsWith('sub-qz-') &&
             !s.id.startsWith('sub-rc-') &&
-            !s.id.startsWith('sub-ord-')
+            !s.id.startsWith('sub-ord-') &&
+            !s.id.startsWith('sub-case-100') &&
+            s.id !== 'sub-case-SP642819' &&
+            s.id !== 'sub-case-SP328786'
         );
         const existingIds = new Set(cleanPrev.map((s) => s.id));
         const merged = [...cleanPrev];
-        dbSubmissions.forEach((s) => {
+        cleanSubmissions.forEach((s) => {
           if (!existingIds.has(s.id)) {
             merged.push(s);
           } else {
