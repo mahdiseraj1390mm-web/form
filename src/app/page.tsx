@@ -84,54 +84,46 @@ export default function AppHome() {
   );
   const userAllowedTabs = currentUser?.allowedTabs;
 
-  // گزینه‌های نوار ناوبری اختصاصی پایینی در نمایش موبایل
+  // گزینه‌های نوار ناوبری اختصاصی پایینی در نمایش موبایل (مطابق ترتیب بالا به پایین نوار کناری، از راست به چپ)
   const mobileNavItems = useMemo(() => {
-    const items: Array<{ id: string; label: string; icon: any }> = [];
-
-    // ۱. نوبت‌ها و مشاوران
-    if (isSuperAdmin || userAllowedTabs?.includes('consultants')) {
-      items.push({
-        id: 'consultants',
-        label: 'نوبت‌ها و مشاور',
-        icon: CalendarClock,
-      });
-    }
-
-    // ۲. پرونده مراجعان
-    if (isSuperAdmin || userAllowedTabs?.includes('submissions') || (!userAllowedTabs && !isSuperAdmin)) {
-      items.push({
-        id: 'submissions',
-        label: 'پرونده مراجعان',
-        icon: Inbox,
-      });
-    }
-
-    // ۳. داشبورد مدیریت (در صورت مجاز بودن)
-    if (isSuperAdmin || userAllowedTabs?.includes('dashboard')) {
-      items.push({
+    const candidateItems: Array<{ id: string; label: string; icon: typeof LayoutDashboard }> = [
+      {
         id: 'dashboard',
         label: 'داشبورد',
         icon: LayoutDashboard,
-      });
-    }
-
-    // ۴. طراحی فرم (برای ادمین‌ها)
-    if (isSuperAdmin || userAllowedTabs?.includes('builder')) {
-      items.push({
+      },
+      {
+        id: 'submissions',
+        label: 'پرونده مراجعان',
+        icon: Inbox,
+      },
+      {
         id: 'builder',
         label: 'طراحی فرم',
         icon: PenTool,
-      });
-    }
+      },
+      {
+        id: 'consultants',
+        label: 'نوبت‌ها و مشاور',
+        icon: CalendarClock,
+      },
+    ];
 
-    // ۵. دکمه منوی کشویی جانبی
-    items.push({
-      id: '__menu__',
-      label: 'منو',
-      icon: Menu,
+    const hasCustomTabs = Array.isArray(userAllowedTabs) && userAllowedTabs.length > 0;
+    const allowedItems = candidateItems.filter((item) => {
+      if (isSuperAdmin) return true;
+      if (hasCustomTabs) return userAllowedTabs.includes(item.id);
+      return item.id === 'submissions';
     });
 
-    return items;
+    return [
+      ...allowedItems,
+      {
+        id: '__menu__',
+        label: 'منو',
+        icon: Menu,
+      },
+    ];
   }, [isSuperAdmin, userAllowedTabs]);
 
   // انتخاب خودکار اولین تب مجاز برای کاربر
