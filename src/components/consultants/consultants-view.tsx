@@ -78,7 +78,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
   const [selectedConsultantId, setSelectedConsultantId] = useState<string>('');
   
   // وضعیت‌های ناوبری در نمای مشاور
-  const [consultantTab, setConsultantTab] = useState<'timeline' | 'clients'>('timeline');
+  const [consultantTab] = useState<'timeline' | 'clients'>('clients');
   const [activeDayIndex, setActiveDayIndex] = useState<number>(0);
   const [timelineMode, setTimelineMode] = useState<'day' | 'week'>('day');
   const [isSelfScheduleModalOpen, setIsSelfScheduleModalOpen] = useState(false);
@@ -862,49 +862,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           </div>
         </div>
 
-        {/* سوییچر دو تب اصلی مشاور: تایم‌لاین هفتگی و پرونده‌های مراجعین */}
-        <div className="grid grid-cols-2 gap-2 border-b border-slate-200 pb-3 sm:flex sm:items-center">
-          <button
-            type="button"
-            onClick={() => setConsultantTab('timeline')}
-            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${
-              consultantTab === 'timeline'
-                ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/20'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            <CalendarClock className="w-4 h-4 shrink-0" />
-            <span>تایم‌لاین نوبت‌ها</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                consultantTab === 'timeline' ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {toPersianDigits(activeConsultantBookings.length)}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setConsultantTab('clients')}
-            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer ${
-              consultantTab === 'clients'
-                ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-500/20'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            <Users className="w-4 h-4 shrink-0" />
-            <span>پرونده مراجعین من</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                consultantTab === 'clients' ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {toPersianDigits(activeConsultantBookings.length)}
-            </span>
-          </button>
-        </div>
-
+        {/* تب تایم‌لاین نوبت‌ها و نوار تب بالای پنل مشاور فعلاً پنهان شده است؛ منطق و بک‌اند تایم‌لاین برای نسخه‌های آتی حفظ شده است */}
         {/* محتوای تب فعال مشاور */}
         {consultantTab === 'timeline' ? (
           renderWeeklyTimelineContent()
