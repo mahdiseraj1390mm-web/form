@@ -7,6 +7,7 @@ import { ClientCaseGroup, Appointment } from './client-dossier-fullview';
 import { SvgRadarChart } from '@/components/analytics/radar-chart';
 import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '@/components/analytics/point-line-chart';
+import { ScrollableTabCarousel } from '@/components/ui/scrollable-tab-carousel';
 import {
   toPersianDigits,
   toEnglishDigits,
@@ -930,8 +931,11 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       </div>
 
       {/* نوار فیلتر و ناوبری داخلی تب آمار */}
-      <div className="flex items-center gap-1.5 overflow-x-auto p-1.5 bg-slate-200/70 rounded-2xl">
-        {[
+      <ScrollableTabCarousel
+        variant="pills"
+        activeId={activeFilter}
+        onChange={(id) => setActiveFilter(id as AnalysisFilter)}
+        items={[
           { id: 'all', label: 'همه آمارها', icon: Layers },
           { id: 'growth', label: 'آمار رشد و پیشرفت', icon: TrendingUp },
           { id: 'appointments', label: 'اخذ نوبت و استمرار', icon: Calendar },
@@ -939,23 +943,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
           { id: 'marital', label: 'رضایت زوجین و خانواده', icon: HeartHandshake },
           { id: 'personality', label: 'تحلیل شخصیتی', icon: Compass },
           { id: 'disorders', label: 'غربالگری اختلالات', icon: AlertTriangle },
-        ].map((f) => {
-          const IconComp = f.icon;
-          const isActive = activeFilter === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id as AnalysisFilter)}
-              className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                isActive ? 'bg-[#173f6b] text-white shadow-xs' : 'text-slate-600 hover:bg-white/80'
-              }`}
-            >
-              <IconComp className="size-3.5" />
-              <span>{f.label}</span>
-            </button>
-          );
-        })}
-      </div>
+        ]}
+      />
 
       {/* ========================================================= */}
       {/* بخش شاخص‌های هویتی، تحلیل بالینی پرونده و خط زمان جلسات */}

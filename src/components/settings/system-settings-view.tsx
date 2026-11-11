@@ -38,6 +38,7 @@ import {
 import { WebhookTester } from './webhook-tester';
 import { PortalSettingsTab } from './portal-settings-tab';
 import { SmsSettingsTab } from './sms-settings-tab';
+import { ScrollableTabCarousel } from '@/components/ui/scrollable-tab-carousel';
 import { useForm } from '@/context/form-context';
 import { TeamMember, TeamRole } from '@/types/advanced';
 import { InviteMemberModal } from '@/components/team/invite-member-modal';
@@ -178,33 +179,20 @@ export const SystemSettingsView: React.FC = () => {
         </p>
 
         {/* منوی تب‌های تنظیمات */}
-        <div className="flex items-center gap-2 mt-6 border-b border-slate-100 pb-0 text-xs font-semibold overflow-x-auto">
-          {[
+        <ScrollableTabCarousel
+          variant="underline"
+          className="mt-6"
+          activeId={activeTab}
+          onChange={(id) => setActiveTab(id as any)}
+          items={[
             { id: 'general', label: 'اطلاعات سازمان', icon: Building2 },
             { id: 'portal', label: 'صفحه ورود (پورتال پرونده)', icon: LogIn },
             { id: 'sms', label: 'سامانه پیامک', icon: Smartphone },
             { id: 'payment', label: 'درگاه‌های شاپرک', icon: CreditCard },
             { id: 'api', label: 'وب‌هوک و API', icon: Webhook },
             { id: 'team', label: 'مشاوران', icon: Users },
-          ].map((t) => {
-            const Icon = t.icon;
-            const isActive = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setActiveTab(t.id as any)}
-                className={`flex items-center gap-2 py-3 px-3 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'border-blue-600 text-blue-600 font-bold'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
+          ]}
+        />
       </div>
 
       {/* محتوای تب فعال */}

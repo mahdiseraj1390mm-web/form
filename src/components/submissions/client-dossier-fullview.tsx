@@ -54,6 +54,7 @@ import { VerticalBarChart } from '../analytics/vertical-bar-chart';
 import { PointLineChart } from '../analytics/point-line-chart';
 import { ClientStatisticalAnalysisTab } from './client-statistical-analysis-tab';
 import { PrintableClientDossier } from './printable-client-dossier';
+import { ScrollableTabCarousel } from '@/components/ui/scrollable-tab-carousel';
 import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
   formatPersianDateTime,
@@ -1539,33 +1540,24 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         </div>
 
 
-        {/* نوار زبانه‌های ناوبری ۶ گانه (اسکرول افقی روان در موبایل و شبکه ۶ ستونه در دسکتاپ) */}
-        <nav className="flex md:grid md:grid-cols-6 overflow-x-auto no-scrollbar gap-2 sm:gap-3 w-full p-1.5 sm:p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm min-h-[50px] sm:min-h-[58px] select-none">
-          {[
-            ['overview', 'تحلیل در یک نگاه'],
-            ['analytics', 'تحلیل‌های آماری'],
-            ['profile', 'مشخصات ثبت‌نام'],
-            ['forms', 'فرم‌ها و آزمون‌ها'],
-            ['followups', 'پیگیری‌ها و درج لاگ'],
-            ['finances', 'مالی و نوبت‌ها'],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => {
-                setCurrentView('dossier');
-                setActiveTab(key as any);
-              }}
-              className={`h-10 sm:h-12 shrink-0 md:w-full rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center text-center whitespace-nowrap cursor-pointer px-3.5 sm:px-2 ${
-                (currentView === 'dossier' && activeTab === key) ||
-                (currentView === 'formReport' && key === 'forms')
-                  ? 'bg-[#173f6b] text-white shadow-sm ring-1 ring-[#173f6b]'
-                  : 'text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+        {/* نوار تب‌های ناوبری ۶ گانه: تب فعال در مرکز، تب‌های قبلی و بعدی فید در دو طرف + فلش‌ها و اسکرول */}
+        <ScrollableTabCarousel
+          variant="dossier"
+          desktopGridClassName="lg:grid lg:grid-cols-6 lg:gap-3"
+          activeId={currentView === 'formReport' ? 'forms' : activeTab}
+          onChange={(key) => {
+            setCurrentView('dossier');
+            setActiveTab(key as any);
+          }}
+          items={[
+            { id: 'overview', label: 'تحلیل در یک نگاه' },
+            { id: 'analytics', label: 'تحلیل‌های آماری' },
+            { id: 'profile', label: 'مشخصات ثبت‌نام' },
+            { id: 'forms', label: 'فرم‌ها و آزمون‌ها' },
+            { id: 'followups', label: 'پیگیری‌ها و درج لاگ' },
+            { id: 'finances', label: 'مالی و نوبت‌ها' },
+          ]}
+        />
 
         {/* ۱. تب تحلیل در یک نگاه (Overview Tab) */}
         {currentView === 'dossier' && activeTab === 'overview' && (

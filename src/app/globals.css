@@ -188,6 +188,30 @@ pre {
   scrollbar-color: #334155 transparent;
 }
 
+.visible-tab-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+
+.visible-tab-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  display: block;
+}
+
+.visible-tab-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 9999px;
+}
+
+.visible-tab-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 9999px;
+}
+
+.visible-tab-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
