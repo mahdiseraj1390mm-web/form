@@ -1746,7 +1746,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-4">
                   <div className="flex items-center gap-1.5 text-slate-500 text-[11px] mb-2 font-bold">
                     <BadgeCheck className="size-4 text-purple-600 shrink-0" />
-                    <span>مشاوره با کدام مشاوران داشته:</span>
+                    <span>سابقه مشاوره با کدام مشاوران را داشته است:</span>
                   </div>
                   {consultantsAttended.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
