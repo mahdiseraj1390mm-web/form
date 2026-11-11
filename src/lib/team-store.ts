@@ -4,11 +4,19 @@ import { TeamMember } from '@/types/advanced';
 import { 
   AVAILABLE_SIDEBAR_TABS, 
   DEFAULT_INITIAL_TEAM_MEMBERS, 
-  normalizeMobileNumber 
+  normalizeMobileNumber,
+  buildSuperAdminSessionUser,
+  buildMemberSessionUser,
 } from '@/lib/team-constants';
 import { sql } from '@/lib/db';
 
-export { AVAILABLE_SIDEBAR_TABS, DEFAULT_INITIAL_TEAM_MEMBERS, normalizeMobileNumber };
+export {
+  AVAILABLE_SIDEBAR_TABS,
+  DEFAULT_INITIAL_TEAM_MEMBERS,
+  normalizeMobileNumber,
+  buildSuperAdminSessionUser,
+  buildMemberSessionUser,
+};
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const TEAM_MEMBERS_FILE = path.join(DATA_DIR, 'team_members.json');
@@ -120,6 +128,7 @@ export async function getTeamMembersFromDb(): Promise<TeamMember[]> {
         ...m,
         allowedTabs: Array.isArray(m.allowedTabs) ? m.allowedTabs : ['submissions'],
         requireCaseCode: m.requireCaseCode !== undefined ? m.requireCaseCode : true,
+        canEditWorkingHours: m.canEditWorkingHours === true,
       }));
       // ذخیره در PostgreSQL در پس‌زمینه
       saveTeamMembersToPostgres(mapped).catch(() => {});
@@ -144,7 +153,10 @@ export async function getTeamMembersFromDb(): Promise<TeamMember[]> {
  * ذخیره اعضای تیم در دیتابیس و فایل محلی به صورت همزمان
  */
 export async function saveTeamMembersToDb(members: TeamMember[]): Promise<void> {
-  const cleanMembers = filterOutLegacyTestMembers(members);
+  const cleanMembers = filterOutLegacyTestMembers(members).map((m) => ({
+    ...m,
+    canEditWorkingHours: m.canEditWorkingHours === true,
+  }));
 
   // ۱. ذخیره بی‌درنگ در فایل پایدار سرور
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -205,4 +217,48 @@ export async function findTeamMemberByCredentials(
   });
 
   return matched || null;
+}
+
+export type SessionActor =
+  | { type: 'admin' }
+  | { type: 'member'; member: TeamMember };
+
+/**
+ * استخراج هویت کاربر احراز هویت شده از مقدار کوکی نشست
+ */
+export async function resolveSessionActor(cookieValue?: string): Promise<SessionActor | null> {
+  if (!cookieValue || cookieValue.length <= 5) return null;
+
+  try {
+    let raw = cookieValue;
+    if (raw.includes('%')) {
+      try {
+        raw = decodeURIComponent(raw);
+      } catch {
+        // در صورت خطا از همان مقدار خام استفاده می‌شود
+      }
+    }
+
+    const decoded = Buffer.from(raw, 'base64').toString('utf8');
+
+    if (decoded.startsWith('admin:')) {
+      return { type: 'admin' };
+    }
+
+    if (decoded.startsWith('member:')) {
+      const parts = decoded.split(':');
+      const memberId = parts[1];
+      if (memberId) {
+        const members = await getTeamMembersFromDb();
+        const member = members.find((m) => m.id === memberId);
+        if (member && member.status === 'active') {
+          return { type: 'member', member };
+        }
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }

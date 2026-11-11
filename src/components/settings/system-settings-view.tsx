@@ -626,7 +626,20 @@ export const SystemSettingsView: React.FC = () => {
                           ))}
                         </div>
 
-                        <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {!isSuper && (
+                            member.canEditWorkingHours === true ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-bold">
+                                <Clock className="w-3 h-3 text-blue-600" />
+                                <span>تغییر ساعت کاری: مجاز برای مشاور</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold">
+                                <Lock className="w-3 h-3 text-slate-500" />
+                                <span>تغییر ساعت کاری: قفل (فقط ادمین)</span>
+                              </span>
+                            )
+                          )}
                           {hasCaseCodeRestriction ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
                               <ShieldAlert className="w-3 h-3 text-amber-600" />

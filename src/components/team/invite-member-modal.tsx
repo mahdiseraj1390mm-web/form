@@ -107,6 +107,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const [status, setStatus] = useState<'active' | 'suspended'>('active');
   const [allowedTabs, setAllowedTabs] = useState<string[]>(['submissions', 'consultants']);
   const [requireCaseCode, setRequireCaseCode] = useState(true);
+  const [canEditWorkingHours, setCanEditWorkingHours] = useState(false);
   const [consultantId, setConsultantId] = useState('');
   const [allowedTopics, setAllowedTopics] = useState<string[]>([]);
   const [customTopicInput, setCustomTopicInput] = useState('');
@@ -154,6 +155,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         ? editingMember.clientDossierAccess === 'restricted'
         : (editingMember.requireCaseCode !== undefined ? editingMember.requireCaseCode : true);
       setRequireCaseCode(isRestricted);
+      setCanEditWorkingHours(editingMember.canEditWorkingHours === true);
       setConsultantId(editingMember.consultantId || '');
 
       const topicMap: Record<string, string> = {
@@ -195,6 +197,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       setStatus('active');
       setAllowedTabs(['submissions', 'consultants']);
       setRequireCaseCode(true);
+      setCanEditWorkingHours(false);
       setConsultantId('');
       setAllowedTopics(['بالینی']);
       setSlotDurationMinutes(45);
@@ -502,6 +505,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       allowedTabs,
       requireCaseCode,
       clientDossierAccess: requireCaseCode ? 'restricted' : 'unrestricted',
+      canEditWorkingHours,
       consultantId: consultantId.trim() || undefined,
       allowedTopics: allowedTopics.length > 0 ? allowedTopics : undefined,
       workingHours: workingHoursData,
@@ -760,12 +764,69 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                 </div>
               </div>
 
-              {/* ۳. دسترسی به تب‌های نوار کناری سامانه */}
+              {/* ۳. دسترسی تغییر ساعت کاری توسط مشاور */}
+              <div className="p-4 bg-gradient-to-r from-slate-50 via-emerald-50/30 to-teal-50/40 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-700" />
+                    <span className="font-extrabold text-slate-800 text-xs sm:text-sm">۳. دسترسی تغییر ساعت کاری</span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                      canEditWorkingHours
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    {canEditWorkingHours ? 'مجاز برای مشاور' : 'غیرمجاز (پیش‌فرض)'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setCanEditWorkingHours(false)}
+                    className={`p-3 rounded-xl border text-right transition-all cursor-pointer ${
+                      !canEditWorkingHours
+                        ? 'border-slate-700 bg-white ring-2 ring-slate-400/30 shadow-2xs'
+                        : 'border-slate-200 bg-white/70 hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3.5 h-3.5 rounded-full border-2 ${!canEditWorkingHours ? 'border-slate-800 bg-slate-800' : 'border-slate-300'}`} />
+                      <span className="font-extrabold text-xs text-slate-900">فقط ادمین (پیش‌فرض)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1.5 leading-relaxed">
+                      مشاور امکان تغییر ساعت کاری خود را ندارد و فقط ادمین می‌تواند آن را تنظیم کند.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCanEditWorkingHours(true)}
+                    className={`p-3 rounded-xl border text-right transition-all cursor-pointer ${
+                      canEditWorkingHours
+                        ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-400/30'
+                        : 'border-slate-200 bg-white/70 hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3.5 h-3.5 rounded-full border-2 ${canEditWorkingHours ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'}`} />
+                      <span className="font-extrabold text-xs text-emerald-950">اجازه ویرایش به مشاور</span>
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1.5 leading-relaxed">
+                      مشاور می‌تواند از پنل اختصاصی خود روزها و ساعات کاری‌اش را تغییر دهد.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* ۴. دسترسی به تب‌های نوار کناری سامانه */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                    <span className="font-extrabold text-slate-800 text-xs sm:text-sm">۳. دسترسی به تب‌های نوار کناری</span>
+                    <span className="font-extrabold text-slate-800 text-xs sm:text-sm">۴. دسترسی به تب‌های نوار کناری</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button

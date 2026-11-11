@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findTeamMemberByCredentials, AVAILABLE_SIDEBAR_TABS } from '@/lib/team-store';
+import {
+  findTeamMemberByCredentials,
+  buildSuperAdminSessionUser,
+  buildMemberSessionUser,
+} from '@/lib/team-store';
 
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'belhagh@12345';
@@ -19,32 +23,25 @@ export async function POST(req: NextRequest) {
 
     const cleanUsername = String(username).trim();
     const cleanPassword = String(password).trim();
+    const isHttps =
+      req.nextUrl.protocol === 'https:' ||
+      req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() === 'https';
 
     // ۱. بررسی لاگین مدیر کل (Super Admin)
     if (cleanUsername === ADMIN_USERNAME && cleanPassword === ADMIN_PASSWORD) {
       const token = Buffer.from(`${ADMIN_USERNAME}:${Date.now()}:belhagh_secret_token`).toString('base64');
       const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24;
 
-      const allTabs = AVAILABLE_SIDEBAR_TABS.map((t) => t.id);
-
       const response = NextResponse.json({
         success: true,
-        user: {
-          id: 'admin',
-          username: ADMIN_USERNAME,
-          name: 'مدیر ارشد سامانه',
-          role: 'super_admin',
-          isSuperAdmin: true,
-          allowedTabs: allTabs,
-          requireCaseCode: false,
-        },
+        user: buildSuperAdminSessionUser(),
       });
 
       response.cookies.set({
         name: AUTH_COOKIE_NAME,
         value: token,
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isHttps,
         sameSite: 'lax',
         path: '/',
         maxAge,
@@ -67,33 +64,16 @@ export async function POST(req: NextRequest) {
       const token = Buffer.from(`member:${member.id}:${Date.now()}:belhagh_secret_token`).toString('base64');
       const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24;
 
-      const userAllowedTabs = Array.isArray(member.allowedTabs) && member.allowedTabs.length > 0
-        ? member.allowedTabs
-        : ['submissions'];
-
       const response = NextResponse.json({
         success: true,
-        user: {
-          id: member.id,
-          username: member.mobile || member.username,
-          name: member.name,
-          mobile: member.mobile,
-          role: member.role || 'member',
-          jobTitle: member.jobTitle,
-          isSuperAdmin: false,
-          allowedTabs: userAllowedTabs,
-          requireCaseCode: member.requireCaseCode !== undefined ? member.requireCaseCode : true,
-          consultantId: member.consultantId,
-          assignedConsultantIds: member.assignedConsultantIds || (member.consultantId ? [member.consultantId] : []),
-          allowedTopics: member.allowedTopics || [],
-        },
+        user: buildMemberSessionUser(member),
       });
 
       response.cookies.set({
         name: AUTH_COOKIE_NAME,
         value: token,
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isHttps,
         sameSite: 'lax',
         path: '/',
         maxAge,

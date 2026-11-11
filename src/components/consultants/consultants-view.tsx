@@ -115,6 +115,12 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
     );
   }, [currentUser, teamMembers]);
 
+  const canEditOwnWorkingHours = isSuperAdmin || (
+    currentMember
+      ? currentMember.canEditWorkingHours === true
+      : currentUser?.canEditWorkingHours === true
+  );
+
   const currentConsultantProfile = useMemo<ConsultantProfile>(() => {
     if (currentMember) {
       return matchMemberToConsultant(currentMember);
@@ -851,14 +857,16 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsSelfScheduleModalOpen(true)}
-              className="col-span-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs rounded-2xl shadow-sm hover:from-emerald-700 hover:to-teal-800 transition flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"
-            >
-              <Clock className="w-4 h-4" />
-              <span>تنظیم و ویرایش ساعات کاری من</span>
-            </button>
+            {canEditOwnWorkingHours && (
+              <button
+                type="button"
+                onClick={() => setIsSelfScheduleModalOpen(true)}
+                className="col-span-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs rounded-2xl shadow-sm hover:from-emerald-700 hover:to-teal-800 transition flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"
+              >
+                <Clock className="w-4 h-4" />
+                <span>تنظیم و ویرایش ساعات کاری من</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1108,23 +1116,25 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           />
         )}
 
-        {/* مودال ویرایش ساعات کاری مشاور جاری */}
-        <ConsultantScheduleModal
-          isOpen={isSelfScheduleModalOpen}
-          onClose={() => setIsSelfScheduleModalOpen(false)}
-          title="تنظیم و ویرایش ساعات کاری من"
-          description={`تنظیم روزهای حضور، شیفت‌ها و مدت جلسات - ${currentConsultantProfile.name}`}
-          initialSchedule={currentMember?.workingHours}
-          topics={currentMember?.allowedTopics}
-          onSave={(newSchedule) => {
-            if (currentMember) {
-              updateTeamMember(currentMember.id, { 
-                workingHours: newSchedule,
-                topicWorkingHours: newSchedule.topicSchedules 
-              });
-            }
-          }}
-        />
+        {/* مودال ویرایش ساعات کاری مشاور جاری (فقط با مجوز ادمین) */}
+        {canEditOwnWorkingHours && (
+          <ConsultantScheduleModal
+            isOpen={canEditOwnWorkingHours && isSelfScheduleModalOpen}
+            onClose={() => setIsSelfScheduleModalOpen(false)}
+            title="تنظیم و ویرایش ساعات کاری من"
+            description={`تنظیم روزهای حضور، شیفت‌ها و مدت جلسات - ${currentConsultantProfile.name}`}
+            initialSchedule={currentMember?.workingHours}
+            topics={currentMember?.allowedTopics}
+            onSave={(newSchedule) => {
+              if (canEditOwnWorkingHours && currentMember) {
+                updateTeamMember(currentMember.id, { 
+                  workingHours: newSchedule,
+                  topicWorkingHours: newSchedule.topicSchedules 
+                });
+              }
+            }}
+          />
+        )}
 
       </div>
     );

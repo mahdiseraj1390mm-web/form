@@ -29,6 +29,7 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     accessibleFormIds: ['all'],
     allowedTabs: ['dashboard', 'submissions', 'consultants'],
     requireCaseCode: false,
+    canEditWorkingHours: false,
     consultantId: 'f_booking_borhani',
     assignedConsultantIds: ['f_booking_borhani_teen', 'f_booking_borhani_family'],
     allowedTopics: ['نوجوان', 'خانواده'],
@@ -83,6 +84,7 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     accessibleFormIds: ['all'],
     allowedTabs: ['dashboard', 'submissions', 'consultants'],
     requireCaseCode: true,
+    canEditWorkingHours: false,
     consultantId: 'f_booking_farahmandi',
     assignedConsultantIds: ['f_booking_farahmandi'],
     allowedTopics: ['کودک'],
@@ -135,6 +137,7 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     accessibleFormIds: ['all'],
     allowedTabs: ['dashboard', 'submissions', 'consultants'],
     requireCaseCode: false,
+    canEditWorkingHours: false,
     consultantId: 'f_booking_shavandi',
     assignedConsultantIds: ['f_booking_shavandi_child', 'f_booking_shavandi_teen'],
     allowedTopics: ['کودک', 'نوجوان'],
@@ -187,6 +190,7 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     accessibleFormIds: ['all'],
     allowedTabs: ['dashboard', 'submissions', 'consultants'],
     requireCaseCode: true,
+    canEditWorkingHours: false,
     consultantId: 'f_booking_teymourian',
     assignedConsultantIds: ['f_booking_teymourian'],
     allowedTopics: ['کودک'],
@@ -241,6 +245,7 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     accessibleFormIds: ['all'],
     allowedTabs: ['dashboard', 'submissions', 'consultants'],
     requireCaseCode: false,
+    canEditWorkingHours: false,
     consultantId: 'f_booking_torshizi',
     assignedConsultantIds: ['f_booking_torshizi'],
     allowedTopics: ['بالینی', 'فردی'],
@@ -279,6 +284,43 @@ export const DEFAULT_INITIAL_TEAM_MEMBERS: TeamMember[] = [
     },
   },
 ];
+
+export function buildSuperAdminSessionUser() {
+  return {
+    id: 'admin',
+    username: 'admin',
+    name: 'مدیر ارشد سامانه',
+    role: 'super_admin',
+    isSuperAdmin: true,
+    allowedTabs: AVAILABLE_SIDEBAR_TABS.map((t) => t.id),
+    requireCaseCode: false,
+    canEditWorkingHours: true,
+  };
+}
+
+export function buildMemberSessionUser(member: TeamMember) {
+  const userAllowedTabs =
+    Array.isArray(member.allowedTabs) && member.allowedTabs.length > 0
+      ? member.allowedTabs
+      : ['submissions'];
+
+  return {
+    id: member.id,
+    username: member.mobile || member.username || '',
+    name: member.name,
+    mobile: member.mobile,
+    role: member.role || 'member',
+    jobTitle: member.jobTitle,
+    isSuperAdmin: false,
+    allowedTabs: userAllowedTabs,
+    requireCaseCode: member.requireCaseCode !== undefined ? member.requireCaseCode : true,
+    canEditWorkingHours: member.canEditWorkingHours === true,
+    consultantId: member.consultantId,
+    assignedConsultantIds:
+      member.assignedConsultantIds || (member.consultantId ? [member.consultantId] : []),
+    allowedTopics: member.allowedTopics || [],
+  };
+}
 
 export function normalizeMobileNumber(phone: string): string {
   if (!phone) return '';

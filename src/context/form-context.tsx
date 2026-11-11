@@ -919,7 +919,23 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teamMembers: members }),
-    }).catch((err) => console.warn('Error saving team to server:', err));
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const refreshRes = await fetch(`/api/team?_nocache=${Date.now()}`, { cache: 'no-store' });
+          const refreshData = await refreshRes.json();
+          if (refreshData?.teamMembers && Array.isArray(refreshData.teamMembers) && refreshData.teamMembers.length > 0) {
+            const clean = refreshData.teamMembers.filter(
+              (m: TeamMember) => m.id !== 'user-booking-op' && m.id !== 'user-reviewer' && m.id !== 'user-admin'
+            );
+            setTeamMembers(clean);
+            try {
+              localStorage.setItem('formafzar_team_members', JSON.stringify(clean));
+            } catch {}
+          }
+        }
+      })
+      .catch((err) => console.warn('Error saving team to server:', err));
   };
 
   const inviteTeamMember = (member: Omit<TeamMember, 'id' | 'invitedAt'>): TeamMember => {
