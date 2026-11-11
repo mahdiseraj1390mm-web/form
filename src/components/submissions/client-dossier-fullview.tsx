@@ -948,8 +948,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     setNewAppointmentData({ date: '', topic: 'خانواده و ازدواج', counselor: '' });
   };
 
+  const isSessionReportComplete =
+    Boolean(reportForm.reviewed.trim()) &&
+    Boolean(reportForm.challenges.trim()) &&
+    Boolean(selectedAppointmentStatus);
+
   const submitReport = () => {
-    if (!editing) return;
+    if (!editing || !isSessionReportComplete) return;
     const catPrefix = selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}] ` : '';
     const fullRecommendation = `${catPrefix}${reportForm.recommendation.trim()}`;
 
@@ -989,7 +994,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             selectedAppointmentStatus === 'optimal' ? 'وضعیت مطلوب' :
             selectedAppointmentStatus === 'regressing' ? 'عقب گرد' :
             selectedAppointmentStatus === 'needs_followup' ? 'نیازمند پیگیری' : 'در انتظار ارزیابی'
-          }${selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''} | توصیه: ${reportForm.recommendation.trim()}`
+          }${selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''}${reportForm.recommendation.trim() ? ` | توصیه: ${reportForm.recommendation.trim()}` : ''}`
         );
       }
     }
@@ -4153,9 +4158,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
                     <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۱</span>
-                    موارد بررسی‌شده در جلسه
+                    موارد بررسی‌شده در جلسه <span className="text-rose-500">*</span>
                   </span>
                   <textarea
+                    required
                     value={reportForm.reviewed}
                     onChange={(e) => setReportForm((old) => ({ ...old, reviewed: e.target.value }))}
                     placeholder="مباحث، شرح‌حال و سرفصل‌های گفت‌وگو شده در جلسه..."
@@ -4168,9 +4174,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
                     <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۲</span>
-                    معضلات و چالش‌های مراجع
+                    معضلات و چالش‌های مراجع <span className="text-rose-500">*</span>
                   </span>
                   <textarea
+                    required
                     value={reportForm.challenges}
                     onChange={(e) => setReportForm((old) => ({ ...old, challenges: e.target.value }))}
                     placeholder="مشکلات رفتاری، خانوادگی، روحی یا تحصیلی تشخیص داده‌شده..."
@@ -4183,7 +4190,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <div className="pt-2 border-t border-slate-100 space-y-2">
                   <span className="flex items-center gap-2 text-xs font-black text-slate-700">
                     <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۳</span>
-                    تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه:
+                    تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه: <span className="text-rose-500">*</span>
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
@@ -4238,13 +4245,15 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               )}
 
+              {!isSessionReportComplete && (
+                <p className="mt-4 text-[11px] font-bold text-rose-600 text-center">
+                  تکمیل موارد ۱، ۲ و انتخاب وضعیت در مورد ۳ برای ثبت گزارش الزامی است.
+                </p>
+              )}
+
               <button
                 onClick={submitReport}
-                disabled={
-                  !reportForm.reviewed.trim() ||
-                  !reportForm.challenges.trim() ||
-                  !reportForm.recommendation.trim()
-                }
+                disabled={!isSessionReportComplete}
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#173f6b] px-5 py-4 text-sm font-black text-white transition hover:bg-[#0f3155] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
               >
                 <Check className="size-4" />

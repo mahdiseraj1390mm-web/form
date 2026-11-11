@@ -191,7 +191,13 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
 
   if (!isOpen || !booking) return null;
 
+  const isRequiredFieldsComplete =
+    Boolean(reportForm.reviewed.trim()) &&
+    Boolean(reportForm.challenges.trim()) &&
+    Boolean(selectedAppointmentStatus);
+
   const handleSubmitReport = () => {
+    if (!isRequiredFieldsComplete) return;
     const catPrefix = selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}] ` : '';
     const fullRecommendation = `${catPrefix}${reportForm.recommendation.trim()}`;
     const caseIdentifier = getClientCaseIdentifier(booking);
@@ -288,7 +294,7 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
         'مشاور ارشد پرونده',
         `🤝 ثبت گزارش جلسه مشاوره (${booking.topic} - ${displayDateTime.split('،')[0]}): وضعیت بالینی: ${statusLabel}${
           selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''
-        } | توصیه: ${reportForm.recommendation.trim()}`
+        }${reportForm.recommendation.trim() ? ` | توصیه: ${reportForm.recommendation.trim()}` : ''}`
       );
     }
 
@@ -468,9 +474,10 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                 <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">
                   ۱
                 </span>
-                موارد بررسی‌شده در جلسه
+                موارد بررسی‌شده در جلسه <span className="text-rose-500">*</span>
               </span>
               <textarea
+                required
                 value={reportForm.reviewed}
                 onChange={(e) => setReportForm((old) => ({ ...old, reviewed: e.target.value }))}
                 placeholder="مباحث، شرح‌حال و سرفصل‌های گفت‌وگو شده در جلسه..."
@@ -485,9 +492,10 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                 <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">
                   ۲
                 </span>
-                معضلات و چالش‌های مراجع
+                معضلات و چالش‌های مراجع <span className="text-rose-500">*</span>
               </span>
               <textarea
+                required
                 value={reportForm.challenges}
                 onChange={(e) => setReportForm((old) => ({ ...old, challenges: e.target.value }))}
                 placeholder="مشکلات رفتاری، خانوادگی، روحی یا تحصیلی تشخیص داده‌شده..."
@@ -502,7 +510,7 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                 <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">
                   ۳
                 </span>
-                تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه:
+                تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه: <span className="text-rose-500">*</span>
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {CLINICAL_STATUSES.map((st) => {
@@ -554,15 +562,17 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
             </div>
           )}
 
+          {!isRequiredFieldsComplete && (
+            <p className="mt-4 text-[11px] font-bold text-rose-600 text-center">
+              تکمیل موارد ۱، ۲ و انتخاب وضعیت در مورد ۳ برای ثبت گزارش الزامی است.
+            </p>
+          )}
+
           {/* دکمه ارسال و ذخیره */}
           <button
             type="button"
             onClick={handleSubmitReport}
-            disabled={
-              !reportForm.reviewed.trim() ||
-              !reportForm.challenges.trim() ||
-              !reportForm.recommendation.trim()
-            }
+            disabled={!isRequiredFieldsComplete}
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#173f6b] px-5 py-4 text-sm font-black text-white transition hover:bg-[#0f3155] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer shadow-md"
           >
             <Check className="size-4" />
