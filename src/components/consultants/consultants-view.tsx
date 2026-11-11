@@ -1006,7 +1006,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
                                 >
                                   <FileText className="w-3.5 h-3.5" />
-                                  <span>مشاهده پرونده کامل</span>
+                                  <span>مشاهده پرونده</span>
                                 </button>
                               </div>
                             </td>
@@ -1083,7 +1083,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                             className="py-2.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                           >
                             <FileText className="w-3.5 h-3.5" />
-                            <span>پرونده کامل</span>
+                            <span>مشاهده پرونده</span>
                           </button>
                         </div>
                       </div>
