@@ -179,6 +179,15 @@ pre {
   scrollbar-width: none;
 }
 
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: #334155 transparent;
+}
+
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }

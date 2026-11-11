@@ -501,7 +501,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [activeSubmissions]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-7 pb-20 sm:pb-12 space-y-6 bg-slate-50 overscroll-contain">
+    <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 sm:p-7 pb-20 sm:pb-12 space-y-6 bg-slate-50 overscroll-contain">
       
       {/* سربرگ داشبورد مدیریت */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs">
@@ -592,7 +592,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* پایش پیشرفت مرکز بالحق: نمودار نقطه و خط برای نشان دادن پیشرفت در مراجعات و نوبت‌ها */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+      <div className="min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
@@ -609,7 +609,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* تب سوییچر شاخص پیشرفت */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold self-start sm:self-auto max-w-full">
             <button
               onClick={() => setProgressMetric('bookings')}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
@@ -658,9 +658,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* ۲-الف. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        <div className="min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-violet-600" />
                 <div>
@@ -684,16 +684,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             />
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
             <span>محورهای تجویزی اساتید</span>
             <span className="font-bold text-violet-700">{getTopItemSummary(topRecommendedTopicsData, 'توصیه')}</span>
           </div>
         </div>
 
         {/* ۲-ب. باکس بیشترین موضوعات مراجعه به مشاوران */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        <div className="min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Compass className="w-5 h-5 text-sky-600" />
                 <div>
@@ -717,16 +717,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             />
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
             <span>۵ حوزه تقاضای مراجعان</span>
             <span className="font-bold text-sky-700">{getTopItemSummary(topReferralTopicsData, 'مراجعه')}</span>
           </div>
         </div>
 
         {/* ۴. باکس بیشترین نوبت‌ها از مشاوران (از کدام مشاوران بیشترین نوبت ها دریافت شده) */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        <div className="min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-emerald-600" />
                 <div>
@@ -750,7 +750,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             />
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
             <span>اساتید مشاور برتر بالحق</span>
             <button
               onClick={() => onNavigateTab('submissions')}
@@ -768,7 +768,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* ۱. باکس آخرین فعالیت‌ها (ثبت پرونده، نوبت‌ها، پرسش‌نامه‌ها - حفظ محرمانگی نام) */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
+        <div className="lg:col-span-6 min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
               <div className="flex items-center gap-2">
@@ -779,7 +779,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
 
               {/* فیلتر تب رویدادها */}
-              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-[11px] font-bold">
+              <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-[11px] font-bold max-w-full">
                 {[
                   { id: 'all', label: 'همه' },
                   { id: 'cases', label: 'ثبت پرونده' },
@@ -845,9 +845,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* ۵. باکس بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی) */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
+        <div className="lg:col-span-6 min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Award className="w-5 h-5 text-amber-600" />
                 <div>
@@ -871,7 +871,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             />
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
             <span>مراجعین با بیشترین حجم نوبت‌های مشاوره</span>
             <button
               onClick={() => onNavigateTab('submissions')}

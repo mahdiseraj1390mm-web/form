@@ -789,7 +789,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
   const eqSemColor = getSemanticColorByPercentage(caseEquilibriumIndex);
 
   return (
-    <div className="space-y-6 animate-in fade-in pb-12 text-slate-800" dir="rtl">
+    <div className="space-y-6 animate-in fade-in pb-12 text-slate-800 min-w-0" dir="rtl">
       {/* سربرگ تب تحلیل‌های آماری */}
       <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 gap-4">
         <div>
@@ -960,7 +960,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* ========================================================= */}
       {/* بخش شاخص‌های هویتی، تحلیل بالینی پرونده و خط زمان جلسات */}
       {/* ========================================================= */}
-      <section className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-7 shadow-sm space-y-6">
+      <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-7 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-2xl bg-[#173f6b] text-white flex items-center justify-center shadow-xs">
@@ -1012,7 +1012,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
         {/* وضعیت بالینی پرونده و خط زمان جلسات */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* کارت وضعیت بالینی پرونده */}
-          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col justify-between space-y-4">
+          <div className="min-w-0 p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col justify-between space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-black text-slate-900">وضعیت بالینی پرونده مراجع</h4>
@@ -1058,7 +1058,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
           </div>
 
           {/* نمودار خط زمان جلسات مراجع */}
-          <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+          <div className="min-w-0 p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-black text-slate-900">روند جلسات در خط زمان (نمودار نقطه خط)</h4>
@@ -1135,8 +1135,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* بخش اول: آمار رشد و مراحل تحول فردی مراجع */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'growth') && (
-        <section className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="size-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
                 <TrendingUp className="size-5" />
@@ -1155,7 +1155,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
 
           <div className="grid gap-6 lg:grid-cols-12">
             {/* کارت مرحله تحول مراجع */}
-            <div className="lg:col-span-5 bg-gradient-to-br from-slate-50 to-emerald-50/50 rounded-2xl p-5 border border-slate-200/90 flex flex-col space-y-4 shadow-2xs">
+            <div className="lg:col-span-5 min-w-0 bg-gradient-to-br from-slate-50 to-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-slate-200/90 flex flex-col space-y-4 shadow-2xs">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-500">مرحله کنونی رشد مراجع</span>
@@ -1207,7 +1207,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
                   </span>
                 </div>
 
-                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
                   {growthStats.stages.map((st) => (
                     <div
                       key={st.step}
@@ -1278,7 +1278,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
             </div>
 
             {/* ارکان و شکاف رشد */}
-            <div className="lg:col-span-7 space-y-4">
+            <div className="lg:col-span-7 min-w-0 space-y-4">
               <h4 className="text-xs font-black text-slate-700">ارکان سه‌گانه سنجش رشد بالحق (مقایسه میله‌ای عمودی):</h4>
               <VerticalBarChart
                 data={[
@@ -1321,7 +1321,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
                   {growthStats.priorities.map((item, idx) => (
                     <div
                       key={item.code}
-                      className="flex items-center justify-between text-xs bg-white/90 p-2.5 rounded-xl border border-amber-100"
+                      className="flex flex-wrap items-center justify-between gap-2 text-xs bg-white/90 p-2.5 rounded-xl border border-amber-100"
                     >
                       <div className="flex items-center gap-2">
                         <span className="size-5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black flex items-center justify-center font-mono">
@@ -1346,8 +1346,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* بخش دوم: اخذ نوبت و مراجعه به مشاوران مختلف */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'appointments') && (
-        <section className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="size-9 rounded-xl bg-blue-50 text-[#173f6b] flex items-center justify-center">
                 <CalendarCheck className="size-5" />
@@ -1402,7 +1402,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
           </div>
 
           {/* پایش روند استمرار و پیشرفت جلسات مشاوره مراجع: نمودار نقطه و خط پیشرفت */}
-          <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3">
+          <div className="min-w-0 bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-3">
             <PointLineChart
               data={sessionProgressData}
               unit="٪"
@@ -1497,8 +1497,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* بخش سوم: وضعیت سلامت جسمی، سلامت روان و مصرف دارو */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'health') && (
-        <section className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="size-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
                 <HeartPulse className="size-5" />
@@ -1659,8 +1659,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* بخش چهارم: رضایت زوجین و پویایی خانواده */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'marital') && (
-        <section className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="size-9 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center">
                 <HeartHandshake className="size-5" />
@@ -1684,7 +1684,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
 
           <div className="grid gap-6 lg:grid-cols-12">
             {/* کارت شاخص اصلی رضایت زوجین */}
-            <div className="lg:col-span-5 bg-gradient-to-br from-pink-50/40 via-white to-rose-50/30 rounded-2xl p-5 border border-pink-100 flex flex-col justify-between">
+            <div className="lg:col-span-5 min-w-0 bg-gradient-to-br from-pink-50/40 via-white to-rose-50/30 rounded-2xl p-4 sm:p-5 border border-pink-100 flex flex-col justify-between">
               <div>
                 <span className="text-xs font-bold text-pink-800">
                   {maritalStats.isMarried ? 'شاخص ترکیبی رضایت و هماهنگی زناشویی' : 'شاخص بلوغ ارتباطی و آمادگی ازدواج'}
@@ -1721,7 +1721,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
             </div>
 
             {/* مؤلفه‌های تفکیکی مرتبط با زوجین (نمودار میله‌ای عمودی مقایسه ابعاد ارتباطی) */}
-            <div className="lg:col-span-7 space-y-4">
+            <div className="lg:col-span-7 min-w-0 space-y-4">
               <h4 className="text-xs font-black text-slate-700">مؤلفه‌های ۵گانه سازگاری و ارتباط عاطفی (مقایسه میله‌ای عمودی):</h4>
               <VerticalBarChart
                 data={[
@@ -1746,8 +1746,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* بخش پنجم: تحلیل شخصیتی چندبعدی */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'personality') && (
-        <section className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="size-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                 <Compass className="size-5" />
@@ -1766,16 +1766,16 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
 
           <div className="grid gap-6 lg:grid-cols-12 items-center">
             {/* نمودار رادار شخصیتی */}
-            <div className="lg:col-span-6 bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex flex-col items-center justify-center">
+            <div className="lg:col-span-6 min-w-0 w-full bg-slate-50/70 rounded-2xl p-4 border border-slate-100 flex flex-col items-center justify-center">
               <span className="text-xs font-bold text-slate-600 mb-2">نمودار چندضلعی ابعاد شخصیت (رادار ۱۶ مؤلفه)</span>
-              <div className="w-full max-w-[420px]">
+              <div className="w-full min-w-0 max-w-[520px]">
                 <SvgRadarChart items={radarComponents} size={420} primaryColor="#173f6b" />
               </div>
               <span className="text-[10px] text-slate-400 mt-1">حرکت ماوس بر روی نقاط جهت مشاهده امتیاز هر مؤلفه</span>
             </div>
 
             {/* ابعاد ۵گانه شخصیت و نقاط قوت */}
-            <div className="lg:col-span-6 space-y-5">
+            <div className="lg:col-span-6 min-w-0 space-y-5">
               <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
                 <span className="text-[11px] font-bold text-indigo-900 block mb-1">الگوی رفتاری و شخصیتی غالب:</span>
                 <p className="text-xs font-black text-indigo-950 leading-6">
@@ -1830,8 +1830,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* بخش ششم: غربالگری اختلالات و ریسک‌های بالینی */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'disorders') && (
-        <section className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="size-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                 <AlertTriangle className="size-5" />
@@ -1871,7 +1871,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
           </div>
 
           {/* مقایسه شاخص‌های ریسک ۶گانه در نمودار میله‌ای عمودی */}
-          <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200">
+          <div className="min-w-0 bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200">
             <VerticalBarChart
               data={disorderScreeningStats.items.map((item) => {
                 const score = item.risk === 'high' ? 85 : item.risk === 'medium' ? 50 : 15;

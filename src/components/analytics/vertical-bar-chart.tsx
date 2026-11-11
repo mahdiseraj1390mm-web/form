@@ -51,12 +51,15 @@ export const VerticalBarChart: React.FC<VerticalBarChartProps> = ({
   const rawMax = Math.max(...data.map((d) => d.value), 1);
   const maxValue = maxScale !== undefined ? maxScale : rawMax;
   const isScrollNeeded = scrollable || data.length > 7;
+  const minChartWidth = isScrollNeeded
+    ? Math.max(520, data.length * 68)
+    : Math.max(240, data.length * 56 + 24);
 
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full min-w-0 space-y-3">
       {(title || subtitle || badgeText || unit) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-1.5">
-          <div>
+          <div className="min-w-0">
             {title && (
               <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">
                 {title}
@@ -64,7 +67,7 @@ export const VerticalBarChart: React.FC<VerticalBarChartProps> = ({
             )}
             {subtitle && <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {badgeText && (
               <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                 {badgeText}
@@ -79,16 +82,14 @@ export const VerticalBarChart: React.FC<VerticalBarChartProps> = ({
         </div>
       )}
 
-      {/* کانتینر اسکرول در صورت زیاد بودن تعداد میله‌ها */}
-      <div className={isScrollNeeded ? 'w-full overflow-x-auto pb-2 custom-scrollbar' : 'w-full'}>
+      {/* کانتینر اسکرول افقی اختصاصی نمودار (در موبایل یا هنگام زیاد بودن تعداد میله‌ها فقط خود نمودار اسکرول می‌خورد) */}
+      <div className="w-full max-w-full min-w-0 overflow-x-auto pb-2 custom-scrollbar">
         <div
-          className={`w-full flex items-end justify-between gap-2 sm:gap-3.5 pt-8 pb-3 px-2 sm:px-4 bg-slate-50/70 rounded-2xl border border-slate-100/90 relative ${
-            isScrollNeeded ? 'min-w-[520px]' : ''
-          }`}
-          style={{ minHeight: `${height}px` }}
+          className="w-full flex items-end justify-between gap-2 sm:gap-3.5 pt-14 pb-3 px-2 sm:px-4 bg-slate-50/70 rounded-2xl border border-slate-100/90 relative"
+          style={{ minHeight: `${height}px`, minWidth: `${minChartWidth}px` }}
         >
           {/* خطوط کمکی مقیاس پس‌زمینه (۲۵٪، ۵۰٪، ۷۵٪، ۱۰۰٪) */}
-          <div className="absolute inset-x-0 bottom-12 top-7 pointer-events-none flex flex-col justify-between px-3 opacity-30">
+          <div className="absolute inset-x-0 bottom-12 top-12 pointer-events-none flex flex-col justify-between px-3 opacity-30">
             <div className="border-b border-dashed border-slate-300 w-full" />
             <div className="border-b border-dashed border-slate-300 w-full" />
             <div className="border-b border-dashed border-slate-300 w-full" />
@@ -105,7 +106,7 @@ export const VerticalBarChart: React.FC<VerticalBarChartProps> = ({
             return (
               <div
                 key={item.id || idx}
-                className="flex-1 flex flex-col items-center justify-end h-full min-w-[38px] group relative cursor-pointer z-10"
+                className="flex-1 min-w-0 flex flex-col items-center justify-end h-full group relative cursor-pointer z-10"
                 onMouseEnter={() => setHoveredIdx(idx)}
                 onMouseLeave={() => setHoveredIdx(null)}
               >
@@ -144,7 +145,7 @@ export const VerticalBarChart: React.FC<VerticalBarChartProps> = ({
                 {/* عنوان و برچسب زیر میله */}
                 {/* کادر شناور راهنما (Tooltip) - دقیقاً هنگام مکث موس زیر/بالای ستون ظاهر می‌شود و هنگام خروج ناپدید می‌گردد */}
                 {isHovered && (
-                  <div className="absolute -top-14 z-30 pointer-events-none bg-slate-900/95 text-white text-[11px] py-1.5 px-3 rounded-xl shadow-xl border border-slate-700/80 whitespace-nowrap flex flex-col items-center animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute -top-12 z-30 pointer-events-none bg-slate-900/95 text-white text-[11px] py-1.5 px-3 rounded-xl shadow-xl border border-slate-700/80 whitespace-nowrap flex flex-col items-center animate-in fade-in zoom-in-95 duration-100">
                     <span className="font-bold">{item.label}</span>
                     <span className="font-mono font-black text-amber-300">
                       {toPersianDigits(item.value)} {unit} {item.percentage !== undefined ? `(${toPersianDigits(item.percentage)}٪)` : ''}
@@ -173,7 +174,6 @@ export const VerticalBarChart: React.FC<VerticalBarChartProps> = ({
           })}
         </div>
       </div>
-
-      </div>
+    </div>
   );
 };

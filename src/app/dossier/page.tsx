@@ -214,7 +214,7 @@ function DossierContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f5f7fa]">
       <ClientDossierFullview clientCase={targetCase} onClose={() => router.push('/')} />
     </div>
   );

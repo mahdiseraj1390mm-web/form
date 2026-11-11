@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { EvaluationComponentScore } from '@/types/form';
 import { toPersianDigits } from '@/lib/persian';
 
@@ -16,6 +16,15 @@ export const SvgRadarChart: React.FC<SvgRadarChartProps> = ({
   primaryColor = '#0284c7',
 }) => {
   const [hoveredItem, setHoveredItem] = useState<EvaluationComponentScore | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (el.scrollWidth > el.clientWidth) {
+      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+    }
+  }, [items.length, size]);
 
   if (!items || items.length < 3) {
     return (
@@ -26,7 +35,17 @@ export const SvgRadarChart: React.FC<SvgRadarChartProps> = ({
   }
 
   const center = size / 2;
-  const radius = 175;
+  const radius = Math.round(size * 0.336);
+  const labelOffset = Math.round(size * 0.06);
+  const padX = radius + Math.max(185, Math.round(size * 0.36));
+  const padY = radius + Math.max(62, Math.round(size * 0.13));
+  const vbX = center - padX;
+  const vbY = center - padY;
+  const vbW = padX * 2;
+  const vbH = padY * 2;
+  const labelFontSize = size < 460 ? 9 : 10;
+  const labelHoverFontSize = size < 460 ? 10.5 : 11.5;
+
   const count = items.length;
   const angleStep = (Math.PI * 2) / count;
 
@@ -59,7 +78,7 @@ export const SvgRadarChart: React.FC<SvgRadarChartProps> = ({
     polygonPoints.push(`${vx.toFixed(1)},${vy.toFixed(1)}`);
 
     // موقعیت برچسب
-    const labelR = radius + 32;
+    const labelR = radius + labelOffset;
     const lx = center + Math.cos(angle) * labelR;
     const ly = center + Math.sin(angle) * labelR;
 
@@ -73,12 +92,17 @@ export const SvgRadarChart: React.FC<SvgRadarChartProps> = ({
   const polygonStr = polygonPoints.join(' ');
 
   return (
-    <div className="relative w-full max-w-[560px] mx-auto select-none">
-      <svg
-        viewBox="-40 -35 600 590"
-        className="w-full h-auto drop-shadow-xs"
-        style={{ overflow: 'visible' }}
+    <div className="relative w-full min-w-0 max-w-[600px] mx-auto select-none">
+      <div
+        ref={scrollRef}
+        dir="ltr"
+        className="w-full max-w-full overflow-x-auto pb-2 custom-scrollbar"
       >
+        <div className="w-full min-w-[500px] sm:min-w-0" dir="rtl">
+          <svg
+            viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
+            className="w-full h-auto drop-shadow-xs block"
+          >
         <defs>
           <radialGradient id="radarFillGrad" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={primaryColor} stopOpacity="0.4" />
@@ -168,7 +192,7 @@ export const SvgRadarChart: React.FC<SvgRadarChartProps> = ({
                 x={lbl.x}
                 y={lbl.y + 4}
                 textAnchor={lbl.textAnchor}
-                fontSize={isHovered ? '11.5' : '10'}
+                fontSize={isHovered ? labelHoverFontSize : labelFontSize}
                 fontWeight={isHovered ? '800' : '600'}
                 fontFamily="var(--font-vazirmatn), Vazirmatn, sans-serif"
                 fill={isHovered ? '#0284c7' : '#334155'}
@@ -179,11 +203,16 @@ export const SvgRadarChart: React.FC<SvgRadarChartProps> = ({
             </g>
           );
         })}
-      </svg>
+          </svg>
+        </div>
+      </div>
 
       {/* تول‌تیپ تعاملی شناور روی هاور */}
       {hoveredItem && (
-        <div className="absolute top-2 left-2 z-10 bg-slate-900/95 text-white px-3 py-2 rounded-xl text-xs shadow-lg backdrop-blur-xs border border-slate-700 max-w-xs animate-in fade-in zoom-in-95 pointer-events-none">
+        <div
+          dir="rtl"
+          className="absolute top-2 left-2 z-10 bg-slate-900/95 text-white px-3 py-2 rounded-xl text-xs shadow-lg backdrop-blur-xs border border-slate-700 max-w-xs animate-in fade-in zoom-in-95 pointer-events-none"
+        >
           <div className="flex items-center justify-between gap-3 font-bold border-b border-slate-800 pb-1 mb-1">
             <span>مؤلفه {toPersianDigits(hoveredItem.code)}: {hoveredItem.title}</span>
             <span className="text-sky-400 font-mono">نمره: {toPersianDigits(hoveredItem.score)}</span>

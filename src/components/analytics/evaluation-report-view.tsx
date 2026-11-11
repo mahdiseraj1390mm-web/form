@@ -41,7 +41,7 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
   const faithComponent = evaluation.componentScores.find((c) => c.code === 17);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* کارت‌های شاخص‌های کلیدی (KPIs) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* میانگین کل */}
@@ -125,7 +125,7 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
       {/* بخش اصلی: مقایسه مؤلفه‌های ارزیابی (میله‌ای عمودی، نقطه و خط، رادار) و اولویت‌های رشد */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* نمودار مؤلفه‌های فردی با قابلیت انتخاب نوع نمودار */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        <div className="lg:col-span-7 min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-2">
               <span className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
@@ -134,7 +134,7 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
               </span>
 
               {/* سوییچر نوع نمایش نمودار */}
-              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-xs font-bold">
+              <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-xs font-bold max-w-full">
                 <button
                   onClick={() => setComponentChartType('bar')}
                   className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
@@ -212,7 +212,7 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
               )}
 
               {componentChartType === 'radar' && (
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center w-full min-w-0">
                   <SvgRadarChart items={radarComponents} />
                 </div>
               )}
@@ -225,7 +225,7 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
         </div>
 
         {/* ۳ اولویت نخست رشد (Growth Priorities) */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+        <div className="lg:col-span-5 min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <span className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
@@ -270,7 +270,7 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
                       key={item.code}
                       className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs"
                     >
-                      <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                         <div className="flex items-center gap-2">
                           <span className={`w-5 h-5 rounded-md ${itemColor.dotBg} text-white text-[11px] font-black flex items-center justify-center shrink-0`}>
                             {toPersianDigits(idx + 1)}

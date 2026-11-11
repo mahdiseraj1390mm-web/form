@@ -1401,7 +1401,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   }, [appointments]);
 
   return (
-    <div id="printable-dossier-wrapper" className="fixed inset-0 z-50 overflow-y-scroll bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
+    <div id="printable-dossier-wrapper" className="fixed inset-0 z-50 overflow-y-scroll overflow-x-hidden bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
       {/* سند جامع رسمی چاپی پرونده - تمام فیلدها، سوابق و آمارها به تفکیک و زیر هم */}
       <PrintableClientDossier
         clientCase={clientCase}
@@ -1413,7 +1413,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       />
 
       {/* رابط کاربری تعاملی صفحه مانیتور - هنگام پرینت کاملاً پنهان می‌شود */}
-      <div className="flex flex-col min-h-screen print:hidden print-hidden-in-dossier">
+      <div className="flex flex-col min-h-screen min-w-0 print:hidden print-hidden-in-dossier">
       {/* سربرگ ناوبری سراسری برند بالحق */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur shadow-2xs">
         <div className="mx-auto flex w-full items-center justify-between gap-6 px-4 sm:px-8 lg:px-12 py-3.5">
@@ -1457,7 +1457,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       </header>
 
       {/* محدوده اصلی محتوای پرونده جامع */}
-      <div className="w-full px-4 sm:px-8 lg:px-12 py-6 space-y-6">
+      <div className="w-full min-w-0 px-3 sm:px-8 lg:px-12 py-6 space-y-6">
         {/* نوار مسیر ناوبری، عنوان پرونده و دکمه‌های اقدام */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1789,7 +1789,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             {/* گرید سه‌گانه بالای صفحه: توصیه‌ها، نوبت‌ها، مدرسه معارفی */}
             <div className="grid gap-4 xl:grid-cols-3">
               {/* کارت ۱: آخرین توصیه‌های مشاور */}
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="mb-5 flex items-center gap-3">
                     <div className="grid size-10 place-items-center rounded-xl bg-violet-50 text-violet-600">
@@ -1827,7 +1827,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </article>
 
               {/* کارت ۲: نوبت‌ها و جلسات مشاوره */}
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -1902,7 +1902,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </article>
 
               {/* کارت ۳: ارجاعات و پیگیری‌ها */}
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -1954,8 +1954,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
             {/* گرید میانی: نتایج واقعی آزمون‌ها و آمار پرونده */}
             <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="mb-5 flex items-center justify-between">
+              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3">
                     <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
                       <BarChart3 className="size-5" />
@@ -2115,7 +2115,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               </article>
 
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
                 <h3 className="text-sm font-black text-slate-900">آمار پرونده</h3>
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <Stat
@@ -2178,7 +2178,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </div>
 
               {/* نوار روند پیشرفت وضعیت بالینی */}
-              <div className="grid grid-cols-4 gap-2 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                 {[
                   { id: 'regressing', label: 'عقب گرد', color: 'bg-rose-500', light: 'bg-rose-50 border-rose-200 text-rose-800' },
                   { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'bg-amber-500', light: 'bg-amber-50 border-amber-200 text-amber-800' },
@@ -2981,8 +2981,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         {currentView === 'formReport' && selectedSubmission && (
           <div className="space-y-6 animate-in fade-in">
             {/* نوار بالای گزارش: بازگشت به لیست فرم‌ها + عنوان و متاداده */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => {
                     setCurrentView('dossier');
@@ -3089,7 +3089,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 return (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     {/* ۱. نمودار حلقه‌ای درصد تکمیل داده‌ها */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center text-center">
+                    <div className="min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center text-center">
                       <span className="text-xs font-extrabold text-slate-600 mb-4 flex items-center gap-2">
                         <Activity className="w-4 h-4 text-[#173f6b]" />
                         <span>نرخ تکمیل فیلدها و پاسخگویی</span>
@@ -3131,7 +3131,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     </div>
 
                     {/* ۲. نمودارهای میله‌ای ابعاد و شاخص‌های کیفی فرم با رنگ‌بندی ۴ گانه معنایی */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs lg:col-span-2 flex flex-col justify-between space-y-4">
+                    <div className="min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs lg:col-span-2 flex flex-col justify-between space-y-4">
                       <div>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-3 gap-2">
                           <span className="text-xs font-extrabold text-slate-900 flex items-center gap-2">

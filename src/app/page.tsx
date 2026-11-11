@@ -212,7 +212,7 @@ export default function AppHome() {
       />
 
       {/* بوم اصلی نرم‌افزار */}
-      <div className="flex-1 min-h-0 flex overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex overflow-hidden">
         
         {/* منوی کناری ثابت و کشویی موبایل */}
         <Sidebar 
@@ -223,7 +223,7 @@ export default function AppHome() {
         />
 
         {/* محتوای تب فعال */}
-        <main className="flex-1 min-h-0 flex flex-col overflow-hidden bottom-nav-safe md:pb-0">
+        <main className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden bottom-nav-safe md:pb-0">
           {currentTab === 'dashboard' && isTabAllowed('dashboard') && (
             <DashboardView
               onOpenNewFormModal={() => setIsNewFormModalOpen(true)}
