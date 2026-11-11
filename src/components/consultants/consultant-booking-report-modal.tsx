@@ -355,16 +355,13 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                   <p className="text-[11px] text-amber-800/80">راهکارها، تمرین‌ها و پروتکل تجویزی جلسه</p>
                 </div>
               </div>
-              <span className="rounded-full bg-amber-200/90 px-2.5 py-0.5 text-[10px] font-black text-amber-900 border border-amber-300">
-                بخش هایلایت بالینی
-              </span>
             </div>
 
             {/* منوی کشویی / کرکره‌ای انتخاب سرفصل بالینی */}
             <div className="relative">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-                  <span>سرفصل بالینی توصیه (انتخاب کشویی / کرکره‌ای):</span>
+                  <span>سرفصل بالینی توصیه:</span>
                 </span>
                 {selectedClinicalCategory && (
                   <button
@@ -398,13 +395,13 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                     </span>
                   ) : (
                     <span className="text-slate-500 font-medium truncate">
-                      جهت انتخاب سرفصل بالینی کلیک کنید (منوی کشویی / کرکره‌ای)...
+                      جهت انتخاب سرفصل بالینی کلیک کنید...
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 text-amber-800 mr-2">
                   <span className="text-[11px] font-bold hidden sm:inline">
-                    {isClinicalCategoryOpen ? 'بستن منو' : 'باز کردن گزینه‌ها (کشویی)'}
+                    {isClinicalCategoryOpen ? 'بستن منو' : 'باز کردن گزینه‌ها'}
                   </span>
                   <ChevronDown
                     className={`size-4 transition-transform duration-300 ${

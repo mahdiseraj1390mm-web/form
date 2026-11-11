@@ -602,9 +602,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <h2 className="text-sm font-extrabold text-slate-900">
                 پایش روند پیشرفت پذیرش پرونده‌ها و استمرار جلسات بالحق
               </h2>
-              <span className="text-[11px] text-slate-400">
-                نمودار نقطه و خط پیشرفت در طول ماه‌ها با قابلیت تفکیک نوبت‌ها، پرونده‌ها و نرخ پایداری
-              </span>
             </div>
           </div>
 
@@ -650,7 +647,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           lineColor={progressMetric === 'attendance' ? '#8b5cf6' : progressMetric === 'cases' ? '#059669' : '#0284c7'}
           showPoints={true}
           showValues={true}
-          badgeText="نمودار نقطه و خط پیشرفت زمانی"
+          badgeText=""
         />
       </div>
 
@@ -857,9 +854,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-[11px] text-slate-400">کد پرونده مراجعینی که بیشترین نوبت را دریافت کرده‌اند</span>
                 </div>
               </div>
-              <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold border border-amber-100 shrink-0">
-                نمودار میله‌ای عمودی
-              </span>
             </div>
 
             <VerticalBarChart
