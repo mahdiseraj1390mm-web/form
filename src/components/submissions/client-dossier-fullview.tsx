@@ -5,6 +5,7 @@ import { Form, FormSubmission, SubmissionStatus, FormField } from '@/types/form'
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import { isSuperAdminUser } from '@/lib/team-constants';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
 import {
   X,
   Printer,
@@ -3851,9 +3852,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-400 font-bold">استاد مشاور پرونده:</span>
-                  <div className="size-8 rounded-xl bg-indigo-50 text-indigo-700 grid place-items-center">
-                    <User className="size-4" />
-                  </div>
+                  <ConsultantAvatar
+                    name={latestRecommendation?.counselor || appointments[0]?.counselor}
+                    size="sm"
+                  />
                 </div>
                 <span className="text-base font-black text-slate-900 block truncate">
                   {latestRecommendation?.counselor || (appointments[0]?.counselor ? appointments[0].counselor : 'مشاور تعیین‌نشده')}
@@ -3921,7 +3923,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                             <td className="py-4 px-4 font-mono font-bold text-slate-400">{toPersianDigits(idx + 1)}</td>
                             <td className="py-4 px-4 font-mono font-bold text-slate-900">{toPersianDigits(item.date)}</td>
-                            <td className="py-4 px-4 font-bold text-slate-800">{item.counselor}</td>
+                            <td className="py-4 px-4 font-bold text-slate-800">
+                              <div className="flex items-center gap-2">
+                                <ConsultantAvatar name={item.counselor} size="xs" />
+                                <span>{item.counselor}</span>
+                              </div>
+                            </td>
                             <td className="py-4 px-4 text-slate-600">{item.topic}</td>
                             <td className="py-4 px-4">
                               <span
