@@ -1246,8 +1246,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     approved: { label: 'تأیید شده', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
     rejected: { label: 'نیازمند اقدام', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200', ring: 'ring-slate-200' },
-    optimal: { label: 'وضعیت مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
-    growing: { label: 'در حال رشد', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', ring: 'ring-teal-200' },
+    optimal: { label: 'وضعیت مطلوب', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', ring: 'ring-blue-200' },
+    growing: { label: 'در حال رشد', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
     needs_followup: { label: 'نیازمند پیگیری', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', ring: 'ring-amber-200' },
     regressing: { label: 'عقب گرد', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-200' },
   };
@@ -2219,9 +2219,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <span className="text-[11px] text-slate-400 whitespace-nowrap">آخرین ارزیابی:</span>
                   <span className={`px-3 py-1 rounded-xl text-xs font-black border ${
                     clientCase.overallStatus === 'growing'
-                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
                       : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
                       ? 'bg-rose-50 text-rose-700 border-rose-200'
                       : clientCase.overallStatus === 'needs_followup'
@@ -2246,8 +2246,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 {[
                   { id: 'regressing', label: 'عقب گرد', color: 'bg-rose-500', light: 'bg-rose-50 border-rose-200 text-rose-800' },
                   { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'bg-amber-500', light: 'bg-amber-50 border-amber-200 text-amber-800' },
-                  { id: 'growing', label: 'در حال رشد', color: 'bg-blue-500', light: 'bg-blue-50 border-blue-200 text-blue-800' },
-                  { id: 'optimal', label: 'وضعیت مطلوب', color: 'bg-emerald-500', light: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+                  { id: 'optimal', label: 'وضعیت مطلوب', color: 'bg-blue-500', light: 'bg-blue-50 border-blue-200 text-blue-800' },
+                  { id: 'growing', label: 'در حال رشد', color: 'bg-emerald-500', light: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
                 ].map((step, idx) => {
                   const isCurrent = (
                     clientCase.overallStatus === step.id ||
@@ -4236,8 +4236,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     {[
                       { id: 'regressing', label: 'عقب گرد', color: 'rose' },
                       { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'amber' },
-                      { id: 'optimal', label: 'وضعیت مطلوب', color: 'emerald' },
-                      { id: 'growing', label: 'در حال رشد', color: 'blue' },
+                      { id: 'optimal', label: 'وضعیت مطلوب', color: 'blue' },
+                      { id: 'growing', label: 'در حال رشد', color: 'emerald' },
                     ].map((st) => {
                       const isSel = selectedAppointmentStatus === st.id;
                       return (
@@ -4251,9 +4251,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                 ? 'bg-rose-600 text-white border-rose-600 shadow-xs ring-2 ring-rose-200'
                                 : st.color === 'amber'
                                 ? 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-200'
-                                : st.color === 'emerald'
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-200'
-                                : 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-200'
+                                : st.color === 'blue'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-200'
+                                : 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-200'
                               : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                           }`}
                         >

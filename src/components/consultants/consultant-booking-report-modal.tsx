@@ -28,8 +28,8 @@ const CLINICAL_CATEGORIES = [
 const CLINICAL_STATUSES = [
   { id: 'regressing', label: 'عقب گرد', color: 'rose' },
   { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'amber' },
-  { id: 'optimal', label: 'وضعیت مطلوب', color: 'emerald' },
-  { id: 'growing', label: 'در حال رشد', color: 'blue' },
+  { id: 'optimal', label: 'وضعیت مطلوب', color: 'blue' },
+  { id: 'growing', label: 'در حال رشد', color: 'emerald' },
 ] as const;
 
 function getClientCaseIdentifier(booking: ConsultantBookingItem): string {

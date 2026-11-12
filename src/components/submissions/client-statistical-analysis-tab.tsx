@@ -1012,9 +1012,9 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
               {['regressing', 'needs_followup', 'growing', 'optimal'].includes(clientCase.overallStatus) ? (
                 <>
                   <div className="inline-block px-4 py-2 rounded-xl text-base font-black shadow-xs" style={{
-                    backgroundColor: clientCase.overallStatus === "growing" ? "#eff6ff" : clientCase.overallStatus === "optimal" ? "#ecfdf5" : clientCase.overallStatus === "regressing" ? "#fff1f2" : "#fffbeb",
-                    color: clientCase.overallStatus === "growing" ? "#1d4ed8" : clientCase.overallStatus === "optimal" ? "#047857" : clientCase.overallStatus === "regressing" ? "#be123c" : "#b45309",
-                    borderColor: clientCase.overallStatus === "growing" ? "#bfdbfe" : clientCase.overallStatus === "optimal" ? "#a7f3d0" : clientCase.overallStatus === "regressing" ? "#fecdd3" : "#fde68a",
+                    backgroundColor: clientCase.overallStatus === "growing" ? "#ecfdf5" : clientCase.overallStatus === "optimal" ? "#eff6ff" : clientCase.overallStatus === "regressing" ? "#fff1f2" : "#fffbeb",
+                    color: clientCase.overallStatus === "growing" ? "#047857" : clientCase.overallStatus === "optimal" ? "#1d4ed8" : clientCase.overallStatus === "regressing" ? "#be123c" : "#b45309",
+                    borderColor: clientCase.overallStatus === "growing" ? "#a7f3d0" : clientCase.overallStatus === "optimal" ? "#bfdbfe" : clientCase.overallStatus === "regressing" ? "#fecdd3" : "#fde68a",
                     borderWidth: "1px",
                   }}>
                     {clientCase.overallStatus === "growing" ? "🌱 در حال رشد" : clientCase.overallStatus === "optimal" ? "✨ وضعیت مطلوب" : clientCase.overallStatus === "regressing" ? "⚠️ عقب گرد" : "🔍 نیازمند پیگیری"}
