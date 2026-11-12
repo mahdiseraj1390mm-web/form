@@ -104,7 +104,7 @@ export default function AppHome() {
       },
       {
         id: 'consultants',
-        label: 'نوبت‌ها و مشاور',
+        label: 'مشاوران',
         icon: CalendarClock,
       },
     ];
