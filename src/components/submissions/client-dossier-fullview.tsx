@@ -55,6 +55,7 @@ import { PointLineChart } from '../analytics/point-line-chart';
 import { ClientStatisticalAnalysisTab } from './client-statistical-analysis-tab';
 import { PrintableClientDossier } from './printable-client-dossier';
 import { ScrollableTabCarousel } from '@/components/ui/scrollable-tab-carousel';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
   formatPersianDateTime,
@@ -1574,35 +1575,34 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* باکس ۱: خلاصه پرونده جامع مراجع */}
-            <article className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-11 place-items-center rounded-2xl bg-[#173f6b]/10 text-[#173f6b]">
-                    <FileSpreadsheet className="size-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-black text-slate-900">خلاصه پرونده</h3>
-                      <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-extrabold text-[#173f6b] border border-blue-100">
-                        شناسنامه هویتی و بالینی
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      مشخصات فردی، وضعیت تاهل و فرزندان، سوابق نوبت‌ها و روند جلسات مشاوره‌ای
-                    </p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="shadow-sm"
+              title={
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base font-black text-slate-900">خلاصه پرونده</h3>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-extrabold text-[#173f6b] border border-blue-100">
+                    شناسنامه هویتی و بالینی
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-auto">
+              }
+              subtitle="مشخصات فردی، وضعیت تاهل و فرزندان، سوابق نوبت‌ها و روند جلسات مشاوره‌ای"
+              icon={
+                <div className="grid size-11 place-items-center rounded-2xl bg-[#173f6b]/10 text-[#173f6b]">
+                  <FileSpreadsheet className="size-5" />
+                </div>
+              }
+              headerExtra={
+                <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-400 font-medium">کد یکتای پرونده:</span>
                   <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-black text-[#173f6b] font-mono border border-slate-200">
                     {clientCase.caseCode}
                   </span>
                 </div>
-              </div>
-
+              }
+            >
               {/* شبکه اطلاعاتی ۸ گانه */}
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                 {/* ۱. نام و نام خانوادگی */}
                 <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
                   <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
@@ -1780,25 +1780,33 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   )}
                 </div>
               </div>
-
-              </article>
+            </CollapsibleCard>
 
             {/* گرید سه‌گانه بالای صفحه: توصیه‌ها، نوبت‌ها، مدرسه معارفی */}
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid gap-4 xl:grid-cols-3 items-start">
               {/* کارت ۱: آخرین توصیه‌های مشاور */}
-              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="mb-5 flex items-center gap-3">
-                    <div className="grid size-10 place-items-center rounded-xl bg-violet-50 text-violet-600">
-                      <FileText className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900">آخرین توصیه‌های مشاور</h3>
-                      <p className="mt-1 text-[11px] text-slate-400">بازتاب خودکار از آخرین گزارش جلسه</p>
-                    </div>
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">آخرین توصیه‌های مشاور</h3>}
+                subtitle="بازتاب خودکار از آخرین گزارش جلسه"
+                icon={
+                  <div className="grid size-10 place-items-center rounded-xl bg-violet-50 text-violet-600">
+                    <FileText className="size-5" />
                   </div>
-
-                  {latestRecommendation ? (
+                }
+                footer={
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-slate-600">
+                      {latestRecommendation?.counselor ? latestRecommendation.counselor : 'مشاور تعیین‌نشده'}
+                    </span>
+                    <span className="text-slate-400 font-mono">
+                      {latestRecommendation?.date ? latestRecommendation.date.split('،')[0] : 'فاقد سابقه گزارش'}
+                    </span>
+                  </div>
+                }
+              >
+                {latestRecommendation ? (
                     <div className="rounded-2xl bg-violet-50/70 p-4 text-sm leading-7 text-slate-700 min-h-[96px]">
                       {latestRecommendation.recommendation}
                     </div>
@@ -1811,35 +1819,37 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       </span>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-[11px]">
-                  <span className="font-bold text-slate-600">
-                    {latestRecommendation?.counselor ? latestRecommendation.counselor : 'مشاور تعیین‌نشده'}
-                  </span>
-                  <span className="text-slate-400 font-mono">
-                    {latestRecommendation?.date ? latestRecommendation.date.split('،')[0] : 'فاقد سابقه گزارش'}
-                  </span>
-                </div>
-              </article>
+              </CollapsibleCard>
 
               {/* کارت ۲: نوبت‌ها و جلسات مشاوره */}
-              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="grid size-10 place-items-center rounded-xl bg-blue-50 text-[#173f6b]">
-                        <Calendar className="size-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900">نوبت‌ها و جلسات مشاوره</h3>
-                        <p className="mt-1 text-[11px] text-slate-400">مرتب‌شده از جدیدترین نوبت</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#173f6b] font-mono">
-                      {toPersianDigits(appointments.length)} نوبت
-                    </span>
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">نوبت‌ها و جلسات مشاوره</h3>}
+                subtitle="مرتب‌شده از جدیدترین نوبت"
+                icon={
+                  <div className="grid size-10 place-items-center rounded-xl bg-blue-50 text-[#173f6b]">
+                    <Calendar className="size-5" />
                   </div>
+                }
+                headerExtra={
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#173f6b] font-mono">
+                    {toPersianDigits(appointments.length)} نوبت
+                  </span>
+                }
+                footer={
+                  <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                    {appointments.length > 0 ? (
+                      <>
+                        <span>روی هر نوبت جهت ثبت گزارش کلیک کنید</span>
+                        <span>سامانه خدمات نوبت‌دهی مشاوره بالحق</span>
+                      </>
+                    ) : (
+                      <span>سامانه نوبت‌دهی مشاوره بالحق</span>
+                    )}
+                  </div>
+                }
+              >
 
                   {appointments.length > 0 ? (
                     <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-0.5">
@@ -1884,37 +1894,37 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       <div className="text-[11px] text-slate-500 font-medium">نوبت‌های مشاوره از طریق بخش رزرو نوبت سامانه تنظیم و ثبت می‌گردند.</div>
                     </div>
                   )}
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 mt-3 text-[11px] text-slate-400 flex items-center justify-between">
-                  {appointments.length > 0 ? (
-                    <>
-                      <span>روی هر نوبت جهت ثبت گزارش کلیک کنید</span>
-                      <span>سامانه خدمات نوبت‌دهی مشاوره بالحق</span>
-                    </>
-                  ) : (
-                    <span>سامانه نوبت‌دهی مشاوره بالحق</span>
-                  )}
-                </div>
-              </article>
+              </CollapsibleCard>
 
               {/* کارت ۳: ارجاعات و پیگیری‌ها */}
-              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-700">
-                        <MessageSquare className="size-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900">ارجاعات و پیگیری‌ها</h3>
-                        <p className="mt-1 text-[11px] text-slate-400">یادداشت‌ها و اقدامات ثبت‌شده</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800 font-mono">
-                      {toPersianDigits(allFollowupComments.length)} اقدام
-                    </span>
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">ارجاعات و پیگیری‌ها</h3>}
+                subtitle="یادداشت‌ها و اقدامات ثبت‌شده"
+                icon={
+                  <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-700">
+                    <MessageSquare className="size-5" />
                   </div>
+                }
+                headerExtra={
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800 font-mono">
+                    {toPersianDigits(allFollowupComments.length)} اقدام
+                  </span>
+                }
+                footer={
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">تایم‌لاین ارجاعات بالینی</span>
+                    <button
+                      onClick={() => setActiveTab('followups')}
+                      className="text-[#173f6b] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <span>مشاهده همه پیگیری‌ها</span>
+                      <ArrowLeft className="size-3" />
+                    </button>
+                  </div>
+                }
+              >
 
                   {allFollowupComments.length > 0 ? (
                     <div className="space-y-2 max-h-[200px] overflow-y-auto pr-0.5">
@@ -1934,34 +1944,22 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       <p className="text-[11px]">اقدامات و تماس‌ها را در تب پیگیری‌ها ثبت فرمایید.</p>
                     </div>
                   )}
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">تایم‌لاین ارجاعات بالینی</span>
-                  <button
-                    onClick={() => setActiveTab('followups')}
-                    className="text-[#173f6b] font-bold hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <span>مشاهده همه پیگیری‌ها</span>
-                    <ArrowLeft className="size-3" />
-                  </button>
-                </div>
-              </article>
+              </CollapsibleCard>
             </div>
 
             {/* گرید میانی: نتایج واقعی آزمون‌ها و آمار پرونده */}
-            <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
-              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
-                      <BarChart3 className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900">خلاصه نتایج آزمون‌ها و شاخص‌های بالینی</h3>
-                      <p className="mt-1 text-[11px] text-slate-400">بررسی شاخص‌های واقعی ثبت‌شده در ارزیابی‌های مراجع</p>
-                    </div>
+            <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr] items-start">
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">خلاصه نتایج آزمون‌ها و شاخص‌های بالینی</h3>}
+                subtitle="بررسی شاخص‌های واقعی ثبت‌شده در ارزیابی‌های مراجع"
+                icon={
+                  <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
+                    <BarChart3 className="size-5" />
                   </div>
+                }
+                headerExtra={
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setActiveTab('analytics')}
@@ -1978,7 +1976,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       مشاهده فرم‌ها
                     </button>
                   </div>
-                </div>
+                }
+              >
 
                 <div className="grid gap-3 md:grid-cols-3">
                   {/* آزمون ۱: کارنامه خودسنجی صفاً */}
@@ -2110,11 +2109,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     badgeText="نمودار میله‌ای عمودی مقایسه شاخص‌ها"
                   />
                 </div>
-              </article>
+              </CollapsibleCard>
 
-              <article className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
-                <h3 className="text-sm font-black text-slate-900">آمار پرونده</h3>
-                <div className="mt-4 grid grid-cols-2 gap-3">
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">آمار پرونده</h3>}
+              >
+                <div className="grid grid-cols-2 gap-3">
                   <Stat
                     value={toPersianDigits(clientCase.totalFormsCount)}
                     label="فرم ثبت‌شده"
@@ -2132,22 +2134,22 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   />
                   <Stat value={dossierAgeText} label="سابقه پرونده" tone="blue" />
                 </div>
-              </article>
+              </CollapsibleCard>
             </div>
 
             
             {/* نمودار وضعیت مراجع بر اساس تعیین وضعیت مشاور (درخواست کاربر) */}
-            <article className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-700">
-                    <Activity className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">وضعیت مراجع بر اساس تعیین وضعیت مشاور</h3>
-                    <p className="mt-0.5 text-[11px] text-slate-400">سنجش بالینی و برآیند وضعیت کلی مراجع پس از جلسات مشاوره</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="shadow-sm"
+              title={<h3 className="text-sm font-black text-slate-900">وضعیت مراجع بر اساس تعیین وضعیت مشاور</h3>}
+              subtitle="سنجش بالینی و برآیند وضعیت کلی مراجع پس از جلسات مشاوره"
+              icon={
+                <div className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-700">
+                  <Activity className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400">آخرین ارزیابی:</span>
                   <span className={`px-3 py-1 rounded-xl text-xs font-black border ${
@@ -2172,10 +2174,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       : 'در انتظار ارزیابی اولیه مشاور'}
                   </span>
                 </div>
-              </div>
-
+              }
+            >
               {/* نوار روند پیشرفت وضعیت بالینی */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { id: 'regressing', label: 'عقب گرد', color: 'bg-rose-500', light: 'bg-rose-50 border-rose-200 text-rose-800' },
                   { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'bg-amber-500', light: 'bg-amber-50 border-amber-200 text-amber-800' },
@@ -2203,7 +2205,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   );
                 })}
               </div>
-            </article>
+            </CollapsibleCard>
 
             {/* گرید پایینی: دکمه‌های اقدام و هدایت سریع */}
             <div className="grid gap-4 md:grid-cols-3">
@@ -2388,17 +2390,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* بخش ۱: اطلاعات هویتی و شناسنامه‌ای مراجع در ۴ ستون دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
-                    <User className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">مشخصات هویتی و شناسنامه‌ای مراجع</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">اطلاعات هویتی و ثبت‌نام اولیه ثبت‌شده در سامانه</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h3 className="text-base font-black text-slate-900">مشخصات هویتی و شناسنامه‌ای مراجع</h3>}
+              subtitle="اطلاعات هویتی و ثبت‌نام اولیه ثبت‌شده در سامانه"
+              icon={
+                <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
+                  <User className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <button
                   onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
@@ -2406,9 +2408,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <Edit className="size-3.5" />
                   <span>ویرایش مشخصات فردی</span>
                 </button>
-              </div>
-
-              <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+              }
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pt-1">
                 <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
                   <span className="text-xs text-slate-400 font-bold block">نام و نام خانوادگی:</span>
                   <span className="text-sm sm:text-base font-black text-slate-900 block">{displayFullName}</span>
@@ -2487,20 +2489,20 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </span>
                 </div>
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۲: سوابق سلامت، شرح‌حال پزشکی و بالینی مراجع در ۳ ستون پهن دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-rose-100 text-rose-600 grid place-items-center">
-                    <HeartPulse className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">سوابق سلامت و شرح‌حال پزشکی مراجع</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">وضعیت سلامت جسمی، بیماری‌های روحی و داروهای مصرفی</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h3 className="text-base font-black text-slate-900">سوابق سلامت و شرح‌حال پزشکی مراجع</h3>}
+              subtitle="وضعیت سلامت جسمی، بیماری‌های روحی و داروهای مصرفی"
+              icon={
+                <div className="size-10 rounded-xl bg-rose-100 text-rose-600 grid place-items-center">
+                  <HeartPulse className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <button
                   onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
@@ -2508,9 +2510,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <Edit className="size-3.5" />
                   <span>ویرایش سوابق سلامت</span>
                 </button>
-              </div>
-
-              <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
                 <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
                   <div className="flex items-center gap-2">
                     <HeartPulse className="size-4 text-rose-500" />
@@ -2541,20 +2543,20 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </p>
                 </div>
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۳: اطلاعات تحصیلی و مدرسه معارفی در ۳ ستون پهن دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
-                    <GraduationCap className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">اطلاعات تحصیلی و مدرسه معارفی</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">وضعیت ثبت‌نام در مدارس معارفی، کادر آموزشی و مربیان تربیتی</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h3 className="text-base font-black text-slate-900">اطلاعات تحصیلی و مدرسه معارفی</h3>}
+              subtitle="وضعیت ثبت‌نام در مدارس معارفی، کادر آموزشی و مربیان تربیتی"
+              icon={
+                <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
+                  <GraduationCap className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <button
                   onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
@@ -2562,9 +2564,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <Edit className="size-3.5" />
                   <span>ویرایش</span>
                 </button>
-              </div>
-
-              <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
                 <div className="p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2">
                   <span className="text-xs text-slate-400 font-bold block">نام مدرسه معارفی:</span>
                   <span className="text-sm sm:text-base font-black text-slate-900 block">
@@ -2586,7 +2588,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </span>
                 </div>
               </div>
-            </div>
+            </CollapsibleCard>
           </div>
         )}
 
@@ -2636,28 +2638,23 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* بخش ۱: آزمون‌ها و پرسشنامه‌های بالینی مراجع در عرض کامل دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
-                    <HelpCircle className="size-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-indigo-950">
-                      آزمون‌ها و پرسشنامه‌های بالینی
-                    </h4>
-                    <span className="text-xs text-slate-400 block mt-0.5">
-                      آزمون صفا، پرسشنامه‌های اختصاصی و خودسنجی‌های تکمیل‌شده توسط مراجع
-                    </span>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h4 className="text-base font-black text-indigo-950">آزمون‌ها و پرسشنامه‌های بالینی</h4>}
+              subtitle="آزمون صفا، پرسشنامه‌های اختصاصی و خودسنجی‌های تکمیل‌شده توسط مراجع"
+              icon={
+                <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
+                  <HelpCircle className="size-5" />
                 </div>
-
+              }
+              headerExtra={
                 <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
                   {toPersianDigits(questionnaireSubs.length)} آزمون
                 </span>
-              </div>
-
-              <div className="p-6">
+              }
+            >
+              <div className="pt-1">
                 {questionnaireSubs.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
                     پرسشنامه‌ای برای این مراجع ثبت نشده است.
@@ -2722,31 +2719,26 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۲: نوبت‌های مشاوره رزرو شده در عرض کامل دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-sky-100 text-sky-700 grid place-items-center">
-                    <CalendarCheck className="size-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-sky-950">
-                      سامانه‌های نوبت‌دهی مشاوره
-                    </h4>
-                    <span className="text-xs text-slate-400 block mt-0.5">
-                      جلسات مشاوره، رزرو نوبت تلفنی و پیگیری‌های زمان‌بندی‌شده مراجع
-                    </span>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h4 className="text-base font-black text-sky-950">سامانه‌های نوبت‌دهی مشاوره</h4>}
+              subtitle="جلسات مشاوره، رزرو نوبت تلفنی و پیگیری‌های زمان‌بندی‌شده مراجع"
+              icon={
+                <div className="size-10 rounded-xl bg-sky-100 text-sky-700 grid place-items-center">
+                  <CalendarCheck className="size-5" />
                 </div>
-
+              }
+              headerExtra={
                 <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-sky-50 text-sky-800 border border-sky-200">
                   {toPersianDigits(bookingSubs.length)} نوبت
                 </span>
-              </div>
-
-              <div className="p-6">
+              }
+            >
+              <div className="pt-1">
                 {bookingSubs.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
                     نوبت مشاوره‌ای ثبت نشده است.
@@ -2811,31 +2803,26 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۳: کادر ثبت‌نام و پذیرش در عرض کامل دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
-                    <BadgeCheck className="size-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-emerald-950">
-                      پذیرش و فرم ثبت‌نام اولیه
-                    </h4>
-                    <span className="text-xs text-slate-400 block mt-0.5">
-                      فرم تشکیل پرونده اولیه، مشخصات فردی و سوابق پایه‌ای ثبت‌شده
-                    </span>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h4 className="text-base font-black text-emerald-950">پذیرش و فرم ثبت‌نام اولیه</h4>}
+              subtitle="فرم تشکیل پرونده اولیه، مشخصات فردی و سوابق پایه‌ای ثبت‌شده"
+              icon={
+                <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
+                  <BadgeCheck className="size-5" />
                 </div>
-
+              }
+              headerExtra={
                 <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
                   {toPersianDigits(registrationSubs.length)} فرم
                 </span>
-              </div>
-
-              <div className="p-6">
+              }
+            >
+              <div className="pt-1">
                 {registrationSubs.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
                     فرم ثبت‌نام اولیه‌ای یافت نشد.
@@ -2900,30 +2887,27 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۴: سایر فرم‌های پرونده (در صورت وجود) */}
             {otherSubs.length > 0 && (
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-                <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-slate-200 text-slate-700 grid place-items-center">
-                      <FileText className="size-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-base font-black text-slate-900">
-                        سایر فرم‌های ثبت‌شده پرونده
-                      </h4>
-                      <span className="text-xs text-slate-400 block mt-0.5">
-                        سایر فرم‌ها و استعلام‌های انجام‌شده مراجع
-                      </span>
-                    </div>
+              <CollapsibleCard
+                defaultOpen={false}
+                headerClassName="bg-slate-50/70"
+                title={<h4 className="text-base font-black text-slate-900">سایر فرم‌های ثبت‌شده پرونده</h4>}
+                subtitle="سایر فرم‌ها و استعلام‌های انجام‌شده مراجع"
+                icon={
+                  <div className="size-10 rounded-xl bg-slate-200 text-slate-700 grid place-items-center">
+                    <FileText className="size-5" />
                   </div>
+                }
+                headerExtra={
                   <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
                     {toPersianDigits(otherSubs.length)} فرم
                   </span>
-                </div>
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                }
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-1">
                   {otherSubs.map((sub) => {
                     const formObj = forms.find((f) => f.id === sub.formId);
                     const formTitle = formObj ? formObj.title : sub.formId;
@@ -2969,7 +2953,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     );
                   })}
                 </div>
-              </div>
+              </CollapsibleCard>
             )}
           </div>
         )}
@@ -3084,14 +3068,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
               if (formAnalytics) {
                 return (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                     {/* ۱. نمودار حلقه‌ای درصد تکمیل داده‌ها */}
-                    <div className="min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center text-center">
-                      <span className="text-xs font-extrabold text-slate-600 mb-4 flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-[#173f6b]" />
-                        <span>نرخ تکمیل فیلدها و پاسخگویی</span>
-                      </span>
-
+                    <CollapsibleCard
+                      defaultOpen={false}
+                      title={<h3 className="text-xs font-extrabold text-slate-700">نرخ تکمیل فیلدها و پاسخگویی</h3>}
+                      icon={<Activity className="w-4 h-4 text-[#173f6b]" />}
+                      bodyClassName="flex flex-col items-center justify-center text-center"
+                    >
                       <div className="relative w-36 h-36 flex items-center justify-center">
                         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                           <path
@@ -3125,42 +3109,19 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           <strong className="text-slate-900 font-mono">{toPersianDigits(formAnalytics.totalFields)}</strong> فیلد موجود تکمیل گردیده است.
                         </p>
                       </div>
-                    </div>
+                    </CollapsibleCard>
 
                     {/* ۲. نمودارهای میله‌ای ابعاد و شاخص‌های کیفی فرم با رنگ‌بندی ۴ گانه معنایی */}
-                    <div className="min-w-0 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs lg:col-span-2 flex flex-col justify-between space-y-4">
-                      <div>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-3 gap-2">
-                          <span className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-[#173f6b]" />
-                            <span>تحلیل ابعاد کیفی، اعتبارسنجی و تطابق مراجع</span>
-                          </span>
-                          <span className="text-[11px] text-slate-400">محاسبه هوشمند بر پایه پاسخ‌های فرم</span>
-                        </div>
-
-                        <div className="pt-2">
-                          <VerticalBarChart
-                            data={formAnalytics.dimensions.map((dim) => {
-                              const dimColor = getSemanticColorByPercentage(dim.score);
-                              return {
-                                label: dim.name,
-                                value: dim.score,
-                                percentage: dim.score,
-                                color: dimColor.hex,
-                                secondaryLabel: `${toPersianDigits(dim.score)}٪`,
-                              };
-                            })}
-                            unit="٪"
-                            maxScale={100}
-                            height={220}
-                            showValues={true}
-                            badgeText="نمودار میله‌ای عمودی ابعاد"
-                          />
-                        </div>
-                      </div>
-
-                      {/* متاداده فرم */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-4 mt-4 border-t border-slate-100 text-[11px]">
+                    <CollapsibleCard
+                      defaultOpen={false}
+                      className="lg:col-span-2"
+                      title={<h3 className="text-xs font-extrabold text-slate-900">تحلیل ابعاد کیفی، اعتبارسنجی و تطابق مراجع</h3>}
+                      icon={<TrendingUp className="w-4 h-4 text-[#173f6b]" />}
+                      headerExtra={
+                        <span className="text-[11px] text-slate-400">محاسبه هوشمند بر پایه پاسخ‌های فرم</span>
+                      }
+                      footer={
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
                         <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                           <span className="text-slate-400 block">سوالات گزینه‌ای:</span>
                           <span className="font-bold text-slate-800 text-xs mt-0.5 block font-mono">
@@ -3186,7 +3147,28 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           </span>
                         </div>
                       </div>
-                    </div>
+                      }
+                    >
+                      <div className="pt-2">
+                        <VerticalBarChart
+                          data={formAnalytics.dimensions.map((dim) => {
+                            const dimColor = getSemanticColorByPercentage(dim.score);
+                            return {
+                              label: dim.name,
+                              value: dim.score,
+                              percentage: dim.score,
+                              color: dimColor.hex,
+                              secondaryLabel: `${toPersianDigits(dim.score)}٪`,
+                            };
+                          })}
+                          unit="٪"
+                          maxScale={100}
+                          height={220}
+                          showValues={true}
+                          badgeText="نمودار میله‌ای عمودی ابعاد"
+                        />
+                      </div>
+                    </CollapsibleCard>
                   </div>
                 );
               }
@@ -3195,24 +3177,22 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             })()}
 
             {/* ۳. نمایش مفصل و گام به گام تمام فیلدهای این فرم (Detailed Field-by-Field Breakdown) */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-6 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#173f6b] flex items-center justify-center font-bold">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
-                      جزئیات کامل پاسخ‌ها و فیلدهای فرم: {selectedFormObj?.title || 'فرم ثبت‌شده'}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      تمامی فیلدها و پاسخ‌های ارائه شده توسط مراجع به تفکیک مراحل فرم
-                    </p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+                  جزئیات کامل پاسخ‌ها و فیلدهای فرم: {selectedFormObj?.title || 'فرم ثبت‌شده'}
+                </h3>
+              }
+              subtitle="تمامی فیلدها و پاسخ‌های ارائه شده توسط مراجع به تفکیک مراحل فرم"
+              icon={
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#173f6b] flex items-center justify-center font-bold">
+                  <FileText className="w-5 h-5" />
                 </div>
-              </div>
-
-              <div className="p-6 space-y-8">
+              }
+            >
+              <div className="space-y-8 pt-1">
                 {selectedFormObj?.steps && selectedFormObj.steps.length > 0 ? (
                   selectedFormObj.steps.map((step: any, stepIdx: number) => {
                     const stepFields = (selectedFormObj.fields || []).filter(
@@ -3355,14 +3335,15 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   );
                 })()}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* ۴. ثبت نظر کارشناسی و یادداشت روی این فرم */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-[#173f6b]" />
-                <span>یادداشت‌ها و نظرات کارشناسی روی این فرم:</span>
-              </h4>
+            <CollapsibleCard
+              defaultOpen={false}
+              title={<h4 className="text-xs sm:text-sm font-extrabold text-slate-900">یادداشت‌ها و نظرات کارشناسی روی این فرم:</h4>}
+              icon={<MessageSquare className="w-4 h-4 text-[#173f6b]" />}
+              bodyClassName="space-y-4"
+            >
 
               {Array.isArray(selectedSubmission.comments) && selectedSubmission.comments.length > 0 && (
                 <div className="space-y-2.5 pb-2">
@@ -3409,7 +3390,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   ثبت نظر
                 </button>
               </div>
-            </div>
+            </CollapsibleCard>
           </div>
         )}
 
@@ -3459,16 +3440,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* ستون ثبت اقدام و لاگ جدید (۵ ستون در دسکتاپ) */}
               <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-2xs space-y-5">
-                  <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                <CollapsibleCard
+                  defaultOpen={false}
+                  title={<h3 className="text-base font-black text-slate-900">ثبت اقدام یا لاگ جدید</h3>}
+                  subtitle="تماس تلفنی، جلسه، یادداشت محرمانه یا ارجاع"
+                  icon={
                     <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
                       <MessageSquare className="size-5" />
                     </div>
-                    <div>
-                      <h3 className="text-base font-black text-slate-900">ثبت اقدام یا لاگ جدید</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">تماس تلفنی، جلسه، یادداشت محرمانه یا ارجاع</p>
-                    </div>
-                  </div>
+                  }
+                  bodyClassName="space-y-5"
+                >
 
                   <div className="space-y-2">
                     <span className="text-xs text-slate-500 font-bold block">نوع تعامل / اقدام:</span>
@@ -3515,26 +3497,26 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     <Send className="size-4" />
                     <span>ثبت اقدام در پرونده مراجع</span>
                   </button>
-                </div>
+                </CollapsibleCard>
               </div>
 
               {/* ستون تاریخچه و تایم‌لاین کامل پیگیری‌ها (۷ ستون در دسکتاپ) */}
               <div className="lg:col-span-7">
-                <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-2xs space-y-5">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-xl bg-slate-100 text-slate-700 grid place-items-center">
-                        <Clock className="size-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-black text-slate-900">تاریخچه کامل پیگیری‌ها و اقدامات</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">گاه‌شمار کلیه مکالمات، جلسات و یادداشت‌های مدیران</p>
-                      </div>
+                <CollapsibleCard
+                  defaultOpen={false}
+                  title={<h3 className="text-base font-black text-slate-900">تاریخچه کامل پیگیری‌ها و اقدامات</h3>}
+                  subtitle="گاه‌شمار کلیه مکالمات، جلسات و یادداشت‌های مدیران"
+                  icon={
+                    <div className="size-10 rounded-xl bg-slate-100 text-slate-700 grid place-items-center">
+                      <Clock className="size-5" />
                     </div>
+                  }
+                  headerExtra={
                     <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700">
                       {toPersianDigits(allFollowupComments.length)} مورد
                     </span>
-                  </div>
+                  }
+                >
 
                   <div className="space-y-4">
                     {allFollowupComments.length === 0 ? (
@@ -3628,7 +3610,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       ))
                     )}
                   </div>
-                </div>
+                </CollapsibleCard>
               </div>
             </div>
           </div>
@@ -3701,19 +3683,19 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* لیست جلسات مشاوره با جدول استاندارد و عریض دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs p-6 sm:p-7 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
-                    <Calendar className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">جدول جامع نوبت‌ها و جلسات مشاوره مراجع</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">برای مشاهده یا ثبت گزارش بالینی هر جلسه، روی دکمه عملیات کلیک کنید.</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              title={<h3 className="text-base font-black text-slate-900">جدول جامع نوبت‌ها و جلسات مشاوره مراجع</h3>}
+              subtitle="برای مشاهده یا ثبت گزارش بالینی هر جلسه، روی دکمه عملیات کلیک کنید."
+              icon={
+                <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
+                  <Calendar className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <div className="text-xs text-slate-500 font-bold bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">سامانه جامع نوبت‌دهی بالحق</div>
-              </div>
+              }
+            >
 
               {appointments.length === 0 ? (
                 <div className="p-12 text-center bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 space-y-2">
@@ -3811,21 +3793,20 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 </>
               )}
-            </div>
+            </CollapsibleCard>
 
             {/* سوابق و ریز تراکنش‌های پرداخت الکترونیک شاپرک در جدول دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
-                    <CreditCard className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">ریز تراکنش‌های پرداخت الکترونیک شاپرک</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">صورتحساب تراکنش‌های مالی، شناسه رهگیری و رسیدهای پرداخت</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h3 className="text-base font-black text-slate-900">ریز تراکنش‌های پرداخت الکترونیک شاپرک</h3>}
+              subtitle="صورتحساب تراکنش‌های مالی، شناسه رهگیری و رسیدهای پرداخت"
+              icon={
+                <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
+                  <CreditCard className="size-5" />
                 </div>
-              </div>
+              }
+            >
 
               {currentSubmissions.filter((s) => s.paymentAmount && s.paymentAmount > 0).length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs sm:text-sm">
@@ -3894,7 +3875,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 </>
               )}
-            </div>
+            </CollapsibleCard>
           </div>
         )}
       </div>

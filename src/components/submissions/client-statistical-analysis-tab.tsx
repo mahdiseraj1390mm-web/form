@@ -8,6 +8,7 @@ import { SvgRadarChart } from '@/components/analytics/radar-chart';
 import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '@/components/analytics/point-line-chart';
 import { ScrollableTabCarousel } from '@/components/ui/scrollable-tab-carousel';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import {
   toPersianDigits,
   toEnglishDigits,
@@ -82,7 +83,6 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
   onPrint,
 }) => {
   const [activeFilter, setActiveFilter] = useState<AnalysisFilter>('all');
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [counselorNoteText, setCounselorNoteText] = useState('');
   const [savedNoteMessage, setSavedNoteMessage] = useState(false);
 
@@ -130,10 +130,6 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       };
     });
   }, [appointments, clientCase.overallStatus]);
-
-  const toggleSection = (sec: string) => {
-    setExpandedSection((prev) => (prev === sec ? null : sec));
-  };
 
   // -------------------------------------------------------------
   // ۱. ارزیابی آزمون صفاً و محاسبه مؤلفه‌های شخصیتی و رشد
@@ -949,24 +945,25 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* ========================================================= */}
       {/* بخش شاخص‌های هویتی، تحلیل بالینی پرونده و خط زمان جلسات */}
       {/* ========================================================= */}
-      <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-7 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-2xl bg-[#173f6b] text-white flex items-center justify-center shadow-xs">
-              <BarChart3 className="size-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-slate-900">شاخص‌های آماری و تحلیل بالینی این پرونده</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                مشخصات ساختار خانواده مراجع، وضعیت بالینی پرونده و خط زمان جلسات مشاوره
-              </p>
-            </div>
+      <CollapsibleCard
+        as="section"
+        defaultOpen={false}
+        className="shadow-sm"
+        bodyClassName="space-y-6"
+        title={<h3 className="text-base font-black text-slate-900">شاخص‌های آماری و تحلیل بالینی این پرونده</h3>}
+        subtitle="مشخصات ساختار خانواده مراجع، وضعیت بالینی پرونده و خط زمان جلسات مشاوره"
+        icon={
+          <div className="size-10 rounded-2xl bg-[#173f6b] text-white flex items-center justify-center shadow-xs">
+            <BarChart3 className="size-5" />
           </div>
+        }
+        headerExtra={
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200/80">
             <ShieldCheck className="size-4 text-emerald-600" />
             <span>منبع داده: سوابق اختصاصی پرونده مراجع (داده‌های قطعی و مستند)</span>
           </div>
-        </div>
+        }
+      >
 
         {/* ۴ کارت مشخصات هویتی و خانوادگی این مراجع */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1119,28 +1116,29 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
             </button>
           </div>
         </div>
-      </section>
+      </CollapsibleCard>
 
       {/* بخش اول: آمار رشد و مراحل تحول فردی مراجع */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'growth') && (
-        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="size-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                <TrendingUp className="size-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">آمار رشد و مراحل کمال فردی</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  ارزیابی میزان تعالی، پیشرفت در طول جلسات و شکاف تا پتانسیل بیشینه
-                </p>
-              </div>
+        <CollapsibleCard
+          as="section"
+          defaultOpen={false}
+          className="shadow-sm"
+          bodyClassName="space-y-6"
+          title={<h3 className="text-base font-black text-slate-900">آمار رشد و مراحل کمال فردی</h3>}
+          subtitle="ارزیابی میزان تعالی، پیشرفت در طول جلسات و شکاف تا پتانسیل بیشینه"
+          icon={
+            <div className="size-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <TrendingUp className="size-5" />
             </div>
+          }
+          headerExtra={
             <span className="text-xs font-bold font-mono px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
               شاخص رشد: %{toPersianDigits(growthStats.growthIndex)}
             </span>
-          </div>
+          }
+        >
 
           <div className="grid gap-6 lg:grid-cols-12">
             {/* کارت مرحله تحول مراجع */}
@@ -1328,30 +1326,31 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
               </div>
             </div>
           </div>
-        </section>
+        </CollapsibleCard>
       )}
 
       {/* ========================================================= */}
       {/* بخش دوم: اخذ نوبت و مراجعه به مشاوران مختلف */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'appointments') && (
-        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="size-9 rounded-xl bg-blue-50 text-[#173f6b] flex items-center justify-center">
-                <CalendarCheck className="size-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">آمار اخذ نوبت و تفکیک مشاوران مرکز</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  تعداد نوبت‌های اخذ شده، استمرار جلسات و آمار تفکیکی جلسات با مشاوران مختلف
-                </p>
-              </div>
+        <CollapsibleCard
+          as="section"
+          defaultOpen={false}
+          className="shadow-sm"
+          bodyClassName="space-y-6"
+          title={<h3 className="text-base font-black text-slate-900">آمار اخذ نوبت و تفکیک مشاوران مرکز</h3>}
+          subtitle="تعداد نوبت‌های اخذ شده، استمرار جلسات و آمار تفکیکی جلسات با مشاوران مختلف"
+          icon={
+            <div className="size-9 rounded-xl bg-blue-50 text-[#173f6b] flex items-center justify-center">
+              <CalendarCheck className="size-5" />
             </div>
+          }
+          headerExtra={
             <span className="text-xs font-bold font-mono px-3 py-1 rounded-full bg-blue-50 text-[#173f6b] border border-blue-200">
               {toPersianDigits(appointmentStats.total)} نوبت ثبت‌شده
             </span>
-          </div>
+          }
+        >
 
           {/* کارت‌های خلاصه نوبت‌دهی */}
           <div className="grid gap-3 sm:grid-cols-4">
@@ -1479,26 +1478,26 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
               </div>
             )}
           </div>
-        </section>
+        </CollapsibleCard>
       )}
 
       {/* ========================================================= */}
       {/* بخش سوم: وضعیت سلامت جسمی، سلامت روان و مصرف دارو */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'health') && (
-        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="size-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                <HeartPulse className="size-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">پایش سلامت سه‌گانه: جسم، روان و دارو</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  ارزیابی وضعیت بیماری‌های جسمانی، تعادل و سلامت روان، و فهرست داروهای مصرفی
-                </p>
-              </div>
+        <CollapsibleCard
+          as="section"
+          defaultOpen={false}
+          className="shadow-sm"
+          bodyClassName="space-y-6"
+          title={<h3 className="text-base font-black text-slate-900">پایش سلامت سه‌گانه: جسم، روان و دارو</h3>}
+          subtitle="ارزیابی وضعیت بیماری‌های جسمانی، تعادل و سلامت روان، و فهرست داروهای مصرفی"
+          icon={
+            <div className="size-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+              <HeartPulse className="size-5" />
             </div>
+          }
+          headerExtra={
             <span
               className={`text-xs font-bold px-3 py-1 rounded-full border ${
                 smartAnalysis.hasPhysicalIllness || smartAnalysis.hasMentalIllness || smartAnalysis.hasMedication
@@ -1510,7 +1509,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
                 ? 'دارای سوابق پزشکی و دارویی'
                 : 'بدون سابقه بیماری و دارو'}
             </span>
-          </div>
+          }
+        >
 
           <div className="grid gap-5 md:grid-cols-3">
             {/* ۱. وضعیت سلامت جسمی */}
@@ -1641,26 +1641,26 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
               </div>
             </div>
           </div>
-        </section>
+        </CollapsibleCard>
       )}
 
       {/* ========================================================= */}
       {/* بخش چهارم: رضایت زوجین و پویایی خانواده */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'marital') && (
-        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="size-9 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center">
-                <HeartHandshake className="size-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">آمار رضایت زوجین و تعاملات خانوادگی</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  ارزیابی شاخص هماهنگی زناشویی، مهارت‌های حل تعارض، گذشت و کیفیت پیوند عاطفی
-                </p>
-              </div>
+        <CollapsibleCard
+          as="section"
+          defaultOpen={false}
+          className="shadow-sm"
+          bodyClassName="space-y-6"
+          title={<h3 className="text-base font-black text-slate-900">آمار رضایت زوجین و تعاملات خانوادگی</h3>}
+          subtitle="ارزیابی شاخص هماهنگی زناشویی، مهارت‌های حل تعارض، گذشت و کیفیت پیوند عاطفی"
+          icon={
+            <div className="size-9 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center">
+              <HeartHandshake className="size-5" />
             </div>
+          }
+          headerExtra={
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-mono">
                 {maritalStats.maritalStatus}
@@ -1669,7 +1669,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
                 نقش: {maritalStats.roleInFamily}
               </span>
             </div>
-          </div>
+          }
+        >
 
           <div className="grid gap-6 lg:grid-cols-12">
             {/* کارت شاخص اصلی رضایت زوجین */}
@@ -1728,30 +1729,31 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
               />
             </div>
           </div>
-        </section>
+        </CollapsibleCard>
       )}
 
       {/* ========================================================= */}
       {/* بخش پنجم: تحلیل شخصیتی چندبعدی */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'personality') && (
-        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="size-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <Compass className="size-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">تحلیل شخصیتی چندبعدی مراجع</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  ارزیابی ابعاد ساختاری شخصیت، سبک تصمیم‌گیری، تعهدات و نمودار رادار ۱۶گانه
-                </p>
-              </div>
+        <CollapsibleCard
+          as="section"
+          defaultOpen={false}
+          className="shadow-sm"
+          bodyClassName="space-y-6"
+          title={<h3 className="text-base font-black text-slate-900">تحلیل شخصیتی چندبعدی مراجع</h3>}
+          subtitle="ارزیابی ابعاد ساختاری شخصیت، سبک تصمیم‌گیری، تعهدات و نمودار رادار ۱۶گانه"
+          icon={
+            <div className="size-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Compass className="size-5" />
             </div>
+          }
+          headerExtra={
             <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
               ۱۶ مؤلفه شخصیتی
             </span>
-          </div>
+          }
+        >
 
           <div className="grid gap-6 lg:grid-cols-12 items-center">
             {/* نمودار رادار شخصیتی */}
@@ -1812,26 +1814,26 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
               </div>
             </div>
           </div>
-        </section>
+        </CollapsibleCard>
       )}
 
       {/* ========================================================= */}
       {/* بخش ششم: غربالگری اختلالات و ریسک‌های بالینی */}
       {/* ========================================================= */}
       {(activeFilter === 'all' || activeFilter === 'disorders') && (
-        <section className="min-w-0 bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="size-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                <AlertTriangle className="size-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">غربالگری بالینی اختلالات و نشانه‌های ریسک</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  پایش سیستماتیک نشانه‌های اضطرابی، خلقی، وسواس، پرخاشگری و تعارضات شدید برای مداخله هدفمند
-                </p>
-              </div>
+        <CollapsibleCard
+          as="section"
+          defaultOpen={false}
+          className="shadow-sm"
+          bodyClassName="space-y-6"
+          title={<h3 className="text-base font-black text-slate-900">غربالگری بالینی اختلالات و نشانه‌های ریسک</h3>}
+          subtitle="پایش سیستماتیک نشانه‌های اضطرابی، خلقی، وسواس، پرخاشگری و تعارضات شدید برای مداخله هدفمند"
+          icon={
+            <div className="size-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <AlertTriangle className="size-5" />
             </div>
+          }
+          headerExtra={
             <div className="flex items-center gap-2">
               {disorderScreeningStats.criticalRisksCount > 0 ? (
                 <span className="text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200 animate-pulse font-mono">
@@ -1843,7 +1845,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
                 </span>
               )}
             </div>
-          </div>
+          }
+        >
 
           {/* بنر ارزیابی ریسک کلی */}
           <div
@@ -1929,7 +1932,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
               );
             })}
           </div>
-        </section>
+        </CollapsibleCard>
       )}
 
       {/* راهنمای سیستم رنگ‌بندی ۴گانه معنایی بالحق در انتهای تب */}
