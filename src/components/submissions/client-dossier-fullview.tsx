@@ -206,9 +206,17 @@ function extractRealAppointmentsFromSubmissions(submissions: FormSubmission[]): 
         ),
         counselor: String((counselorName && !counselorName.includes('علوی')) ? counselorName : 'جناب آقای برهانی'),
         status: data.session_status === 'done' || data.report ? 'done' : 'new',
-        reviewed: data.report_reviewed || data.report?.reviewedItems,
+        reviewed: data.report_reviewed || data.report?.reviewed || data.report?.reviewedItems,
         challenges: data.report_challenges || data.report?.challenges,
-        recommendation: data.report_recommendation || data.report?.recommendations,
+        recommendation: data.report_recommendation || data.report?.recommendation || data.report?.recommendations,
+        report: data.report || (data.report_reviewed || data.report_recommendation ? {
+          counselor: String((counselorName && !counselorName.includes('علوی')) ? counselorName : 'جناب آقای برهانی'),
+          date: normalizedDate,
+          reviewed: data.report_reviewed,
+          challenges: data.report_challenges,
+          recommendation: data.report_recommendation,
+          status: data.clinical_status,
+        } : undefined),
       };
 
       if (!isMockAppointment(app)) {
@@ -647,7 +655,36 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   // آخرین توصیه‌های واقعی مشاور (فقط از جلساتی که واقعاً گزارش بالینی برایشان ثبت شده است)
   const latestRecommendation = useMemo(() => {
-    return appointments.find((item) => item.recommendation && item.recommendation.trim().length > 0) || null;
+    // اولویت ۱: جلسه‌ای که توصیه یا نسخه بالینی دارد
+    for (const item of appointments) {
+      const rec =
+        (item.recommendation && item.recommendation.trim().length > 0)
+          ? item.recommendation.trim()
+          : (item.report?.recommendation && item.report.recommendation.trim().length > 0)
+          ? item.report.recommendation.trim()
+          : '';
+      if (rec) {
+        return {
+          ...item,
+          recommendation: rec,
+          counselor: item.report?.counselor || item.counselor,
+          date: item.report?.date || item.date,
+        };
+      }
+    }
+    // اولویت ۲: در صورتی که فقط موارد بررسی‌شده جلسه بدون فیلد توصیه اختصاصی ثبت شده باشد
+    for (const item of appointments) {
+      const rev = item.reviewed?.trim() || item.report?.reviewed?.trim();
+      if (rev) {
+        return {
+          ...item,
+          recommendation: rev,
+          counselor: item.report?.counselor || item.counselor,
+          date: item.report?.date || item.date,
+        };
+      }
+    }
+    return null;
   }, [appointments]);
 
   // استخراج جنسیت مراجع با اولویت داده‌های صریح و سپس نقش خانوادگی
@@ -913,10 +950,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       counselor: appointment.counselor && appointment.counselor.includes('علوی') ? 'جناب آقای برهانی' : (appointment.counselor || 'جناب آقای برهانی'),
     };
     setEditing(cleanApp);
+    const rawRec = cleanApp.recommendation ?? cleanApp.report?.recommendation ?? '';
+    const cleanRec = rawRec.replace(/^\[محور بالینی:\s*[^\]]+\]\s*/, '');
     setReportForm({
-      reviewed: cleanApp.reviewed ?? '',
-      challenges: cleanApp.challenges ?? '',
-      recommendation: cleanApp.recommendation ?? cleanApp.report?.recommendation ?? '',
+      reviewed: cleanApp.reviewed ?? cleanApp.report?.reviewed ?? '',
+      challenges: cleanApp.challenges ?? cleanApp.report?.challenges ?? '',
+      recommendation: cleanRec,
     });
     const appStatus = cleanApp.report?.status;
     if (appStatus && ['regressing', 'needs_followup', 'optimal', 'growing'].includes(appStatus)) {
@@ -924,7 +963,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     } else {
       setSelectedAppointmentStatus('');
     }
-    setSelectedClinicalCategory(cleanApp.category || '');
+    const catMatch = cleanApp.category || rawRec.match(/\[محور بالینی:\s*([^\]]+)\]/)?.[1] || '';
+    setSelectedClinicalCategory(catMatch);
     setIsClinicalCategoryOpen(false);
     setSavedReport(false);
   };
@@ -960,7 +1000,19 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const submitReport = () => {
     if (!editing || !isSessionReportComplete) return;
     const catPrefix = selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}] ` : '';
-    const fullRecommendation = `${catPrefix}${reportForm.recommendation.trim()}`;
+    const cleanRecText = reportForm.recommendation.trim().replace(/^\[محور بالینی:\s*[^\]]+\]\s*/, '');
+    const fullRecommendation = cleanRecText
+      ? `${catPrefix}${cleanRecText}`
+      : (selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}]` : '');
+
+    const reportPayload = {
+      counselor: editing.counselor,
+      date: editing.date,
+      reviewed: reportForm.reviewed.trim(),
+      challenges: reportForm.challenges.trim(),
+      recommendation: fullRecommendation,
+      status: selectedAppointmentStatus || 'optimal',
+    };
 
     const updatedAppointments = appointments.map((item) => {
       if (item.id === editing.id) {
@@ -968,13 +1020,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           ...item,
           status: 'done' as const,
           category: selectedClinicalCategory || item.category,
-          report: {
-            counselor: editing.counselor,
-            date: editing.date,
-            reviewed: reportForm.reviewed.trim(),
-            challenges: reportForm.challenges.trim(),
-            recommendation: fullRecommendation,
-          },
+          reviewed: reportForm.reviewed.trim(),
+          challenges: reportForm.challenges.trim(),
+          recommendation: fullRecommendation,
+          report: reportPayload,
         };
       }
       return item;
@@ -982,25 +1031,27 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
     setAppointments(updatedAppointments);
 
-    // به‌روزرسانی وضعیت پرونده به وضعیت بالینی انتخابی
+    // به‌روزرسانی وضعیت پرونده به وضعیت بالینی انتخابی مراجع
+    const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
     if (selectedAppointmentStatus) {
       clientCase.overallStatus = selectedAppointmentStatus;
       setCurrentStatus(selectedAppointmentStatus);
-      const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
       if (targetSubId) {
         updateSubmissionStatus(targetSubId, selectedAppointmentStatus);
-        addSubmissionComment(
-          targetSubId,
-          adminName,
-          'مشاور ارشد پرونده',
-          `🤝 ثبت گزارش جلسه مشاوره (${editing.topic} - ${editing.date.split('،')[0]}): وضعیت بالینی: ${
-            selectedAppointmentStatus === 'growing' ? 'در حال رشد' :
-            selectedAppointmentStatus === 'optimal' ? 'وضعیت مطلوب' :
-            selectedAppointmentStatus === 'regressing' ? 'عقب گرد' :
-            selectedAppointmentStatus === 'needs_followup' ? 'نیازمند پیگیری' : 'در انتظار ارزیابی'
-          }${selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''}${reportForm.recommendation.trim() ? ` | توصیه: ${reportForm.recommendation.trim()}` : ''}`
-        );
       }
+    }
+
+    // ذخیره داده‌های گزارش بالینی در کانتکست فرم
+    if (targetSubId) {
+      updateSubmissionData(targetSubId, {
+        session_status: 'done',
+        clinical_status: selectedAppointmentStatus || 'optimal',
+        clinical_category: selectedClinicalCategory,
+        report_reviewed: reportForm.reviewed.trim(),
+        report_challenges: reportForm.challenges.trim(),
+        report_recommendation: fullRecommendation,
+        report: reportPayload,
+      });
     }
 
     setSavedReport(true);
@@ -1279,6 +1330,15 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       const fTitle = formObj ? formObj.title : 'فرم ثبت‌شده';
 
       (Array.isArray(sub.comments) ? sub.comments : []).forEach((c) => {
+        const contentStr = c.content || '';
+        // فیلتر کردن لاگ‌های گزارش جلسه مشاوره تا صرفاً در کارت آخرین توصیه‌های مشاور قرار گیرند و ارجاعات و پیگیری‌ها را آلوده نکنند
+        if (
+          contentStr.includes('ثبت گزارش جلسه مشاوره') ||
+          contentStr.includes('ثبت گزارش جلسه')
+        ) {
+          return;
+        }
+
         list.push({
           id: c.id,
           submissionId: sub.id,
