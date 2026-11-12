@@ -395,11 +395,13 @@ export const PrintableClientDossier: React.FC<PrintableClientDossierProps> = ({
           submissions.forEach((s) => {
             if (Array.isArray(s.comments)) {
               s.comments.forEach((c) => {
+                const text = c.content || (c as any).commentText || "";
+                if (text.includes('ثبت گزارش جلسه مشاوره')) return;
                 allComments.push({
                   author: c.authorName || 'مشاور محترم',
                   role: c.authorRole || 'مشاور مرکز',
                   date: c.createdAt,
-                  text: c.content || (c as any).commentText || "",
+                  text,
                 });
               });
             }
