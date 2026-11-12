@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
+import { PwaInstallButton } from '@/components/pwa/pwa-install-button';
 import { 
   Layers, 
   PlusCircle, 
@@ -121,6 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* دکمه‌های عملیات سریع و حساب کاربری */}
         <div className="flex items-center gap-1.5 sm:gap-3">
+          <PwaInstallButton variant="header" />
           {/* اعلان‌ها و دراپ‌داون تطبیق هوشمند */}
           {isSuperAdmin && (
             <div className="relative" ref={notifRef}>

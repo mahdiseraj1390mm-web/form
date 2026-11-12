@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#084d3e" />
+  <title>عدم دسترسی به اینترنت | روانشناسی بالحق</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #f8fafc 0%, #ecfdf5 100%);
+      color: #0f172a;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+      text-align: center;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 24px;
+      padding: 32px 24px;
+      box-shadow: 0 20px 45px rgba(8, 77, 62, 0.08);
+    }
+    .icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 18px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+    .icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    h1 {
+      font-size: 19px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.8;
+      color: #475569;
+      margin-bottom: 22px;
+    }
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 13px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      background: #084d3e;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    button:hover { background: #063b2f; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="icon">
+      <img src="/icons/icon-192x192.png" alt="روانشناسی بالحق" />
+    </div>
+    <h1>اتصال به اینترنت برقرار نیست</h1>
+    <p>
+      برای استفاده از سامانه خدمات روانشناسی بالحق، لطفاً اتصال اینترنت گوشی یا سیستم خود را بررسی کرده و دوباره تلاش کنید.
+    </p>
+    <button type="button" onclick="window.location.reload()">تلاش مجدد</button>
+  </main>
+</body>
+</html>

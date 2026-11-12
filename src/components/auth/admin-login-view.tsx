@@ -16,6 +16,7 @@ import {
   Phone,
   Info
 } from 'lucide-react';
+import { PwaInstallButton } from '@/components/pwa/pwa-install-button';
 
 export const AdminLoginView: React.FC = () => {
   const { login } = useAdminAuth();
@@ -207,6 +208,10 @@ export const AdminLoginView: React.FC = () => {
               <p className="leading-relaxed">
                 همکاران محترم می‌توانند با شماره تلفن همراه و رمز عبور اختصاصی که توسط مدیر در سامانه تعریف شده است، وارد پنل کاری خود شوند.
               </p>
+            </div>
+
+            <div className="mt-3">
+              <PwaInstallButton variant="login" />
             </div>
           </div>
 
