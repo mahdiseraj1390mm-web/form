@@ -1056,8 +1056,8 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
 
       {/* مدال تنظیمات پنل */}
       {editingPanelId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-3 sm:p-5 pt-16 sm:pt-20 pb-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                 <Settings className="w-4 h-4 text-blue-600" />

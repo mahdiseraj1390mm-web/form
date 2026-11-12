@@ -1474,8 +1474,8 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
 
     {/* پنجره مودال افزودن / ویرایش شرط منطقی */}
     {isRuleModalOpen && (
-      <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 select-none">
-        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150">
+      <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 pt-16 sm:pt-20 pb-4 select-none overflow-y-auto">
+        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-5 space-y-4 animate-in zoom-in-95 duration-150 max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
