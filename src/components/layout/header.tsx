@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import { PwaInstallButton } from '@/components/pwa/pwa-install-button';
@@ -42,13 +42,19 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { activeForm, similarityNotifications, resolveSimilarityNotification, teamMembers } = useForm();
   const { currentUser, logout } = useAdminAuth();
-  const currentMember = teamMembers?.find(
-    (m) =>
-      (m.mobile && currentUser?.mobile && m.mobile === currentUser.mobile) ||
-      (m.name && currentUser?.name && m.name === currentUser.name)
-  );
-  const activeUserAvatar = currentMember?.avatarUrl;
-  const activeUserGender = currentMember?.genderPrefix;
+
+  const { activeUserAvatar, activeUserGender } = useMemo(() => {
+    const mem = teamMembers?.find(
+      (m) =>
+        (currentUser?.id && m.id === currentUser.id) ||
+        (m.mobile && currentUser?.mobile && m.mobile === currentUser.mobile) ||
+        (m.name && currentUser?.name && m.name === currentUser.name)
+    );
+    return {
+      activeUserAvatar: currentUser?.avatarUrl || mem?.avatarUrl,
+      activeUserGender: currentUser?.genderPrefix || mem?.genderPrefix,
+    };
+  }, [currentUser, teamMembers]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
