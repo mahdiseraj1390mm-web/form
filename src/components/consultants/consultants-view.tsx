@@ -52,8 +52,7 @@ import {
   detectDayIndex,
   COUNSELING_TOPICS,
   KNOWN_CONSULTANTS,
-  CONSULTANT_DEFAULT_TOPICS,
-  matchCounselingTopic
+  CONSULTANT_DEFAULT_TOPICS
 } from '@/lib/consultant-helpers';
 import { ClientDossierFullview, ClientCaseGroup } from '@/components/submissions/client-dossier-fullview';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
@@ -805,29 +804,6 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-100 text-blue-800">
-                  پنل اختصاصی مشاور
-                </span>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  حساب کاربری فعال
-                </span>
-                {allowedTopics.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    {allowedTopics.map((topId) => {
-                      const topicObj = matchCounselingTopic(topId);
-                      return (
-                        <span
-                          key={topId}
-                          className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
-                        >
-                          {topicObj?.name || topId}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
               <h2 className="text-lg font-black text-slate-900 tracking-tight">
                 {currentConsultantProfile.name}
               </h2>
