@@ -958,8 +958,8 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
           </div>
         }
         headerExtra={
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200/80">
-            <ShieldCheck className="size-4 text-emerald-600" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200/80 max-w-full leading-snug">
+            <ShieldCheck className="size-4 text-emerald-600 shrink-0" />
             <span>منبع داده: سوابق اختصاصی پرونده مراجع (داده‌های قطعی و مستند)</span>
           </div>
         }
@@ -1661,7 +1661,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
             </div>
           }
           headerExtra={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-mono">
                 {maritalStats.maritalStatus}
               </span>

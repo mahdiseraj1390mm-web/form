@@ -69,50 +69,61 @@ export function CollapsibleCard({
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
         className={cn(
-          'w-full flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-6 sm:py-4 text-right cursor-pointer select-none group transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
+          'w-full flex items-start sm:items-center justify-between gap-2.5 sm:gap-3 px-4 py-3.5 sm:px-6 sm:py-4 text-right cursor-pointer select-none group transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
           isOpen ? 'rounded-t-3xl' : 'rounded-3xl hover:bg-slate-50/70',
           headerClassName
         )}
       >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {icon && <div className="shrink-0">{icon}</div>}
-          <div className="min-w-0 flex-1">
-            {typeof title === 'string' ? (
-              <h2 className="text-sm font-extrabold text-slate-900 leading-snug">{title}</h2>
-            ) : (
-              title
-            )}
-            {subtitle && (
-              <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{subtitle}</div>
-            )}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 flex-1 min-w-0">
+          <div className="flex items-start sm:items-center gap-2.5 flex-[1_1_195px] min-w-0">
+            {icon && <div className="shrink-0 mt-0.5 sm:mt-0">{icon}</div>}
+            <div className="min-w-0 flex-1 break-words">
+              {typeof title === 'string' ? (
+                <h2 className="text-sm font-extrabold text-slate-900 leading-snug">{title}</h2>
+              ) : (
+                title
+              )}
+              {subtitle && (
+                <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{subtitle}</div>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2 max-w-full shrink-0">
           {headerExtra && (
             <div
-              className="flex flex-wrap items-center gap-1.5 max-w-full"
+              className="flex flex-wrap items-center gap-1.5 max-w-full min-w-0"
               onClick={(e) => {
-                e.stopPropagation();
-                if (!isOpen) setIsOpen(true);
+                const target = e.target as HTMLElement | null;
+                const interactive = target?.closest('button, a, select, input, textarea, label');
+                if (interactive && e.currentTarget.contains(interactive)) {
+                  e.stopPropagation();
+                  if (!isOpen) setIsOpen(true);
+                }
               }}
-              onKeyDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                const target = e.target as HTMLElement | null;
+                const interactive = target?.closest('button, a, select, input, textarea, label');
+                if (interactive && e.currentTarget.contains(interactive)) {
+                  e.stopPropagation();
+                }
+              }}
             >
               {headerExtra}
             </div>
           )}
-          <span
-            aria-hidden="true"
-            className={cn(
-              'w-7 h-7 rounded-xl inline-flex items-center justify-center transition-all duration-300 shrink-0',
-              isOpen
-                ? 'bg-slate-100 text-slate-600 rotate-180 group-hover:bg-slate-200/80'
-                : 'bg-slate-100/80 text-slate-500 rotate-0 group-hover:bg-blue-50 group-hover:text-blue-600'
-            )}
-          >
-            <ChevronDown className="w-4 h-4" />
-          </span>
         </div>
+
+        <span
+          aria-hidden="true"
+          className={cn(
+            'w-7 h-7 rounded-xl inline-flex items-center justify-center transition-all duration-300 shrink-0 mt-0.5 sm:mt-0',
+            isOpen
+              ? 'bg-slate-100 text-slate-600 rotate-180 group-hover:bg-slate-200/80'
+              : 'bg-slate-100/80 text-slate-500 rotate-0 group-hover:bg-blue-50 group-hover:text-blue-600'
+          )}
+        >
+          <ChevronDown className="w-4 h-4" />
+        </span>
       </div>
 
       <div

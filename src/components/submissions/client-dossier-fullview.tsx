@@ -1581,7 +1581,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               title={
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-base font-black text-slate-900">خلاصه پرونده</h3>
-                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-extrabold text-[#173f6b] border border-blue-100">
+                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-extrabold text-[#173f6b] border border-blue-100 whitespace-nowrap shrink-0">
                     شناسنامه هویتی و بالینی
                   </span>
                 </div>
@@ -1593,9 +1593,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               }
               headerExtra={
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-medium">کد یکتای پرونده:</span>
-                  <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-black text-[#173f6b] font-mono border border-slate-200">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-slate-400 font-medium whitespace-nowrap">کد یکتای پرونده:</span>
+                  <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-black text-[#173f6b] font-mono border border-slate-200 whitespace-nowrap">
                     {clientCase.caseCode}
                   </span>
                 </div>
@@ -2150,8 +2150,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               }
               headerExtra={
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400">آخرین ارزیابی:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] text-slate-400 whitespace-nowrap">آخرین ارزیابی:</span>
                   <span className={`px-3 py-1 rounded-xl text-xs font-black border ${
                     clientCase.overallStatus === 'growing'
                       ? 'bg-blue-50 text-blue-700 border-blue-200'
