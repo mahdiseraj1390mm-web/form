@@ -199,7 +199,10 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
   const handleSubmitReport = () => {
     if (!isRequiredFieldsComplete) return;
     const catPrefix = selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}] ` : '';
-    const fullRecommendation = `${catPrefix}${reportForm.recommendation.trim()}`;
+    const cleanRecText = reportForm.recommendation.trim().replace(/^\[محور بالینی:\s*[^\]]+\]\s*/, '');
+    const fullRecommendation = cleanRecText
+      ? `${catPrefix}${cleanRecText}`
+      : (selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}]` : '');
     const caseIdentifier = getClientCaseIdentifier(booking);
     const bookingId = booking.id;
     const statusToSave = selectedAppointmentStatus || 'optimal';
@@ -273,29 +276,6 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
 
     if (updateSubmissionStatus && booking.submissionId) {
       updateSubmissionStatus(booking.submissionId, statusToSave as any);
-    }
-
-    if (addSubmissionComment && booking.submissionId) {
-      const adminName = currentUser?.name || 'مشاور مرکز بالحق';
-      const statusLabel =
-        statusToSave === 'growing'
-          ? 'در حال رشد'
-          : statusToSave === 'optimal'
-          ? 'وضعیت مطلوب'
-          : statusToSave === 'regressing'
-          ? 'عقب گرد'
-          : statusToSave === 'needs_followup'
-          ? 'نیازمند پیگیری'
-          : 'انجام شده';
-
-      addSubmissionComment(
-        booking.submissionId,
-        adminName,
-        'مشاور ارشد پرونده',
-        `🤝 ثبت گزارش جلسه مشاوره (${booking.topic} - ${displayDateTime.split('،')[0]}): وضعیت بالینی: ${statusLabel}${
-          selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''
-        }${reportForm.recommendation.trim() ? ` | توصیه: ${reportForm.recommendation.trim()}` : ''}`
-      );
     }
 
     setIsDone(true);
