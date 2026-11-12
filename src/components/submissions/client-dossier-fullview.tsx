@@ -3410,9 +3410,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               bodyClassName="space-y-4"
             >
 
-              {Array.isArray(selectedSubmission.comments) && selectedSubmission.comments.length > 0 && (
+              {Array.isArray(selectedSubmission.comments) && selectedSubmission.comments.filter((c) => !c.content?.includes('ثبت گزارش جلسه مشاوره')).length > 0 && (
                 <div className="space-y-2.5 pb-2">
-                  {selectedSubmission.comments.map((comment) => (
+                  {selectedSubmission.comments.filter((c) => !c.content?.includes('ثبت گزارش جلسه مشاوره')).map((comment) => (
                     <div
                       key={comment.id}
                       className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1"
