@@ -557,6 +557,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     onSave({
       name: name.trim(),
       genderPrefix,
+      avatarUrl: avatarUrl.trim() || undefined,
       mobile: cleanMobile,
       username: cleanMobile,
       password: password.trim(),
