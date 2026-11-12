@@ -23,6 +23,8 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
+
 interface HeaderProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
@@ -38,8 +40,15 @@ export const Header: React.FC<HeaderProps> = ({
   isMobileNavOpen = false,
   onToggleMobileNav,
 }) => {
-  const { activeForm, similarityNotifications, resolveSimilarityNotification } = useForm();
+  const { activeForm, similarityNotifications, resolveSimilarityNotification, teamMembers } = useForm();
   const { currentUser, logout } = useAdminAuth();
+  const currentMember = teamMembers?.find(
+    (m) =>
+      (m.mobile && currentUser?.mobile && m.mobile === currentUser.mobile) ||
+      (m.name && currentUser?.name && m.name === currentUser.name)
+  );
+  const activeUserAvatar = currentMember?.avatarUrl;
+  const activeUserGender = currentMember?.genderPrefix;
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -216,9 +225,14 @@ export const Header: React.FC<HeaderProps> = ({
               title="حساب کاربری"
               aria-label="منوی حساب کاربری"
             >
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs ring-2 ring-slate-100 shadow-sm shrink-0">
-                {currentUser?.name ? currentUser.name.slice(0, 2) : 'کا'}
-              </div>
+              <ConsultantAvatar
+                avatarUrl={activeUserAvatar}
+                genderPrefix={activeUserGender}
+                name={currentUser?.name}
+                size="sm"
+                shape="circle"
+                className="w-7 h-7 sm:w-8 sm:h-8"
+              />
               <ChevronDown className={`w-3.5 h-3.5 text-slate-500 hidden sm:block transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
@@ -226,9 +240,14 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden text-right animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="p-3.5 bg-slate-50 border-b border-slate-200">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                      {currentUser?.name ? currentUser.name.slice(0, 2) : 'کا'}
-                    </div>
+                    <ConsultantAvatar
+                      avatarUrl={activeUserAvatar}
+                      genderPrefix={activeUserGender}
+                      name={currentUser?.name}
+                      size="sm"
+                      shape="circle"
+                      className="w-9 h-9"
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold text-slate-900 truncate">
                         {currentUser?.name || 'کاربر سامانه'}
