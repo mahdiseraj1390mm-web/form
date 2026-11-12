@@ -121,7 +121,7 @@ export const SubmissionsHub: React.FC = () => {
     rejected: { label: 'رد شده', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
     optimal: { label: 'وضعیت مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-    growing: { label: 'در حال رشد', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
+    growing: { label: 'در حال رشد', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
     needs_followup: { label: 'نیازمند پیگیری', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
     regressing: { label: 'عقب گرد', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
   };
@@ -605,24 +605,62 @@ function normalizeSearchText(str: string): string {
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-slate-500 text-xs hidden sm:inline">وضعیت:</span>
             {[
-              { id: 'all', label: 'همه' },
-              { id: 'regressing', label: 'عقب گرد' },
-              { id: 'needs_followup', label: 'نیازمند پیگیری' },
-              { id: 'optimal', label: 'وضعیت مطلوب' },
-              { id: 'growing', label: 'در حال رشد' },
-            ].map((st) => (
-              <button
-                key={st.id}
-                onClick={() => setStatusFilter(st.id)}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  statusFilter === st.id
-                    ? 'bg-sky-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
+              {
+                id: 'all',
+                label: 'همه',
+                active: 'bg-slate-800 text-white border-slate-800 shadow-xs ring-2 ring-slate-300',
+                inactive: 'bg-slate-100 text-slate-600 border-slate-200/80 hover:bg-slate-200 hover:text-slate-800',
+                dot: '',
+              },
+              {
+                id: 'regressing',
+                label: 'عقب گرد',
+                active: 'bg-rose-600 text-white border-rose-600 shadow-xs ring-2 ring-rose-200',
+                inactive: 'bg-rose-50 text-rose-700 border-rose-200/90 hover:bg-rose-100',
+                dot: 'bg-rose-500',
+              },
+              {
+                id: 'needs_followup',
+                label: 'نیازمند پیگیری',
+                active: 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-200',
+                inactive: 'bg-amber-50 text-amber-800 border-amber-200/90 hover:bg-amber-100',
+                dot: 'bg-amber-500',
+              },
+              {
+                id: 'growing',
+                label: 'در حال رشد',
+                active: 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-200',
+                inactive: 'bg-blue-50 text-blue-700 border-blue-200/90 hover:bg-blue-100',
+                dot: 'bg-blue-500',
+              },
+              {
+                id: 'optimal',
+                label: 'وضعیت مطلوب',
+                active: 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-200',
+                inactive: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 hover:bg-emerald-100',
+                dot: 'bg-emerald-500',
+              },
+            ].map((st) => {
+              const isSelected = statusFilter === st.id;
+              return (
+                <button
+                  key={st.id}
+                  onClick={() => setStatusFilter(isSelected && st.id !== 'all' ? 'all' : st.id)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+                    isSelected ? st.active : st.inactive
+                  }`}
+                >
+                  {st.dot && (
+                    <span
+                      className={`size-1.5 rounded-full shrink-0 transition-colors ${
+                        isSelected ? 'bg-white' : st.dot
+                      }`}
+                    />
+                  )}
+                  <span>{st.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
