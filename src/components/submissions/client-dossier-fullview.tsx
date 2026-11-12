@@ -3948,17 +3948,18 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       {/* مودال ثبت نوبت جدید */}
       {isNewAppointmentModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-5 pt-16 sm:pt-20 pb-4 backdrop-blur-sm overflow-y-auto"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setIsNewAppointmentModalOpen(false);
           }}
         >
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl p-6 shadow-2xl space-y-4 max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto border border-slate-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-base font-black text-slate-900">ثبت نوبت مشاوره جدید</h3>
               <button
                 onClick={() => setIsNewAppointmentModalOpen(false)}
-                className="grid size-8 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                className="grid size-8 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer"
+                title="بستن"
               >
                 ×
               </button>
@@ -4026,13 +4027,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       {/* مودال ثبت گزارش جلسه مشاوره */}
       {editing && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm md:items-center md:p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-5 pt-16 sm:pt-20 pb-4 backdrop-blur-sm overflow-y-auto"
           onMouseDown={(event) => {
             if (event.currentTarget === event.target) setEditing(null);
           }}
         >
-          <section className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-[28px] bg-white shadow-2xl md:rounded-[28px]">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 p-5 backdrop-blur">
+          <section className="max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] w-full max-w-2xl flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200">
+            <div className="shrink-0 flex items-center justify-between border-b border-slate-100 bg-white/95 p-4 sm:p-5 backdrop-blur">
               <div>
                 <div className="text-base font-black text-slate-900">ثبت گزارش جلسه مشاوره</div>
                 <div className="mt-1 text-[11px] text-slate-400">
@@ -4042,11 +4043,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <button
                 onClick={() => setEditing(null)}
                 className="grid size-9 place-items-center rounded-full bg-slate-100 text-lg text-slate-500 hover:bg-slate-200 transition cursor-pointer"
+                title="بستن"
               >
                 ×
               </button>
             </div>
-            <div className="p-5">
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1">
               {/* وضعیت نوبت */}
               <div
                 className={`mb-4 flex items-center justify-between rounded-2xl px-4 py-2.5 text-xs font-bold ${
@@ -4305,9 +4307,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     
       {/* مودال ویرایش مشخصات مراجع توسط مشاور */}
       {isEditProfileModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in" dir="rtl">
-          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-5 pt-16 sm:pt-20 pb-4 animate-in fade-in overflow-y-auto" dir="rtl">
+          <div className="w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)]">
+            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
                   <Edit className="w-4 h-4" />
@@ -4320,6 +4322,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <button
                 onClick={() => setIsEditProfileModalOpen(false)}
                 className="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition flex items-center justify-center cursor-pointer"
+                title="بستن"
               >
                 <X className="w-4 h-4" />
               </button>
