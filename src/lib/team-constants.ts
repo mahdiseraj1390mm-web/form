@@ -51,6 +51,16 @@ export function buildMemberSessionUser(member: TeamMember) {
   };
 }
 
+export function isSuperAdminUser(
+  user?: { isSuperAdmin?: boolean; username?: string; role?: string } | null
+): boolean {
+  return Boolean(
+    user?.isSuperAdmin ||
+      user?.username === 'admin' ||
+      user?.role === 'super_admin'
+  );
+}
+
 export function normalizeMobileNumber(phone: string): string {
   if (!phone) return '';
   const digits = String(phone)

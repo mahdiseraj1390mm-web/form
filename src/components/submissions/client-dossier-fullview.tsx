@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Form, FormSubmission, SubmissionStatus, FormField } from '@/types/form';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
+import { isSuperAdminUser } from '@/lib/team-constants';
 import {
   X,
   Printer,
@@ -262,6 +263,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 }) => {
   const { forms, submissions, updateSubmissionStatus, updateSubmissionData, addSubmissionComment, editSubmissionComment, deleteSubmissionComment } = useForm();
   const { currentUser } = useAdminAuth();
+  const isSuperAdmin = isSuperAdminUser(currentUser);
 
   // دریافت پیوسته و بلادرنگ سابمیشن‌های پرونده از کانتکست عمومی (جهت نمایش بلادرنگ پیام‌ها، یادداشت‌ها و پیگیری‌ها بدون نیاز به رفرش)
   const currentSubmissions = useMemo(() => {
@@ -1153,6 +1155,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   };
 
   const handleExportClientExcel = async () => {
+    if (!isSuperAdmin) return;
     try {
       setIsExportingExcel(true);
       const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
@@ -1529,14 +1532,16 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <Printer className="size-4" />
               چاپ پرونده
             </button>
-            <button
-              onClick={handleExportClientExcel}
-              disabled={isExportingExcel}
-              className="flex items-center gap-2 rounded-xl bg-[#173f6b] hover:bg-[#123357] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
-            >
-              <FileSpreadsheet className="size-4" />
-              خروجی اکسل
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={handleExportClientExcel}
+                disabled={isExportingExcel}
+                className="flex items-center gap-2 rounded-xl bg-[#173f6b] hover:bg-[#123357] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
+              >
+                <FileSpreadsheet className="size-4" />
+                خروجی اکسل
+              </button>
+            )}
           </div>
         </div>
 

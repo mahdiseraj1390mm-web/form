@@ -3,6 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from '@/context/form-context';
+import { useAdminAuth } from '@/context/admin-auth-context';
+import { isSuperAdminUser } from '@/lib/team-constants';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -86,6 +88,8 @@ interface AnalyticsViewProps {
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner }) => {
   const router = useRouter();
   const { forms, submissions, setActiveForm, activeForm } = useForm();
+  const { currentUser } = useAdminAuth();
+  const isSuperAdmin = isSuperAdminUser(currentUser);
 
   // دو زبانه اصلی: داشبورد جامع آمارهای کلان مدیریتی (پیش‌فرض) و تحلیل تفکیکی فیلدهای فرم‌ها
   const [activeTab, setActiveTab] = useState<'overview' | 'formDetail'>('overview');
@@ -989,7 +993,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
   }
 
   const handleExportExcel = async () => {
-    if (!currentForm) return;
+    if (!isSuperAdmin || !currentForm) return;
     if (formSubmissions.length === 0) {
       alert('پاسخی برای خروجی اکسل در این فرم وجود ندارد.');
       return;
@@ -1767,7 +1771,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </select>
             </div>
 
-            {formSubmissions.length > 0 && (
+            {isSuperAdmin && formSubmissions.length > 0 && (
               <button
                 onClick={handleExportExcel}
                 disabled={isExporting}
