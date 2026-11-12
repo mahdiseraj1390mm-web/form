@@ -266,16 +266,26 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
       updateSubmissionData(booking.submissionId, {
         session_status: 'done',
         clinical_status: statusToSave,
+        caseStatus: statusToSave,
         clinical_category: selectedClinicalCategory,
         report_reviewed: reportForm.reviewed.trim(),
         report_challenges: reportForm.challenges.trim(),
         report_recommendation: fullRecommendation,
         report: reportPayload,
       });
+      if (booking.caseCode && booking.caseCode !== 'ثبت‌نشده') {
+        updateSubmissionData(booking.caseCode, {
+          clinical_status: statusToSave,
+          caseStatus: statusToSave,
+        });
+      }
     }
 
     if (updateSubmissionStatus && booking.submissionId) {
       updateSubmissionStatus(booking.submissionId, statusToSave as any);
+      if (booking.caseCode && booking.caseCode !== 'ثبت‌نشده') {
+        updateSubmissionStatus(booking.caseCode, statusToSave as any);
+      }
     }
 
     setIsDone(true);
