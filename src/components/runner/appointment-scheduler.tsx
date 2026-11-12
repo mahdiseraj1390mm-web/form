@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { useForm } from '@/context/form-context';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
 import { 
   COUNSELING_TOPICS, 
   COUNSELOR_MAP, 
@@ -127,6 +128,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             consultantId: m.id,
             consultantName: m.name,
             genderPrefix: prefix as 'آقا' | 'خانم',
+            avatarUrl: m.avatarUrl,
             enabled: true,
             enabledTopics: topics,
             customWorkingHours: m.workingHours,
