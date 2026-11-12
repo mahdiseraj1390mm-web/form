@@ -43,7 +43,7 @@ import { useForm } from '@/context/form-context';
 import { TeamMember, TeamRole } from '@/types/advanced';
 import { InviteMemberModal } from '@/components/team/invite-member-modal';
 import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
-import { COUNSELING_TOPICS } from '@/lib/consultant-helpers';
+import { matchCounselingTopic } from '@/lib/consultant-helpers';
 import { toPersianDigits } from '@/lib/persian';
 
 const TAB_NAME_MAP: Record<string, string> = {
@@ -540,7 +540,7 @@ export const SystemSettingsView: React.FC = () => {
                               <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                                 <span className="text-[10px] text-slate-400 font-medium">موضوعات:</span>
                                 {member.allowedTopics.map((topId) => {
-                                  const topicObj = COUNSELING_TOPICS.find((t) => t.id === topId);
+                                  const topicObj = matchCounselingTopic(topId);
                                   return (
                                     <span
                                       key={topId}

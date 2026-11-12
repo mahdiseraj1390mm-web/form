@@ -36,7 +36,13 @@ import {
 import { TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { Form, AppointmentData, WorkDayPeriod, DayScheduleConfig } from '@/types/form';
 import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
-import { COUNSELING_TOPICS, KNOWN_CONSULTANTS } from '@/lib/consultant-helpers';
+import {
+  COUNSELING_TOPICS,
+  KNOWN_CONSULTANTS,
+  matchCounselingTopic,
+  normalizeCounselingTopicId,
+  normalizeTopicSchedulesMap,
+} from '@/lib/consultant-helpers';
 import { toPersianDigits } from '@/lib/persian';
 
 interface InviteMemberModalProps {
@@ -158,19 +164,20 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       setCanEditWorkingHours(editingMember.canEditWorkingHours === true);
       setConsultantId(editingMember.consultantId || '');
 
-      const topicMap: Record<string, string> = {
-        teen: 'نوجوان',
-        child: 'کودک',
-        family: 'خانواده',
-        clinical: 'بالینی',
-        academic: 'تحصیلی',
-        individual: 'فردی',
-      };
-      const loadedTopics = (editingMember.allowedTopics || []).map((t) => topicMap[t] || t);
+      const loadedTopics = Array.from(
+        new Set(
+          (editingMember.allowedTopics || [])
+            .map((t) => normalizeCounselingTopicId(t))
+            .filter(Boolean)
+        )
+      );
       setAllowedTopics(loadedTopics);
 
-      // بازیابی ساعت کاری عمومی و اختصاصی هر موضوع
+      // بازیابی ساعت کاری عمومی و اختصاصی هر موضوع (با یکسان‌سازی کلیدهای رسمی)
       const wh = editingMember.workingHours;
+      const mergedTopics = normalizeTopicSchedulesMap(
+        wh?.topicSchedules || editingMember.topicWorkingHours
+      );
       if (wh) {
         setSlotDurationMinutes(wh.slotDurationMinutes || 45);
         setRestTimeMinutes(wh.restTimeMinutes ?? 15);
@@ -178,7 +185,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         setStartHour(wh.startHour || '09:00');
         setEndHour(wh.endHour || '17:00');
         setDaySchedules(wh.daySchedules || {});
-        setTopicSchedules(wh.topicSchedules || editingMember.topicWorkingHours || {});
+        setTopicSchedules(mergedTopics);
       } else {
         setSlotDurationMinutes(45);
         setRestTimeMinutes(15);
@@ -186,7 +193,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         setStartHour('09:00');
         setEndHour('17:00');
         setDaySchedules({});
-        setTopicSchedules(editingMember.topicWorkingHours || {});
+        setTopicSchedules(mergedTopics);
       }
     } else {
       setGenderPrefix('آقا');
@@ -199,7 +206,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       setRequireCaseCode(true);
       setCanEditWorkingHours(false);
       setConsultantId('');
-      setAllowedTopics(['بالینی']);
+      setAllowedTopics(['clinical']);
       setSlotDurationMinutes(45);
       setRestTimeMinutes(15);
       setAvailableDays([0, 1, 2, 3, 4]);
@@ -1039,10 +1046,11 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                   </button>
 
                   {allowedTopics.map((top) => {
-                    const topicObj = COUNSELING_TOPICS.find((t) => t.id === top || t.name === top);
+                    const topicObj = matchCounselingTopic(top);
+                    const canonicalKey = topicObj ? topicObj.id : top;
                     const topLabel = topicObj ? topicObj.name : top;
-                    const hasCustom = !!topicSchedules[top] || (topicObj && !!topicSchedules[topicObj.id]);
-                    const isSelected = activeScheduleTopic === top || (topicObj && activeScheduleTopic === topicObj.id);
+                    const hasCustom = !!topicSchedules[canonicalKey] || !!topicSchedules[top];
+                    const isSelected = activeScheduleTopic === canonicalKey || activeScheduleTopic === top;
 
                     return (
                       <button

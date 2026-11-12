@@ -46,7 +46,7 @@ import {
   matchMemberToConsultant, 
   extractBookingItemFromSubmission, 
   isBookingAssignedToConsultant, 
-  COUNSELING_TOPICS 
+  matchCounselingTopic 
 } from '@/lib/consultant-helpers';
 
 interface ClientCaseGroup {
@@ -280,7 +280,7 @@ export const SubmissionsHub: React.FC = () => {
           if (consultantAllowedTopics.length > 0) {
             const subTopic = String(sub.data?.f_topic || sub.data?.f_counseling_subject || sub.data?.topic || '').toLowerCase();
             const matchesTopic = consultantAllowedTopics.some((tId) => {
-              const topicObj = COUNSELING_TOPICS.find((t) => t.id === tId);
+              const topicObj = matchCounselingTopic(tId);
               return topicObj && topicObj.keywords.some((kw) => subTopic.includes(kw));
             });
             if (matchesTopic) {

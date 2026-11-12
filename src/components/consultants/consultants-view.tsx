@@ -52,7 +52,8 @@ import {
   detectDayIndex,
   COUNSELING_TOPICS,
   KNOWN_CONSULTANTS,
-  CONSULTANT_DEFAULT_TOPICS
+  CONSULTANT_DEFAULT_TOPICS,
+  matchCounselingTopic
 } from '@/lib/consultant-helpers';
 import { ClientDossierFullview, ClientCaseGroup } from '@/components/submissions/client-dossier-fullview';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
@@ -814,7 +815,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                 {allowedTopics.length > 0 && (
                   <div className="flex items-center gap-1">
                     {allowedTopics.map((topId) => {
-                      const topicObj = COUNSELING_TOPICS.find((t) => t.id === topId);
+                      const topicObj = matchCounselingTopic(topId);
                       return (
                         <span
                           key={topId}

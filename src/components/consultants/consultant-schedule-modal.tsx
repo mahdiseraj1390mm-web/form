@@ -15,7 +15,11 @@ import {
   Info
 } from 'lucide-react';
 import { AppointmentData, WorkDayPeriod, DayScheduleConfig } from '@/types/form';
-import { COUNSELING_TOPICS } from '@/lib/consultant-helpers';
+import {
+  matchCounselingTopic,
+  normalizeCounselingTopicId,
+  normalizeTopicSchedulesMap,
+} from '@/lib/consultant-helpers';
 import { toPersianDigits } from '@/lib/persian';
 
 interface ConsultantScheduleModalProps {
@@ -69,7 +73,7 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
       setStartHour(initialSchedule.startHour || '09:00');
       setEndHour(initialSchedule.endHour || '17:00');
       setDaySchedules(initialSchedule.daySchedules || {});
-      setTopicSchedules(initialSchedule.topicSchedules || {});
+      setTopicSchedules(normalizeTopicSchedulesMap(initialSchedule.topicSchedules));
     } else {
       setSlotDurationMinutes(45);
       setRestTimeMinutes(15);
@@ -82,14 +86,19 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
     setActiveTopic('all');
   }, [initialSchedule, isOpen]);
 
-  // استخراج تمام کلیدهای موضوعی فعال (ترکیب topics ورودی و کلیدهای درون topicSchedules)
+  // استخراج تمام کلیدهای موضوعی یکتا و رسمی (ترکیب topics ورودی و topicSchedules بدون تکرار)
   const availableTopics = useMemo(() => {
-    const set = new Set<string>(topics || []);
-    if (initialSchedule?.topicSchedules) {
-      Object.keys(initialSchedule.topicSchedules).forEach((k) => set.add(k));
-    }
+    const set = new Set<string>();
+    (topics || []).forEach((t) => {
+      const k = normalizeCounselingTopicId(t);
+      if (k) set.add(k);
+    });
+    Object.keys(topicSchedules).forEach((t) => {
+      const k = normalizeCounselingTopicId(t);
+      if (k) set.add(k);
+    });
     return Array.from(set);
-  }, [topics, initialSchedule]);
+  }, [topics, topicSchedules]);
 
   // دریافت برنامه جاری (عمومی یا موضوع انتخابی)
   const currentSchedule = (): AppointmentData => {
@@ -295,7 +304,7 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
   const cur = currentSchedule();
   const activeTopicDisplay = useMemo(() => {
     if (activeTopic === 'all') return 'ساعت کاری عمومی';
-    const topObj = COUNSELING_TOPICS.find((t) => t.id === activeTopic || t.name === activeTopic);
+    const topObj = matchCounselingTopic(activeTopic);
     return topObj ? topObj.name : activeTopic;
   }, [activeTopic]);
 
@@ -380,10 +389,11 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
                 </button>
 
                 {availableTopics.map((topKey) => {
-                  const topObj = COUNSELING_TOPICS.find((t) => t.id === topKey || t.name === topKey);
+                  const topObj = matchCounselingTopic(topKey);
+                  const canonicalKey = topObj ? topObj.id : topKey;
                   const topLabel = topObj ? topObj.name : topKey;
-                  const hasCustom = !!topicSchedules[topKey] || (topObj && !!topicSchedules[topObj.id]);
-                  const isSelected = activeTopic === topKey || (topObj && activeTopic === topObj.id);
+                  const hasCustom = !!topicSchedules[canonicalKey] || !!topicSchedules[topKey];
+                  const isSelected = activeTopic === canonicalKey || activeTopic === topKey;
 
                   return (
                     <button
