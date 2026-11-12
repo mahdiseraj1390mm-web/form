@@ -367,9 +367,9 @@ export const RestrictedDossierView: React.FC<RestrictedDossierViewProps> = ({
 
       {/* مودال مشاهده رکورد تکی پاسخ‌های فرم */}
       {activeSubmissionModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 pt-16 sm:pt-20 pb-4 animate-in fade-in overflow-y-auto">
-          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-2xl w-full p-6 space-y-5 border border-slate-200 shadow-2xl text-right max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-in fade-in select-none">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl text-right max-h-[80dvh] sm:max-h-[85vh] flex flex-col overflow-hidden select-text">
+            <div className="shrink-0 p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-sky-600" />
                 <h3 className="text-base font-extrabold text-slate-900">
@@ -383,6 +383,8 @@ export const RestrictedDossierView: React.FC<RestrictedDossierViewProps> = ({
                 <X className="w-5 h-5" />
               </button>
             </div>
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 overscroll-contain">
+            
 
             <div className="max-h-96 overflow-y-auto space-y-3 overscroll-contain">
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -402,6 +404,7 @@ export const RestrictedDossierView: React.FC<RestrictedDossierViewProps> = ({
               >
                 بستن
               </button>
+            </div>
             </div>
           </div>
         </div>

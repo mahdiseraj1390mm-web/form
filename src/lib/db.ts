@@ -463,9 +463,11 @@ export async function updateSubmissionDataInDb(
   if (!submissionId || !updatedFields) return false;
 
   const cleanId = submissionId.trim();
-  const cCode = updatedFields.caseCode || cleanId;
+  const bareCode = cleanId.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+  const cCode = updatedFields.caseCode || bareCode || cleanId;
   const newFullName = `${updatedFields.f_name || ''} ${updatedFields.f_family || ''}`.trim();
   const newMobile = normalizeMobile(updatedFields.f_mobile || updatedFields.mobile || '');
+  const statusToUpdate = updatedFields.clinical_status || updatedFields.caseStatus || updatedFields.status;
 
   // ۱. به‌روزرسانی در مخزن فایل محلی
   try {
@@ -473,18 +475,26 @@ export async function updateSubmissionDataInDb(
     let updatedCount = 0;
     for (let i = 0; i < local.length; i++) {
       const s = local[i];
-      if (
+      const sCode = (s.data?.caseCode || s.trackingCode || '').trim();
+      const sBare = sCode.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+      const isMatch =
         s.id === cleanId ||
         s.trackingCode === cleanId ||
         s.data?.caseCode === cleanId ||
-        (cCode && (s.trackingCode === cCode || s.data?.caseCode === cCode))
-      ) {
+        (bareCode && (s.id === `sub-case-${bareCode}` || s.trackingCode === bareCode || s.data?.caseCode === bareCode || sBare === bareCode)) ||
+        (cCode && (s.trackingCode === cCode || s.data?.caseCode === cCode));
+
+      if (isMatch) {
         local[i] = {
           ...s,
+          status: (statusToUpdate && ['regressing', 'needs_followup', 'growing', 'optimal', 'approved', 'rejected', 'new'].includes(statusToUpdate))
+            ? statusToUpdate
+            : s.status,
           mobile: newMobile || s.mobile,
           data: {
             ...(s.data || {}),
             ...updatedFields,
+            ...(statusToUpdate ? { caseStatus: statusToUpdate, clinical_status: statusToUpdate } : {}),
             ...(newFullName ? { fullName: newFullName } : {}),
             ...(cCode ? { caseCode: cCode } : {}),
           },
@@ -504,9 +514,10 @@ export async function updateSubmissionDataInDb(
     await executeNeonQueryWithTimeout(
       `UPDATE form_submissions 
        SET data = data || $1::jsonb,
-           mobile = COALESCE($2, mobile)
-       WHERE id = $3 OR tracking_code = $3 OR data->>'caseCode' = $3`,
-      [JSON.stringify(updatedFields), newMobile || null, cleanId]
+           mobile = COALESCE($2, mobile),
+           status = COALESCE($4, status)
+       WHERE id = $3 OR tracking_code = $3 OR data->>'caseCode' = $3 OR tracking_code = $5 OR data->>'caseCode' = $5`,
+      [JSON.stringify(updatedFields), newMobile || null, cleanId, statusToUpdate || null, bareCode || cleanId]
     );
 
     if (newFullName || newMobile) {

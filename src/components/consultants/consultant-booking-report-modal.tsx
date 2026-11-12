@@ -289,15 +289,15 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-5 pt-16 sm:pt-20 pb-4 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden bg-slate-950/60 backdrop-blur-sm select-none"
       onMouseDown={(e) => {
         if (e.currentTarget === e.target) onClose();
       }}
       dir="rtl"
     >
-      <section className="max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] w-full max-w-2xl flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200">
+      <section className="w-full max-w-2xl max-h-[80dvh] sm:max-h-[85vh] flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200 select-text">
         {/* نوار بالایی مودال */}
-        <div className="shrink-0 flex items-center justify-between border-b border-slate-100 bg-white/95 p-4 sm:p-5 backdrop-blur">
+        <div className="shrink-0 flex items-center justify-between border-b border-slate-100 bg-white p-4 sm:p-5 z-10">
           <div>
             <div className="text-base font-black text-slate-900">ثبت گزارش جلسه مشاوره</div>
             <div className="mt-1 text-[11px] text-slate-400">
@@ -314,7 +314,7 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
           </button>
         </div>
 
-        <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 overscroll-contain">
           {/* بنر وضعیت بررسی نوبت */}
           <div
             className={`mb-4 flex items-center justify-between rounded-2xl px-4 py-2.5 text-xs font-bold ${

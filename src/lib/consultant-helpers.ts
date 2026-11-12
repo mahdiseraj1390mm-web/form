@@ -34,6 +34,7 @@ export interface ConsultantProfile {
   id: string;
   name: string;
   genderPrefix?: 'آقا' | 'خانم';
+  avatarUrl?: string;
   mobile: string;
   jobTitle: string;
   specialization: string;
@@ -754,6 +755,7 @@ export function matchMemberToConsultant(
     id: profileId,
     name: member.name || matchedKnown?.name || 'مشاور',
     genderPrefix: member.genderPrefix || matchedKnown?.genderPrefix,
+    avatarUrl: member.avatarUrl || matchedKnown?.avatarUrl,
     mobile: member.mobile || member.username || matchedKnown?.mobile || '',
     jobTitle: member.jobTitle || matchedKnown?.jobTitle || 'مشاور',
     specialization: member.jobTitle || matchedKnown?.specialization || 'مشاوره تخصصی',

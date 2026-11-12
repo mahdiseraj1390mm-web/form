@@ -590,11 +590,49 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const fromSubs = extractRealAppointmentsFromSubmissions(currentSubmissions);
     const refDate = clientCase.firstSubmissionDate || clientCase.latestDate;
+    const cleanCaseCode = (clientCase.caseCode || '').replace(/^sub-case-/, '').trim();
 
-    // بررسی ذخیره‌ساز محلی پرونده (برای گزارش‌های بالینی ثبت‌شده یا جلسات دستی افزوده شده توسط مدیر)
+    // ۱. بررسی گزارش‌های ثبت‌شده نوبت‌ها به تفکیک
+    if (typeof window !== 'undefined') {
+      fromSubs.forEach((app) => {
+        try {
+          const keysToTry = [
+            `belhagh_booking_report_${cleanCaseCode}_${app.id}`,
+            `belhagh_booking_report_${clientCase.caseCode}_${app.id}`,
+          ];
+          for (const repKey of keysToTry) {
+            const rawRep = localStorage.getItem(repKey);
+            if (rawRep) {
+              const parsedRep = JSON.parse(rawRep);
+              if (parsedRep && (parsedRep.reviewed || parsedRep.challenges || parsedRep.recommendation)) {
+                app.status = 'done';
+                app.reviewed = parsedRep.reviewed;
+                app.challenges = parsedRep.challenges;
+                app.recommendation = parsedRep.recommendation;
+                app.category = parsedRep.category || app.category;
+                app.report = parsedRep;
+                break;
+              }
+            }
+          }
+        } catch {}
+      });
+    }
+
+    // ۲. بررسی ذخیره‌ساز محلی پرونده (برای گزارش‌های بالینی ثبت‌شده یا جلسات دستی افزوده شده توسط مدیر)
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem(storageKey);
+        const keysToTry = [
+          storageKey,
+          `belhagh_real_sessions_v3_${cleanCaseCode}`,
+          `belhagh_real_sessions_v3_sub-case-${cleanCaseCode}`,
+        ];
+        let saved: string | null = null;
+        for (const k of keysToTry) {
+          saved = localStorage.getItem(k);
+          if (saved) break;
+        }
+
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
@@ -643,15 +681,78 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   useEffect(() => {
     try {
       const clean = appointments.filter((a) => !isMockAppointment(a));
+      const cleanCaseCode = (clientCase.caseCode || '').replace(/^sub-case-/, '').trim();
       if (clean.length > 0) {
         localStorage.setItem(storageKey, JSON.stringify(clean));
+        if (cleanCaseCode) {
+          localStorage.setItem(`belhagh_real_sessions_v3_${cleanCaseCode}`, JSON.stringify(clean));
+        }
       } else {
         localStorage.removeItem(storageKey);
       }
     } catch (e) {
       console.error('Failed to save appointments', e);
     }
-  }, [appointments, storageKey]);
+  }, [appointments, storageKey, clientCase.caseCode]);
+
+  // استخراج خودکار وضعیت بالینی پرونده از آخرین ارزیابی ثبت‌شده در جلسات مشاوره یا سابمیشن‌ها
+  const resolvedClinicalStatus = useMemo<SubmissionStatus>(() => {
+    // ۱. بررسی وضعیت آخرین جلسه انجام‌شده در سوابق نوبت‌ها
+    for (const app of appointments) {
+      const st = app.report?.status;
+      if (st && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(st)) {
+        return st as SubmissionStatus;
+      }
+    }
+    // ۲. بررسی در سابمیشن‌های پرونده
+    for (const sub of currentSubmissions) {
+      const st = sub.data?.clinical_status || sub.data?.caseStatus || sub.data?.report?.status;
+      if (st && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(st)) {
+        return st as SubmissionStatus;
+      }
+    }
+    for (const sub of currentSubmissions) {
+      if (sub.status && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(sub.status)) {
+        return sub.status;
+      }
+    }
+    // ۳. بررسی در localStorage پرونده
+    if (typeof window !== 'undefined') {
+      try {
+        const cleanCode = (clientCase.caseCode || '').replace(/^sub-case-/, '').trim();
+        const keys = [
+          storageKey,
+          `belhagh_real_sessions_v3_${clientCase.caseCode}`,
+          `belhagh_real_sessions_v3_${cleanCode}`,
+        ];
+        for (const k of keys) {
+          const saved = localStorage.getItem(k);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              for (const item of parsed) {
+                const st = item.report?.status;
+                if (st && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(st)) {
+                  return st as SubmissionStatus;
+                }
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+    if (clientCase.overallStatus && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(clientCase.overallStatus)) {
+      return clientCase.overallStatus;
+    }
+    return clientCase.overallStatus || 'new';
+  }, [appointments, currentSubmissions, clientCase.caseCode, clientCase.overallStatus, storageKey]);
+
+  useEffect(() => {
+    if (resolvedClinicalStatus && resolvedClinicalStatus !== 'new') {
+      setCurrentStatus(resolvedClinicalStatus);
+      clientCase.overallStatus = resolvedClinicalStatus;
+    }
+  }, [resolvedClinicalStatus]);
 
   // آخرین توصیه‌های واقعی مشاور (فقط از جلساتی که واقعاً گزارش بالینی برایشان ثبت شده است)
   const latestRecommendation = useMemo(() => {
@@ -1005,13 +1106,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       ? `${catPrefix}${cleanRecText}`
       : (selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}]` : '');
 
+    const finalClinicalStatus = selectedAppointmentStatus || 'optimal';
+
     const reportPayload = {
       counselor: editing.counselor,
       date: editing.date,
       reviewed: reportForm.reviewed.trim(),
       challenges: reportForm.challenges.trim(),
       recommendation: fullRecommendation,
-      status: selectedAppointmentStatus || 'optimal',
+      category: selectedClinicalCategory,
+      status: finalClinicalStatus,
+      updatedAt: new Date().toISOString(),
     };
 
     const updatedAppointments = appointments.map((item) => {
@@ -1031,21 +1136,37 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
     setAppointments(updatedAppointments);
 
-    // به‌روزرسانی وضعیت پرونده به وضعیت بالینی انتخابی مراجع
-    const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
-    if (selectedAppointmentStatus) {
-      clientCase.overallStatus = selectedAppointmentStatus;
-      setCurrentStatus(selectedAppointmentStatus);
-      if (targetSubId) {
-        updateSubmissionStatus(targetSubId, selectedAppointmentStatus);
+    // ۱. به‌روزرسانی بلادرنگ وضعیت در استیت و فراخوانی کالبک والد
+    clientCase.overallStatus = finalClinicalStatus;
+    setCurrentStatus(finalClinicalStatus);
+    if (onStatusChange) {
+      onStatusChange(finalClinicalStatus);
+    }
+
+    // ۲. ذخیره‌سازی قطعی و مستقیم در localStorage پرونده
+    const cleanCaseCode = (clientCase.caseCode || '').replace(/^sub-case-/, '').trim();
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updatedAppointments));
+        if (cleanCaseCode) {
+          localStorage.setItem(`belhagh_real_sessions_v3_${cleanCaseCode}`, JSON.stringify(updatedAppointments));
+        }
+        localStorage.setItem(`belhagh_booking_report_${clientCase.caseCode}_${editing.id}`, JSON.stringify(reportPayload));
+        if (cleanCaseCode) {
+          localStorage.setItem(`belhagh_booking_report_${cleanCaseCode}_${editing.id}`, JSON.stringify(reportPayload));
+        }
+      } catch (e) {
+        console.error('Failed saving to localStorage', e);
       }
     }
 
-    // ذخیره داده‌های گزارش بالینی در کانتکست فرم
-    if (targetSubId) {
-      updateSubmissionData(targetSubId, {
+    // ۳. پیدا کردن سابمیشن منطبق با این جلسه و ذخیره کامل داده‌های گزارش در آن
+    const sessionSub = currentSubmissions.find((s) => s.id === editing.id || s.trackingCode === editing.id) || currentSubmissions[0];
+    if (sessionSub) {
+      updateSubmissionData(sessionSub.id, {
         session_status: 'done',
-        clinical_status: selectedAppointmentStatus || 'optimal',
+        clinical_status: finalClinicalStatus,
+        caseStatus: finalClinicalStatus,
         clinical_category: selectedClinicalCategory,
         report_reviewed: reportForm.reviewed.trim(),
         report_challenges: reportForm.challenges.trim(),
@@ -1053,6 +1174,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         report: reportPayload,
       });
     }
+
+    // ۴. به‌روزرسانی وضعیت بالینی در تمامی سابمیشن‌های پرونده این مراجع
+    currentSubmissions.forEach((sub) => {
+      updateSubmissionStatus(sub.id, finalClinicalStatus);
+      if (sub.id !== sessionSub?.id) {
+        updateSubmissionData(sub.id, {
+          clinical_status: finalClinicalStatus,
+          caseStatus: finalClinicalStatus,
+        });
+      }
+    });
 
     setSavedReport(true);
     window.setTimeout(() => {
@@ -1474,7 +1606,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     <div id="printable-dossier-wrapper" className="fixed inset-0 z-50 overflow-y-scroll overflow-x-hidden bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
       {/* سند جامع رسمی چاپی پرونده - تمام فیلدها، سوابق و آمارها به تفکیک و زیر هم */}
       <PrintableClientDossier
-        clientCase={clientCase}
+        clientCase={{ ...clientCase, overallStatus: currentStatus }}
         combinedData={combinedData}
         appointments={appointments}
         submissions={currentSubmissions}
@@ -1546,7 +1678,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 }}
                 className="text-slate-600 font-bold hover:text-[#173f6b] transition cursor-pointer"
               >
-                پرونده {toPersianDigits(clientCase.caseCode)}
+                پرونده {toPersianDigits(clientCase.caseCode.replace(/^sub-case-/, ''))}
               </button>
               {currentView === 'formReport' && selectedFormObj && (
                 <>
@@ -2218,23 +2350,23 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[11px] text-slate-400 whitespace-nowrap">آخرین ارزیابی:</span>
                   <span className={`px-3 py-1 rounded-xl text-xs font-black border ${
-                    clientCase.overallStatus === 'growing'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
+                    currentStatus === 'growing'
                       ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
+                      : currentStatus === 'optimal' || currentStatus === 'approved'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : currentStatus === 'regressing' || currentStatus === 'rejected'
                       ? 'bg-rose-50 text-rose-700 border-rose-200'
-                      : clientCase.overallStatus === 'needs_followup'
+                      : currentStatus === 'needs_followup'
                       ? 'bg-amber-50 text-amber-700 border-amber-200'
                       : 'bg-slate-100 text-slate-600 border-slate-200'
                   }`}>
-                    {clientCase.overallStatus === 'growing'
+                    {currentStatus === 'growing'
                       ? 'در حال رشد'
-                      : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
+                      : currentStatus === 'optimal' || currentStatus === 'approved'
                       ? 'وضعیت مطلوب'
-                      : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
+                      : currentStatus === 'regressing' || currentStatus === 'rejected'
                       ? 'عقب گرد'
-                      : clientCase.overallStatus === 'needs_followup'
+                      : currentStatus === 'needs_followup'
                       ? 'نیازمند پیگیری'
                       : 'در انتظار ارزیابی اولیه مشاور'}
                   </span>
@@ -2246,12 +2378,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 {[
                   { id: 'regressing', label: 'عقب گرد', color: 'bg-rose-500', light: 'bg-rose-50 border-rose-200 text-rose-800' },
                   { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'bg-amber-500', light: 'bg-amber-50 border-amber-200 text-amber-800' },
-                  { id: 'optimal', label: 'وضعیت مطلوب', color: 'bg-blue-500', light: 'bg-blue-50 border-blue-200 text-blue-800' },
-                  { id: 'growing', label: 'در حال رشد', color: 'bg-emerald-500', light: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+                  { id: 'growing', label: 'در حال رشد', color: 'bg-blue-500', light: 'bg-blue-50 border-blue-200 text-blue-800' },
+                  { id: 'optimal', label: 'وضعیت مطلوب', color: 'bg-emerald-500', light: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
                 ].map((step, idx) => {
                   const isCurrent = (
-                    clientCase.overallStatus === step.id ||
-                    (step.id === 'optimal' && clientCase.overallStatus === 'approved') ||
+                    currentStatus === step.id ||
+                    (step.id === 'optimal' && currentStatus === 'approved') ||
                     false
                   );
                   return (
@@ -2336,7 +2468,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         {/* ۲. تب تحلیل‌های آماری مراجع (Statistical Analysis Tab) */}
         {currentView === 'dossier' && activeTab === 'analytics' && (
           <ClientStatisticalAnalysisTab
-            clientCase={clientCase}
+            clientCase={{ ...clientCase, overallStatus: currentStatus }}
             appointments={appointments}
             combinedData={combinedData}
             safaEvaluationSubmission={safaEvaluationSubmission}
@@ -2367,7 +2499,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                         {statusConfigs[currentStatus].label}
                       </span>
                       <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-mono font-bold text-[#173f6b] border border-blue-200/60">
-                        کد پرونده: {toPersianDigits(clientCase.caseCode)}
+                        کد پرونده: {toPersianDigits(clientCase.caseCode.replace(/^sub-case-/, ''))}
                       </span>
                     </div>
                     <div className="mt-2.5 flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500">
@@ -3948,13 +4080,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       {/* مودال ثبت نوبت جدید */}
       {isNewAppointmentModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-5 pt-16 sm:pt-20 pb-4 backdrop-blur-sm overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden bg-slate-950/60 backdrop-blur-sm select-none"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setIsNewAppointmentModalOpen(false);
           }}
         >
-          <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl p-6 shadow-2xl space-y-4 max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 max-h-[80dvh] sm:max-h-[85vh] flex flex-col overflow-hidden select-text">
+            <div className="shrink-0 p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white">
               <h3 className="text-base font-black text-slate-900">ثبت نوبت مشاوره جدید</h3>
               <button
                 onClick={() => setIsNewAppointmentModalOpen(false)}
@@ -3965,7 +4097,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain">
+              <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
               <div>
                 <label className="block text-slate-700 font-bold mb-1.5">تاریخ و ساعت نوبت:</label>
                 <input
@@ -4020,6 +4153,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
@@ -4027,13 +4161,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       {/* مودال ثبت گزارش جلسه مشاوره */}
       {editing && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-5 pt-16 sm:pt-20 pb-4 backdrop-blur-sm overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden bg-slate-950/60 backdrop-blur-sm select-none"
           onMouseDown={(event) => {
             if (event.currentTarget === event.target) setEditing(null);
           }}
         >
-          <section className="max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] w-full max-w-2xl flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200">
-            <div className="shrink-0 flex items-center justify-between border-b border-slate-100 bg-white/95 p-4 sm:p-5 backdrop-blur">
+          <section className="w-full max-w-2xl max-h-[80dvh] sm:max-h-[85vh] flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200 select-text">
+            <div className="shrink-0 flex items-center justify-between border-b border-slate-100 bg-white p-4 sm:p-5 z-10">
               <div>
                 <div className="text-base font-black text-slate-900">ثبت گزارش جلسه مشاوره</div>
                 <div className="mt-1 text-[11px] text-slate-400">
@@ -4048,7 +4182,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 ×
               </button>
             </div>
-            <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 overscroll-contain">
               {/* وضعیت نوبت */}
               <div
                 className={`mb-4 flex items-center justify-between rounded-2xl px-4 py-2.5 text-xs font-bold ${
@@ -4307,9 +4441,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     
       {/* مودال ویرایش مشخصات مراجع توسط مشاور */}
       {isEditProfileModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-5 pt-16 sm:pt-20 pb-4 animate-in fade-in overflow-y-auto" dir="rtl">
-          <div className="w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)]">
-            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden bg-slate-950/60 backdrop-blur-sm select-none animate-in fade-in" dir="rtl">
+          <div className="w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80dvh] sm:max-h-[85vh] select-text">
+            <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
                   <Edit className="w-4 h-4" />
@@ -4328,7 +4462,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 text-xs overscroll-contain">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-600 font-bold mb-1">نام:</label>

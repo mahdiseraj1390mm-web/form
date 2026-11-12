@@ -9,6 +9,8 @@ export interface AdminUser {
   username: string;
   name: string;
   role: string;
+  genderPrefix?: 'آقا' | 'خانم';
+  avatarUrl?: string;
   mobile?: string;
   jobTitle?: string;
   allowedTabs?: string[];

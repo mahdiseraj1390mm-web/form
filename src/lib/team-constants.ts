@@ -37,6 +37,8 @@ export function buildMemberSessionUser(member: TeamMember) {
     id: member.id,
     username: member.mobile || member.username || '',
     name: member.name,
+    genderPrefix: member.genderPrefix,
+    avatarUrl: member.avatarUrl,
     mobile: member.mobile,
     role: member.role || 'member',
     jobTitle: member.jobTitle,

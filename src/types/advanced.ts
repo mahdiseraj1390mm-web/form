@@ -75,6 +75,7 @@ export interface TeamMember {
   id: string;
   name: string;
   genderPrefix?: 'آقا' | 'خانم'; // پیشوند: آقا یا خانم
+  avatarUrl?: string; // آدرس تصویر پروفایل مشاور
   email: string;
   mobile: string;
   username?: string;

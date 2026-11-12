@@ -674,17 +674,69 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSubmissionStatus = (submissionId: string, newStatus: SubmissionStatus) => {
+    const cleanId = (submissionId || '').trim();
+    const bareCode = cleanId.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+
     setSubmissions((prev) =>
-      prev.map((s) => (s.id === submissionId ? { ...s, status: newStatus, updatedAt: new Date().toISOString() } : s))
+      prev.map((s) => {
+        const sCode = (s.data?.caseCode || s.trackingCode || '').trim();
+        const sBare = sCode.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+        const isMatch =
+          s.id === cleanId ||
+          s.trackingCode === cleanId ||
+          s.data?.caseCode === cleanId ||
+          (bareCode && (s.id === `sub-case-${bareCode}` || s.trackingCode === bareCode || s.data?.caseCode === bareCode || sBare === bareCode));
+
+        if (isMatch) {
+          return {
+            ...s,
+            status: newStatus,
+            data: {
+              ...(s.data || {}),
+              caseStatus: newStatus,
+              clinical_status: newStatus,
+            },
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return s;
+      })
     );
+
+    try {
+      fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_submission_status',
+          submissionId,
+          status: newStatus,
+        }),
+      }).catch(() => {});
+    } catch {}
   };
 
   const updateSubmissionData = (submissionId: string, updatedFields: Record<string, any>) => {
+    const cleanId = (submissionId || '').trim();
+    const bareCode = cleanId.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+    const newStatus = updatedFields.clinical_status || updatedFields.caseStatus || updatedFields.status;
+
     setSubmissions((prev) =>
       prev.map((s) => {
-        if (s.id === submissionId || s.trackingCode === submissionId || (s.data && s.data.caseCode === submissionId)) {
+        const sCode = (s.data?.caseCode || s.trackingCode || '').trim();
+        const sBare = sCode.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+        const isMatch =
+          s.id === cleanId ||
+          s.trackingCode === cleanId ||
+          s.data?.caseCode === cleanId ||
+          (bareCode && (s.id === `sub-case-${bareCode}` || s.trackingCode === bareCode || s.data?.caseCode === bareCode || sBare === bareCode));
+
+        if (isMatch) {
           return {
             ...s,
+            ...(newStatus && ['regressing', 'needs_followup', 'growing', 'optimal', 'approved', 'rejected', 'new'].includes(newStatus)
+              ? { status: newStatus }
+              : {}),
             data: { ...s.data, ...updatedFields },
             updatedAt: new Date().toISOString(),
           };
