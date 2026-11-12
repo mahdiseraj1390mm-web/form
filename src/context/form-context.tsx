@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus, EvaluationResult, SimilarityNotification } from '@/types/form';
 import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
@@ -120,6 +120,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
   const [activeForm, setActiveForm] = useState<Form | null>(initialForms[0]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const isRefreshingSubmissionsRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -894,7 +895,9 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   const getSubmissionsByFormId = (formId: string) => submissions.filter((s) => s.formId === formId);
 
   // واکشی پاسخ‌های فرم از دیتابیس ابری Neon و ادغام با وضعیت موجود
-  const refreshSubmissionsFromDb = async (formId?: string): Promise<void> => {
+  const refreshSubmissionsFromDb = useCallback(async (formId?: string): Promise<void> => {
+    if (isRefreshingSubmissionsRef.current) return;
+    isRefreshingSubmissionsRef.current = true;
     try {
       const url = formId ? `/api/cases?formId=${formId}` : "/api/cases?formId=all";
       const res = await fetch(url, { cache: 'no-store' });
@@ -905,11 +908,28 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         ...s,
         comments: Array.isArray(s.comments) ? s.comments : [],
       }));
-      if (formId === 'all' || !formId) {
-        setSubmissions(dbSubmissions);
-        return;
-      }
+
       setSubmissions((prev) => {
+        if (formId === 'all' || !formId) {
+          // مقایسه سطحی برای جلوگیری از رندرهای بیهوده در صورت عدم تغییر داده
+          if (prev.length === dbSubmissions.length) {
+            const isIdentical = dbSubmissions.every((dbs, idx) => {
+              const p = prev[idx];
+              return (
+                p &&
+                p.id === dbs.id &&
+                p.status === dbs.status &&
+                p.paymentStatus === dbs.paymentStatus &&
+                (p.comments?.length || 0) === (dbs.comments?.length || 0) &&
+                p.updatedAt === dbs.updatedAt &&
+                JSON.stringify(p.data) === JSON.stringify(dbs.data)
+              );
+            });
+            if (isIdentical) return prev;
+          }
+          return dbSubmissions;
+        }
+
         const cleanPrev = prev.filter(
           (s) =>
             !s.id.startsWith('sub-bh-') &&
@@ -919,14 +939,26 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         );
         const existingIds = new Set(cleanPrev.map((s) => s.id));
         const merged = [...cleanPrev];
+        let changed = false;
         dbSubmissions.forEach((s) => {
           if (!existingIds.has(s.id)) {
             merged.push(s);
+            changed = true;
           } else {
             const idx = merged.findIndex((m) => m.id === s.id);
-            if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
+            if (idx !== -1 && (
+              merged[idx].status !== s.status ||
+              merged[idx].paymentStatus !== s.paymentStatus ||
+              (merged[idx].comments?.length || 0) !== (s.comments?.length || 0) ||
+              merged[idx].updatedAt !== s.updatedAt ||
+              JSON.stringify(merged[idx].data) !== JSON.stringify(s.data)
+            )) {
+              merged[idx] = { ...merged[idx], ...s };
+              changed = true;
+            }
           }
         });
+        if (!changed && cleanPrev.length === prev.length) return prev;
         return merged.map((s) => ({
           ...s,
           comments: Array.isArray(s.comments) ? s.comments : [],
@@ -934,8 +966,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (err) {
       console.warn('refreshSubmissionsFromDb error:', err);
+    } finally {
+      isRefreshingSubmissionsRef.current = false;
     }
-  };
+  }, []);
 
   const sendChatMessage = (
     formId: string,

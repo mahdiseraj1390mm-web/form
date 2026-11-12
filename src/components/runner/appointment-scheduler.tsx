@@ -506,11 +506,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold ${
-                          isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          <User className="w-4 h-4" />
-                        </div>
+                        <ConsultantAvatar
+                          avatarUrl={consultant.avatarUrl}
+                          genderPrefix={consultant.genderPrefix}
+                          name={consultant.consultantName}
+                          size="sm"
+                        />
                         <div>
                           <span className="font-extrabold text-xs block">{fullName}</span>
                           <span className="text-[10px] text-slate-500">مشاور تخصصی</span>
@@ -534,9 +535,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             <div className="pt-2 border-t border-indigo-100/70">
               <div className="p-3.5 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-indigo-50/90 border border-blue-200/90 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-                    <PhoneCall className="w-4 h-4" />
-                  </div>
+                  <ConsultantAvatar
+                    avatarUrl={activeConsultantConfig.avatarUrl || matchingMember?.avatarUrl}
+                    genderPrefix={activeConsultantConfig.genderPrefix || matchingMember?.genderPrefix}
+                    name={activeConsultantConfig.consultantName}
+                    size="md"
+                  />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-extrabold text-blue-950 text-xs">

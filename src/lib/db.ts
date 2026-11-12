@@ -35,7 +35,16 @@ if (process.env.NODE_ENV !== 'production') {
 
 const LOCAL_SUBMISSIONS_FILE = path.join(process.cwd(), 'data', 'submissions.json');
 
+let lastDbFailureTime = 0;
+let lastDbErrorLoggedTime = 0;
+const DB_FAILURE_COOLDOWN_MS = 30000;
+
 async function executeDbQueryWithTimeout(queryText: string, params: any[] = []): Promise<any> {
+  // در صورتی که دیتابیس در دسترس نباشد، تا ۳۰ ثانیه برای هر درخواست معطل نمانده و سریعاً به فایل محلی فال‌بک می‌شود
+  if (Date.now() - lastDbFailureTime < DB_FAILURE_COOLDOWN_MS) {
+    throw new Error('Database connection temporarily unavailable (cooling down)');
+  }
+
   let timer: any;
   const timeoutPromise = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error('PostgreSQL DB query timeout')), 5000);
@@ -46,9 +55,14 @@ async function executeDbQueryWithTimeout(queryText: string, params: any[] = []):
       pool.query(queryText, params),
       timeoutPromise,
     ]);
+    lastDbFailureTime = 0;
     return (res as any).rows;
   } catch (err: any) {
-    console.warn('DB query error:', err?.message || err);
+    lastDbFailureTime = Date.now();
+    if (Date.now() - lastDbErrorLoggedTime > 30000) {
+      console.warn('DB query error (falling back to local cache):', err?.message || err);
+      lastDbErrorLoggedTime = Date.now();
+    }
     throw err;
   } finally {
     clearTimeout(timer);

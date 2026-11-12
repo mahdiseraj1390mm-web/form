@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import { ShieldAlert, Lock, Key } from 'lucide-react';
@@ -83,19 +83,26 @@ export const SubmissionsHub: React.FC = () => {
       ? currentMember.requireCaseCode
       : (currentUser?.requireCaseCode !== false)
   );
-  // همگام‌سازی کاملاً خودکار و زنده با پایگاه‌داده سرور
+  const refreshRef = useRef(refreshSubmissionsFromDb);
+  useEffect(() => {
+    refreshRef.current = refreshSubmissionsFromDb;
+  }, [refreshSubmissionsFromDb]);
+
+  // همگام‌سازی هوشمند با پایگاه‌داده سرور: در بدو ورود، بازگشت به تب، و هر ۶۰ ثانیه به شرط فعال بودن تب
   useEffect(() => {
     // ۱. دریافت بلافاصله در بدو ورود به کارتابل
-    refreshSubmissionsFromDb('all');
+    refreshRef.current?.('all');
 
-    // ۲. به‌روزرسانی خودکار در پس‌زمینه هر ۱۵ ثانیه بدون نیاز به هیچ کلیک
+    // ۲. به‌روزرسانی خودکار در پس‌زمینه هر ۶۰ ثانیه فقط در صورتی که صفحه در دید کاربر باشد
     const interval = setInterval(() => {
-      refreshSubmissionsFromDb('all');
-    }, 45000);
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refreshRef.current?.('all');
+      }
+    }, 60000);
 
     // ۳. دریافت آخرین اطلاعات به محض بازگشت کاربر به تب مرورگر
     const handleFocus = () => {
-      refreshSubmissionsFromDb('all');
+      refreshRef.current?.('all');
     };
     window.addEventListener('focus', handleFocus);
 
@@ -103,7 +110,7 @@ export const SubmissionsHub: React.FC = () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [refreshSubmissionsFromDb]);
+  }, []);
   
   // دو زبانه اصلی: کارتابل پرونده‌های مراجعین (پیش‌فرض) و بانک ارسالی‌های تفکیکی فرم‌ها
   const [hubTab, setHubTab] = useState<'cases' | 'submissions'>('cases');

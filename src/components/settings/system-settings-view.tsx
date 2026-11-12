@@ -45,6 +45,7 @@ import { InviteMemberModal } from '@/components/team/invite-member-modal';
 import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
 import { matchCounselingTopic } from '@/lib/consultant-helpers';
 import { toPersianDigits } from '@/lib/persian';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
 
 const TAB_NAME_MAP: Record<string, string> = {
   dashboard: 'داشبورد مدیریت',
@@ -459,9 +460,13 @@ export const SystemSettingsView: React.FC = () => {
                         {/* مشخصات مشاور */}
                         <div className="flex items-start gap-3">
                           <div className="relative">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-100 to-indigo-100 border border-slate-300 text-indigo-950 font-extrabold flex items-center justify-center text-xs shadow-xs">
-                              {prefix ? prefix : (cleanNameOnly ? cleanNameOnly.slice(0, 2) : 'مش')}
-                            </div>
+                            <ConsultantAvatar
+                              avatarUrl={member.avatarUrl}
+                              genderPrefix={member.genderPrefix}
+                              name={member.name}
+                              size="md"
+                              className="w-12 h-12"
+                            />
                             <span
                               className={`absolute -bottom-1 -left-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
                                 isActive ? 'bg-emerald-500' : 'bg-rose-400'
