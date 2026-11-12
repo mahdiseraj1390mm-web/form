@@ -31,8 +31,13 @@ import {
   CalendarDays,
   UserCheck,
   RotateCcw,
-  Check
+  Check,
+  Upload,
+  Image as ImageIcon,
+  Camera,
+  Loader2
 } from 'lucide-react';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
 import { TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { Form, AppointmentData, WorkDayPeriod, DayScheduleConfig } from '@/types/form';
 import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
@@ -106,6 +111,12 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   // اطلاعات کاربری
   const [genderPrefix, setGenderPrefix] = useState<'آقا' | 'خانم'>('آقا');
   const [name, setName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -148,6 +159,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
 
       setGenderPrefix(initialPrefix);
       setName(cleanName);
+      setAvatarUrl(editingMember.avatarUrl || '');
+      setAvatarUploadError(null);
+      setShowUrlInput(false);
       setMobile(editingMember.mobile || editingMember.username || '');
       setPassword(editingMember.password || '');
       setJobTitle(editingMember.jobTitle || '');
@@ -198,6 +212,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     } else {
       setGenderPrefix('آقا');
       setName('');
+      setAvatarUrl('');
+      setAvatarUploadError(null);
+      setShowUrlInput(false);
       setMobile('');
       setPassword('');
       setJobTitle('مشاور تخصصی');
@@ -219,6 +236,46 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     setCustomTopicInput('');
     setErrors({});
   }, [editingMember, isOpen]);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarUploadError('لطفاً یک فایل تصویری معتبر (JPG, PNG, WebP) انتخاب فرمایید.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarUploadError('حجم تصویر نباید بیشتر از ۵ مگابایت باشد.');
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      setAvatarUploadError(null);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setAvatarUrl(data.url);
+      } else {
+        setAvatarUploadError(data.error || 'خطا در بارگذاری تصویر');
+      }
+    } catch (err: any) {
+      setAvatarUploadError('خطا در برقراری ارتباط با سرور: ' + (err?.message || ''));
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const toggleTab = (tabId: string) => {
     setAllowedTabs((prev) => {

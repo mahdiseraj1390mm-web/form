@@ -190,7 +190,8 @@ export const SubmissionsHub: React.FC = () => {
       const rawMobile = sub.data?.f_mobile || sub.data?.bk_mobile || sub.data?.mobile || (sub as any).mobile;
       const clean = normalizeMob(rawMobile);
       if (clean) {
-        const cCode = sub.data?.caseCode || sub.trackingCode;
+        const rawCCode = (sub.data?.caseCode || sub.trackingCode || '').trim();
+        const cCode = rawCCode.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
         if (cCode) {
           const current = mobileToPrimaryCase.get(clean);
           if (!current || (!cCode.startsWith('BH-') && current.startsWith('BH-')) || (!cCode.startsWith('CASE-') && current.startsWith('CASE-'))) {
@@ -205,7 +206,8 @@ export const SubmissionsHub: React.FC = () => {
       const cleanMobile = normalizeMob(rawMobile);
 
       // استخراج کد پرونده واحد (تجمیع بر اساس شماره تماس یا کد اختصاصی، بدون حذف هیچ سابقه‌ای)
-      const caseCode = (cleanMobile && mobileToPrimaryCase.get(cleanMobile)) || sub.data?.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
+      const rawCaseCode = (cleanMobile && mobileToPrimaryCase.get(cleanMobile)) || sub.data?.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
+      const caseCode = String(rawCaseCode).replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
       
       const candidateName =
         sub.data.fullName ||
@@ -234,7 +236,7 @@ export const SubmissionsHub: React.FC = () => {
           formTitles: [formTitle],
           totalFormsCount: 1,
           latestDate: sub.createdAt,
-          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.caseStatus || sub.status) ? (sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'new')) as any,
+          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.clinical_status || sub.data?.caseStatus || sub.status) ? (sub.data?.clinical_status || sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'new')) as any,
           totalPaidAmount: sub.paymentStatus === 'paid' ? (sub.paymentAmount || 0) : 0,
           roleInFamily,
         });
@@ -254,6 +256,61 @@ export const SubmissionsHub: React.FC = () => {
         if (candidateName && (existing.fullName === 'مراجع مرکز بالحق' || !existing.fullName)) {
           existing.fullName = candidateName;
         }
+      }
+    });
+
+    // ارزیابی جامع و دقیق وضعیت بالینی کلیه پرونده‌ها بر اساس آخرین جلسه و گزارش ثبت‌شده
+    caseMap.forEach((c) => {
+      let clinicalSt: SubmissionStatus | null = null;
+      // ۱. بررسی گزارش بالینی ثبت‌شده در فیلدهای داده سابمیشن‌ها
+      for (const s of c.submissions) {
+        const candidate = s.data?.clinical_status || s.data?.caseStatus || s.data?.report?.status;
+        if (candidate && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(candidate)) {
+          clinicalSt = candidate as SubmissionStatus;
+          break;
+        }
+      }
+      // ۲. بررسی وضعیت صریح سابمیشن
+      if (!clinicalSt) {
+        for (const s of c.submissions) {
+          if (s.status && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(s.status)) {
+            clinicalSt = s.status;
+            break;
+          }
+        }
+      }
+      // ۳. بررسی در حافظه محلی مرورگر (برای جلساتی که اخیراً توسط مشاور ثبت شده‌اند)
+      if (!clinicalSt && typeof window !== 'undefined') {
+        try {
+          const keys = [
+            `belhagh_real_sessions_v3_${c.caseCode}`,
+            `belhagh_real_sessions_v3_sub-case-${c.caseCode}`,
+          ];
+          for (const k of keys) {
+            const saved = localStorage.getItem(k);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed)) {
+                for (const item of parsed) {
+                  const itemSt = item.report?.status;
+                  if (itemSt && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(itemSt)) {
+                    clinicalSt = itemSt;
+                    break;
+                  }
+                }
+              }
+            }
+            if (clinicalSt) break;
+          }
+        } catch {}
+      }
+
+      if (clinicalSt) {
+        c.overallStatus = clinicalSt;
+      } else {
+        const hasApproved = c.submissions.some((s) => s.status === 'approved');
+        const hasRejected = c.submissions.some((s) => s.status === 'rejected');
+        c.overallStatus = hasApproved ? 'optimal' : hasRejected ? 'regressing' : 'new';
       }
     });
 
@@ -705,7 +762,7 @@ function normalizeSearchText(str: string): string {
                           {/* کد پرونده */}
                           <td className="p-3.5 sm:p-4">
                             <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200/80 inline-block text-xs">
-                              {c.caseCode}
+                              {c.caseCode.replace(/^sub-case-/, '')}
                             </span>
                           </td>
 
@@ -713,10 +770,10 @@ function normalizeSearchText(str: string): string {
                           <td className="p-3.5 sm:p-4">
                             <div className="flex items-center gap-2.5">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center font-mono font-bold text-[11px] shrink-0 shadow-2xs">
-                                SP
+                                {c.caseCode.replace(/^sub-case-/, '').slice(0, 2).toUpperCase() || 'SP'}
                               </div>
                               <div>
-                                <span className="font-mono font-black text-slate-900 block text-xs">{c.caseCode}</span>
+                                <span className="font-mono font-black text-slate-900 block text-xs">{c.caseCode.replace(/^sub-case-/, '')}</span>
                                 {c.roleInFamily && (
                                   <span className="text-[11px] text-slate-400 block -mt-0.5">
                                     نقش: {c.roleInFamily} خانواده
@@ -830,11 +887,11 @@ function normalizeSearchText(str: string): string {
                     <div className="flex items-center justify-between gap-2.5">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-xs">
-                          SP
+                          {c.caseCode.replace(/^sub-case-/, '').slice(0, 2).toUpperCase() || 'SP'}
                         </div>
                         <div className="min-w-0">
                           <span className="font-mono font-extrabold text-slate-900 text-sm block tracking-tight">
-                            {c.caseCode}
+                            {c.caseCode.replace(/^sub-case-/, '')}
                           </span>
                           {c.roleInFamily && (
                             <span className="text-[11px] text-slate-500 font-medium block truncate">
@@ -855,7 +912,7 @@ function normalizeSearchText(str: string): string {
                       <div>
                         <span className="text-[10px] text-slate-400 block mb-1">شناسه مراجع:</span>
                         <span className="font-mono font-bold text-sky-800 bg-sky-50/90 px-2 py-0.5 rounded-lg border border-sky-200/70 inline-block text-[11px]">
-                          {c.caseCode}
+                          {c.caseCode.replace(/^sub-case-/, '')}
                         </span>
                       </div>
 

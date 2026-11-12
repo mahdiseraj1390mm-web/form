@@ -54,6 +54,21 @@ export async function POST(req: NextRequest) {
                 ...m,
                 workingHours: body.workingHours,
                 topicWorkingHours: body.topicWorkingHours ?? body.workingHours?.topicSchedules,
+                avatarUrl: body.avatarUrl !== undefined ? body.avatarUrl : m.avatarUrl,
+              }
+            : m
+        );
+        await saveTeamMembersToDb(updated);
+        return NextResponse.json({ success: true, teamMembers: updated });
+      }
+
+      if (body.action === 'updateOwnProfile') {
+        const current = await getTeamMembersFromDb();
+        const updated = current.map((m) =>
+          m.id === actor.member.id
+            ? {
+                ...m,
+                avatarUrl: body.avatarUrl !== undefined ? body.avatarUrl : m.avatarUrl,
               }
             : m
         );
@@ -76,8 +91,9 @@ export async function POST(req: NextRequest) {
           m.id === actor.member.id
             ? {
                 ...m,
-                workingHours: incomingSelf.workingHours,
-                topicWorkingHours: incomingSelf.topicWorkingHours,
+                workingHours: incomingSelf.workingHours ?? m.workingHours,
+                topicWorkingHours: incomingSelf.topicWorkingHours ?? m.topicWorkingHours,
+                avatarUrl: incomingSelf.avatarUrl !== undefined ? incomingSelf.avatarUrl : m.avatarUrl,
               }
             : m
         );
