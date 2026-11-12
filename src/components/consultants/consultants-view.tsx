@@ -32,8 +32,15 @@ import {
   UserCheck,
   Check,
   Building2,
-  Inbox
+  Inbox,
+  Camera,
+  Upload,
+  Trash2,
+  Loader2
 } from 'lucide-react';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
+import { InviteMemberModal } from '@/components/team/invite-member-modal';
+import { TeamMember } from '@/types/advanced';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import type { 
@@ -82,6 +89,40 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
   const [activeDayIndex, setActiveDayIndex] = useState<number>(0);
   const [timelineMode, setTimelineMode] = useState<'day' | 'week'>('day');
   const [isSelfScheduleModalOpen, setIsSelfScheduleModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isUploadingSelfAvatar, setIsUploadingSelfAvatar] = useState(false);
+  const selfAvatarInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleSelfAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentMember) return;
+    if (!file.type.startsWith('image/')) {
+      alert('لطفاً یک فایل تصویری معتبر انتخاب فرمایید.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('حجم تصویر نباید بیشتر از ۵ مگابایت باشد.');
+      return;
+    }
+    try {
+      setIsUploadingSelfAvatar(true);
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        updateTeamMember(currentMember.id, { avatarUrl: data.url });
+      } else {
+        alert(data.error || 'خطا در بارگذاری تصویر');
+      }
+    } catch (err: any) {
+      alert('خطا در برقراری ارتباط با سرور: ' + (err?.message || ''));
+    } finally {
+      setIsUploadingSelfAvatar(false);
+      if (selfAvatarInputRef.current) selfAvatarInputRef.current.value = '';
+    }
+  };
 
   // فیلتر و جستجو
   const [searchQuery, setSearchQuery] = useState('');
@@ -267,7 +308,14 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
 
     const matchingSubs = rawList.length > 0 ? rawList : [booking.rawSubmission];
     const totalPaid = matchingSubs.reduce((acc, curr) => acc + (curr.paymentAmount || 0), 0);
-    const overallStatus = (matchingSubs[0]?.status || 'approved') as any;
+    let overallStatus = (matchingSubs[0]?.status || 'approved') as any;
+    for (const s of matchingSubs) {
+      const cand = s.data?.clinical_status || s.data?.caseStatus || s.data?.report?.status;
+      if (cand && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(cand)) {
+        overallStatus = cand;
+        break;
+      }
+    }
 
     const group: ClientCaseGroup = {
       caseCode: booking.caseCode,
@@ -793,20 +841,64 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
         {/* سربرگ مشخصات مشاور */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white font-black text-xl flex items-center justify-center shadow-md shadow-blue-500/20">
-                {currentConsultantProfile.name.slice(0, 2)}
-              </div>
+            <div className="relative group">
+              <ConsultantAvatar
+                avatarUrl={currentMember?.avatarUrl || currentConsultantProfile.avatarUrl}
+                genderPrefix={currentMember?.genderPrefix || currentConsultantProfile.genderPrefix}
+                name={currentConsultantProfile.name}
+                size="lg"
+                className="w-14 h-14 ring-2 ring-slate-100 shadow-sm"
+              />
               <span
                 className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white"
                 title="آنلاین"
               />
+              {currentMember && (
+                <>
+                  <input
+                    ref={selfAvatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleSelfAvatarUpload}
+                    id="self-avatar-upload"
+                  />
+                  <label
+                    htmlFor="self-avatar-upload"
+                    className="absolute inset-0 bg-black/50 text-white rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-xs"
+                    title="تغییر یا بارگذاری عکس پروفایل"
+                  >
+                    {isUploadingSelfAvatar ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Camera className="w-5 h-5" />
+                    )}
+                  </label>
+                </>
+              )}
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                {currentConsultantProfile.name}
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                  {currentConsultantProfile.name}
+                </h2>
+                {currentMember?.avatarUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('آیا از حذف عکس اختصاصی و بازگشت به آیکون پیش‌فرض اطمینان دارید؟')) {
+                        updateTeamMember(currentMember.id, { avatarUrl: undefined });
+                      }
+                    }}
+                    className="text-[10px] text-rose-600 hover:text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 transition cursor-pointer flex items-center gap-1"
+                    title="حذف تصویر اختصاصی"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>حذف عکس</span>
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                 <span className="font-semibold text-slate-700">{currentConsultantProfile.jobTitle}</span>
                 <span>•</span>
@@ -1090,6 +1182,9 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           <ClientDossierFullview
             clientCase={selectedClientGroup}
             onClose={() => setSelectedClientGroup(null)}
+            onStatusChange={(newStatus) => {
+              setSelectedClientGroup((prev) => (prev ? { ...prev, overallStatus: newStatus } : null));
+            }}
           />
         )}
 
@@ -1191,9 +1286,13 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
           {/* نوار بالایی انتخاب مشاور برای نمایش تایم‌لاین */}
           <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
-                {activeTimelineConsultant.name.slice(0, 2)}
-              </div>
+              <ConsultantAvatar
+                avatarUrl={activeTimelineConsultant.avatarUrl}
+                genderPrefix={activeTimelineConsultant.genderPrefix}
+                name={activeTimelineConsultant.name}
+                size="sm"
+                className="w-10 h-10"
+              />
               <div>
                 <h3 className="font-extrabold text-sm text-slate-900">
                   تایم‌لاین هفتگی: {activeTimelineConsultant.name}
@@ -1295,9 +1394,13 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                     {/* مشخصات مشاور */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                       <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-100 to-indigo-100 border border-slate-300 text-indigo-950 font-black flex items-center justify-center text-sm shadow-xs shrink-0">
-                          {prof.genderPrefix ? prof.genderPrefix : prof.name.slice(0, 2)}
-                        </div>
+                        <ConsultantAvatar
+                          avatarUrl={prof.avatarUrl || mem?.avatarUrl}
+                          genderPrefix={prof.genderPrefix || mem?.genderPrefix}
+                          name={prof.name}
+                          size="md"
+                          className="w-12 h-12"
+                        />
 
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1341,17 +1444,33 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedConsultantId(prof.id);
-                            setAdminViewMode('timeline');
-                          }}
-                          className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-                        >
-                          <CalendarClock className="w-4 h-4" />
-                          <span>مشاهده تایم‌لاین هفتگی</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {isSuperAdmin && mem && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMember(mem);
+                                setIsInviteModalOpen(true);
+                              }}
+                              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                              title="ویرایش عکس، مشخصات و ساعات کاری مشاور"
+                            >
+                              <Settings className="w-4 h-4 text-slate-500" />
+                              <span>ویرایش مشخصات</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedConsultantId(prof.id);
+                              setAdminViewMode('timeline');
+                            }}
+                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          >
+                            <CalendarClock className="w-4 h-4" />
+                            <span>مشاهده تایم‌لاین هفتگی</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -1440,6 +1559,26 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
         <ClientDossierFullview
           clientCase={selectedClientGroup}
           onClose={() => setSelectedClientGroup(null)}
+          onStatusChange={(newStatus) => {
+            setSelectedClientGroup((prev) => (prev ? { ...prev, overallStatus: newStatus } : null));
+          }}
+        />
+      )}
+
+      {/* مودال ویرایش مشخصات مشاور و عکس پروفایل */}
+      {isSuperAdmin && (
+        <InviteMemberModal
+          isOpen={isInviteModalOpen}
+          onClose={() => {
+            setIsInviteModalOpen(false);
+            setEditingMember(null);
+          }}
+          editingMember={editingMember}
+          onSave={(memberData) => {
+            if (editingMember) {
+              updateTeamMember(editingMember.id, memberData);
+            }
+          }}
         />
       )}
 
