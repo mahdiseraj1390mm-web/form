@@ -73,7 +73,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
   const currentAvailability: ClientFormAvailability = 
     form.clientAvailability || 
     generalSettings.clientAvailability || 
-    (form.status === 'published' && form.id !== 'form-belhagh-registration' ? 'active_submittable' : 'hidden_inactive');
+    (form.status === 'published' ? 'active_submittable' : form.status === 'draft' ? 'active_readonly' : 'hidden_inactive');
 
   // تنظیمات امنیتی و محدودیت‌ها
   const sec: SecuritySettings = form.security || {
@@ -244,8 +244,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                         value="active_submittable"
                         checked={currentAvailability === 'active_submittable'}
                         onChange={() => {
-                          updateGeneral({ clientAvailability: 'active_submittable' });
-                          onUpdateForm({ clientAvailability: 'active_submittable' });
+                          onUpdateForm({
+                            status: 'published',
+                            clientAvailability: 'active_submittable',
+                            generalSettings: {
+                              ...generalSettings,
+                              clientAvailability: 'active_submittable',
+                            },
+                          });
                         }}
                         className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                       />
@@ -267,8 +273,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                         value="active_readonly"
                         checked={currentAvailability === 'active_readonly'}
                         onChange={() => {
-                          updateGeneral({ clientAvailability: 'active_readonly' });
-                          onUpdateForm({ clientAvailability: 'active_readonly' });
+                          onUpdateForm({
+                            status: 'draft',
+                            clientAvailability: 'active_readonly',
+                            generalSettings: {
+                              ...generalSettings,
+                              clientAvailability: 'active_readonly',
+                            },
+                          });
                         }}
                         className="w-4 h-4 text-amber-600 focus:ring-amber-500 cursor-pointer"
                       />
@@ -290,8 +302,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                         value="hidden_inactive"
                         checked={currentAvailability === 'hidden_inactive'}
                         onChange={() => {
-                          updateGeneral({ clientAvailability: 'hidden_inactive' });
-                          onUpdateForm({ clientAvailability: 'hidden_inactive' });
+                          onUpdateForm({
+                            status: 'archived',
+                            clientAvailability: 'hidden_inactive',
+                            generalSettings: {
+                              ...generalSettings,
+                              clientAvailability: 'hidden_inactive',
+                            },
+                          });
                         }}
                         className="w-4 h-4 text-rose-600 focus:ring-rose-500 cursor-pointer"
                       />

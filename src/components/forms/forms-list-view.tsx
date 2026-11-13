@@ -29,34 +29,53 @@ import {
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
 import { isAssignedSafaSubmission } from '@/lib/safa-utils';
 
-const FORM_STATUS_MAP: Record<
-  'published' | 'draft' | 'archived',
+export type FormAvailabilityStatus = 'active_submittable' | 'active_readonly' | 'hidden_inactive';
+
+export const FORM_STATUS_MAP: Record<
+  FormAvailabilityStatus,
   {
+    code: number;
     label: string;
+    fullLabel: string;
     badgeClass: string;
     dotClass: string;
     pulse: boolean;
   }
 > = {
-  published: {
-    label: 'منتشر شده (فعال)',
+  active_submittable: {
+    code: 1,
+    label: '۱ـ فعال با ثبت',
+    fullLabel: '۱ـ فعال با امکان ثبت (روشن و قابل کلیک)',
     badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100',
     dotClass: 'bg-emerald-500',
     pulse: true,
   },
-  draft: {
-    label: 'پیش‌نویس',
+  active_readonly: {
+    code: 2,
+    label: '۲ـ فعال بدون ثبت',
+    fullLabel: '۲ـ فعال اما بدون امکان ثبت (انتهای لیست)',
     badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100',
     dotClass: 'bg-amber-500',
     pulse: false,
   },
-  archived: {
-    label: 'بایگانی‌شده',
+  hidden_inactive: {
+    code: 3,
+    label: '۳ـ غیرفعال و عدم نمایش',
+    fullLabel: '۳ـ غیرفعال و بدون امکان ثبت (عدم نمایش در لیست)',
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200',
     dotClass: 'bg-slate-400',
     pulse: false,
   },
 };
+
+export function getFormEffectiveStatus(form: Form): FormAvailabilityStatus {
+  if (form.clientAvailability) return form.clientAvailability;
+  if (form.generalSettings?.clientAvailability) return form.generalSettings.clientAvailability;
+  if (form.status === 'published') return 'active_submittable';
+  if (form.status === 'draft') return 'active_readonly';
+  if (form.status === 'archived') return 'hidden_inactive';
+  return 'active_submittable';
+}
 
 interface FormsListViewProps {
   onOpenNewFormModal: () => void;
@@ -75,21 +94,34 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
   const [copiedEmbed, setCopiedEmbed] = useState(false);
   const [reportsFormId, setReportsFormId] = useState<string | null>(null);
   const [exportingFormId, setExportingFormId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft' | 'archived'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | FormAvailabilityStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [openStatusMenuId, setOpenStatusMenuId] = useState<string | null>(null);
   const [statusToast, setStatusToast] = useState<string | null>(null);
 
-  const handleStatusChange = (form: Form, newStatus: 'published' | 'draft' | 'archived') => {
-    updateForm(form.id, { status: newStatus });
-    const label = FORM_STATUS_MAP[newStatus]?.label || newStatus;
+  const handleStatusChange = (form: Form, newStatus: FormAvailabilityStatus) => {
+    const statusMap: Record<FormAvailabilityStatus, 'published' | 'draft' | 'archived'> = {
+      active_submittable: 'published',
+      active_readonly: 'draft',
+      hidden_inactive: 'archived',
+    };
+
+    updateForm(form.id, {
+      status: statusMap[newStatus],
+      clientAvailability: newStatus,
+      generalSettings: {
+        ...(form.generalSettings || {}),
+        clientAvailability: newStatus,
+      },
+    });
+    const label = FORM_STATUS_MAP[newStatus]?.fullLabel || newStatus;
     setStatusToast(`وضعیت فرم «${form.title}» به «${label}» تغییر یافت.`);
     setTimeout(() => setStatusToast(null), 3000);
   };
 
   const filteredForms = useMemo(() => {
     return forms.filter((form) => {
-      const formStatus = form.status || 'published';
+      const formStatus = getFormEffectiveStatus(form);
       if (statusFilter !== 'all' && formStatus !== statusFilter) {
         return false;
       }
@@ -191,49 +223,49 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
 
           <button
             type="button"
-            onClick={() => setStatusFilter('published')}
+            onClick={() => setStatusFilter('active_submittable')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              statusFilter === 'published'
+              statusFilter === 'active_submittable'
                 ? 'bg-emerald-700 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-            <span>منتشر شده</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'published' ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-100 text-emerald-800'}`}>
-              {toPersianDigits(forms.filter((f) => (f.status || 'published') === 'published').length)}
+            <span>۱ـ فعال با ثبت</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'active_submittable' ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-100 text-emerald-800'}`}>
+              {toPersianDigits(forms.filter((f) => getFormEffectiveStatus(f) === 'active_submittable').length)}
             </span>
           </button>
 
           <button
             type="button"
-            onClick={() => setStatusFilter('draft')}
+            onClick={() => setStatusFilter('active_readonly')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              statusFilter === 'draft'
+              statusFilter === 'active_readonly'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-amber-50 hover:text-amber-800'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-            <span>پیش‌نویس</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'draft' ? 'bg-amber-700 text-amber-100' : 'bg-amber-100 text-amber-800'}`}>
-              {toPersianDigits(forms.filter((f) => f.status === 'draft').length)}
+            <span>۲ـ فعال بدون ثبت</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'active_readonly' ? 'bg-amber-700 text-amber-100' : 'bg-amber-100 text-amber-800'}`}>
+              {toPersianDigits(forms.filter((f) => getFormEffectiveStatus(f) === 'active_readonly').length)}
             </span>
           </button>
 
           <button
             type="button"
-            onClick={() => setStatusFilter('archived')}
+            onClick={() => setStatusFilter('hidden_inactive')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              statusFilter === 'archived'
+              statusFilter === 'hidden_inactive'
                 ? 'bg-slate-700 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-            <span>بایگانی‌شده</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'archived' ? 'bg-slate-600 text-slate-100' : 'bg-slate-100 text-slate-600'}`}>
-              {toPersianDigits(forms.filter((f) => f.status === 'archived').length)}
+            <span>۳ـ غیرفعال و عدم نمایش</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'hidden_inactive' ? 'bg-slate-600 text-slate-100' : 'bg-slate-100 text-slate-600'}`}>
+              {toPersianDigits(forms.filter((f) => getFormEffectiveStatus(f) === 'hidden_inactive').length)}
             </span>
           </button>
         </div>
@@ -272,7 +304,7 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredForms.map((form) => {
-            const formStatus: 'published' | 'draft' | 'archived' = form.status || 'published';
+            const formStatus: FormAvailabilityStatus = getFormEffectiveStatus(form);
             const statusCfg = FORM_STATUS_MAP[formStatus];
 
             return (
@@ -284,9 +316,9 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                   onNavigateTab('runner');
                 }}
                 className={`bg-white rounded-2xl border shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-visible p-6 space-y-4 cursor-pointer relative ${
-                  formStatus === 'published'
+                  formStatus === 'active_submittable'
                     ? 'border-slate-200 hover:border-emerald-400'
-                    : formStatus === 'draft'
+                    : formStatus === 'active_readonly'
                     ? 'border-amber-200/90 bg-amber-50/15 hover:border-amber-400'
                     : 'border-slate-200 bg-slate-50/40 opacity-85'
                 }`}
@@ -323,11 +355,11 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                             className="fixed inset-0 z-30"
                             onClick={() => setOpenStatusMenuId(null)}
                           />
-                          <div className="absolute left-0 mt-1.5 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-right animate-in fade-in slide-in-from-top-1 duration-150">
+                          <div className="absolute left-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-right animate-in fade-in slide-in-from-top-1 duration-150">
                             <div className="px-3 py-1 text-[10px] font-extrabold text-slate-400 border-b border-slate-100 mb-1">
                               تغییر وضعیت فرم:
                             </div>
-                            {(['published', 'draft', 'archived'] as const).map((st) => {
+                            {(['active_submittable', 'active_readonly', 'hidden_inactive'] as const).map((st) => {
                               const isCur = formStatus === st;
                               const cfg = FORM_STATUS_MAP[st];
                               return (
@@ -338,13 +370,13 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                                     handleStatusChange(form, st);
                                     setOpenStatusMenuId(null);
                                   }}
-                                  className={`w-full px-3 py-1.5 text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                                  className={`w-full px-3 py-2 text-xs flex items-center justify-between gap-2 transition-colors cursor-pointer ${
                                     isCur ? 'bg-slate-50 font-bold text-slate-900' : 'text-slate-600 hover:bg-slate-100'
                                   }`}
                                 >
                                   <div className="flex items-center gap-2">
                                     <span className={`w-2 h-2 rounded-full ${cfg.dotClass}`} />
-                                    <span>{cfg.label}</span>
+                                    <span>{cfg.fullLabel}</span>
                                   </div>
                                   {isCur && <Check className="w-3.5 h-3.5 text-blue-600" />}
                                 </button>

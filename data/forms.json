@@ -6,11 +6,11 @@
     "description": "برای دریافت خدمات روانشناسی بالحق ابتدا ثبت نام بفرمائید",
     "category": "روانشناسی و سلامت",
     "mode": "wizard",
-    "status": "published",
+    "status": "draft",
     "submissionCount": 142,
     "viewCount": 1850,
     "createdAt": "2026-03-01T08:00:00Z",
-    "updatedAt": "2026-04-15T12:00:00Z",
+    "updatedAt": "2026-11-13T23:25:08.073Z",
     "steps": [
       {
         "id": "step-1",
@@ -433,7 +433,8 @@
       "portalSubtitle": "سامانه مشاوره تلفنی و پرونده مراجعین",
       "portalHeroImage": "/images/belhagh-hero.png",
       "showPortalHeroImage": true,
-      "liveChatEnabled": true
+      "liveChatEnabled": true,
+      "clientAvailability": "active_readonly"
     },
     "theme": {
       "themeId": "belhagh_official",
@@ -447,7 +448,8 @@
       "labelColor": "#0f172a",
       "buttonColor": "#0284c7",
       "buttonTextColor": "#ffffff"
-    }
+    },
+    "clientAvailability": "active_readonly"
   },
   {
     "id": "form-belhagh-booking",
