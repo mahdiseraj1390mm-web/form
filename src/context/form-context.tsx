@@ -123,7 +123,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-11-06-mandatory-fields-v16';
+      const CACHE_VERSION = 'v-2026-11-09-dossiers-live-v2';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');
@@ -238,7 +238,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     // همگام‌سازی کلیه پاسخ‌های فرم از پایگاه‌داده سرور صرفاً برای پنل‌های ادمین و بدون اتلاف پهنای باند مراجعین
     const isPublicFormRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/form/');
     if (!isPublicFormRoute) {
-      fetch('/api/cases?formId=all', { cache: 'no-store' })
+      fetch(`/api/cases?formId=all&_nocache=${Date.now()}`, { cache: 'no-store', headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' } })
         .then((res) => res.json())
         .then((data) => {
           if (data?.submissions && Array.isArray(data.submissions) && data.submissions.length > 0) {
@@ -293,7 +293,11 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     if (!isInitialized) return;
     try {
       localStorage.setItem('formafzar_forms', JSON.stringify(forms));
-      localStorage.setItem('formafzar_submissions', JSON.stringify(submissions));
+      if (submissions.length <= 100) {
+        localStorage.setItem('formafzar_submissions', JSON.stringify(submissions));
+      } else {
+        localStorage.removeItem('formafzar_submissions');
+      }
       localStorage.setItem('formafzar_chat', JSON.stringify(chatMessages));
       localStorage.setItem('formafzar_webhooks', JSON.stringify(webhookLogs));
       localStorage.setItem('formafzar_team_members', JSON.stringify(teamMembers));
@@ -844,7 +848,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   // واکشی پاسخ‌های فرم از دیتابیس ابری Neon و ادغام با وضعیت موجود
   const refreshSubmissionsFromDb = async (formId?: string): Promise<void> => {
     try {
-      const url = formId ? `/api/cases?formId=${formId}` : "/api/cases?formId=all";
+      const url = `/api/cases?formId=${formId || "all"}&_nocache=${Date.now()}`;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();

@@ -53,7 +53,11 @@ export function formatJalaliDateFromDay(dayName: string): string {
     return dayName;
   }
 
-  const cleanName = dayName.replace(/\u200c/g, '').replace(/[\s\-_]/g, '').trim();
+  const cleanName = dayName
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\u200c/g, '')
+    .replace(/[\s\-_]/g, '')
+    .trim();
   const dayMap: Record<string, number> = {
     'شنبه': 6,
     'یکشنبه': 0,
@@ -144,9 +148,69 @@ export function extractBookingDetails(formData: Record<string, any>) {
     ? { ...COUNSELOR_MAP[matchedBookingField] }
     : { name: 'مشاور مرکز روانشناسی بالحق', mobile: '' };
 
+  // پشتیبانی از ساختار جدید کامپوننت AppointmentScheduler (فیلدهای f_booking، f_booking_slot، counselorName، counselorPhone، user-counselor-*)
+  if (!slotValue) {
+    if (formData.f_booking_slot && typeof formData.f_booking_slot === 'string') {
+      slotValue = formData.f_booking_slot.trim();
+    } else {
+      const userCounselorKey = Object.keys(formData).find(
+        (k) => k.startsWith('user-counselor-') && formData[k]
+      );
+      if (userCounselorKey) {
+        slotValue = String(formData[userCounselorKey]).trim();
+      }
+    }
+  }
+
+  let parsedBookingCounselor = '';
+  if (formData.f_booking && typeof formData.f_booking === 'string') {
+    const bookingStr = formData.f_booking.trim();
+    if (bookingStr.includes('|')) {
+      const parts = bookingStr.split('|').map((p) => p.trim());
+      for (const part of parts) {
+        if (part.includes('مشاور:')) {
+          parsedBookingCounselor = part.replace(/.*مشاور:\s*/, '').trim();
+        }
+        if (!slotValue && part.includes('نوبت:')) {
+          slotValue = part.replace(/.*نوبت:\s*/, '').trim();
+        }
+      }
+    } else if (!slotValue) {
+      slotValue = bookingStr;
+    }
+  }
+
+  if (!matchedBookingField) {
+    const directName =
+      formData.counselorName ||
+      formData.f_counselor ||
+      formData.counselor ||
+      parsedBookingCounselor;
+    if (directName && typeof directName === 'string' && directName.trim()) {
+      counselorInfo.name = directName.trim();
+    }
+
+    const directPhone = formData.counselorPhone || formData.f_phone;
+    if (directPhone && typeof directPhone === 'string' && directPhone.trim()) {
+      counselorInfo.mobile = directPhone.trim();
+    }
+  }
+
   // جستجوی تکمیلی بر اساس فیلدهای انتخابی مشاور در صورت خالی بودن
   if (!counselorInfo.mobile || counselorInfo.name === 'مشاور مرکز روانشناسی بالحق') {
+    const counselorIdKey =
+      formData.counselorId ||
+      formData.counselorField ||
+      Object.keys(formData).find((k) => k.startsWith('user-counselor-') && formData[k]) ||
+      '';
+
     const counselorFields = [
+      counselorInfo.name !== 'مشاور مرکز روانشناسی بالحق' ? counselorInfo.name : '',
+      parsedBookingCounselor,
+      counselorIdKey,
+      formData.counselorName,
+      formData.f_counselor,
+      formData.counselor,
       formData.f_counselor_child,
       formData.f_counselor_teen,
       formData.f_counselor_education,
@@ -155,6 +219,20 @@ export function extractBookingDetails(formData: Record<string, any>) {
     ].filter(Boolean);
 
     const nameToMobileMap: Record<string, { name: string; mobile: string }> = {
+      'farahmandi': { name: 'جناب آقای یاسر فرهمندی', mobile: '09364280322' },
+      'teymourian': { name: 'سرکار خانم تیموریان', mobile: '09140288938' },
+      'shavandi': { name: 'سرکار خانم شوندی', mobile: '09127944985' },
+      'ansari': { name: 'سرکار خانم انصاری', mobile: '09122301387' },
+      'zeynali': { name: 'سرکار خانم زینلی', mobile: '09379709635' },
+      'borhani': { name: 'جناب آقای برهانی', mobile: '09120449093' },
+      'rastgoo': { name: 'سرکار خانم راستگو', mobile: '09123069447' },
+      'abdi-family': { name: 'سرکار خانم عبدی', mobile: '09192886258' },
+      'user-counselor-abdi': { name: 'جناب آقای عبدی', mobile: '09127853843' },
+      'torshizi': { name: 'جناب آقای دکتر ترشیزی', mobile: '09155513734' },
+      'yavari': { name: 'سرکار خانم یاوری', mobile: '09307556919' },
+      'golyayi': { name: 'سرکار خانم گلیایی', mobile: '09125140551' },
+      'sedighi': { name: 'جناب آقای دکتر صدیقی', mobile: '09151538227' },
+      'karimi': { name: 'سرکار خانم کریمی', mobile: '09192180481' },
       'فرهمندی': { name: 'جناب آقای یاسر فرهمندی', mobile: '09364280322' },
       'تیموریان': { name: 'سرکار خانم تیموریان', mobile: '09140288938' },
       'شوندی': { name: 'سرکار خانم شوندی', mobile: '09127944985' },
@@ -207,7 +285,11 @@ export function extractBookingDetails(formData: Record<string, any>) {
   const timePart = formatExactTime(rawTimePart);
 
   const clientName = (formData.fullName || formData.f_fullname || formData.name || formData.f_client_name || `${formData.f_name || ''} ${formData.f_family || ''}`.trim() || formData.f_applicant_name || 'مراجع محترم').trim();
-  const clientMobile = formData.f_mobile || formData.mobile || formData.f_phone || '';
+  const clientMobile =
+    formData.f_mobile ||
+    formData.mobile ||
+    (formData.f_phone && formData.f_phone !== counselorInfo.mobile ? formData.f_phone : '') ||
+    '';
 
   // استخراج استان و شهر مراجع
   const rawProvinceCity = formData.f_province_city || formData.province_city || '';

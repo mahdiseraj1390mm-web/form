@@ -103,8 +103,8 @@ export const SmsSettingsTab: React.FC = () => {
           args: patternKey === 'case_registration' 
             ? ['SP260120']
             : patternKey === 'appointment_client'
-            ? ['مراجع آزمایشی', 'دکتر علیرضا برهانی', '1405/08/10', '16:00 عصر']
-            : ['مهدی سراج', phone, '1405/08/10', '16:00 عصر'],
+            ? ['مراجع آزمایشی', 'دکتر علیرضا برهانی', '16:00 عصر', '1405/08/10']
+            : ['مهدی سراج', 'اصفهان', 'نجف آباد', phone, '1405/08/10', '16:00 عصر'],
         }),
       });
       const data = await res.json();
