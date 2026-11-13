@@ -6,7 +6,7 @@ import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } fr
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
 import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib/additional-mock-submissions';
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
-import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary } from '@/lib/user-similarity';
+import { evaluateSubmissionSimilarity, reclaimDossierWithExplicitCode, ClientProfileSummary, matchAndMergeSafaForNewRegistration } from '@/lib/user-similarity';
 
 export const allInitialSubmissions: FormSubmission[] = belhaghInitialSubmissions.map((s) => ({
   ...s,
@@ -389,6 +389,16 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
     setForms((prev) => [created, ...prev]);
     setActiveForm(created);
+
+    // ذخیره فرم جدید در سرور و دیتابیس
+    fetch('/api/forms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newForm: created }),
+    }).catch((err) => {
+      console.warn('Failed to sync new form to server DB:', err);
+    });
+
     return created;
   };
 
@@ -415,10 +425,25 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteForm = (id: string) => {
-    setForms((prev) => prev.filter((f) => f.id !== id));
+    setForms((prev) => {
+      const remaining = prev.filter((f) => f.id !== id);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('formafzar_forms', JSON.stringify(remaining));
+        } catch {}
+      }
+      return remaining;
+    });
     if (activeForm?.id === id) {
       setActiveForm(forms.find((f) => f.id !== id) || null);
     }
+
+    // ارسال درخواست حذف به سرور و پایگاه‌داده برای پایدار ماندن حذف در رفرش صفحه
+    fetch(`/api/forms?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }).catch((err) => {
+      console.warn('Failed to delete form on server DB:', err);
+    });
   };
 
   const addFieldToForm = (formId: string, field: FormField) => {
@@ -583,7 +608,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     }
 
     // ۳. اگر ثبت‌نام جدید است، بررسی و الحاق پرونده‌های معلق صفا به این کاربر جدید
-    if (formId === 'form-belhagh-registration') {
+    if (formId === 'form-belhagh-registration' || formId === 'zexuz') {
       const isLegacyCode = (code?: string) => !code || code.startsWith('BH-') || code.includes('-');
       const candidateCode = !isLegacyCode(submissionData.caseCode)
         ? submissionData.caseCode
@@ -593,22 +618,52 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       submissionData.caseCode = candidateCode;
     }
 
-    const newSubmission: FormSubmission = {
+    let finalSubmission: FormSubmission = {
       ...initialSubObj,
       data: submissionData,
       linkingStatus: assignedLinkingStatus,
       candidateUserIds: assignedCandidates,
     };
 
-    setSubmissions((prev) => {
-      const idx = prev.findIndex((s) => s.id === newSubmission.id);
-      if (idx !== -1) {
-        const next = [...prev];
-        next[idx] = newSubmission;
-        return next;
+    let mergedSafaSub: FormSubmission | null = null;
+    if (formId === 'form-belhagh-registration' || formId === 'zexuz') {
+      const mergeRes = matchAndMergeSafaForNewRegistration(finalSubmission, submissions);
+      if (mergeRes.mergedSafa) {
+        finalSubmission = mergeRes.updatedRegistrationSub;
+        mergedSafaSub = mergeRes.mergedSafa;
+
+        // ذخیره بک‌اند کارنامه ادغام شده
+        fetch('/api/cases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'save_submission',
+            submission: mergeRes.mergedSafa,
+          }),
+        }).catch(() => {});
       }
-      return [newSubmission, ...prev];
+    }
+
+    setSubmissions((prev) => {
+      let next = [...prev];
+      if (mergedSafaSub) {
+        const sIdx = next.findIndex((s) => s.id === mergedSafaSub!.id);
+        if (sIdx !== -1) {
+          next[sIdx] = mergedSafaSub;
+        } else {
+          next.unshift(mergedSafaSub);
+        }
+      }
+      const idx = next.findIndex((s) => s.id === finalSubmission.id);
+      if (idx !== -1) {
+        next[idx] = finalSubmission;
+      } else {
+        next.unshift(finalSubmission);
+      }
+      return next;
     });
+
+    const newSubmission = finalSubmission;
 
     setForms((prev) =>
       prev.map((f) => (f.id === formId ? { ...f, submissionCount: f.submissionCount + 1 } : f))

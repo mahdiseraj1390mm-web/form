@@ -5,7 +5,7 @@ import {
   LayoutDashboard, 
   PenTool, 
   Inbox,
-  FileSpreadsheet, 
+  FolderKanban,
   BarChart3, 
   Settings, 
   Sparkles, 
@@ -55,6 +55,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'داشبورد مدیریت',
       icon: LayoutDashboard,
       badge: null,
+    },
+    {
+      id: 'forms',
+      label: 'فرم‌ها و پرسشنامه‌ها',
+      icon: FolderKanban,
+      badge: toPersianDigits(forms.length),
     },
     {
       id: 'submissions',

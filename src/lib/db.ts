@@ -828,8 +828,27 @@ export async function saveFormsToPostgres(forms: Form[]): Promise<void> {
         [form.id, form.slug, form.title, JSON.stringify(form)]
       );
     }
+
+    if (forms.length > 0) {
+      const activeIds = forms.map((f) => f.id);
+      await executeDbQueryWithTimeout(
+        `DELETE FROM forms WHERE NOT (id = ANY($1::varchar[]))`,
+        [activeIds]
+      );
+    }
   } catch (err: any) {
     console.warn('PostgreSQL saveFormsToPostgres warning:', err?.message || err);
+  }
+}
+
+/**
+ * حذف فرم از جدول forms در پایگاه داده PostgreSQL
+ */
+export async function deleteFormFromPostgres(id: string): Promise<void> {
+  try {
+    await executeDbQueryWithTimeout(`DELETE FROM forms WHERE id = $1`, [id]);
+  } catch (err: any) {
+    console.warn('PostgreSQL deleteFormFromPostgres warning:', err?.message || err);
   }
 }
 

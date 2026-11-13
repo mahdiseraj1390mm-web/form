@@ -5,6 +5,7 @@ import {
   BarChart3,
   CalendarClock,
   Eye,
+  FolderKanban,
   Inbox,
   LayoutDashboard,
   PenTool,
@@ -30,6 +31,11 @@ const SIDEBAR_BOTTOM_NAV_ITEMS: BottomNavItem[] = [
     id: 'dashboard',
     label: 'داشبورد',
     icon: LayoutDashboard,
+  },
+  {
+    id: 'forms',
+    label: 'فرم‌ها',
+    icon: FolderKanban,
   },
   {
     id: 'submissions',

@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { initialForms } from '@/lib/mock-data';
 import { Form } from '@/types/form';
-import { getFormsFromDb, saveFormsToPostgres } from '@/lib/db';
+import { getFormsFromDb, saveFormsToPostgres, deleteFormFromPostgres } from '@/lib/db';
 
 const DB_PATH = path.join(process.cwd(), 'data', 'forms.json');
 
@@ -151,6 +151,11 @@ export async function POST(req: NextRequest) {
 
     if (body.forms && Array.isArray(body.forms)) {
       currentForms = body.forms;
+    } else if (body.newForm && body.newForm.id) {
+      const exists = currentForms.some((f) => f.id === body.newForm.id);
+      if (!exists) {
+        currentForms = [body.newForm, ...currentForms];
+      }
     } else if (body.formId && body.updated) {
       const idx = currentForms.findIndex((f) => f.id === body.formId);
       if (idx !== -1) {
@@ -179,6 +184,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, forms: currentForms });
   } catch (err: any) {
     console.error('Error saving form to DB:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const formId = searchParams.get('id');
+    if (!formId) {
+      return NextResponse.json({ error: 'شناسه فرم مشخص نیست' }, { status: 400 });
+    }
+
+    // ۱. حذف از پایگاه‌داده سرور PostgreSQL
+    await deleteFormFromPostgres(formId);
+
+    // ۲. حذف از مخزن فایل محلی data/forms.json
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      await fs.mkdir(dataDir, { recursive: true });
+      let currentForms: Form[] = [];
+      try {
+        const content = await fs.readFile(DB_PATH, 'utf8');
+        currentForms = JSON.parse(content);
+      } catch {
+        currentForms = initialForms;
+      }
+      const updatedForms = currentForms.filter((f) => f.id !== formId);
+      await fs.writeFile(DB_PATH, JSON.stringify(updatedForms, null, 2), 'utf8');
+      return NextResponse.json({ success: true, forms: updatedForms });
+    } catch (err) {
+      console.warn('Error updating forms.json on delete:', err);
+      return NextResponse.json({ success: true });
+    }
+  } catch (err: any) {
+    console.error('Error deleting form from DB:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
