@@ -585,16 +585,18 @@ export function reconcilePendingDossiersNightly(
   const unlinkedSafaSubs = updatedSubmissions.filter((sub) => {
     if (sub.formId !== 'form-safaan-assessment') return false;
     const cCode = sub.data?.caseCode;
-    return !cCode || cCode.startsWith('SF-') || cCode === sub.trackingCode || !clientGroups.has(cCode);
+    const isLinked = sub.linkingStatus === 'linked' || sub.data?.linkingStatus === 'linked';
+    return !isLinked && (!cCode || cCode.startsWith('SF-') || cCode === sub.trackingCode || !clientGroups.has(cCode));
   });
 
-  // ۴. تطبیق هوشمند هر مراجع متصل‌نشده با کارنامه‌های صفا
+  // ۴. تطبیق هوشمند هر مراجع متصل‌نشده با کارنامه‌های صفا بر مبنای بالاترین ضریب شباهت
   for (const client of clientGroups.values()) {
     if (client.hasLinkedSafa) continue;
 
     // الف) بررسی کد صریح صفا در دستگاه
     let matchedSafa: FormSubmission | null = null;
     let matchedCode = '';
+    let matchScore = 100;
 
     if (client.safaUserCode) {
       const found = unlinkedSafaSubs.find(
@@ -606,56 +608,69 @@ export function reconcilePendingDossiersNightly(
       if (found) {
         matchedSafa = found;
         matchedCode = client.safaUserCode;
+        matchScore = 100;
       }
     }
 
-    // ب) بررسی تطابق ۱۰۰٪ مشخصات ۴گانه (مدرسه، شهر، سال تولد و جنسیت)
-    if (!matchedSafa && client.schoolName && client.birthYear && client.gender) {
-      const candidates: Array<{ safa: FormSubmission; code: string }> = [];
+    // ب) محاسبه ضریب شباهت برای تمام کارنامه‌ها و انتخاب کاندید با بیشترین شباهت
+    if (!matchedSafa) {
+      const candidates: Array<{
+        safa: FormSubmission;
+        code: string;
+        score: number;
+        birthDiff: number;
+        matchedFields: string[];
+      }> = [];
 
       for (const safa of unlinkedSafaSubs) {
         const sSchool = safa.data?.school_name || safa.data?.f_school_name || '';
         const sProv = safa.data?.province || safa.data?.f_province_city || '';
-        const sBirth =
-          safa.data?.birth_year ||
-          (safa.data?.f_birth_date ? parseInt(String(safa.data.f_birth_date).split(/[/-]/)[0]) : undefined);
+        const sBirth = extractBirthYear(safa.data?.birth_year || safa.data?.f_birth_date) || undefined;
         const sGender = safa.data?.gender || safa.data?.f_gender || '';
 
-        // تطابق مرکز/مدرسه
-        const simSchool = stringSimilarity(client.schoolName, sSchool);
-        const cSNorm = normalizePersianText(client.schoolName);
-        const sSNorm = normalizePersianText(sSchool);
-        const schoolMatch = simSchool >= 0.55 || cSNorm.includes(sSNorm) || sSNorm.includes(cSNorm);
+        const sim = calculateDemographicSimilarity(
+          {
+            schoolName: client.schoolName,
+            provinceCity: client.provinceCity,
+            birthYear: client.birthYear,
+            gender: client.gender,
+          },
+          {
+            schoolName: sSchool,
+            provinceCity: sProv,
+            birthYear: sBirth,
+            gender: sGender,
+          }
+        );
 
-        // تطابق استان و شهر
-        const simProv = stringSimilarity(client.provinceCity || '', sProv);
-        const cPNorm = normalizePersianText(client.provinceCity || '');
-        const sPNorm = normalizePersianText(sProv);
-        const provMatch = simProv >= 0.5 || cPNorm.includes(sPNorm) || sPNorm.includes(cPNorm);
-
-        // تطابق سال تولد دقیق
-        const birthMatch = sBirth && client.birthYear === sBirth;
-
-        // تطابق جنسیت
-        const genderMatch = sGender && client.gender === sGender;
-
-        if (schoolMatch && provMatch && birthMatch && genderMatch) {
+        if (sim.score >= 50) {
           const sCode = safa.data?.user_code || (safa.trackingCode ? safa.trackingCode.replace('SF-', '') : '');
-          candidates.push({ safa, code: sCode });
+          candidates.push({
+            safa,
+            code: sCode,
+            score: sim.score,
+            birthDiff: sim.birthDiff,
+            matchedFields: sim.matchedFields,
+          });
         }
       }
 
-      if (candidates.length === 1) {
-        matchedSafa = candidates[0].safa;
-        matchedCode = candidates[0].code;
-      } else if (candidates.length > 1) {
-        logs.push(
-          `برای مراجع ${client.fullName} (${client.caseCode}) تعداد ${candidates.length} کارنامه با مشخصات مشابه یافت شد (نیازمند تفکیک دقیق).`
-        );
+      // مرتب‌سازی بر مبنای بالاترین ضریب شباهت
+      candidates.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (a.birthDiff !== b.birthDiff) return a.birthDiff - b.birthDiff;
+        return b.matchedFields.length - a.matchedFields.length;
+      });
+
+      if (candidates.length > 0) {
+        const top = candidates[0];
+        matchedSafa = top.safa;
+        matchedCode = top.code;
+        matchScore = top.score;
       }
     }
 
-    // ج) اعمال پیوند دوطرفه در صورت تطابق قطعی
+    // ج) اعمال پیوند و ادغام دوطرفه در صورت یافتن کاندید با بالاترین شباهت
     if (matchedSafa && matchedCode) {
       // به‌روزرسانی کارنامه صفاً جهت ملحق شدن به پرونده مراجع در کارتابل
       matchedSafa.data = {
@@ -666,13 +681,13 @@ export function reconcilePendingDossiersNightly(
         f_mobile: client.mobile,
         linkingStatus: 'linked',
         reconciledAt: now,
-        reconciledReason: `تطبیق ۱۰۰٪ مشخصات ۴گانه با مراجع ${client.fullName} (${client.caseCode})`,
+        reconciledReason: `تطبیق و ادغام با بالاترین ضریب شباهت (${matchScore}%) با پرونده ${client.fullName} (${client.caseCode})`,
         evaluationResult: matchedSafa.evaluationResult || matchedSafa.data?.evaluationResult,
       };
       matchedSafa.mobile = client.mobile;
       matchedSafa.linkingStatus = 'linked';
       matchedSafa.reconciledAt = now;
-      matchedSafa.reconciledReason = `تطبیق ۱۰۰٪ با مراجع ${client.fullName}`;
+      matchedSafa.reconciledReason = `تطبیق و ادغام با بالاترین ضریب شباهت (${matchScore}%) با پرونده ${client.fullName}`;
 
       changedMap.set(matchedSafa.id, matchedSafa);
 
@@ -688,7 +703,7 @@ export function reconcilePendingDossiersNightly(
           detectedSafaCode: matchedCode,
           linkingStatus: 'linked',
           reconciledAt: now,
-          reconciledReason: `اتصال به کارنامه صفاً (${matchedCode})`,
+          reconciledReason: `اتصال به کارنامه صفاً (${matchedCode} - تشابه ${matchScore}%)`,
         };
         cSub.detectedSafaCode = matchedCode;
         cSub.linkingStatus = 'linked';
@@ -699,7 +714,7 @@ export function reconcilePendingDossiersNightly(
       client.hasLinkedSafa = true;
       reconciledCount++;
       logs.push(
-        `کارنامه خودسنجی صفاً (کد ${matchedCode}) با موفقیت به پرونده مراجع ${client.fullName} (${client.caseCode}) متصل شد.`
+        `کارنامه خودسنجی صفاً (کد ${matchedCode} با ضریب شباهت ${matchScore}%) با موفقیت به پرونده مراجع ${client.fullName} (${client.caseCode}) ادغام شد.`
       );
     }
   }
@@ -710,6 +725,300 @@ export function reconcilePendingDossiersNightly(
     changedSubmissions: Array.from(changedMap.values()),
     logs,
   };
+}
+
+/**
+ * محاسبه ضریب شباهت ویژگی‌های ۴گانه جمعیت‌شناختی میان مراجع و کارنامه صفان
+ */
+export function calculateDemographicSimilarity(
+  clientData: {
+    schoolName?: string;
+    provinceCity?: string;
+    birthYear?: number;
+    gender?: string;
+  },
+  safaData: {
+    schoolName?: string;
+    provinceCity?: string;
+    birthYear?: number;
+    gender?: string;
+  }
+): {
+  score: number;
+  matchedFields: string[];
+  unmatchedFields: string[];
+  birthDiff: number;
+} {
+  const matchedFields: string[] = [];
+  const unmatchedFields: string[] = [];
+  let earnedScore = 0;
+  let totalWeight = 0;
+  let birthDiff = 99;
+
+  const cSchool = normalizePersianText(clientData.schoolName || '');
+  const sSchool = normalizePersianText(safaData.schoolName || '');
+  const cProv = normalizePersianText(clientData.provinceCity || '');
+  const sProv = normalizePersianText(safaData.provinceCity || '');
+  const cYear = clientData.birthYear;
+  const sYear = safaData.birthYear;
+  const cGender = clientData.gender ? normalizePersianText(clientData.gender) : '';
+  const sGender = safaData.gender ? normalizePersianText(safaData.gender) : '';
+
+  // ۱. نام مدرسه یا مرکز معارفی (وزن: ۳۵)
+  if (cSchool && sSchool) {
+    totalWeight += 35;
+    const sim = stringSimilarity(cSchool, sSchool);
+    if (sim >= 0.55 || cSchool.includes(sSchool) || sSchool.includes(cSchool)) {
+      earnedScore += 35;
+      matchedFields.push(`نام مرکز معارفی (${safaData.schoolName})`);
+    } else {
+      unmatchedFields.push('نام مرکز معارفی');
+    }
+  }
+
+  // ۲. استان و شهر (وزن: ۲۵)
+  if (cProv && sProv) {
+    totalWeight += 25;
+    const sim = stringSimilarity(cProv, sProv);
+    if (sim >= 0.5 || cProv.includes(sProv) || sProv.includes(cProv)) {
+      earnedScore += 25;
+      matchedFields.push(`استان و شهر (${safaData.provinceCity})`);
+    } else {
+      unmatchedFields.push('استان و شهر');
+    }
+  }
+
+  // ۳. سال تولد (وزن: ۲۵)
+  if (cYear && sYear) {
+    totalWeight += 25;
+    birthDiff = Math.abs(cYear - sYear);
+    if (birthDiff === 0) {
+      earnedScore += 25;
+      matchedFields.push(`سال تولد دقیق (${sYear})`);
+    } else if (birthDiff === 1) {
+      earnedScore += 16;
+      matchedFields.push(`سال تولد با ۱ سال اختلاف (${sYear})`);
+    } else if (birthDiff === 2) {
+      earnedScore += 8;
+      matchedFields.push(`سال تولد با ۲ سال اختلاف (${sYear})`);
+    } else {
+      unmatchedFields.push(`سال تولد (${cYear} در برابر ${sYear})`);
+    }
+  }
+
+  // ۴. جنسیت (وزن: ۱۵)
+  if (cGender && sGender) {
+    totalWeight += 15;
+    if (cGender === sGender || cGender.includes(sGender) || sGender.includes(cGender)) {
+      earnedScore += 15;
+      matchedFields.push(`جنسیت (${safaData.gender})`);
+    } else {
+      unmatchedFields.push('جنسیت');
+    }
+  }
+
+  // اگر حداقل یک بعد اصلی یا دو بعد معتبر مقایسه شده باشند (حداقل وزن ۳۵)
+  const finalPercent = totalWeight >= 35 ? Math.round((earnedScore / totalWeight) * 100) : 0;
+
+  // پاداش همگرایی چندعاملی
+  let convergenceBonus = 0;
+  if (matchedFields.length >= 4) convergenceBonus = 10;
+  else if (matchedFields.length === 3) convergenceBonus = 5;
+
+  const scoreWithBonus = Math.min(100, finalPercent + (finalPercent > 0 ? convergenceBonus : 0));
+
+  return {
+    score: scoreWithBonus,
+    matchedFields,
+    unmatchedFields,
+    birthDiff,
+  };
+}
+
+/**
+ * همانندسازی و ادغام خودکار کارنامه آزمون صفان با بالاترین ضریب شباهت در زمان ثبت‌نام مراجع
+ */
+export function matchAndMergeSafaForNewRegistration(
+  newRegistrationSub: FormSubmission,
+  allSubmissions: FormSubmission[]
+): {
+  mergedSafa: FormSubmission | null;
+  updatedRegistrationSub: FormSubmission;
+  matchScore: number;
+} {
+  const now = new Date().toISOString();
+  const subData = newRegistrationSub.data || {};
+  const caseCode = subData.caseCode || newRegistrationSub.trackingCode || `CASE-${newRegistrationSub.id.slice(-6)}`;
+  const fullName =
+    subData.fullName ||
+    `${subData.f_name || ''} ${subData.f_family || ''}`.trim() ||
+    subData.f_fullname ||
+    'مراجع بالحق';
+  const mobile = normalizeMobile(subData.f_mobile || subData.bk_mobile || newRegistrationSub.mobile || '');
+
+  const schoolName = subData.f_school_name || subData.school_name || '';
+  const provinceCity = subData.f_province_city || subData.province || '';
+  const birthYear = extractBirthYear(subData.f_birth_date || subData.birth_year) || undefined;
+  const gender =
+    subData.gender ||
+    subData.f_gender ||
+    (subData.f_role_in_family?.includes('مادر') ||
+    subData.f_role_in_family?.includes('دختر') ||
+    subData.f_role_in_family?.includes('زن') ||
+    subData.f_role_in_family?.includes('همسر (خانم)')
+      ? 'خانم'
+      : subData.f_role_in_family?.includes('پدر') ||
+        subData.f_role_in_family?.includes('پسر') ||
+        subData.f_role_in_family?.includes('مرد') ||
+        subData.f_role_in_family?.includes('همسر (آقا)')
+      ? 'آقا'
+      : undefined);
+
+  const detectedSafaCode =
+    newRegistrationSub.detectedSafaCode ||
+    subData.detectedSafaCode ||
+    subData.safaUserCode ||
+    (caseCode.startsWith('SF-') ? caseCode.replace('SF-', '') : undefined);
+
+  // استخراج کارنامه‌های صفای انتساب‌نیافته
+  const unlinkedSafas = allSubmissions.filter((s) => {
+    if (s.formId !== 'form-safaan-assessment') return false;
+    const isLinked = s.linkingStatus === 'linked' || s.data?.linkingStatus === 'linked';
+    const sCaseCode = s.data?.caseCode || s.trackingCode;
+    const hasRealCode = typeof sCaseCode === 'string' && sCaseCode.trim() !== '' && !sCaseCode.startsWith('SF-');
+    return !(isLinked && hasRealCode);
+  });
+
+  if (unlinkedSafas.length === 0) {
+    return { mergedSafa: null, updatedRegistrationSub: newRegistrationSub, matchScore: 0 };
+  }
+
+  // ۱. بررسی تطابق قطعی کد صفا
+  if (detectedSafaCode) {
+    const exact = unlinkedSafas.find(
+      (s) =>
+        s.data?.user_code === detectedSafaCode ||
+        s.trackingCode === `SF-${detectedSafaCode}` ||
+        s.trackingCode === detectedSafaCode
+    );
+    if (exact) {
+      const mergedSafa: FormSubmission = {
+        ...exact,
+        mobile: mobile || exact.mobile,
+        linkingStatus: 'linked',
+        reconciledAt: now,
+        reconciledReason: `تطابق قطعی کد دستگاه صفا (${detectedSafaCode}) در زمان ثبت‌نام`,
+        data: {
+          ...(exact.data || {}),
+          caseCode,
+          fullName,
+          mobile,
+          f_mobile: mobile,
+          linkingStatus: 'linked',
+          reconciledAt: now,
+          reconciledReason: `تطابق قطعی کد دستگاه صفا (${detectedSafaCode}) در زمان ثبت‌نام`,
+          evaluationResult: exact.evaluationResult || exact.data?.evaluationResult,
+        },
+      };
+
+      const updatedReg: FormSubmission = {
+        ...newRegistrationSub,
+        detectedSafaCode,
+        linkingStatus: 'linked',
+        reconciledAt: now,
+        data: {
+          ...subData,
+          safaUserCode: detectedSafaCode,
+          detectedSafaCode,
+          linkingStatus: 'linked',
+          reconciledAt: now,
+          reconciledReason: `اتصال قطعی به کارنامه صفا (${detectedSafaCode})`,
+        },
+      };
+
+      return { mergedSafa, updatedRegistrationSub: updatedReg, matchScore: 100 };
+    }
+  }
+
+  // ۲. محاسبه ضریب شباهت برای تمام کارنامه‌ها و انتخاب کاندید با بالاترین شباهت
+  const candidates: Array<{
+    safa: FormSubmission;
+    code: string;
+    score: number;
+    birthDiff: number;
+    matchedFields: string[];
+  }> = [];
+
+  for (const safa of unlinkedSafas) {
+    const sSchool = safa.data?.school_name || safa.data?.f_school_name || '';
+    const sProv = safa.data?.province || safa.data?.f_province_city || '';
+    const sBirth = extractBirthYear(safa.data?.birth_year || safa.data?.f_birth_date) || undefined;
+    const sGender = safa.data?.gender || safa.data?.f_gender || '';
+
+    const sim = calculateDemographicSimilarity(
+      { schoolName, provinceCity, birthYear, gender },
+      { schoolName: sSchool, provinceCity: sProv, birthYear: sBirth, gender: sGender }
+    );
+
+    if (sim.score >= 50) {
+      const sCode = safa.data?.user_code || (safa.trackingCode ? safa.trackingCode.replace('SF-', '') : '');
+      candidates.push({
+        safa,
+        code: sCode,
+        score: sim.score,
+        birthDiff: sim.birthDiff,
+        matchedFields: sim.matchedFields,
+      });
+    }
+  }
+
+  // مرتب‌سازی بر اساس بیشترین شباهت (نزولی)
+  candidates.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.birthDiff !== b.birthDiff) return a.birthDiff - b.birthDiff;
+    return b.matchedFields.length - a.matchedFields.length;
+  });
+
+  if (candidates.length === 0) {
+    return { mergedSafa: null, updatedRegistrationSub: newRegistrationSub, matchScore: 0 };
+  }
+
+  const topMatch = candidates[0];
+  const mergedSafa: FormSubmission = {
+    ...topMatch.safa,
+    mobile: mobile || topMatch.safa.mobile,
+    linkingStatus: 'linked',
+    reconciledAt: now,
+    reconciledReason: `همانندسازی و ادغام خودکار با بیشترین شباهت (${topMatch.score}%) در زمان ثبت‌نام مراجع`,
+    data: {
+      ...(topMatch.safa.data || {}),
+      caseCode,
+      fullName,
+      mobile,
+      f_mobile: mobile,
+      linkingStatus: 'linked',
+      reconciledAt: now,
+      reconciledReason: `همانندسازی و ادغام خودکار با بیشترین شباهت (${topMatch.score}%) در زمان ثبت‌نام مراجع`,
+      evaluationResult: topMatch.safa.evaluationResult || topMatch.safa.data?.evaluationResult,
+    },
+  };
+
+  const updatedReg: FormSubmission = {
+    ...newRegistrationSub,
+    detectedSafaCode: topMatch.code,
+    linkingStatus: 'linked',
+    reconciledAt: now,
+    data: {
+      ...subData,
+      safaUserCode: topMatch.code,
+      detectedSafaCode: topMatch.code,
+      linkingStatus: 'linked',
+      reconciledAt: now,
+      reconciledReason: `اتصال خودکار به کارنامه صفاً (${topMatch.code} با تشابه ${topMatch.score}%)`,
+    },
+  };
+
+  return { mergedSafa, updatedRegistrationSub: updatedReg, matchScore: topMatch.score };
 }
 
 export function extractClientProfiles(submissions: FormSubmission[]): ClientProfileSummary[] {

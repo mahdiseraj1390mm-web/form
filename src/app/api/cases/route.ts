@@ -10,6 +10,7 @@ import {
   editSubmissionCommentInDb,
   deleteSubmissionCommentInDb,
 } from '@/lib/db';
+import { matchAndMergeSafaForNewRegistration } from '@/lib/user-similarity';
 
 
 // شناسه‌های جامع مشاوران و کلیه نقش‌ها و فیلدهای متناظر آن‌ها جهت جلوگیری قطعی از تداخل نوبت در یک زمان
@@ -279,12 +280,49 @@ export async function POST(req: NextRequest) {
       }
 
       const result = await createCaseRecord(caseCode, clean, data || {});
-      return NextResponse.json({ success: true, isNew: result.isNew, caseRecord: result.caseRecord });
+
+      // همانندسازی و ادغام خودکار کارنامه آزمون صفان با بیشترین شباهت در بک‌اند
+      let mergedSafaSubmission = null;
+      try {
+        const allSubs = await getFormSubmissionsFromDb('all');
+        const regSub = allSubs.find(
+          (s) =>
+            (s.data?.caseCode === caseCode || s.trackingCode === caseCode || s.mobile === clean) &&
+            (s.formId === 'form-belhagh-registration' || s.formId === 'zexuz')
+        ) || {
+          id: `sub-case-${caseCode}`,
+          formId: 'form-belhagh-registration',
+          trackingCode: caseCode,
+          mobile: clean,
+          data: { ...(data || {}), caseCode, mobile: clean },
+          status: 'new',
+          paymentStatus: 'none',
+          createdAt: new Date().toISOString(),
+          comments: [],
+        };
+
+        const mergeRes = matchAndMergeSafaForNewRegistration(regSub, allSubs);
+        if (mergeRes.mergedSafa) {
+          await saveFormSubmissionToDb(mergeRes.mergedSafa);
+          await saveFormSubmissionToDb(mergeRes.updatedRegistrationSub);
+          mergedSafaSubmission = mergeRes.mergedSafa;
+        }
+      } catch (err) {
+        console.warn('Backend auto-merge safa on register_case error:', err);
+      }
+
+      return NextResponse.json({
+        success: true,
+        isNew: result.isNew,
+        caseRecord: result.caseRecord,
+        mergedSafa: mergedSafaSubmission,
+      });
     }
 
     // ۳. ذخیره عمومی پاسخ هر فرم در Neon DB
     if (action === 'save_submission') {
       const { submission } = body;
+      let mergedSafaSubmission = null;
       if (submission) {
         if (submission.formId === 'form-belhagh-booking') {
           const subData = submission.data || {};
@@ -302,9 +340,28 @@ export async function POST(req: NextRequest) {
             );
           }
         }
-        await saveFormSubmissionToDb(submission);
+
+        // اگر فرم ثبت‌نام بود، همانندسازی و ادغام خودکار کارنامه صفان با بالاترین ضریب شباهت انجام گیرد
+        if (submission.formId === 'form-belhagh-registration' || submission.formId === 'zexuz') {
+          try {
+            const allSubs = await getFormSubmissionsFromDb('all');
+            const mergeRes = matchAndMergeSafaForNewRegistration(submission, allSubs);
+            if (mergeRes.mergedSafa) {
+              await saveFormSubmissionToDb(mergeRes.mergedSafa);
+              await saveFormSubmissionToDb(mergeRes.updatedRegistrationSub);
+              mergedSafaSubmission = mergeRes.mergedSafa;
+            } else {
+              await saveFormSubmissionToDb(submission);
+            }
+          } catch (err) {
+            console.warn('Backend auto-merge safa on save_submission error:', err);
+            await saveFormSubmissionToDb(submission);
+          }
+        } else {
+          await saveFormSubmissionToDb(submission);
+        }
       }
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, mergedSafa: mergedSafaSubmission });
     }
 
     // ۴. به‌روزرسانی اطلاعات ویرایش‌شده پرونده توسط مشاور

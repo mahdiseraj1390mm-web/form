@@ -19,7 +19,12 @@
       "f_mental_illness": "خیر",
       "f_medications": "خیر",
       "caseCode": "SP968172",
-      "fullName": "علی حسینی"
+      "fullName": "علی حسینی",
+      "safaUserCode": "11129",
+      "detectedSafaCode": "11129",
+      "linkingStatus": "linked",
+      "reconciledAt": "2026-11-13T21:31:25.840Z",
+      "reconciledReason": "اتصال به کارنامه صفاً (11129 - تشابه 100%)"
     },
     "status": "new",
     "paymentStatus": "none",
@@ -28,7 +33,9 @@
     "createdAt": "2026-10-31T20:39:11.893Z",
     "comments": [],
     "linkingStatus": "linked",
-    "mobile": "09908595127"
+    "mobile": "09908595127",
+    "detectedSafaCode": "11129",
+    "reconciledAt": "2026-11-13T21:31:25.840Z"
   },
   {
     "id": "sub-case-SP642819",
@@ -57,7 +64,12 @@
           "content": "📞 تماس تلفنی: سلام",
           "createdAt": "2026-11-04T16:34:33.639Z"
         }
-      ]
+      ],
+      "safaUserCode": "70700",
+      "detectedSafaCode": "70700",
+      "linkingStatus": "linked",
+      "reconciledAt": "2026-11-13T21:31:25.840Z",
+      "reconciledReason": "اتصال به کارنامه صفاً (70700 - تشابه 80%)"
     },
     "comments": [
       {
@@ -67,7 +79,10 @@
         "content": "📞 تماس تلفنی: سلام",
         "createdAt": "2026-11-04T16:34:33.639Z"
       }
-    ]
+    ],
+    "detectedSafaCode": "70700",
+    "linkingStatus": "linked",
+    "reconciledAt": "2026-11-13T21:31:25.840Z"
   },
   {
     "id": "sub-case-SP328786",
@@ -190,7 +205,12 @@
           "content": "📞 تماس تلفنی: سلام",
           "createdAt": "2026-11-04T16:42:49.300Z"
         }
-      ]
+      ],
+      "safaUserCode": "55522",
+      "detectedSafaCode": "55522",
+      "linkingStatus": "linked",
+      "reconciledAt": "2026-11-13T21:31:25.840Z",
+      "reconciledReason": "اتصال به کارنامه صفاً (55522 - تشابه 71%)"
     },
     "comments": [
       {
@@ -207,7 +227,10 @@
         "content": "📞 تماس تلفنی: سلام",
         "createdAt": "2026-11-04T16:42:49.300Z"
       }
-    ]
+    ],
+    "detectedSafaCode": "55522",
+    "linkingStatus": "linked",
+    "reconciledAt": "2026-11-13T21:31:25.840Z"
   },
   {
     "id": "sub-1793226327126",
@@ -224,9 +247,17 @@
       "f_school_name": "اصفهان",
       "f_province_city": "isfahan - نجف‌آباد",
       "f_birth_date": "1398/10/08",
-      "caseCode": "SP220717"
+      "caseCode": "SP220717",
+      "safaUserCode": "55522",
+      "detectedSafaCode": "55522",
+      "linkingStatus": "linked",
+      "reconciledAt": "2026-11-13T21:31:25.840Z",
+      "reconciledReason": "اتصال به کارنامه صفاً (55522 - تشابه 71%)"
     },
-    "comments": []
+    "comments": [],
+    "detectedSafaCode": "55522",
+    "linkingStatus": "linked",
+    "reconciledAt": "2026-11-13T21:31:25.840Z"
   },
   {
     "id": "sub-safa-13",
@@ -195216,8 +195247,8 @@
     "formId": "form-safaan-assessment",
     "trackingCode": "SF-55522",
     "data": {
-      "caseCode": "SF-55522",
-      "fullName": "مراجع صفاً (55522)",
+      "caseCode": "SP220717",
+      "fullName": "مسیح مهدی پور",
       "school_name": "زهرا قارئی اصفهان",
       "f_school_name": "زهرا قارئی اصفهان",
       "province": "اصفهان",
@@ -195282,10 +195313,15 @@
       "q_safa_54": "3",
       "q_safa_55": "3",
       "q_safa_56": "3",
-      "q_safa_57": "4"
+      "q_safa_57": "4",
+      "mobile": "09912958662",
+      "f_mobile": "09912958662",
+      "linkingStatus": "linked",
+      "reconciledAt": "2026-11-13T21:31:25.840Z",
+      "reconciledReason": "تطبیق و ادغام با بالاترین ضریب شباهت (71%) با پرونده مسیح مهدی پور (SP220717)"
     },
     "status": "approved",
-    "linkingStatus": "pending_match",
+    "linkingStatus": "linked",
     "detectedSafaCode": "55522",
     "createdAt": "2026-10-15 21:46:47",
     "evaluationResult": {
@@ -195484,7 +195520,10 @@
         "description": "وضعیت شما در مسیر پویایی قرار دارد. با برنامه‌ریزی بر روی ۳ مؤلفه دارای بیشترین فاصله رشد، هماهنگی میان باورها و کردار افزایش خواهد یافت."
       }
     },
-    "comments": []
+    "comments": [],
+    "mobile": "09912958662",
+    "reconciledAt": "2026-11-13T21:31:25.840Z",
+    "reconciledReason": "تطبیق و ادغام با بالاترین ضریب شباهت (71%) با پرونده مسیح مهدی پور"
   },
   {
     "id": "sub-safa-735",
@@ -235641,8 +235680,8 @@
     "formId": "form-safaan-assessment",
     "trackingCode": "SF-11129",
     "data": {
-      "caseCode": "SF-11129",
-      "fullName": "مراجع صفاً (11129)",
+      "caseCode": "SP968172",
+      "fullName": "علی حسینی",
       "school_name": "نجف آباد",
       "f_school_name": "نجف آباد",
       "province": "اصفهان",
@@ -235707,10 +235746,15 @@
       "q_safa_54": "4",
       "q_safa_55": "4",
       "q_safa_56": "4",
-      "q_safa_57": "4"
+      "q_safa_57": "4",
+      "mobile": "09908595127",
+      "f_mobile": "09908595127",
+      "linkingStatus": "linked",
+      "reconciledAt": "2026-11-13T21:31:25.840Z",
+      "reconciledReason": "تطبیق و ادغام با بالاترین ضریب شباهت (100%) با پرونده علی حسینی (SP968172)"
     },
     "status": "approved",
-    "linkingStatus": "pending_match",
+    "linkingStatus": "linked",
     "detectedSafaCode": "11129",
     "createdAt": "2026-10-19 18:53:25",
     "evaluationResult": {
@@ -235909,7 +235953,10 @@
         "description": "جهت‌گیری معنوی و الگوهای رفتاری شما در هماهنگی شایسته‌ای قرار دارند. تمرکز اصلی باید بر پایداری در برابر آزمون‌های پرفشار و تعالی بیشتر باشد."
       }
     },
-    "comments": []
+    "comments": [],
+    "mobile": "09908595127",
+    "reconciledAt": "2026-11-13T21:31:25.840Z",
+    "reconciledReason": "تطبیق و ادغام با بالاترین ضریب شباهت (100%) با پرونده علی حسینی"
   },
   {
     "id": "sub-safa-883",
@@ -284874,8 +284921,8 @@
     "formId": "form-safaan-assessment",
     "trackingCode": "SF-70700",
     "data": {
-      "caseCode": "SF-70700",
-      "fullName": "مراجع صفاً (70700)",
+      "caseCode": "SP642819",
+      "fullName": "علی حسینی",
       "school_name": "مدرسه",
       "f_school_name": "مدرسه",
       "province": "تهران",
@@ -284940,10 +284987,15 @@
       "q_safa_54": "5",
       "q_safa_55": "5",
       "q_safa_56": "5",
-      "q_safa_57": "5"
+      "q_safa_57": "5",
+      "mobile": "09121112233",
+      "f_mobile": "09121112233",
+      "linkingStatus": "linked",
+      "reconciledAt": "2026-11-13T21:31:25.840Z",
+      "reconciledReason": "تطبیق و ادغام با بالاترین ضریب شباهت (80%) با پرونده علی حسینی (SP642819)"
     },
     "status": "approved",
-    "linkingStatus": "pending_match",
+    "linkingStatus": "linked",
     "detectedSafaCode": "70700",
     "createdAt": "2026-10-26 18:45:30",
     "evaluationResult": {
@@ -285142,7 +285194,10 @@
         "description": "جهت‌گیری معنوی و الگوهای رفتاری شما در هماهنگی شایسته‌ای قرار دارند. تمرکز اصلی باید بر پایداری در برابر آزمون‌های پرفشار و تعالی بیشتر باشد."
       }
     },
-    "comments": []
+    "comments": [],
+    "mobile": "09121112233",
+    "reconciledAt": "2026-11-13T21:31:25.840Z",
+    "reconciledReason": "تطبیق و ادغام با بالاترین ضریب شباهت (80%) با پرونده علی حسینی"
   },
   {
     "id": "sub-safa-1063",
