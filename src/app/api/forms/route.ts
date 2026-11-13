@@ -210,7 +210,7 @@ export async function DELETE(req: NextRequest) {
       } catch {
         currentForms = initialForms;
       }
-      const updatedForms = currentForms.filter((f) => f.id !== formId);
+      const updatedForms = currentForms.filter((f) => f.id !== formId && f.slug !== formId);
       await fs.writeFile(DB_PATH, JSON.stringify(updatedForms, null, 2), 'utf8');
       return NextResponse.json({ success: true, forms: updatedForms });
     } catch (err) {

@@ -175,11 +175,6 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
             fields: base.fields || f.fields,
           };
         });
-        initialForms.forEach((f) => {
-          if (!updated.some((u) => u.id === f.id || u.slug === f.slug)) {
-            updated.unshift(f);
-          }
-        });
         setForms(updated);
         if (updated.length > 0) setActiveForm(updated[0]);
       }

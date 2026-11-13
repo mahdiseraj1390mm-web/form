@@ -846,7 +846,7 @@ export async function saveFormsToPostgres(forms: Form[]): Promise<void> {
  */
 export async function deleteFormFromPostgres(id: string): Promise<void> {
   try {
-    await executeDbQueryWithTimeout(`DELETE FROM forms WHERE id = $1`, [id]);
+    await executeDbQueryWithTimeout(`DELETE FROM forms WHERE id = $1 OR slug = $1`, [id]);
   } catch (err: any) {
     console.warn('PostgreSQL deleteFormFromPostgres warning:', err?.message || err);
   }
