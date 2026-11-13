@@ -1165,7 +1165,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
           {/* پایش پیشرفت بالینی: نمودار نقطه و خط برای نشان دادن پیشرفت در مراجعات، پرونده‌ها و شاخص تعادل */}
           <CollapsibleCard
-            defaultOpen={false}
+            defaultOpen={true}
             title="پایش روند پیشرفت زمانی شاخص‌های بالینی و پرونده‌ها"
             subtitle="نمودار نقطه و خط پیشرفت جهت تحلیل رشد جلسات، پرونده‌ها و شاخص تعادل بالینی مراجعان مرکز"
             icon={
@@ -1224,7 +1224,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
             
             {/* ۱. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               title="بیشترین موضوعات توصیه شده توسط مشاوران"
               subtitle="توصیه‌ها و مداخلات درمانی تجویز شده مشاوران"
               icon={<Sparkles className="w-5 h-5 text-violet-600" />}
@@ -1251,7 +1251,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
             {/* ۲. باکس بیشترین موضوعات مراجعه به مشاوران */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               title="بیشترین موضوعات مراجعه به مشاوران"
               subtitle="علت و تقاضای اولیه مراجعه مراجعان مرکز"
               icon={<Compass className="w-5 h-5 text-sky-600" />}
@@ -1278,7 +1278,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
             {/* ۳. باکس بیشترین نوبت‌ها از مشاوران (از کدام مشاوران بیشترین نوبت ها دریافت شده) */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               title="بیشترین نوبت‌های دریافتی از مشاوران"
               subtitle="رتبه‌بندی اساتید بر اساس تعداد نوبت‌های رزرو شده"
               icon={<BarChart3 className="w-5 h-5 text-emerald-600" />}
@@ -1310,7 +1310,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
             
             {/* ۱. باکس آخرین فعالیت‌ها (ثبت پرونده، نوبت‌ها، پرسش‌نامه‌ها) */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-6"
               title="آخرین فعالیت‌ها و رویدادهای سامانه"
               icon={<Clock className="w-5 h-5 text-indigo-600" />}
@@ -1378,7 +1378,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
             {/* ۵. باکس بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی) */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-6"
               title="بیشترین نوبت‌ها توسط مراجعان"
               subtitle="کد پرونده مراجعینی که بیشترین نوبت را دریافت کرده‌اند"
@@ -1411,7 +1411,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
             
             {/* توزیع تعداد نوبت‌ها به ازای هر مراجع */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-5"
               title="تعداد نوبت‌ها به ازای هر مراجع"
               icon={<CalendarDays className="w-4 h-4 text-blue-600" />}
@@ -1445,7 +1445,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
             {/* جدول ۱۰ مراجع با بیشترین تعداد نوبت و جلسه */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-7"
               title="مراجعین با بیشترین حجم ارجاع و نوبت"
               icon={<UserCheck className="w-4 h-4 text-emerald-600" />}
@@ -1505,7 +1505,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
             
             {/* پراکندگی جغرافیایی ثبت‌نامی‌ها بر اساس شهرها */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-6"
               title="پراکندگی جغرافیایی (بیشتر ثبت‌نامی‌ها از کدام شهرها هستند)"
               icon={<MapPin className="w-4 h-4 text-purple-600" />}
@@ -1535,7 +1535,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
             {/* بعد خانوار (بیشتر خانواده‌ها چند نفره هستند) */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-6"
               title="بُعد خانوار (بیشتر مراجعین در خانواده‌های چند نفره هستند)"
               icon={<Baby className="w-4 h-4 text-emerald-600" />}
@@ -1577,7 +1577,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
             
             {/* توزیع رده‌های سنی با تمرکز بر نوجوانان و جوانان */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-6"
               title="توزیع رده‌های سنی مراجعین و سهم نوجوانان"
               icon={<GraduationCap className="w-4 h-4 text-blue-600" />}
@@ -1610,7 +1610,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
             {/* تفکیک وضعیت تأهل (درصد مجرد، متأهل، مطلقه) */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-6"
               title="وضعیت تأهل مراجعین (درصد مجرد، متأهل، مطلقه)"
               icon={<HeartHandshake className="w-4 h-4 text-rose-600" />}
@@ -1676,7 +1676,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
             
             {/* رتبه‌بندی مشاوران بر اساس تعداد نوبت‌های اخذ شده */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-6"
               title="فراوانی و رتبه‌بندی مشاورین (بیشترین نوبت‌های اخذ شده)"
               icon={<Award className="w-4 h-4 text-amber-600" />}
@@ -1709,7 +1709,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
             {/* شاخص‌های جمعی بالینی و خودسنجی صفا */}
             <CollapsibleCard
-              defaultOpen={false}
+              defaultOpen={true}
               className="lg:col-span-6"
               title="شاخص‌های جمعی بالینی و اولویت‌های رشد در جامعه مراجعین"
               icon={<Sparkles className="w-4 h-4 text-emerald-600" />}
@@ -1816,7 +1816,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               {/* تحلیل فیلدهای گزینه‌ای با طرح ۴ رنگ */}
               {activeChoiceField && optionDistribution.length > 0 && (
                 <CollapsibleCard
-                  defaultOpen={false}
+                  defaultOpen={true}
                   title="نمودار فراوانی و تفکیک پاسخ‌های گزینه‌ای"
                   subtitle="درصد و تعداد دقیق هر یک از گزینه‌ها"
                   headerExtra={
@@ -1875,7 +1875,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               {/* تحلیل فیلدهای عددی در صورت وجود */}
               {activeNumericField && numericStats.count > 0 && (
                 <CollapsibleCard
-                  defaultOpen={false}
+                  defaultOpen={true}
                   title={`محاسبات آماری فیلد عددی: ${activeNumericField.label}`}
                 >
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

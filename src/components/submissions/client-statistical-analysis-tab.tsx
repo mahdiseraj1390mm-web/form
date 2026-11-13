@@ -947,7 +947,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {/* ========================================================= */}
       <CollapsibleCard
         as="section"
-        defaultOpen={false}
+        defaultOpen={true}
         className="shadow-sm"
         bodyClassName="space-y-6"
         title={<h3 className="text-base font-black text-slate-900">شاخص‌های آماری و تحلیل بالینی این پرونده</h3>}
@@ -1129,7 +1129,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {(activeFilter === 'all' || activeFilter === 'growth') && (
         <CollapsibleCard
           as="section"
-          defaultOpen={false}
+          defaultOpen={true}
           className="shadow-sm"
           bodyClassName="space-y-6"
           title={<h3 className="text-base font-black text-slate-900">آمار رشد و مراحل کمال فردی</h3>}
@@ -1341,7 +1341,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {(activeFilter === 'all' || activeFilter === 'appointments') && (
         <CollapsibleCard
           as="section"
-          defaultOpen={false}
+          defaultOpen={true}
           className="shadow-sm"
           bodyClassName="space-y-6"
           title={<h3 className="text-base font-black text-slate-900">آمار اخذ نوبت و تفکیک مشاوران مرکز</h3>}
@@ -1493,7 +1493,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {(activeFilter === 'all' || activeFilter === 'health') && (
         <CollapsibleCard
           as="section"
-          defaultOpen={false}
+          defaultOpen={true}
           className="shadow-sm"
           bodyClassName="space-y-6"
           title={<h3 className="text-base font-black text-slate-900">پایش سلامت سه‌گانه: جسم، روان و دارو</h3>}
@@ -1656,7 +1656,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {(activeFilter === 'all' || activeFilter === 'marital') && (
         <CollapsibleCard
           as="section"
-          defaultOpen={false}
+          defaultOpen={true}
           className="shadow-sm"
           bodyClassName="space-y-6"
           title={<h3 className="text-base font-black text-slate-900">آمار رضایت زوجین و تعاملات خانوادگی</h3>}
@@ -1744,7 +1744,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {(activeFilter === 'all' || activeFilter === 'personality') && (
         <CollapsibleCard
           as="section"
-          defaultOpen={false}
+          defaultOpen={true}
           className="shadow-sm"
           bodyClassName="space-y-6"
           title={<h3 className="text-base font-black text-slate-900">تحلیل شخصیتی چندبعدی مراجع</h3>}
@@ -1829,7 +1829,7 @@ export const ClientStatisticalAnalysisTab: React.FC<ClientStatisticalAnalysisTab
       {(activeFilter === 'all' || activeFilter === 'disorders') && (
         <CollapsibleCard
           as="section"
-          defaultOpen={false}
+          defaultOpen={true}
           className="shadow-sm"
           bodyClassName="space-y-6"
           title={<h3 className="text-base font-black text-slate-900">غربالگری بالینی اختلالات و نشانه‌های ریسک</h3>}
