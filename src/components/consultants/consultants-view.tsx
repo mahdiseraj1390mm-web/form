@@ -946,18 +946,18 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
         ) : (
           <div className="space-y-4">
             
-            {/* لیست پرونده‌های رزرو شده این مشاور */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-extrabold text-sm text-slate-900">
-                    لیست پرونده‌های مراجعین اختصاصی شما
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    مراجعانی که نوبت مشاوره خود را با شما ثبت نموده‌اند
-                  </p>
-                </div>
+            {/* سربرگ بخش پرونده‌های مشاور: عنوان، فیلتر موضوعات و شمارنده */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-extrabold text-sm sm:text-base text-slate-900">
+                  لیست پرونده‌های مراجعین اختصاصی شما
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  مراجعانی که نوبت مشاوره خود را با شما ثبت نموده‌اند
+                </p>
+              </div>
 
+              <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
                 {/* دکمه‌های تفکیک موضوعی در کارتابل پرونده‌ها */}
                 {activeConsultantTopics.length > 1 && (
                   <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 flex-wrap">
@@ -1002,31 +1002,33 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                   </div>
                 )}
 
-                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-xl shrink-0 self-start sm:self-auto">
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200/80 shrink-0">
                   {toPersianDigits(displayedConsultantBookings.length)} مراجع در این بخش
                 </span>
               </div>
+            </div>
 
-              {displayedConsultantBookings.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 space-y-2">
-                  <Inbox className="w-10 h-10 mx-auto text-slate-300" />
-                  <p className="font-bold text-xs text-slate-700">پرونده‌ای در این موضوع یافت نشد</p>
-                  <p className="text-[11px]">به محض ثبت نوبت توسط مراجع، مشخصات پرونده در این جدول درج می‌گردد.</p>
-                </div>
-              ) : (
-                <>
-                  {/* نمایش جدولی استاندارد برای تبلت و دسکتاپ */}
-                  <div className="hidden md:block overflow-x-auto">
+            {displayedConsultantBookings.length === 0 ? (
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-12 text-center text-slate-400 space-y-2">
+                <Inbox className="w-10 h-10 mx-auto text-slate-300" />
+                <p className="font-bold text-xs text-slate-700">پرونده‌ای در این موضوع یافت نشد</p>
+                <p className="text-[11px]">به محض ثبت نوبت توسط مراجع، مشخصات پرونده در این بخش درج می‌گردد.</p>
+              </div>
+            ) : (
+              <>
+                {/* نمایش جدولی استاندارد برای تبلت و دسکتاپ */}
+                <div className="hidden md:block bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+                  <div className="overflow-x-auto">
                     <table className="w-full text-right text-xs">
                       <thead>
                         <tr className="bg-slate-50/80 text-slate-600 border-b border-slate-200 font-bold">
-                          <th className="py-3 px-4">کد پرونده</th>
-                          <th className="py-3 px-4">نام و نام خانوادگی</th>
-                          <th className="py-3 px-4">شماره تماس</th>
-                          <th className="py-3 px-4">زمان نوبت رزرو شده</th>
-                          <th className="py-3 px-4">موضوع مشاوره</th>
-                          <th className="py-3 px-4">استان و شهر</th>
-                          <th className="py-3 px-4 text-center">اقدام</th>
+                          <th className="py-3.5 px-4">کد پرونده</th>
+                          <th className="py-3.5 px-4">نام و نام خانوادگی</th>
+                          <th className="py-3.5 px-4">شماره تماس</th>
+                          <th className="py-3.5 px-4">زمان نوبت رزرو شده</th>
+                          <th className="py-3.5 px-4">موضوع مشاوره</th>
+                          <th className="py-3.5 px-4">استان و شهر</th>
+                          <th className="py-3.5 px-4 text-center">اقدام</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1092,83 +1094,104 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                       </tbody>
                     </table>
                   </div>
+                </div>
 
-                  {/* نمایش کارتی بهینه و لمسی اختصاصی برای موبایل */}
-                  <div className="block md:hidden divide-y divide-slate-100">
-                    {displayedConsultantBookings.map((b) => (
-                      <div key={b.id} className="p-4 space-y-3 bg-white hover:bg-slate-50/70 transition">
-                        {/* سربرگ کارت: نام مراجع و کد پرونده */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 font-bold flex items-center justify-center text-xs shrink-0">
-                              <User className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <h4 className="font-extrabold text-sm text-slate-900 leading-tight">{b.clientName}</h4>
-                              <span className="font-mono text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-0.5 border border-blue-100">
-                                {b.caseCode}
-                              </span>
-                            </div>
+                {/* نمایش کارتی مدرن، مجزا و لمسی اختصاصی برای موبایل */}
+                <div className="block md:hidden space-y-3.5 pb-4">
+                  {displayedConsultantBookings.map((b) => (
+                    <div
+                      key={b.id}
+                      className="bg-white rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-blue-200/80 transition-all duration-200 p-4 space-y-3.5"
+                    >
+                      {/* سربرگ کارت: نام مراجع، کد پرونده و زمان نوبت */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                            <User className="w-4 h-4 text-white" />
                           </div>
+                          <div className="min-w-0">
+                            <h4 className="font-extrabold text-sm text-slate-900 leading-tight truncate">
+                              {b.clientName}
+                            </h4>
+                            <span className="font-mono text-[11px] font-bold text-blue-800 bg-blue-50/90 px-2 py-0.5 rounded-lg inline-block mt-0.5 border border-blue-200/70">
+                              {b.caseCode}
+                            </span>
+                          </div>
+                        </div>
 
-                          <span className="text-[10px] font-extrabold px-2 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono text-center">
-                            {b.slotValue || `${b.dayName} - ${b.timeRange}`}
+                        <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200/80 font-mono text-center shrink-0">
+                          {b.slotValue || `${b.dayName} - ${b.timeRange}`}
+                        </span>
+                      </div>
+
+                      {/* اطلاعات تماس، موضوع و شهر */}
+                      <div className="grid grid-cols-2 gap-2.5 text-xs bg-slate-50/90 p-3.5 rounded-2xl border border-slate-100">
+                        <div>
+                          <span className="text-slate-400 block text-[10px] mb-1">موضوع مشاوره:</span>
+                          <span
+                            className={`inline-block text-[11px] font-extrabold px-2 py-0.5 rounded-lg border ${
+                              b.topic.includes('نوجوان')
+                                ? 'bg-sky-50 text-sky-800 border-sky-200'
+                                : b.topic.includes('خانواده') || b.topic.includes('ازدواج')
+                                ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                : b.topic.includes('کودک')
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : b.topic.includes('بالینی')
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}
+                          >
+                            {b.topic}
                           </span>
                         </div>
 
-                        {/* اطلاعات تماس، موضوع و شهر */}
-                        <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                          <div>
-                            <span className="text-slate-400 block text-[10px] mb-0.5">موضوع مشاوره:</span>
-                            <span className="font-bold text-slate-800 truncate block">{b.topic}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px] mb-0.5">شهر / استان:</span>
-                            <span className="font-medium text-slate-700 truncate block">{b.provinceCity || 'ثبت‌نشده'}</span>
-                          </div>
-                          <div className="col-span-2 flex items-center justify-between pt-1.5 border-t border-slate-200/60 mt-0.5">
-                            <span className="text-slate-400 text-[10px]">شماره تماس:</span>
-                            {b.clientMobile ? (
-                              <a
-                                href={`tel:${b.clientMobile}`}
-                                className="font-mono font-bold text-blue-700 flex items-center gap-1.5 hover:underline py-0.5"
-                                title="تماس تلفنی با مراجع"
-                              >
-                                <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>{b.clientMobile}</span>
-                              </a>
-                            ) : (
-                              <span className="text-slate-400">ثبت‌نشده</span>
-                            )}
-                          </div>
+                        <div>
+                          <span className="text-slate-400 block text-[10px] mb-1">شهر / استان:</span>
+                          <span className="font-semibold text-slate-700 truncate block">{b.provinceCity || 'ثبت‌نشده'}</span>
                         </div>
 
-                        {/* دکمه‌های اقدام لمسی */}
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => setViewingBooking(b)}
-                            className="py-2.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <CalendarClock className="w-3.5 h-3.5 text-slate-500" />
-                            <span>مشاهده نوبت</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleOpenClientDossier(b)}
-                            className="py-2.5 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>مشاهده پرونده</span>
-                          </button>
+                        <div className="col-span-2 flex items-center justify-between pt-2.5 border-t border-slate-200/60 mt-0.5">
+                          <span className="text-slate-400 text-[11px]">شماره تماس:</span>
+                          {b.clientMobile ? (
+                            <a
+                              href={`tel:${b.clientMobile}`}
+                              className="font-mono font-bold text-blue-700 flex items-center gap-1.5 hover:underline bg-white px-2.5 py-1 rounded-xl border border-slate-200/70 shadow-2xs"
+                              title="تماس تلفنی با مراجع"
+                            >
+                              <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>{b.clientMobile}</span>
+                            </a>
+                          ) : (
+                            <span className="text-slate-400">ثبت‌نشده</span>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+
+                      {/* دکمه‌های اقدام لمسی */}
+                      <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setViewingBooking(b)}
+                          className="py-2.5 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                        >
+                          <CalendarClock className="w-4 h-4 text-slate-500" />
+                          <span>مشاهده نوبت</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenClientDossier(b)}
+                          className="py-2.5 px-3 bg-gradient-to-l from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-[0.98]"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>مشاهده پرونده</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
           </div>
         )}
