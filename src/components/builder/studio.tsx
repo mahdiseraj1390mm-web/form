@@ -66,11 +66,24 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
     const newField: FormField = {
       id: `f_${Date.now()}`,
       type,
-      label: widgetDef ? widgetDef.label : 'فیلد جدید',
-      placeholder: '',
+      label: type === 'bankCard' ? 'مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)' : (widgetDef ? widgetDef.label : 'فیلد جدید'),
+      placeholder: type === 'bankCard' ? 'مثال: ۵۰,۰۰۰' : '',
+      helpText: type === 'bankCard' ? 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید' : '',
       panelId: finalPanelId,
       gridCols: 12,
       validations: {},
+      bankCardData: type === 'bankCard' ? {
+        cardNumber: '6037-9979-1234-5678',
+        cardHolder: 'مرکز خدمات روانشناسی بالحق',
+        bankKey: 'melli',
+        bankName: 'بانک ملی ایران',
+        presetAmounts: [30000, 50000, 100000, 200000],
+        showPresetAmounts: true,
+        showCustomAmount: true,
+        depositTitle: 'شماره کارت جهت واریز اختیاری:',
+        description: 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید',
+        allowCopy: true,
+      } : undefined,
       options: ['radio', 'checkbox', 'select', 'quizQuestion'].includes(type)
         ? [
             { id: 'opt_1', label: 'گزینه ۱', value: '1', price: 0 },

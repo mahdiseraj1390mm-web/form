@@ -43,18 +43,18 @@ export const Header: React.FC<HeaderProps> = ({
   const { activeForm, similarityNotifications, resolveSimilarityNotification, teamMembers } = useForm();
   const { currentUser, logout } = useAdminAuth();
 
-  const { activeUserAvatar, activeUserGender } = useMemo(() => {
-    const mem = teamMembers?.find(
+  const currentMember = useMemo(() => {
+    if (!currentUser || !teamMembers) return null;
+    return teamMembers.find(
       (m) =>
-        (currentUser?.id && m.id === currentUser.id) ||
-        (m.mobile && currentUser?.mobile && m.mobile === currentUser.mobile) ||
-        (m.name && currentUser?.name && m.name === currentUser.name)
+        (currentUser.id && m.id === currentUser.id) ||
+        (m.mobile && currentUser.mobile && m.mobile === currentUser.mobile) ||
+        (m.name && currentUser.name && m.name === currentUser.name)
     );
-    return {
-      activeUserAvatar: currentUser?.avatarUrl || mem?.avatarUrl,
-      activeUserGender: currentUser?.genderPrefix || mem?.genderPrefix,
-    };
   }, [currentUser, teamMembers]);
+
+  const activeUserAvatar = currentUser?.avatarUrl || currentMember?.avatarUrl || '';
+  const activeUserGender = currentUser?.genderPrefix || currentMember?.genderPrefix || '';
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);

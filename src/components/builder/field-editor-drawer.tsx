@@ -10,7 +10,8 @@ import {
   ConditionAction, 
   WorkDayPeriod,
   FormConsultantBookingConfig,
-  AppointmentData 
+  AppointmentData,
+  BankCardData
 } from '@/types/form';
 import { 
   X, 
@@ -36,13 +37,22 @@ import {
   CheckSquare,
   Square,
   RefreshCw,
-  User
+  User,
+  CreditCard
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { predefinedLists, iranProvinces } from '@/lib/iran-geo';
 import { useForm } from '@/context/form-context';
 import { COUNSELING_TOPICS, isConsultantMember } from '@/lib/consultant-helpers';
 import { ConsultantScheduleModal } from '@/components/consultants/consultant-schedule-modal';
+import { BankCardDisplay } from '@/components/ui/bank-card-display';
+import { 
+  IRANIAN_BANKS, 
+  getBankByKey, 
+  detectBankFromCardNumber, 
+  formatCardNumber, 
+  cleanCardNumber 
+} from '@/lib/iran-banks';
 
 interface FieldEditorDrawerProps {
   field: FormField | null;
@@ -73,9 +83,10 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
     schedule: AppointmentData;
   } | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'general' | 'validation' | 'rules' | 'options' | 'formula' | 'quiz' | 'style' | 'booking'>(
-    field.type === 'appointmentBooking' ? 'booking' : 'general'
+  const [activeTab, setActiveTab] = useState<'general' | 'validation' | 'rules' | 'options' | 'formula' | 'quiz' | 'style' | 'booking' | 'bankCard'>(
+    field.type === 'appointmentBooking' ? 'booking' : field.type === 'bankCard' ? 'bankCard' : 'general'
   );
+  const [newPresetAmount, setNewPresetAmount] = useState('');
 
   // وضعیت و متغیرهای شروط منطقی
   const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);

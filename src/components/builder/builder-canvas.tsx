@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { widgetDefinitions } from './widget-palette';
 import { toPersianDigits } from '@/lib/persian';
+import { BankCardDisplay } from '@/components/ui/bank-card-display';
 
 interface BuilderCanvasProps {
   form: Form;
@@ -906,6 +907,19 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                   </span>
                                 </div>
                               </div>
+                            ) : field.type === 'bankCard' ? (
+                              <BankCardDisplay
+                                cardNumber={field.bankCardData?.cardNumber || '6037-9979-1234-5678'}
+                                cardHolder={field.bankCardData?.cardHolder || 'مرکز خدمات روانشناسی بالحق'}
+                                bankKey={field.bankCardData?.bankKey}
+                                title={field.label || field.bankCardData?.depositTitle || 'مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)'}
+                                description={field.helpText || field.bankCardData?.description || 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید'}
+                                presetAmounts={field.bankCardData?.presetAmounts}
+                                showPresetAmounts={field.bankCardData?.showPresetAmounts !== false}
+                                showCustomAmount={field.bankCardData?.showCustomAmount !== false}
+                                isReadOnly={true}
+                                showContainerBorder={false}
+                              />
                             ) : (
                               <div className="h-8 border border-slate-200 rounded-md bg-slate-50/60 flex items-center px-3 text-[11px] text-slate-400">
                                 {field.placeholder || 'محل ورود داده کاربر...'}

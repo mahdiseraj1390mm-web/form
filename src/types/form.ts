@@ -45,7 +45,8 @@ export type FieldType =
   | 'likertScale'
   | 'mapLocation'
   | 'termsCheckbox'
-  | 'choiceTable';
+  | 'choiceTable'
+  | 'bankCard';
 
 export interface SelectOption {
   id: string;
@@ -135,6 +136,19 @@ export interface AppointmentData {
   topicSchedules?: Record<string, AppointmentData>; // ساعات کاری تفکیک‌شده به ازای هر موضوع مشاوره (مثلاً کودک، نوجوان و...)
 }
 
+export interface BankCardData {
+  cardNumber?: string; // شماره ۱۶ رقمی کارت
+  cardHolder?: string; // نام صاحب کارت / نام فرد
+  bankKey?: string; // کلید بانک (melli, mellat, ...)
+  bankName?: string; // نام فارسی بانک
+  presetAmounts?: number[]; // مبالغ پیشنهادی به تومان
+  showPresetAmounts?: boolean; // نمایش چیپ‌های مبالغ آماده
+  showCustomAmount?: boolean; // امکان ورود مبلغ دلخواه
+  depositTitle?: string; // عنوان کادر واریز اختیاری
+  description?: string; // توضیحات هدیه یا مشارکت اختیاری
+  allowCopy?: boolean; // دکمه کپی شماره کارت
+}
+
 export interface FormField {
   id: string;
   type: FieldType;
@@ -160,6 +174,7 @@ export interface FormField {
   };
   appointmentData?: AppointmentData;
   consultantId?: string; // شناسه مشاور اختصاصی متصل به این فیلد
+  bankCardData?: BankCardData; // تنظیمات کارت بانکی گرافیکی و واریز
   pageBreakAfter?: boolean; // انتقال به صفحه بعد پس از این پرسش (دکمه بعدی)
   nextButtonText?: string; // متن دکمه بعدی (مثلاً "بعدی"، "ادامه")
   autoAdvanceOnSelect?: boolean; // رفتن خودکار به سوال بعد با انتخاب گزینه

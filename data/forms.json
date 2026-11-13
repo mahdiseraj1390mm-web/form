@@ -64,7 +64,8 @@
         "stepId": "step-1",
         "gridCols": 12,
         "validations": {
-          "required": true
+          "required": true,
+          "customErrorMessage": "مشخص کردن وضعیت عضویت در سایت عبادالله الزامی است."
         },
         "options": [
           {
@@ -87,7 +88,8 @@
         "stepId": "step-2",
         "gridCols": 6,
         "validations": {
-          "required": true
+          "required": true,
+          "customErrorMessage": "درج نام الزامی است."
         }
       },
       {
@@ -98,7 +100,8 @@
         "stepId": "step-2",
         "gridCols": 6,
         "validations": {
-          "required": true
+          "required": true,
+          "customErrorMessage": "درج نام خانوادگی الزامی است."
         }
       },
       {
@@ -109,7 +112,8 @@
         "stepId": "step-2",
         "gridCols": 12,
         "validations": {
-          "required": true
+          "required": true,
+          "customErrorMessage": "شماره تلفن همراه معتبر الزامی است."
         }
       },
       {
@@ -120,7 +124,8 @@
         "stepId": "step-2",
         "gridCols": 12,
         "validations": {
-          "required": true
+          "required": true,
+          "customErrorMessage": "انتخاب تاریخ تولد الزامی است."
         }
       },
       {
@@ -130,7 +135,8 @@
         "stepId": "step-2",
         "gridCols": 12,
         "validations": {
-          "required": true
+          "required": true,
+          "customErrorMessage": "انتخاب نقش در خانواده الزامی است."
         },
         "options": [
           {
@@ -210,7 +216,8 @@
         "stepId": "step-2",
         "gridCols": 12,
         "validations": {
-          "required": true
+          "required": true,
+          "customErrorMessage": "انتخاب وضعیت تاهل الزامی است."
         },
         "options": [
           {
@@ -242,7 +249,8 @@
         "stepId": "step-2",
         "gridCols": 12,
         "validations": {
-          "required": true
+          "required": true,
+          "customErrorMessage": "انتخاب استان و شهرستان الزامی است."
         }
       },
       {
@@ -452,7 +460,7 @@
     "submissionCount": 89,
     "viewCount": 1420,
     "createdAt": "2026-03-01T08:30:00Z",
-    "updatedAt": "2026-11-08T15:01:00.696Z",
+    "updatedAt": "2026-11-13T21:43:07.430Z",
     "steps": [
       {
         "id": "step-1",
@@ -2493,7 +2501,8 @@
       "portalSubtitle": "سامانه مشاوره تلفنی و پرونده مراجعین",
       "portalHeroImage": "/images/belhagh-hero.png",
       "showPortalHeroImage": true,
-      "liveChatEnabled": true
+      "liveChatEnabled": true,
+      "clientAvailability": "active_submittable"
     },
     "theme": {
       "themeId": "belhagh_official",
@@ -2509,7 +2518,8 @@
       "labelColor": "#0f172a",
       "buttonColor": "#00897b",
       "buttonTextColor": "#ffffff"
-    }
+    },
+    "clientAvailability": "active_submittable"
   },
   {
     "id": "form-safaan-assessment",

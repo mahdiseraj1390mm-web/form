@@ -98,8 +98,10 @@ export const widgetDefinitions: WidgetDef[] = [
   { type: 'appointmentBooking', label: 'رزرو وقت', tab: 'fields', group: 'advanced', icon: CalendarClock, description: 'تقویم هوشمند نوبت‌های کاری بدون تداخل (نوبت‌های باقی‌مانده)', badge: 'نوبت' },
   { type: 'termsCheckbox', label: 'شرایط استفاده', tab: 'fields', group: 'advanced', icon: FileCheck2, description: 'چک‌باکس توافق‌نامه و پذیرش قوانین' },
   { type: 'nationalCode', label: 'کد ملی ۱۰ رقمی', tab: 'fields', group: 'advanced', icon: CreditCard, description: 'اعتبارسنجی با الگوریتم کنترل ثبت‌احوال', badge: 'ایران' },
+  { type: 'bankCard', label: 'کارت بانکی و هدیه', tab: 'fields', group: 'advanced', icon: CreditCard, description: 'کارت گرافیکی شتاب با طرح بانک، شماره کارت، نام فرد و واریز اختیاری', badge: 'بانک' },
 
   // --- تب ابزارک‌ها / ابزارهای تکمیلی و آزمون ---
+  { type: 'bankCard', label: 'کارت به کارت و واریز', tab: 'widgets', group: 'business', icon: CreditCard, description: 'کارت بانکی با طرح و لوگوی بانک، شماره کارت، نام صاحب حساب و انتخاب مبالغ', badge: 'بانک' },
   { type: 'quizQuestion', label: 'سوال تستی آزمون', tab: 'widgets', group: 'business', icon: HelpCircle, description: 'با کلید تصحیح، نمره مثبت و منفی', badge: 'آزمون' },
   { type: 'countdownTimer', label: 'شمارنده معکوس', tab: 'widgets', group: 'business', icon: Timer, description: 'محدودسازی زمان تکمیل صفحه یا آزمون' },
   { type: 'barcodeScanner', label: 'بارکد و QR', tab: 'widgets', group: 'business', icon: QrCode, description: 'اسکن سریع با وب‌کم یا دوربین موبایل' },
