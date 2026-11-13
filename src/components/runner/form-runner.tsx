@@ -3027,15 +3027,19 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setAuthGateMode('portal');
-                    setCurrentStepIndex(0);
-                    setInternalPageIndex(0);
+                    if (onBackToStudio) {
+                      setAuthGateMode('portal');
+                      setCurrentStepIndex(0);
+                      setInternalPageIndex(0);
+                    } else if (typeof window !== 'undefined') {
+                      window.location.href = '/portal';
+                    }
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
-                  title="بازگشت به صفحه اول / ورود به پرونده"
+                  title="بازگشت"
                 >
                   <ArrowRight className="w-3.5 h-3.5" />
-                  <span>بازگشت به صفحه ورود</span>
+                  <span>بازگشت</span>
                 </button>
                 <h1 className="text-base sm:text-xl font-extrabold" style={{ color: theme?.titleColor || '#0f172a' }}>{form.title}</h1>
               </div>
