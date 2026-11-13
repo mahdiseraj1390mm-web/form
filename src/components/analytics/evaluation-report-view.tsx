@@ -20,6 +20,7 @@ import {
   BarChart3,
   LineChart,
 } from 'lucide-react';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
 
 interface EvaluationReportViewProps {
   evaluation: EvaluationResult;
@@ -41,7 +42,7 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
   const faithComponent = evaluation.componentScores.find((c) => c.code === 17);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* کارت‌های شاخص‌های کلیدی (KPIs) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* میانگین کل */}
@@ -123,180 +124,175 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
       </div>
 
       {/* بخش اصلی: مقایسه مؤلفه‌های ارزیابی (میله‌ای عمودی، نقطه و خط، رادار) و اولویت‌های رشد */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* نمودار مؤلفه‌های فردی با قابلیت انتخاب نوع نمودار */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-2">
-              <span className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-sky-600" />
-                <span>نمودار مقایسه مؤلفه‌های ارزیابی</span>
-              </span>
-
-              {/* سوییچر نوع نمایش نمودار */}
-              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-xs font-bold">
-                <button
-                  onClick={() => setComponentChartType('bar')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                    componentChartType === 'bar'
-                      ? 'bg-white text-slate-900 shadow-2xs font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  <span>میله‌ای عمودی</span>
-                </button>
-                <button
-                  onClick={() => setComponentChartType('line')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                    componentChartType === 'line'
-                      ? 'bg-white text-slate-900 shadow-2xs font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <LineChart className="w-3.5 h-3.5" />
-                  <span>نقطه و خط</span>
-                </button>
-                <button
-                  onClick={() => setComponentChartType('radar')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                    componentChartType === 'radar'
-                      ? 'bg-white text-slate-900 shadow-2xs font-black'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Compass className="w-3.5 h-3.5" />
-                  <span>رادار</span>
-                </button>
-              </div>
+        <CollapsibleCard
+          defaultOpen={false}
+          className="lg:col-span-7"
+          title="نمودار مقایسه مؤلفه‌های ارزیابی"
+          icon={<BarChart3 className="w-4 h-4 text-sky-600" />}
+          headerExtra={
+            <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-xs font-bold max-w-full">
+              <button
+                onClick={() => setComponentChartType('bar')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  componentChartType === 'bar'
+                    ? 'bg-white text-slate-900 shadow-2xs font-black'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>میله‌ای عمودی</span>
+              </button>
+              <button
+                onClick={() => setComponentChartType('line')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  componentChartType === 'line'
+                    ? 'bg-white text-slate-900 shadow-2xs font-black'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <LineChart className="w-3.5 h-3.5" />
+                <span>نقطه و خط</span>
+              </button>
+              <button
+                onClick={() => setComponentChartType('radar')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                  componentChartType === 'radar'
+                    ? 'bg-white text-slate-900 shadow-2xs font-black'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5" />
+                <span>رادار</span>
+              </button>
             </div>
-
-            <div className="py-2">
-              {componentChartType === 'bar' && (
-                <VerticalBarChart
-                  data={radarComponents.map((c) => {
-                    const sc = getSemanticColorByPercentage(c.score);
-                    return {
-                      label: c.title,
-                      value: c.score,
-                      percentage: c.score,
-                      color: sc.hex,
-                      secondaryLabel: `مؤلفه ${toPersianDigits(c.code)}`,
-                    };
-                  })}
-                  unit="٪"
-                  maxScale={100}
-                  height={240}
-                  showValues={true}
-                  scrollable={true}
-                  badgeText="نمودار میله‌ای عمودی مؤلفه‌ها"
-                />
-              )}
-
-              {componentChartType === 'line' && (
-                <PointLineChart
-                  data={radarComponents.map((c) => ({
-                    label: `م${toPersianDigits(c.code)}`,
-                    value: c.score,
-                    secondaryLabel: c.title,
-                    color: getSemanticColorByPercentage(c.score).hex,
-                  }))}
-                  unit="٪"
-                  maxScale={100}
-                  height={230}
-                  lineColor="#173f6b"
-                  showPoints={true}
-                  showValues={true}
-                  badgeText="نمودار نقطه و خط پروفایل بالینی"
-                />
-              )}
-
-              {componentChartType === 'radar' && (
-                <div className="flex items-center justify-center">
-                  <SvgRadarChart items={radarComponents} />
-                </div>
-              )}
+          }
+          footer={
+            <div className="text-[11px] text-slate-400 text-center">
+              مؤلفه‌های ارزیابی شده بر مبنای نمره استاندارد ۱۰۰ مقایسه شده‌اند.
             </div>
-          </div>
-
-          <div className="text-[11px] text-slate-400 text-center pt-2 border-t border-slate-100 mt-2">
-            مؤلفه‌های ارزیابی شده بر مبنای نمره استاندارد ۱۰۰ مقایسه شده‌اند.
-          </div>
-        </div>
-
-        {/* ۳ اولویت نخست رشد (Growth Priorities) */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <span className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-amber-600" />
-                <span>۳ اولویت نخست رشد مراجع</span>
-              </span>
-              <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                بیشترین فاصله رشد
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-500 leading-relaxed mb-4">
-              این مؤلفه‌ها بیشترین پتانسیل جهش را دارند و تمرکز جلسات مشاوره بر روی آن‌ها سریع‌ترین تحول را ایجاد خواهد کرد:
-            </p>
-
-            <div className="space-y-4">
-              {/* نمودار میله‌ای عمودی مقایسه ۳ اولویت نخست رشد */}
+          }
+        >
+          <div className="py-2">
+            {componentChartType === 'bar' && (
               <VerticalBarChart
-                data={evaluation.topPriorities.slice(0, 3).map((item, idx) => {
-                  const itemColor = getSemanticColorByPercentage(item.score);
+                data={radarComponents.map((c) => {
+                  const sc = getSemanticColorByPercentage(c.score);
                   return {
-                    label: item.title,
-                    value: item.score,
-                    percentage: item.score,
-                    color: itemColor.hex,
-                    secondaryLabel: `شکاف: %${toPersianDigits(item.gap)}`,
-                    badge: `اولویت ${toPersianDigits(idx + 1)}`,
+                    label: c.title,
+                    value: c.score,
+                    percentage: c.score,
+                    color: sc.hex,
+                    secondaryLabel: `مؤلفه ${toPersianDigits(c.code)}`,
                   };
                 })}
                 unit="٪"
                 maxScale={100}
-                height={200}
+                height={240}
                 showValues={true}
-                badgeText="نمودار میله‌ای عمودی اولویت‌ها"
+                scrollable={true}
+                badgeText="نمودار میله‌ای عمودی مؤلفه‌ها"
               />
+            )}
 
-              <div className="space-y-3 pt-2 border-t border-slate-100">
-                {evaluation.topPriorities.slice(0, 3).map((item, idx) => {
-                  const itemColor = getSemanticColorByPercentage(item.score);
-                  return (
-                    <div
-                      key={item.code}
-                      className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs"
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-5 h-5 rounded-md ${itemColor.dotBg} text-white text-[11px] font-black flex items-center justify-center shrink-0`}>
-                            {toPersianDigits(idx + 1)}
-                          </span>
-                          <span className="font-extrabold text-xs text-slate-900">
-                            مؤلفه {toPersianDigits(item.code)}: {item.title}
-                          </span>
-                        </div>
+            {componentChartType === 'line' && (
+              <PointLineChart
+                data={radarComponents.map((c) => ({
+                  label: `م${toPersianDigits(c.code)}`,
+                  value: c.score,
+                  secondaryLabel: c.title,
+                  color: getSemanticColorByPercentage(c.score).hex,
+                }))}
+                unit="٪"
+                maxScale={100}
+                height={230}
+                lineColor="#173f6b"
+                showPoints={true}
+                showValues={true}
+                badgeText="نمودار نقطه و خط پروفایل بالینی"
+              />
+            )}
 
-                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${itemColor.badgeBg} ${itemColor.textColor} ${itemColor.badgeBorder}`}>
-                          فاصله: {toPersianDigits(item.gap)}%
+            {componentChartType === 'radar' && (
+              <div className="flex items-center justify-center w-full min-w-0">
+                <SvgRadarChart items={radarComponents} />
+              </div>
+            )}
+          </div>
+        </CollapsibleCard>
+
+        {/* ۳ اولویت نخست رشد (Growth Priorities) */}
+        <CollapsibleCard
+          defaultOpen={false}
+          className="lg:col-span-5"
+          title="۳ اولویت نخست رشد مراجع"
+          icon={<TrendingUp className="w-4 h-4 text-amber-600" />}
+          headerExtra={
+            <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+              بیشترین فاصله رشد
+            </span>
+          }
+        >
+          <p className="text-xs text-slate-500 leading-relaxed mb-4">
+            این مؤلفه‌ها بیشترین پتانسیل جهش را دارند و تمرکز جلسات مشاوره بر روی آن‌ها سریع‌ترین تحول را ایجاد خواهد کرد:
+          </p>
+
+          <div className="space-y-4">
+            {/* نمودار میله‌ای عمودی مقایسه ۳ اولویت نخست رشد */}
+            <VerticalBarChart
+              data={evaluation.topPriorities.slice(0, 3).map((item, idx) => {
+                const itemColor = getSemanticColorByPercentage(item.score);
+                return {
+                  label: item.title,
+                  value: item.score,
+                  percentage: item.score,
+                  color: itemColor.hex,
+                  secondaryLabel: `شکاف: %${toPersianDigits(item.gap)}`,
+                  badge: `اولویت ${toPersianDigits(idx + 1)}`,
+                };
+              })}
+              unit="٪"
+              maxScale={100}
+              height={200}
+              showValues={true}
+              badgeText="نمودار میله‌ای عمودی اولویت‌ها"
+            />
+
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              {evaluation.topPriorities.slice(0, 3).map((item, idx) => {
+                const itemColor = getSemanticColorByPercentage(item.score);
+                return (
+                  <div
+                    key={item.code}
+                    className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-5 h-5 rounded-md ${itemColor.dotBg} text-white text-[11px] font-black flex items-center justify-center shrink-0`}>
+                          {toPersianDigits(idx + 1)}
+                        </span>
+                        <span className="font-extrabold text-xs text-slate-900">
+                          مؤلفه {toPersianDigits(item.code)}: {item.title}
                         </span>
                       </div>
 
-                      {item.counselingTip && (
-                        <p
-                          className="text-[11px] text-slate-600 leading-relaxed pr-2.5 border-r-2 mt-2"
-                          style={{ borderColor: itemColor.hex }}
-                        >
-                          💡 <strong>راهکار پیشنهادی:</strong> {item.counselingTip}
-                        </p>
-                      )}
+                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${itemColor.badgeBg} ${itemColor.textColor} ${itemColor.badgeBorder}`}>
+                        فاصله: {toPersianDigits(item.gap)}%
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {item.counselingTip && (
+                      <p
+                        className="text-[11px] text-slate-600 leading-relaxed pr-2.5 border-r-2 mt-2"
+                        style={{ borderColor: itemColor.hex }}
+                      >
+                        💡 <strong>راهکار پیشنهادی:</strong> {item.counselingTip}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -312,22 +308,19 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
               </p>
             </div>
           )}
-        </div>
+        </CollapsibleCard>
       </div>
 
       {/* جدول تفکیکی تمام ۱۷ مؤلفه */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-extrabold text-slate-900">
-              جدول نمرات تفکیکی تمامی مؤلفه‌ها
-            </span>
-          </div>
+      <CollapsibleCard
+        defaultOpen={false}
+        title="جدول نمرات تفکیکی تمامی مؤلفه‌ها"
+        headerExtra={
           <span className="text-xs text-slate-400">
             مجموع {toPersianDigits(evaluation.componentScores.length)} مؤلفه ارزیابی‌شده
           </span>
-        </div>
-
+        }
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-right text-xs">
             <thead>
@@ -381,7 +374,7 @@ export const EvaluationReportView: React.FC<EvaluationReportViewProps> = ({
             </tbody>
           </table>
         </div>
-      </div>
+      </CollapsibleCard>
     </div>
   );
 };

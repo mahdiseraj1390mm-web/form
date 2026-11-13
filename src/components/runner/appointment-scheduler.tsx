@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { useForm } from '@/context/form-context';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
 import { 
   COUNSELING_TOPICS, 
   COUNSELOR_MAP, 
@@ -28,6 +29,9 @@ import {
   cleanConsultantName, 
   getScheduleForTopic, 
   matchCounselingTopic,
+  normalizeCounselingTopicId,
+  hasConsultantActiveSchedule,
+  formatConsultantDisplayName,
   matchTimeRanges,
   extractTimeRange,
   detectDayIndex
@@ -111,19 +115,20 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     // اولویت قطعی با مشاوران ثبت‌شده در دیتابیس سامانه با ساعات کاری فعال است
     if (definedConsultants.length > 0) {
       return definedConsultants
-        .filter((m) => {
-          const hasAvailableDays = Array.isArray(m.workingHours?.availableDays) && m.workingHours.availableDays.length > 0;
-          return m.status === 'active' && hasAvailableDays;
-        })
+        .filter((m) => m.status === 'active' && hasConsultantActiveSchedule(m.workingHours))
         .map((m) => {
           const prefix = m.genderPrefix || (m.name.startsWith('خانم') ? 'خانم' : 'آقا');
-          const topics = (m.allowedTopics && m.allowedTopics.length > 0)
+          const rawTopics = (m.allowedTopics && m.allowedTopics.length > 0)
             ? m.allowedTopics
             : ['مشاوره تخصصی'];
+          const topics = Array.from(
+            new Set(rawTopics.map((t) => normalizeCounselingTopicId(t) || t))
+          );
           return {
             consultantId: m.id,
             consultantName: m.name,
             genderPrefix: prefix as 'آقا' | 'خانم',
+            avatarUrl: m.avatarUrl,
             enabled: true,
             enabledTopics: topics,
             customWorkingHours: m.workingHours,
@@ -137,11 +142,17 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const hasMultiConsultantMode = selectedConsultants.length > 0;
 
-  // تمام موضوعات فعال در این فرم
+  // تمام موضوعات فعال و یکتا در این فرم (جلوگیری از نمایش دکمه‌های تکراری)
   const availableTopicIds = useMemo(() => {
     const set = new Set<string>();
     selectedConsultants.forEach((c) => {
-      (c.enabledTopics || []).forEach((t) => set.add(t));
+      (c.enabledTopics || []).forEach((t) => {
+        const canonical = normalizeCounselingTopicId(t) || t;
+        const topicSched = getScheduleForTopic(c.customWorkingHours, canonical);
+        if (Array.isArray(topicSched?.availableDays) && topicSched.availableDays.length > 0) {
+          set.add(canonical);
+        }
+      });
     });
     return Array.from(set);
   }, [selectedConsultants]);
@@ -159,21 +170,23 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     }
   }, [hasMultiConsultantMode, availableTopicIds, selectedTopicId]);
 
-  // مشاوران پوشش‌دهنده موضوع انتخابی
+  // مشاوران پوشش‌دهنده موضوع انتخابی که در این موضوع دارای روزهای کاری فعال هستند
   const consultantsForTopic = useMemo(() => {
     if (!selectedTopicId) return selectedConsultants;
+    const selNorm = normalizeCounselingTopicId(selectedTopicId);
     return selectedConsultants.filter((c) => {
       const topics = c.enabledTopics || [];
-      return topics.some((t) => {
-        if (t === selectedTopicId) return true;
-        const topicObj = COUNSELING_TOPICS.find(
-          (ct) => ct.id === selectedTopicId || ct.name === selectedTopicId || ct.keywords.includes(selectedTopicId)
-        );
+      const coversTopic = topics.some((t) => {
+        if (t === selectedTopicId || normalizeCounselingTopicId(t) === selNorm) return true;
+        const topicObj = matchCounselingTopic(selectedTopicId);
         if (topicObj) {
           if (topicObj.id === t || topicObj.name === t || topicObj.keywords.includes(t)) return true;
         }
         return false;
       });
+      if (!coversTopic) return false;
+      const topicSched = getScheduleForTopic(c.customWorkingHours, selectedTopicId);
+      return Array.isArray(topicSched?.availableDays) && topicSched.availableDays.length > 0;
     });
   }, [selectedConsultants, selectedTopicId]);
 
@@ -398,11 +411,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const handleSelectSlot = (slotLabel: string) => {
     if (hasMultiConsultantMode) {
-      const topicObj = COUNSELING_TOPICS.find((t) => t.id === selectedTopicId);
+      const topicObj = matchCounselingTopic(selectedTopicId);
       const topicName = topicObj ? topicObj.name : (selectedTopicId || 'مشاوره تخصصی');
-      const prefix = activeConsultantConfig?.genderPrefix ? `${activeConsultantConfig.genderPrefix} ` : '';
       const consultantFullName = activeConsultantConfig
-        ? `${prefix}${activeConsultantConfig.consultantName}`
+        ? formatConsultantDisplayName(activeConsultantConfig.consultantName, activeConsultantConfig.genderPrefix)
         : 'مشاور';
       const formatted = `موضوع: ${topicName} | مشاور: ${consultantFullName} | نوبت: ${slotLabel}`;
       onChange(formatted, {
@@ -477,8 +489,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                 {consultantsForTopic.map((consultant) => {
                   const isSelected = selectedConsultantId === consultant.consultantId;
-                  const prefix = consultant.genderPrefix ? `${consultant.genderPrefix} ` : '';
-                  const fullName = `${prefix}${consultant.consultantName}`;
+                  const fullName = formatConsultantDisplayName(consultant.consultantName, consultant.genderPrefix);
 
                   return (
                     <button
@@ -495,11 +506,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold ${
-                          isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          <User className="w-4 h-4" />
-                        </div>
+                        <ConsultantAvatar
+                          avatarUrl={consultant.avatarUrl}
+                          genderPrefix={consultant.genderPrefix}
+                          name={consultant.consultantName}
+                          size="sm"
+                        />
                         <div>
                           <span className="font-extrabold text-xs block">{fullName}</span>
                           <span className="text-[10px] text-slate-500">مشاور تخصصی</span>
@@ -523,9 +535,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             <div className="pt-2 border-t border-indigo-100/70">
               <div className="p-3.5 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-indigo-50/90 border border-blue-200/90 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-xs shrink-0">
-                    <PhoneCall className="w-4 h-4" />
-                  </div>
+                  <ConsultantAvatar
+                    avatarUrl={activeConsultantConfig.avatarUrl || matchingMember?.avatarUrl}
+                    genderPrefix={activeConsultantConfig.genderPrefix || matchingMember?.genderPrefix}
+                    name={activeConsultantConfig.consultantName}
+                    size="md"
+                  />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-extrabold text-blue-950 text-xs">

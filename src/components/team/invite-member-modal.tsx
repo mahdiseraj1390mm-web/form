@@ -31,12 +31,23 @@ import {
   CalendarDays,
   UserCheck,
   RotateCcw,
-  Check
+  Check,
+  Upload,
+  Image as ImageIcon,
+  Camera,
+  Loader2
 } from 'lucide-react';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
 import { TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { Form, AppointmentData, WorkDayPeriod, DayScheduleConfig } from '@/types/form';
 import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
-import { COUNSELING_TOPICS, KNOWN_CONSULTANTS } from '@/lib/consultant-helpers';
+import {
+  COUNSELING_TOPICS,
+  KNOWN_CONSULTANTS,
+  matchCounselingTopic,
+  normalizeCounselingTopicId,
+  normalizeTopicSchedulesMap,
+} from '@/lib/consultant-helpers';
 import { toPersianDigits } from '@/lib/persian';
 
 interface InviteMemberModalProps {
@@ -100,6 +111,12 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   // اطلاعات کاربری
   const [genderPrefix, setGenderPrefix] = useState<'آقا' | 'خانم'>('آقا');
   const [name, setName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -107,6 +124,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const [status, setStatus] = useState<'active' | 'suspended'>('active');
   const [allowedTabs, setAllowedTabs] = useState<string[]>(['submissions', 'consultants']);
   const [requireCaseCode, setRequireCaseCode] = useState(true);
+  const [canEditWorkingHours, setCanEditWorkingHours] = useState(false);
   const [consultantId, setConsultantId] = useState('');
   const [allowedTopics, setAllowedTopics] = useState<string[]>([]);
   const [customTopicInput, setCustomTopicInput] = useState('');
@@ -141,6 +159,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
 
       setGenderPrefix(initialPrefix);
       setName(cleanName);
+      setAvatarUrl(editingMember.avatarUrl || '');
+      setAvatarUploadError(null);
+      setShowUrlInput(false);
       setMobile(editingMember.mobile || editingMember.username || '');
       setPassword(editingMember.password || '');
       setJobTitle(editingMember.jobTitle || '');
@@ -154,21 +175,23 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         ? editingMember.clientDossierAccess === 'restricted'
         : (editingMember.requireCaseCode !== undefined ? editingMember.requireCaseCode : true);
       setRequireCaseCode(isRestricted);
+      setCanEditWorkingHours(editingMember.canEditWorkingHours === true);
       setConsultantId(editingMember.consultantId || '');
 
-      const topicMap: Record<string, string> = {
-        teen: 'نوجوان',
-        child: 'کودک',
-        family: 'خانواده',
-        clinical: 'بالینی',
-        academic: 'تحصیلی',
-        individual: 'فردی',
-      };
-      const loadedTopics = (editingMember.allowedTopics || []).map((t) => topicMap[t] || t);
+      const loadedTopics = Array.from(
+        new Set(
+          (editingMember.allowedTopics || [])
+            .map((t) => normalizeCounselingTopicId(t))
+            .filter(Boolean)
+        )
+      );
       setAllowedTopics(loadedTopics);
 
-      // بازیابی ساعت کاری عمومی و اختصاصی هر موضوع
+      // بازیابی ساعت کاری عمومی و اختصاصی هر موضوع (با یکسان‌سازی کلیدهای رسمی)
       const wh = editingMember.workingHours;
+      const mergedTopics = normalizeTopicSchedulesMap(
+        wh?.topicSchedules || editingMember.topicWorkingHours
+      );
       if (wh) {
         setSlotDurationMinutes(wh.slotDurationMinutes || 45);
         setRestTimeMinutes(wh.restTimeMinutes ?? 15);
@@ -176,7 +199,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         setStartHour(wh.startHour || '09:00');
         setEndHour(wh.endHour || '17:00');
         setDaySchedules(wh.daySchedules || {});
-        setTopicSchedules(wh.topicSchedules || editingMember.topicWorkingHours || {});
+        setTopicSchedules(mergedTopics);
       } else {
         setSlotDurationMinutes(45);
         setRestTimeMinutes(15);
@@ -184,19 +207,23 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         setStartHour('09:00');
         setEndHour('17:00');
         setDaySchedules({});
-        setTopicSchedules(editingMember.topicWorkingHours || {});
+        setTopicSchedules(mergedTopics);
       }
     } else {
       setGenderPrefix('آقا');
       setName('');
+      setAvatarUrl('');
+      setAvatarUploadError(null);
+      setShowUrlInput(false);
       setMobile('');
       setPassword('');
       setJobTitle('مشاور تخصصی');
       setStatus('active');
       setAllowedTabs(['submissions', 'consultants']);
       setRequireCaseCode(true);
+      setCanEditWorkingHours(false);
       setConsultantId('');
-      setAllowedTopics(['بالینی']);
+      setAllowedTopics(['clinical']);
       setSlotDurationMinutes(45);
       setRestTimeMinutes(15);
       setAvailableDays([0, 1, 2, 3, 4]);
@@ -209,6 +236,46 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     setCustomTopicInput('');
     setErrors({});
   }, [editingMember, isOpen]);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setAvatarUploadError('لطفاً یک فایل تصویری معتبر (JPG, PNG, WebP) انتخاب فرمایید.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setAvatarUploadError('حجم تصویر نباید بیشتر از ۵ مگابایت باشد.');
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      setAvatarUploadError(null);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setAvatarUrl(data.url);
+      } else {
+        setAvatarUploadError(data.error || 'خطا در بارگذاری تصویر');
+      }
+    } catch (err: any) {
+      setAvatarUploadError('خطا در برقراری ارتباط با سرور: ' + (err?.message || ''));
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const toggleTab = (tabId: string) => {
     setAllowedTabs((prev) => {
@@ -490,6 +557,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
     onSave({
       name: name.trim(),
       genderPrefix,
+      avatarUrl: avatarUrl.trim() || undefined,
       mobile: cleanMobile,
       username: cleanMobile,
       password: password.trim(),
@@ -502,6 +570,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       allowedTabs,
       requireCaseCode,
       clientDossierAccess: requireCaseCode ? 'restricted' : 'unrestricted',
+      canEditWorkingHours,
       consultantId: consultantId.trim() || undefined,
       allowedTopics: allowedTopics.length > 0 ? allowedTopics : undefined,
       workingHours: workingHoursData,
@@ -521,8 +590,8 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-6xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-slate-900 flex flex-col max-h-[94vh]">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 select-none">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 max-w-6xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-slate-900 flex flex-col max-h-[80dvh] sm:max-h-[85vh] select-text">
         
         {/* سربرگ مودال */}
         <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
@@ -562,6 +631,122 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
                   <User className="w-4 h-4 text-blue-600" />
                   <span className="font-extrabold text-slate-800 text-xs sm:text-sm">۱. مشخصات هویتی و ورود به سامانه</span>
+                </div>
+
+                {/* بخش تعریف و بارگذاری عکس پروفایل مشاور */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-slate-700 text-[11px] flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-blue-600" />
+                      <span>عکس پروفایل مشاور</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {avatarUrl ? 'تصویر اختصاصی فعال است' : `آیکون پیش‌فرض ${genderPrefix}`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* پیش‌نمایش آواتار */}
+                    <div className="relative group">
+                      <ConsultantAvatar
+                        avatarUrl={avatarUrl}
+                        genderPrefix={genderPrefix}
+                        name={name}
+                        size="xl"
+                        className="ring-2 ring-slate-100 shadow-xs"
+                      />
+                      {avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setAvatarUrl('')}
+                          className="absolute -top-1.5 -right-1.5 p-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full shadow-xs cursor-pointer transition"
+                          title="حذف تصویر و بازگشت به آیکون پیش‌فرض"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* کنترل‌های آپلود */}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarFileChange}
+                          className="hidden"
+                          id="consultant-avatar-upload"
+                        />
+                        <label
+                          htmlFor="consultant-avatar-upload"
+                          className={`px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                            isUploadingAvatar ? 'opacity-60 pointer-events-none' : ''
+                          }`}
+                        >
+                          {isUploadingAvatar ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                              <span>در حال بارگذاری...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-3.5 h-3.5 text-blue-600" />
+                              <span>بارگذاری تصویر جدید</span>
+                            </>
+                          )}
+                        </label>
+
+                        {avatarUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setAvatarUrl('')}
+                            className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                            <span>حذف تصویر</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowUrlInput(!showUrlInput)}
+                            className="px-2.5 py-1.5 text-slate-500 hover:text-slate-800 text-[11px] font-medium transition cursor-pointer"
+                          >
+                            {showUrlInput ? 'بستن ورودی لینک' : 'یا درج آدرس لینک (URL)'}
+                          </button>
+                        )}
+                      </div>
+
+                      {showUrlInput && !avatarUrl && (
+                        <div className="flex items-center gap-1.5 animate-in fade-in duration-150">
+                          <input
+                            type="text"
+                            value={avatarUrl}
+                            onChange={(e) => setAvatarUrl(e.target.value)}
+                            placeholder="https://... یا /uploads/..."
+                            className="flex-1 px-2.5 py-1 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 bg-slate-50/50"
+                            dir="ltr"
+                          />
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-slate-500 leading-tight">
+                        {avatarUrl ? (
+                          <span className="text-emerald-700 font-medium">✓ عکس اختصاصی با موفقیت تنظیم شد.</span>
+                        ) : (
+                          <span>
+                            عکس پیش‌فرض: <strong className="text-slate-700 font-bold">آیکون اشخاص ({genderPrefix === 'خانم' ? 'بانوان' : 'آقایان'})</strong> نمایش داده می‌شود.
+                          </span>
+                        )}
+                      </p>
+
+                      {avatarUploadError && (
+                        <p className="text-rose-500 text-[10px] font-medium bg-rose-50 p-1.5 rounded-lg border border-rose-200">
+                          {avatarUploadError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -760,12 +945,69 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                 </div>
               </div>
 
-              {/* ۳. دسترسی به تب‌های نوار کناری سامانه */}
+              {/* ۳. دسترسی تغییر ساعت کاری توسط مشاور */}
+              <div className="p-4 bg-gradient-to-r from-slate-50 via-emerald-50/30 to-teal-50/40 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-700" />
+                    <span className="font-extrabold text-slate-800 text-xs sm:text-sm">۳. دسترسی تغییر ساعت کاری</span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                      canEditWorkingHours
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    {canEditWorkingHours ? 'مجاز برای مشاور' : 'غیرمجاز (پیش‌فرض)'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setCanEditWorkingHours(false)}
+                    className={`p-3 rounded-xl border text-right transition-all cursor-pointer ${
+                      !canEditWorkingHours
+                        ? 'border-slate-700 bg-white ring-2 ring-slate-400/30 shadow-2xs'
+                        : 'border-slate-200 bg-white/70 hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3.5 h-3.5 rounded-full border-2 ${!canEditWorkingHours ? 'border-slate-800 bg-slate-800' : 'border-slate-300'}`} />
+                      <span className="font-extrabold text-xs text-slate-900">فقط ادمین (پیش‌فرض)</span>
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1.5 leading-relaxed">
+                      مشاور امکان تغییر ساعت کاری خود را ندارد و فقط ادمین می‌تواند آن را تنظیم کند.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCanEditWorkingHours(true)}
+                    className={`p-3 rounded-xl border text-right transition-all cursor-pointer ${
+                      canEditWorkingHours
+                        ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-400/30'
+                        : 'border-slate-200 bg-white/70 hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3.5 h-3.5 rounded-full border-2 ${canEditWorkingHours ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'}`} />
+                      <span className="font-extrabold text-xs text-emerald-950">اجازه ویرایش به مشاور</span>
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1.5 leading-relaxed">
+                      مشاور می‌تواند از پنل اختصاصی خود روزها و ساعات کاری‌اش را تغییر دهد.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* ۴. دسترسی به تب‌های نوار کناری سامانه */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                    <span className="font-extrabold text-slate-800 text-xs sm:text-sm">۳. دسترسی به تب‌های نوار کناری</span>
+                    <span className="font-extrabold text-slate-800 text-xs sm:text-sm">۴. دسترسی به تب‌های نوار کناری</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -978,10 +1220,11 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                   </button>
 
                   {allowedTopics.map((top) => {
-                    const topicObj = COUNSELING_TOPICS.find((t) => t.id === top || t.name === top);
+                    const topicObj = matchCounselingTopic(top);
+                    const canonicalKey = topicObj ? topicObj.id : top;
                     const topLabel = topicObj ? topicObj.name : top;
-                    const hasCustom = !!topicSchedules[top] || (topicObj && !!topicSchedules[topicObj.id]);
-                    const isSelected = activeScheduleTopic === top || (topicObj && activeScheduleTopic === topicObj.id);
+                    const hasCustom = !!topicSchedules[canonicalKey] || !!topicSchedules[top];
+                    const isSelected = activeScheduleTopic === canonicalKey || activeScheduleTopic === top;
 
                     return (
                       <button

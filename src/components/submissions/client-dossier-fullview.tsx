@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Form, FormSubmission, SubmissionStatus, FormField } from '@/types/form';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
+import { isSuperAdminUser } from '@/lib/team-constants';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
 import {
   X,
   Printer,
@@ -54,6 +56,8 @@ import { VerticalBarChart } from '../analytics/vertical-bar-chart';
 import { PointLineChart } from '../analytics/point-line-chart';
 import { ClientStatisticalAnalysisTab } from './client-statistical-analysis-tab';
 import { PrintableClientDossier } from './printable-client-dossier';
+import { ScrollableTabCarousel } from '@/components/ui/scrollable-tab-carousel';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
 import { getFourColorByIndex, getSemanticColorByPercentage } from '@/lib/chart-colors';
 import {
   formatPersianDateTime,
@@ -203,9 +207,17 @@ function extractRealAppointmentsFromSubmissions(submissions: FormSubmission[]): 
         ),
         counselor: String((counselorName && !counselorName.includes('علوی')) ? counselorName : 'جناب آقای برهانی'),
         status: data.session_status === 'done' || data.report ? 'done' : 'new',
-        reviewed: data.report_reviewed || data.report?.reviewedItems,
+        reviewed: data.report_reviewed || data.report?.reviewed || data.report?.reviewedItems,
         challenges: data.report_challenges || data.report?.challenges,
-        recommendation: data.report_recommendation || data.report?.recommendations,
+        recommendation: data.report_recommendation || data.report?.recommendation || data.report?.recommendations,
+        report: data.report || (data.report_reviewed || data.report_recommendation ? {
+          counselor: String((counselorName && !counselorName.includes('علوی')) ? counselorName : 'جناب آقای برهانی'),
+          date: normalizedDate,
+          reviewed: data.report_reviewed,
+          challenges: data.report_challenges,
+          recommendation: data.report_recommendation,
+          status: data.clinical_status,
+        } : undefined),
       };
 
       if (!isMockAppointment(app)) {
@@ -260,6 +272,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 }) => {
   const { forms, submissions, updateSubmissionStatus, updateSubmissionData, addSubmissionComment, editSubmissionComment, deleteSubmissionComment } = useForm();
   const { currentUser } = useAdminAuth();
+  const isSuperAdmin = isSuperAdminUser(currentUser);
 
   // دریافت پیوسته و بلادرنگ سابمیشن‌های پرونده از کانتکست عمومی (جهت نمایش بلادرنگ پیام‌ها، یادداشت‌ها و پیگیری‌ها بدون نیاز به رفرش)
   const currentSubmissions = useMemo(() => {
@@ -578,11 +591,49 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const [appointments, setAppointments] = useState<Appointment[]>(() => {
     const fromSubs = extractRealAppointmentsFromSubmissions(currentSubmissions);
     const refDate = clientCase.firstSubmissionDate || clientCase.latestDate;
+    const cleanCaseCode = (clientCase.caseCode || '').replace(/^sub-case-/, '').trim();
 
-    // بررسی ذخیره‌ساز محلی پرونده (برای گزارش‌های بالینی ثبت‌شده یا جلسات دستی افزوده شده توسط مدیر)
+    // ۱. بررسی گزارش‌های ثبت‌شده نوبت‌ها به تفکیک
+    if (typeof window !== 'undefined') {
+      fromSubs.forEach((app) => {
+        try {
+          const keysToTry = [
+            `belhagh_booking_report_${cleanCaseCode}_${app.id}`,
+            `belhagh_booking_report_${clientCase.caseCode}_${app.id}`,
+          ];
+          for (const repKey of keysToTry) {
+            const rawRep = localStorage.getItem(repKey);
+            if (rawRep) {
+              const parsedRep = JSON.parse(rawRep);
+              if (parsedRep && (parsedRep.reviewed || parsedRep.challenges || parsedRep.recommendation)) {
+                app.status = 'done';
+                app.reviewed = parsedRep.reviewed;
+                app.challenges = parsedRep.challenges;
+                app.recommendation = parsedRep.recommendation;
+                app.category = parsedRep.category || app.category;
+                app.report = parsedRep;
+                break;
+              }
+            }
+          }
+        } catch {}
+      });
+    }
+
+    // ۲. بررسی ذخیره‌ساز محلی پرونده (برای گزارش‌های بالینی ثبت‌شده یا جلسات دستی افزوده شده توسط مدیر)
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem(storageKey);
+        const keysToTry = [
+          storageKey,
+          `belhagh_real_sessions_v3_${cleanCaseCode}`,
+          `belhagh_real_sessions_v3_sub-case-${cleanCaseCode}`,
+        ];
+        let saved: string | null = null;
+        for (const k of keysToTry) {
+          saved = localStorage.getItem(k);
+          if (saved) break;
+        }
+
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
@@ -631,19 +682,111 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   useEffect(() => {
     try {
       const clean = appointments.filter((a) => !isMockAppointment(a));
+      const cleanCaseCode = (clientCase.caseCode || '').replace(/^sub-case-/, '').trim();
       if (clean.length > 0) {
         localStorage.setItem(storageKey, JSON.stringify(clean));
+        if (cleanCaseCode) {
+          localStorage.setItem(`belhagh_real_sessions_v3_${cleanCaseCode}`, JSON.stringify(clean));
+        }
       } else {
         localStorage.removeItem(storageKey);
       }
     } catch (e) {
       console.error('Failed to save appointments', e);
     }
-  }, [appointments, storageKey]);
+  }, [appointments, storageKey, clientCase.caseCode]);
+
+  // استخراج خودکار وضعیت بالینی پرونده از آخرین ارزیابی ثبت‌شده در جلسات مشاوره یا سابمیشن‌ها
+  const resolvedClinicalStatus = useMemo<SubmissionStatus>(() => {
+    // ۱. بررسی وضعیت آخرین جلسه انجام‌شده در سوابق نوبت‌ها
+    for (const app of appointments) {
+      const st = app.report?.status;
+      if (st && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(st)) {
+        return st as SubmissionStatus;
+      }
+    }
+    // ۲. بررسی در سابمیشن‌های پرونده
+    for (const sub of currentSubmissions) {
+      const st = sub.data?.clinical_status || sub.data?.caseStatus || sub.data?.report?.status;
+      if (st && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(st)) {
+        return st as SubmissionStatus;
+      }
+    }
+    for (const sub of currentSubmissions) {
+      if (sub.status && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(sub.status)) {
+        return sub.status;
+      }
+    }
+    // ۳. بررسی در localStorage پرونده
+    if (typeof window !== 'undefined') {
+      try {
+        const cleanCode = (clientCase.caseCode || '').replace(/^sub-case-/, '').trim();
+        const keys = [
+          storageKey,
+          `belhagh_real_sessions_v3_${clientCase.caseCode}`,
+          `belhagh_real_sessions_v3_${cleanCode}`,
+        ];
+        for (const k of keys) {
+          const saved = localStorage.getItem(k);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              for (const item of parsed) {
+                const st = item.report?.status;
+                if (st && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(st)) {
+                  return st as SubmissionStatus;
+                }
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+    if (clientCase.overallStatus && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(clientCase.overallStatus)) {
+      return clientCase.overallStatus;
+    }
+    return clientCase.overallStatus || 'new';
+  }, [appointments, currentSubmissions, clientCase.caseCode, clientCase.overallStatus, storageKey]);
+
+  useEffect(() => {
+    if (resolvedClinicalStatus && resolvedClinicalStatus !== 'new') {
+      setCurrentStatus(resolvedClinicalStatus);
+      clientCase.overallStatus = resolvedClinicalStatus;
+    }
+  }, [resolvedClinicalStatus]);
 
   // آخرین توصیه‌های واقعی مشاور (فقط از جلساتی که واقعاً گزارش بالینی برایشان ثبت شده است)
   const latestRecommendation = useMemo(() => {
-    return appointments.find((item) => item.recommendation && item.recommendation.trim().length > 0) || null;
+    // اولویت ۱: جلسه‌ای که توصیه یا نسخه بالینی دارد
+    for (const item of appointments) {
+      const rec =
+        (item.recommendation && item.recommendation.trim().length > 0)
+          ? item.recommendation.trim()
+          : (item.report?.recommendation && item.report.recommendation.trim().length > 0)
+          ? item.report.recommendation.trim()
+          : '';
+      if (rec) {
+        return {
+          ...item,
+          recommendation: rec,
+          counselor: item.report?.counselor || item.counselor,
+          date: item.report?.date || item.date,
+        };
+      }
+    }
+    // اولویت ۲: در صورتی که فقط موارد بررسی‌شده جلسه بدون فیلد توصیه اختصاصی ثبت شده باشد
+    for (const item of appointments) {
+      const rev = item.reviewed?.trim() || item.report?.reviewed?.trim();
+      if (rev) {
+        return {
+          ...item,
+          recommendation: rev,
+          counselor: item.report?.counselor || item.counselor,
+          date: item.report?.date || item.date,
+        };
+      }
+    }
+    return null;
   }, [appointments]);
 
   // استخراج جنسیت مراجع با اولویت داده‌های صریح و سپس نقش خانوادگی
@@ -909,10 +1052,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       counselor: appointment.counselor && appointment.counselor.includes('علوی') ? 'جناب آقای برهانی' : (appointment.counselor || 'جناب آقای برهانی'),
     };
     setEditing(cleanApp);
+    const rawRec = cleanApp.recommendation ?? cleanApp.report?.recommendation ?? '';
+    const cleanRec = rawRec.replace(/^\[محور بالینی:\s*[^\]]+\]\s*/, '');
     setReportForm({
-      reviewed: cleanApp.reviewed ?? '',
-      challenges: cleanApp.challenges ?? '',
-      recommendation: cleanApp.recommendation ?? cleanApp.report?.recommendation ?? '',
+      reviewed: cleanApp.reviewed ?? cleanApp.report?.reviewed ?? '',
+      challenges: cleanApp.challenges ?? cleanApp.report?.challenges ?? '',
+      recommendation: cleanRec,
     });
     const appStatus = cleanApp.report?.status;
     if (appStatus && ['regressing', 'needs_followup', 'optimal', 'growing'].includes(appStatus)) {
@@ -920,7 +1065,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     } else {
       setSelectedAppointmentStatus('');
     }
-    setSelectedClinicalCategory(cleanApp.category || '');
+    const catMatch = cleanApp.category || rawRec.match(/\[محور بالینی:\s*([^\]]+)\]/)?.[1] || '';
+    setSelectedClinicalCategory(catMatch);
     setIsClinicalCategoryOpen(false);
     setSavedReport(false);
   };
@@ -948,10 +1094,31 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     setNewAppointmentData({ date: '', topic: 'خانواده و ازدواج', counselor: '' });
   };
 
+  const isSessionReportComplete =
+    Boolean(reportForm.reviewed.trim()) &&
+    Boolean(reportForm.challenges.trim()) &&
+    Boolean(selectedAppointmentStatus);
+
   const submitReport = () => {
-    if (!editing) return;
+    if (!editing || !isSessionReportComplete) return;
     const catPrefix = selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}] ` : '';
-    const fullRecommendation = `${catPrefix}${reportForm.recommendation.trim()}`;
+    const cleanRecText = reportForm.recommendation.trim().replace(/^\[محور بالینی:\s*[^\]]+\]\s*/, '');
+    const fullRecommendation = cleanRecText
+      ? `${catPrefix}${cleanRecText}`
+      : (selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}]` : '');
+
+    const finalClinicalStatus = selectedAppointmentStatus || 'optimal';
+
+    const reportPayload = {
+      counselor: editing.counselor,
+      date: editing.date,
+      reviewed: reportForm.reviewed.trim(),
+      challenges: reportForm.challenges.trim(),
+      recommendation: fullRecommendation,
+      category: selectedClinicalCategory,
+      status: finalClinicalStatus,
+      updatedAt: new Date().toISOString(),
+    };
 
     const updatedAppointments = appointments.map((item) => {
       if (item.id === editing.id) {
@@ -959,13 +1126,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           ...item,
           status: 'done' as const,
           category: selectedClinicalCategory || item.category,
-          report: {
-            counselor: editing.counselor,
-            date: editing.date,
-            reviewed: reportForm.reviewed.trim(),
-            challenges: reportForm.challenges.trim(),
-            recommendation: fullRecommendation,
-          },
+          reviewed: reportForm.reviewed.trim(),
+          challenges: reportForm.challenges.trim(),
+          recommendation: fullRecommendation,
+          report: reportPayload,
         };
       }
       return item;
@@ -973,26 +1137,55 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
     setAppointments(updatedAppointments);
 
-    // به‌روزرسانی وضعیت پرونده به وضعیت بالینی انتخابی
-    if (selectedAppointmentStatus) {
-      clientCase.overallStatus = selectedAppointmentStatus;
-      setCurrentStatus(selectedAppointmentStatus);
-      const targetSubId = currentSubmissions[0]?.id || clientCase.submissions[0]?.id;
-      if (targetSubId) {
-        updateSubmissionStatus(targetSubId, selectedAppointmentStatus);
-        addSubmissionComment(
-          targetSubId,
-          adminName,
-          'مشاور ارشد پرونده',
-          `🤝 ثبت گزارش جلسه مشاوره (${editing.topic} - ${editing.date.split('،')[0]}): وضعیت بالینی: ${
-            selectedAppointmentStatus === 'growing' ? 'در حال رشد' :
-            selectedAppointmentStatus === 'optimal' ? 'وضعیت مطلوب' :
-            selectedAppointmentStatus === 'regressing' ? 'عقب گرد' :
-            selectedAppointmentStatus === 'needs_followup' ? 'نیازمند پیگیری' : 'در انتظار ارزیابی'
-          }${selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''} | توصیه: ${reportForm.recommendation.trim()}`
-        );
+    // ۱. به‌روزرسانی بلادرنگ وضعیت در استیت و فراخوانی کالبک والد
+    clientCase.overallStatus = finalClinicalStatus;
+    setCurrentStatus(finalClinicalStatus);
+    if (onStatusChange) {
+      onStatusChange(finalClinicalStatus);
+    }
+
+    // ۲. ذخیره‌سازی قطعی و مستقیم در localStorage پرونده
+    const cleanCaseCode = (clientCase.caseCode || '').replace(/^sub-case-/, '').trim();
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updatedAppointments));
+        if (cleanCaseCode) {
+          localStorage.setItem(`belhagh_real_sessions_v3_${cleanCaseCode}`, JSON.stringify(updatedAppointments));
+        }
+        localStorage.setItem(`belhagh_booking_report_${clientCase.caseCode}_${editing.id}`, JSON.stringify(reportPayload));
+        if (cleanCaseCode) {
+          localStorage.setItem(`belhagh_booking_report_${cleanCaseCode}_${editing.id}`, JSON.stringify(reportPayload));
+        }
+      } catch (e) {
+        console.error('Failed saving to localStorage', e);
       }
     }
+
+    // ۳. پیدا کردن سابمیشن منطبق با این جلسه و ذخیره کامل داده‌های گزارش در آن
+    const sessionSub = currentSubmissions.find((s) => s.id === editing.id || s.trackingCode === editing.id) || currentSubmissions[0];
+    if (sessionSub) {
+      updateSubmissionData(sessionSub.id, {
+        session_status: 'done',
+        clinical_status: finalClinicalStatus,
+        caseStatus: finalClinicalStatus,
+        clinical_category: selectedClinicalCategory,
+        report_reviewed: reportForm.reviewed.trim(),
+        report_challenges: reportForm.challenges.trim(),
+        report_recommendation: fullRecommendation,
+        report: reportPayload,
+      });
+    }
+
+    // ۴. به‌روزرسانی وضعیت بالینی در تمامی سابمیشن‌های پرونده این مراجع
+    currentSubmissions.forEach((sub) => {
+      updateSubmissionStatus(sub.id, finalClinicalStatus);
+      if (sub.id !== sessionSub?.id) {
+        updateSubmissionData(sub.id, {
+          clinical_status: finalClinicalStatus,
+          caseStatus: finalClinicalStatus,
+        });
+      }
+    });
 
     setSavedReport(true);
     window.setTimeout(() => {
@@ -1146,6 +1339,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   };
 
   const handleExportClientExcel = async () => {
+    if (!isSuperAdmin) return;
     try {
       setIsExportingExcel(true);
       const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
@@ -1185,8 +1379,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     approved: { label: 'تأیید شده', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
     rejected: { label: 'نیازمند اقدام', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200', ring: 'ring-slate-200' },
-    optimal: { label: 'وضعیت مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
-    growing: { label: 'در حال رشد', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200', ring: 'ring-teal-200' },
+    optimal: { label: 'وضعیت مطلوب', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', ring: 'ring-blue-200' },
+    growing: { label: 'در حال رشد', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-200' },
     needs_followup: { label: 'نیازمند پیگیری', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', ring: 'ring-amber-200' },
     regressing: { label: 'عقب گرد', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', ring: 'ring-rose-200' },
   };
@@ -1269,6 +1463,15 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       const fTitle = formObj ? formObj.title : 'فرم ثبت‌شده';
 
       (Array.isArray(sub.comments) ? sub.comments : []).forEach((c) => {
+        const contentStr = c.content || '';
+        // فیلتر کردن لاگ‌های گزارش جلسه مشاوره تا صرفاً در کارت آخرین توصیه‌های مشاور قرار گیرند و ارجاعات و پیگیری‌ها را آلوده نکنند
+        if (
+          contentStr.includes('ثبت گزارش جلسه مشاوره') ||
+          contentStr.includes('ثبت گزارش جلسه')
+        ) {
+          return;
+        }
+
         list.push({
           id: c.id,
           submissionId: sub.id,
@@ -1401,10 +1604,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   }, [appointments]);
 
   return (
-    <div id="printable-dossier-wrapper" className="fixed inset-0 z-50 overflow-y-scroll bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
+    <div id="printable-dossier-wrapper" className="fixed inset-0 z-50 overflow-y-scroll overflow-x-hidden bg-[#f5f7fa] text-slate-800 print:static print:inset-auto print:overflow-visible print:bg-white print:h-auto print:min-h-0 print:z-auto print:block" dir="rtl">
       {/* سند جامع رسمی چاپی پرونده - تمام فیلدها، سوابق و آمارها به تفکیک و زیر هم */}
       <PrintableClientDossier
-        clientCase={clientCase}
+        clientCase={{ ...clientCase, overallStatus: currentStatus }}
         combinedData={combinedData}
         appointments={appointments}
         submissions={currentSubmissions}
@@ -1413,7 +1616,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       />
 
       {/* رابط کاربری تعاملی صفحه مانیتور - هنگام پرینت کاملاً پنهان می‌شود */}
-      <div className="flex flex-col min-h-screen print:hidden print-hidden-in-dossier">
+      <div className="flex flex-col min-h-screen min-w-0 print:hidden print-hidden-in-dossier">
       {/* سربرگ ناوبری سراسری برند بالحق */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur shadow-2xs">
         <div className="mx-auto flex w-full items-center justify-between gap-6 px-4 sm:px-8 lg:px-12 py-3.5">
@@ -1457,7 +1660,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       </header>
 
       {/* محدوده اصلی محتوای پرونده جامع */}
-      <div className="w-full px-4 sm:px-8 lg:px-12 py-6 space-y-6">
+      <div className="w-full min-w-0 px-3 sm:px-8 lg:px-12 py-6 space-y-6">
         {/* نوار مسیر ناوبری، عنوان پرونده و دکمه‌های اقدام */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1476,7 +1679,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 }}
                 className="text-slate-600 font-bold hover:text-[#173f6b] transition cursor-pointer"
               >
-                پرونده {toPersianDigits(clientCase.caseCode)}
+                پرونده {toPersianDigits(clientCase.caseCode.replace(/^sub-case-/, ''))}
               </button>
               {currentView === 'formReport' && selectedFormObj && (
                 <>
@@ -1522,45 +1725,38 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <Printer className="size-4" />
               چاپ پرونده
             </button>
-            <button
-              onClick={handleExportClientExcel}
-              disabled={isExportingExcel}
-              className="flex items-center gap-2 rounded-xl bg-[#173f6b] hover:bg-[#123357] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
-            >
-              <FileSpreadsheet className="size-4" />
-              خروجی اکسل
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={handleExportClientExcel}
+                disabled={isExportingExcel}
+                className="flex items-center gap-2 rounded-xl bg-[#173f6b] hover:bg-[#123357] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
+              >
+                <FileSpreadsheet className="size-4" />
+                خروجی اکسل
+              </button>
+            )}
           </div>
         </div>
 
 
-        {/* نوار زبانه‌های ناوبری ۶ گانه (اسکرول افقی روان در موبایل و شبکه ۶ ستونه در دسکتاپ) */}
-        <nav className="flex md:grid md:grid-cols-6 overflow-x-auto no-scrollbar gap-2 sm:gap-3 w-full p-1.5 sm:p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm min-h-[50px] sm:min-h-[58px] select-none">
-          {[
-            ['overview', 'تحلیل در یک نگاه'],
-            ['analytics', 'تحلیل‌های آماری'],
-            ['profile', 'مشخصات ثبت‌نام'],
-            ['forms', 'فرم‌ها و آزمون‌ها'],
-            ['followups', 'پیگیری‌ها و درج لاگ'],
-            ['finances', 'مالی و نوبت‌ها'],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => {
-                setCurrentView('dossier');
-                setActiveTab(key as any);
-              }}
-              className={`h-10 sm:h-12 shrink-0 md:w-full rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center text-center whitespace-nowrap cursor-pointer px-3.5 sm:px-2 ${
-                (currentView === 'dossier' && activeTab === key) ||
-                (currentView === 'formReport' && key === 'forms')
-                  ? 'bg-[#173f6b] text-white shadow-sm ring-1 ring-[#173f6b]'
-                  : 'text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+        {/* نوار تب‌های ناوبری ۶ گانه: تب فعال در مرکز، تب‌های قبلی و بعدی فید در دو طرف + فلش‌ها و اسکرول */}
+        <ScrollableTabCarousel
+          variant="dossier"
+          desktopGridClassName="lg:grid lg:grid-cols-6 lg:gap-3"
+          activeId={currentView === 'formReport' ? 'forms' : activeTab}
+          onChange={(key) => {
+            setCurrentView('dossier');
+            setActiveTab(key as any);
+          }}
+          items={[
+            { id: 'overview', label: 'تحلیل در یک نگاه' },
+            { id: 'analytics', label: 'تحلیل‌های آماری' },
+            { id: 'profile', label: 'مشخصات ثبت‌نام' },
+            { id: 'forms', label: 'فرم‌ها و آزمون‌ها' },
+            { id: 'followups', label: 'پیگیری‌ها و درج لاگ' },
+            { id: 'finances', label: 'مالی و نوبت‌ها' },
+          ]}
+        />
 
         {/* ۱. تب تحلیل در یک نگاه (Overview Tab) */}
         {currentView === 'dossier' && activeTab === 'overview' && (
@@ -1577,35 +1773,34 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* باکس ۱: خلاصه پرونده جامع مراجع */}
-            <article className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-11 place-items-center rounded-2xl bg-[#173f6b]/10 text-[#173f6b]">
-                    <FileSpreadsheet className="size-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-black text-slate-900">خلاصه پرونده</h3>
-                      <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-extrabold text-[#173f6b] border border-blue-100">
-                        شناسنامه هویتی و بالینی
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      مشخصات فردی، وضعیت تاهل و فرزندان، سوابق نوبت‌ها و روند جلسات مشاوره‌ای
-                    </p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="shadow-sm"
+              title={
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base font-black text-slate-900">خلاصه پرونده</h3>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-extrabold text-[#173f6b] border border-blue-100 whitespace-nowrap shrink-0">
+                    شناسنامه هویتی و بالینی
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <span className="text-xs text-slate-400 font-medium">کد یکتای پرونده:</span>
-                  <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-black text-[#173f6b] font-mono border border-slate-200">
+              }
+              subtitle="مشخصات فردی، وضعیت تاهل و فرزندان، سوابق نوبت‌ها و روند جلسات مشاوره‌ای"
+              icon={
+                <div className="grid size-11 place-items-center rounded-2xl bg-[#173f6b]/10 text-[#173f6b]">
+                  <FileSpreadsheet className="size-5" />
+                </div>
+              }
+              headerExtra={
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-slate-400 font-medium whitespace-nowrap">کد یکتای پرونده:</span>
+                  <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-black text-[#173f6b] font-mono border border-slate-200 whitespace-nowrap">
                     {clientCase.caseCode}
                   </span>
                 </div>
-              </div>
-
+              }
+            >
               {/* شبکه اطلاعاتی ۸ گانه */}
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                 {/* ۱. نام و نام خانوادگی */}
                 <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-3.5 transition hover:bg-slate-50">
                   <div className="flex items-center gap-1.5 text-slate-400 text-[11px] mb-1.5">
@@ -1741,7 +1936,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-4">
                   <div className="flex items-center gap-1.5 text-slate-500 text-[11px] mb-2 font-bold">
                     <BadgeCheck className="size-4 text-purple-600 shrink-0" />
-                    <span>مشاوره با کدام مشاوران داشته:</span>
+                    <span>سابقه مشاوره با کدام مشاوران را داشته است:</span>
                   </div>
                   {consultantsAttended.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
@@ -1783,25 +1978,33 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   )}
                 </div>
               </div>
-
-              </article>
+            </CollapsibleCard>
 
             {/* گرید سه‌گانه بالای صفحه: توصیه‌ها، نوبت‌ها، مدرسه معارفی */}
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid gap-4 xl:grid-cols-3 items-start">
               {/* کارت ۱: آخرین توصیه‌های مشاور */}
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="mb-5 flex items-center gap-3">
-                    <div className="grid size-10 place-items-center rounded-xl bg-violet-50 text-violet-600">
-                      <FileText className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900">آخرین توصیه‌های مشاور</h3>
-                      <p className="mt-1 text-[11px] text-slate-400">بازتاب خودکار از آخرین گزارش جلسه</p>
-                    </div>
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">آخرین توصیه‌های مشاور</h3>}
+                subtitle="بازتاب خودکار از آخرین گزارش جلسه"
+                icon={
+                  <div className="grid size-10 place-items-center rounded-xl bg-violet-50 text-violet-600">
+                    <FileText className="size-5" />
                   </div>
-
-                  {latestRecommendation ? (
+                }
+                footer={
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-slate-600">
+                      {latestRecommendation?.counselor ? latestRecommendation.counselor : 'مشاور تعیین‌نشده'}
+                    </span>
+                    <span className="text-slate-400 font-mono">
+                      {latestRecommendation?.date ? latestRecommendation.date.split('،')[0] : 'فاقد سابقه گزارش'}
+                    </span>
+                  </div>
+                }
+              >
+                {latestRecommendation ? (
                     <div className="rounded-2xl bg-violet-50/70 p-4 text-sm leading-7 text-slate-700 min-h-[96px]">
                       {latestRecommendation.recommendation}
                     </div>
@@ -1814,35 +2017,37 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       </span>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4 text-[11px]">
-                  <span className="font-bold text-slate-600">
-                    {latestRecommendation?.counselor ? latestRecommendation.counselor : 'مشاور تعیین‌نشده'}
-                  </span>
-                  <span className="text-slate-400 font-mono">
-                    {latestRecommendation?.date ? latestRecommendation.date.split('،')[0] : 'فاقد سابقه گزارش'}
-                  </span>
-                </div>
-              </article>
+              </CollapsibleCard>
 
               {/* کارت ۲: نوبت‌ها و جلسات مشاوره */}
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="grid size-10 place-items-center rounded-xl bg-blue-50 text-[#173f6b]">
-                        <Calendar className="size-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900">نوبت‌ها و جلسات مشاوره</h3>
-                        <p className="mt-1 text-[11px] text-slate-400">مرتب‌شده از جدیدترین نوبت</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#173f6b] font-mono">
-                      {toPersianDigits(appointments.length)} نوبت
-                    </span>
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">نوبت‌ها و جلسات مشاوره</h3>}
+                subtitle="مرتب‌شده از جدیدترین نوبت"
+                icon={
+                  <div className="grid size-10 place-items-center rounded-xl bg-blue-50 text-[#173f6b]">
+                    <Calendar className="size-5" />
                   </div>
+                }
+                headerExtra={
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-[#173f6b] font-mono">
+                    {toPersianDigits(appointments.length)} نوبت
+                  </span>
+                }
+                footer={
+                  <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                    {appointments.length > 0 ? (
+                      <>
+                        <span>روی هر نوبت جهت ثبت گزارش کلیک کنید</span>
+                        <span>سامانه خدمات نوبت‌دهی مشاوره بالحق</span>
+                      </>
+                    ) : (
+                      <span>سامانه نوبت‌دهی مشاوره بالحق</span>
+                    )}
+                  </div>
+                }
+              >
 
                   {appointments.length > 0 ? (
                     <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-0.5">
@@ -1887,37 +2092,37 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       <div className="text-[11px] text-slate-500 font-medium">نوبت‌های مشاوره از طریق بخش رزرو نوبت سامانه تنظیم و ثبت می‌گردند.</div>
                     </div>
                   )}
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 mt-3 text-[11px] text-slate-400 flex items-center justify-between">
-                  {appointments.length > 0 ? (
-                    <>
-                      <span>روی هر نوبت جهت ثبت گزارش کلیک کنید</span>
-                      <span>سامانه خدمات نوبت‌دهی مشاوره بالحق</span>
-                    </>
-                  ) : (
-                    <span>سامانه نوبت‌دهی مشاوره بالحق</span>
-                  )}
-                </div>
-              </article>
+              </CollapsibleCard>
 
               {/* کارت ۳: ارجاعات و پیگیری‌ها */}
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-700">
-                        <MessageSquare className="size-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900">ارجاعات و پیگیری‌ها</h3>
-                        <p className="mt-1 text-[11px] text-slate-400">یادداشت‌ها و اقدامات ثبت‌شده</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800 font-mono">
-                      {toPersianDigits(allFollowupComments.length)} اقدام
-                    </span>
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">ارجاعات و پیگیری‌ها</h3>}
+                subtitle="یادداشت‌ها و اقدامات ثبت‌شده"
+                icon={
+                  <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-700">
+                    <MessageSquare className="size-5" />
                   </div>
+                }
+                headerExtra={
+                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800 font-mono">
+                    {toPersianDigits(allFollowupComments.length)} اقدام
+                  </span>
+                }
+                footer={
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">تایم‌لاین ارجاعات بالینی</span>
+                    <button
+                      onClick={() => setActiveTab('followups')}
+                      className="text-[#173f6b] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <span>مشاهده همه پیگیری‌ها</span>
+                      <ArrowLeft className="size-3" />
+                    </button>
+                  </div>
+                }
+              >
 
                   {allFollowupComments.length > 0 ? (
                     <div className="space-y-2 max-h-[200px] overflow-y-auto pr-0.5">
@@ -1937,34 +2142,22 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       <p className="text-[11px]">اقدامات و تماس‌ها را در تب پیگیری‌ها ثبت فرمایید.</p>
                     </div>
                   )}
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 mt-4 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">تایم‌لاین ارجاعات بالینی</span>
-                  <button
-                    onClick={() => setActiveTab('followups')}
-                    className="text-[#173f6b] font-bold hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <span>مشاهده همه پیگیری‌ها</span>
-                    <ArrowLeft className="size-3" />
-                  </button>
-                </div>
-              </article>
+              </CollapsibleCard>
             </div>
 
             {/* گرید میانی: نتایج واقعی آزمون‌ها و آمار پرونده */}
-            <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="mb-5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
-                      <BarChart3 className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900">خلاصه نتایج آزمون‌ها و شاخص‌های بالینی</h3>
-                      <p className="mt-1 text-[11px] text-slate-400">بررسی شاخص‌های واقعی ثبت‌شده در ارزیابی‌های مراجع</p>
-                    </div>
+            <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr] items-start">
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">خلاصه نتایج آزمون‌ها و شاخص‌های بالینی</h3>}
+                subtitle="بررسی شاخص‌های واقعی ثبت‌شده در ارزیابی‌های مراجع"
+                icon={
+                  <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
+                    <BarChart3 className="size-5" />
                   </div>
+                }
+                headerExtra={
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setActiveTab('analytics')}
@@ -1981,7 +2174,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       مشاهده فرم‌ها
                     </button>
                   </div>
-                </div>
+                }
+              >
 
                 <div className="grid gap-3 md:grid-cols-3">
                   {/* آزمون ۱: کارنامه خودسنجی صفاً */}
@@ -2113,11 +2307,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     badgeText="نمودار میله‌ای عمودی مقایسه شاخص‌ها"
                   />
                 </div>
-              </article>
+              </CollapsibleCard>
 
-              <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-sm font-black text-slate-900">آمار پرونده</h3>
-                <div className="mt-4 grid grid-cols-2 gap-3">
+              <CollapsibleCard
+                defaultOpen={false}
+                className="shadow-sm"
+                title={<h3 className="text-sm font-black text-slate-900">آمار پرونده</h3>}
+              >
+                <div className="grid grid-cols-2 gap-3">
                   <Stat
                     value={toPersianDigits(clientCase.totalFormsCount)}
                     label="فرم ثبت‌شده"
@@ -2135,50 +2332,50 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   />
                   <Stat value={dossierAgeText} label="سابقه پرونده" tone="blue" />
                 </div>
-              </article>
+              </CollapsibleCard>
             </div>
 
             
             {/* نمودار وضعیت مراجع بر اساس تعیین وضعیت مشاور (درخواست کاربر) */}
-            <article className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-700">
-                    <Activity className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">وضعیت مراجع بر اساس تعیین وضعیت مشاور</h3>
-                    <p className="mt-0.5 text-[11px] text-slate-400">سنجش بالینی و برآیند وضعیت کلی مراجع پس از جلسات مشاوره</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="shadow-sm"
+              title={<h3 className="text-sm font-black text-slate-900">وضعیت مراجع بر اساس تعیین وضعیت مشاور</h3>}
+              subtitle="سنجش بالینی و برآیند وضعیت کلی مراجع پس از جلسات مشاوره"
+              icon={
+                <div className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-700">
+                  <Activity className="size-5" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-400">آخرین ارزیابی:</span>
+              }
+              headerExtra={
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] text-slate-400 whitespace-nowrap">آخرین ارزیابی:</span>
                   <span className={`px-3 py-1 rounded-xl text-xs font-black border ${
-                    clientCase.overallStatus === 'growing'
+                    currentStatus === 'growing'
                       ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
+                      : currentStatus === 'optimal' || currentStatus === 'approved'
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
+                      : currentStatus === 'regressing' || currentStatus === 'rejected'
                       ? 'bg-rose-50 text-rose-700 border-rose-200'
-                      : clientCase.overallStatus === 'needs_followup'
+                      : currentStatus === 'needs_followup'
                       ? 'bg-amber-50 text-amber-700 border-amber-200'
                       : 'bg-slate-100 text-slate-600 border-slate-200'
                   }`}>
-                    {clientCase.overallStatus === 'growing'
+                    {currentStatus === 'growing'
                       ? 'در حال رشد'
-                      : clientCase.overallStatus === 'optimal' || clientCase.overallStatus === 'approved'
+                      : currentStatus === 'optimal' || currentStatus === 'approved'
                       ? 'وضعیت مطلوب'
-                      : clientCase.overallStatus === 'regressing' || clientCase.overallStatus === 'rejected'
+                      : currentStatus === 'regressing' || currentStatus === 'rejected'
                       ? 'عقب گرد'
-                      : clientCase.overallStatus === 'needs_followup'
+                      : currentStatus === 'needs_followup'
                       ? 'نیازمند پیگیری'
                       : 'در انتظار ارزیابی اولیه مشاور'}
                   </span>
                 </div>
-              </div>
-
+              }
+            >
               {/* نوار روند پیشرفت وضعیت بالینی */}
-              <div className="grid grid-cols-4 gap-2 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { id: 'regressing', label: 'عقب گرد', color: 'bg-rose-500', light: 'bg-rose-50 border-rose-200 text-rose-800' },
                   { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'bg-amber-500', light: 'bg-amber-50 border-amber-200 text-amber-800' },
@@ -2186,8 +2383,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   { id: 'optimal', label: 'وضعیت مطلوب', color: 'bg-emerald-500', light: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
                 ].map((step, idx) => {
                   const isCurrent = (
-                    clientCase.overallStatus === step.id ||
-                    (step.id === 'optimal' && clientCase.overallStatus === 'approved') ||
+                    currentStatus === step.id ||
+                    (step.id === 'optimal' && currentStatus === 'approved') ||
                     false
                   );
                   return (
@@ -2206,7 +2403,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   );
                 })}
               </div>
-            </article>
+            </CollapsibleCard>
 
             {/* گرید پایینی: دکمه‌های اقدام و هدایت سریع */}
             <div className="grid gap-4 md:grid-cols-3">
@@ -2272,7 +2469,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         {/* ۲. تب تحلیل‌های آماری مراجع (Statistical Analysis Tab) */}
         {currentView === 'dossier' && activeTab === 'analytics' && (
           <ClientStatisticalAnalysisTab
-            clientCase={clientCase}
+            clientCase={{ ...clientCase, overallStatus: currentStatus }}
             appointments={appointments}
             combinedData={combinedData}
             safaEvaluationSubmission={safaEvaluationSubmission}
@@ -2303,7 +2500,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                         {statusConfigs[currentStatus].label}
                       </span>
                       <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-mono font-bold text-[#173f6b] border border-blue-200/60">
-                        کد پرونده: {toPersianDigits(clientCase.caseCode)}
+                        کد پرونده: {toPersianDigits(clientCase.caseCode.replace(/^sub-case-/, ''))}
                       </span>
                     </div>
                     <div className="mt-2.5 flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500">
@@ -2391,17 +2588,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* بخش ۱: اطلاعات هویتی و شناسنامه‌ای مراجع در ۴ ستون دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
-                    <User className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">مشخصات هویتی و شناسنامه‌ای مراجع</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">اطلاعات هویتی و ثبت‌نام اولیه ثبت‌شده در سامانه</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h3 className="text-base font-black text-slate-900">مشخصات هویتی و شناسنامه‌ای مراجع</h3>}
+              subtitle="اطلاعات هویتی و ثبت‌نام اولیه ثبت‌شده در سامانه"
+              icon={
+                <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
+                  <User className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <button
                   onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
@@ -2409,9 +2606,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <Edit className="size-3.5" />
                   <span>ویرایش مشخصات فردی</span>
                 </button>
-              </div>
-
-              <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+              }
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pt-1">
                 <div className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5">
                   <span className="text-xs text-slate-400 font-bold block">نام و نام خانوادگی:</span>
                   <span className="text-sm sm:text-base font-black text-slate-900 block">{displayFullName}</span>
@@ -2490,20 +2687,20 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </span>
                 </div>
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۲: سوابق سلامت، شرح‌حال پزشکی و بالینی مراجع در ۳ ستون پهن دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-rose-100 text-rose-600 grid place-items-center">
-                    <HeartPulse className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">سوابق سلامت و شرح‌حال پزشکی مراجع</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">وضعیت سلامت جسمی، بیماری‌های روحی و داروهای مصرفی</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h3 className="text-base font-black text-slate-900">سوابق سلامت و شرح‌حال پزشکی مراجع</h3>}
+              subtitle="وضعیت سلامت جسمی، بیماری‌های روحی و داروهای مصرفی"
+              icon={
+                <div className="size-10 rounded-xl bg-rose-100 text-rose-600 grid place-items-center">
+                  <HeartPulse className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <button
                   onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
@@ -2511,9 +2708,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <Edit className="size-3.5" />
                   <span>ویرایش سوابق سلامت</span>
                 </button>
-              </div>
-
-              <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
                 <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
                   <div className="flex items-center gap-2">
                     <HeartPulse className="size-4 text-rose-500" />
@@ -2544,20 +2741,20 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </p>
                 </div>
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۳: اطلاعات تحصیلی و مدرسه معارفی در ۳ ستون پهن دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
-                    <GraduationCap className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">اطلاعات تحصیلی و مدرسه معارفی</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">وضعیت ثبت‌نام در مدارس معارفی، کادر آموزشی و مربیان تربیتی</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h3 className="text-base font-black text-slate-900">اطلاعات تحصیلی و مدرسه معارفی</h3>}
+              subtitle="وضعیت ثبت‌نام در مدارس معارفی، کادر آموزشی و مربیان تربیتی"
+              icon={
+                <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
+                  <GraduationCap className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <button
                   onClick={openEditProfileModal}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
@@ -2565,9 +2762,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   <Edit className="size-3.5" />
                   <span>ویرایش</span>
                 </button>
-              </div>
-
-              <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-1">
                 <div className="p-5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-2">
                   <span className="text-xs text-slate-400 font-bold block">نام مدرسه معارفی:</span>
                   <span className="text-sm sm:text-base font-black text-slate-900 block">
@@ -2589,7 +2786,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </span>
                 </div>
               </div>
-            </div>
+            </CollapsibleCard>
           </div>
         )}
 
@@ -2639,28 +2836,23 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* بخش ۱: آزمون‌ها و پرسشنامه‌های بالینی مراجع در عرض کامل دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
-                    <HelpCircle className="size-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-indigo-950">
-                      آزمون‌ها و پرسشنامه‌های بالینی
-                    </h4>
-                    <span className="text-xs text-slate-400 block mt-0.5">
-                      آزمون صفا، پرسشنامه‌های اختصاصی و خودسنجی‌های تکمیل‌شده توسط مراجع
-                    </span>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h4 className="text-base font-black text-indigo-950">آزمون‌ها و پرسشنامه‌های بالینی</h4>}
+              subtitle="آزمون صفا، پرسشنامه‌های اختصاصی و خودسنجی‌های تکمیل‌شده توسط مراجع"
+              icon={
+                <div className="size-10 rounded-xl bg-indigo-100 text-indigo-700 grid place-items-center">
+                  <HelpCircle className="size-5" />
                 </div>
-
+              }
+              headerExtra={
                 <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200">
                   {toPersianDigits(questionnaireSubs.length)} آزمون
                 </span>
-              </div>
-
-              <div className="p-6">
+              }
+            >
+              <div className="pt-1">
                 {questionnaireSubs.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
                     پرسشنامه‌ای برای این مراجع ثبت نشده است.
@@ -2725,31 +2917,26 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۲: نوبت‌های مشاوره رزرو شده در عرض کامل دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-sky-100 text-sky-700 grid place-items-center">
-                    <CalendarCheck className="size-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-sky-950">
-                      سامانه‌های نوبت‌دهی مشاوره
-                    </h4>
-                    <span className="text-xs text-slate-400 block mt-0.5">
-                      جلسات مشاوره، رزرو نوبت تلفنی و پیگیری‌های زمان‌بندی‌شده مراجع
-                    </span>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h4 className="text-base font-black text-sky-950">سامانه‌های نوبت‌دهی مشاوره</h4>}
+              subtitle="جلسات مشاوره، رزرو نوبت تلفنی و پیگیری‌های زمان‌بندی‌شده مراجع"
+              icon={
+                <div className="size-10 rounded-xl bg-sky-100 text-sky-700 grid place-items-center">
+                  <CalendarCheck className="size-5" />
                 </div>
-
+              }
+              headerExtra={
                 <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-sky-50 text-sky-800 border border-sky-200">
                   {toPersianDigits(bookingSubs.length)} نوبت
                 </span>
-              </div>
-
-              <div className="p-6">
+              }
+            >
+              <div className="pt-1">
                 {bookingSubs.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
                     نوبت مشاوره‌ای ثبت نشده است.
@@ -2814,31 +3001,26 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۳: کادر ثبت‌نام و پذیرش در عرض کامل دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
-                    <BadgeCheck className="size-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-emerald-950">
-                      پذیرش و فرم ثبت‌نام اولیه
-                    </h4>
-                    <span className="text-xs text-slate-400 block mt-0.5">
-                      فرم تشکیل پرونده اولیه، مشخصات فردی و سوابق پایه‌ای ثبت‌شده
-                    </span>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h4 className="text-base font-black text-emerald-950">پذیرش و فرم ثبت‌نام اولیه</h4>}
+              subtitle="فرم تشکیل پرونده اولیه، مشخصات فردی و سوابق پایه‌ای ثبت‌شده"
+              icon={
+                <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
+                  <BadgeCheck className="size-5" />
                 </div>
-
+              }
+              headerExtra={
                 <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
                   {toPersianDigits(registrationSubs.length)} فرم
                 </span>
-              </div>
-
-              <div className="p-6">
+              }
+            >
+              <div className="pt-1">
                 {registrationSubs.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50/80 rounded-2xl border border-dashed border-slate-200 text-xs text-slate-400">
                     فرم ثبت‌نام اولیه‌ای یافت نشد.
@@ -2903,30 +3085,27 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بخش ۴: سایر فرم‌های پرونده (در صورت وجود) */}
             {otherSubs.length > 0 && (
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-                <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-slate-200 text-slate-700 grid place-items-center">
-                      <FileText className="size-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-base font-black text-slate-900">
-                        سایر فرم‌های ثبت‌شده پرونده
-                      </h4>
-                      <span className="text-xs text-slate-400 block mt-0.5">
-                        سایر فرم‌ها و استعلام‌های انجام‌شده مراجع
-                      </span>
-                    </div>
+              <CollapsibleCard
+                defaultOpen={false}
+                headerClassName="bg-slate-50/70"
+                title={<h4 className="text-base font-black text-slate-900">سایر فرم‌های ثبت‌شده پرونده</h4>}
+                subtitle="سایر فرم‌ها و استعلام‌های انجام‌شده مراجع"
+                icon={
+                  <div className="size-10 rounded-xl bg-slate-200 text-slate-700 grid place-items-center">
+                    <FileText className="size-5" />
                   </div>
+                }
+                headerExtra={
                   <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
                     {toPersianDigits(otherSubs.length)} فرم
                   </span>
-                </div>
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                }
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-1">
                   {otherSubs.map((sub) => {
                     const formObj = forms.find((f) => f.id === sub.formId);
                     const formTitle = formObj ? formObj.title : sub.formId;
@@ -2972,7 +3151,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     );
                   })}
                 </div>
-              </div>
+              </CollapsibleCard>
             )}
           </div>
         )}
@@ -2981,8 +3160,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         {currentView === 'formReport' && selectedSubmission && (
           <div className="space-y-6 animate-in fade-in">
             {/* نوار بالای گزارش: بازگشت به لیست فرم‌ها + عنوان و متاداده */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-2xs">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => {
                     setCurrentView('dossier');
@@ -3087,14 +3266,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
               if (formAnalytics) {
                 return (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                     {/* ۱. نمودار حلقه‌ای درصد تکمیل داده‌ها */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center text-center">
-                      <span className="text-xs font-extrabold text-slate-600 mb-4 flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-[#173f6b]" />
-                        <span>نرخ تکمیل فیلدها و پاسخگویی</span>
-                      </span>
-
+                    <CollapsibleCard
+                      defaultOpen={false}
+                      title={<h3 className="text-xs font-extrabold text-slate-700">نرخ تکمیل فیلدها و پاسخگویی</h3>}
+                      icon={<Activity className="w-4 h-4 text-[#173f6b]" />}
+                      bodyClassName="flex flex-col items-center justify-center text-center"
+                    >
                       <div className="relative w-36 h-36 flex items-center justify-center">
                         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                           <path
@@ -3128,42 +3307,19 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           <strong className="text-slate-900 font-mono">{toPersianDigits(formAnalytics.totalFields)}</strong> فیلد موجود تکمیل گردیده است.
                         </p>
                       </div>
-                    </div>
+                    </CollapsibleCard>
 
                     {/* ۲. نمودارهای میله‌ای ابعاد و شاخص‌های کیفی فرم با رنگ‌بندی ۴ گانه معنایی */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs lg:col-span-2 flex flex-col justify-between space-y-4">
-                      <div>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-3 gap-2">
-                          <span className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-[#173f6b]" />
-                            <span>تحلیل ابعاد کیفی، اعتبارسنجی و تطابق مراجع</span>
-                          </span>
-                          <span className="text-[11px] text-slate-400">محاسبه هوشمند بر پایه پاسخ‌های فرم</span>
-                        </div>
-
-                        <div className="pt-2">
-                          <VerticalBarChart
-                            data={formAnalytics.dimensions.map((dim) => {
-                              const dimColor = getSemanticColorByPercentage(dim.score);
-                              return {
-                                label: dim.name,
-                                value: dim.score,
-                                percentage: dim.score,
-                                color: dimColor.hex,
-                                secondaryLabel: `${toPersianDigits(dim.score)}٪`,
-                              };
-                            })}
-                            unit="٪"
-                            maxScale={100}
-                            height={220}
-                            showValues={true}
-                            badgeText="نمودار میله‌ای عمودی ابعاد"
-                          />
-                        </div>
-                      </div>
-
-                      {/* متاداده فرم */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-4 mt-4 border-t border-slate-100 text-[11px]">
+                    <CollapsibleCard
+                      defaultOpen={false}
+                      className="lg:col-span-2"
+                      title={<h3 className="text-xs font-extrabold text-slate-900">تحلیل ابعاد کیفی، اعتبارسنجی و تطابق مراجع</h3>}
+                      icon={<TrendingUp className="w-4 h-4 text-[#173f6b]" />}
+                      headerExtra={
+                        <span className="text-[11px] text-slate-400">محاسبه هوشمند بر پایه پاسخ‌های فرم</span>
+                      }
+                      footer={
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px]">
                         <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                           <span className="text-slate-400 block">سوالات گزینه‌ای:</span>
                           <span className="font-bold text-slate-800 text-xs mt-0.5 block font-mono">
@@ -3189,7 +3345,28 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           </span>
                         </div>
                       </div>
-                    </div>
+                      }
+                    >
+                      <div className="pt-2">
+                        <VerticalBarChart
+                          data={formAnalytics.dimensions.map((dim) => {
+                            const dimColor = getSemanticColorByPercentage(dim.score);
+                            return {
+                              label: dim.name,
+                              value: dim.score,
+                              percentage: dim.score,
+                              color: dimColor.hex,
+                              secondaryLabel: `${toPersianDigits(dim.score)}٪`,
+                            };
+                          })}
+                          unit="٪"
+                          maxScale={100}
+                          height={220}
+                          showValues={true}
+                          badgeText="نمودار میله‌ای عمودی ابعاد"
+                        />
+                      </div>
+                    </CollapsibleCard>
                   </div>
                 );
               }
@@ -3198,24 +3375,22 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             })()}
 
             {/* ۳. نمایش مفصل و گام به گام تمام فیلدهای این فرم (Detailed Field-by-Field Breakdown) */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-6 bg-slate-50 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#173f6b] flex items-center justify-center font-bold">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
-                      جزئیات کامل پاسخ‌ها و فیلدهای فرم: {selectedFormObj?.title || 'فرم ثبت‌شده'}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      تمامی فیلدها و پاسخ‌های ارائه شده توسط مراجع به تفکیک مراحل فرم
-                    </p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+                  جزئیات کامل پاسخ‌ها و فیلدهای فرم: {selectedFormObj?.title || 'فرم ثبت‌شده'}
+                </h3>
+              }
+              subtitle="تمامی فیلدها و پاسخ‌های ارائه شده توسط مراجع به تفکیک مراحل فرم"
+              icon={
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#173f6b] flex items-center justify-center font-bold">
+                  <FileText className="w-5 h-5" />
                 </div>
-              </div>
-
-              <div className="p-6 space-y-8">
+              }
+            >
+              <div className="space-y-8 pt-1">
                 {selectedFormObj?.steps && selectedFormObj.steps.length > 0 ? (
                   selectedFormObj.steps.map((step: any, stepIdx: number) => {
                     const stepFields = (selectedFormObj.fields || []).filter(
@@ -3358,18 +3533,19 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   );
                 })()}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* ۴. ثبت نظر کارشناسی و یادداشت روی این فرم */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-[#173f6b]" />
-                <span>یادداشت‌ها و نظرات کارشناسی روی این فرم:</span>
-              </h4>
+            <CollapsibleCard
+              defaultOpen={false}
+              title={<h4 className="text-xs sm:text-sm font-extrabold text-slate-900">یادداشت‌ها و نظرات کارشناسی روی این فرم:</h4>}
+              icon={<MessageSquare className="w-4 h-4 text-[#173f6b]" />}
+              bodyClassName="space-y-4"
+            >
 
-              {Array.isArray(selectedSubmission.comments) && selectedSubmission.comments.length > 0 && (
+              {Array.isArray(selectedSubmission.comments) && selectedSubmission.comments.filter((c) => !c.content?.includes('ثبت گزارش جلسه مشاوره')).length > 0 && (
                 <div className="space-y-2.5 pb-2">
-                  {selectedSubmission.comments.map((comment) => (
+                  {selectedSubmission.comments.filter((c) => !c.content?.includes('ثبت گزارش جلسه مشاوره')).map((comment) => (
                     <div
                       key={comment.id}
                       className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1"
@@ -3412,7 +3588,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   ثبت نظر
                 </button>
               </div>
-            </div>
+            </CollapsibleCard>
           </div>
         )}
 
@@ -3462,16 +3638,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* ستون ثبت اقدام و لاگ جدید (۵ ستون در دسکتاپ) */}
               <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-2xs space-y-5">
-                  <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                <CollapsibleCard
+                  defaultOpen={false}
+                  title={<h3 className="text-base font-black text-slate-900">ثبت اقدام یا لاگ جدید</h3>}
+                  subtitle="تماس تلفنی، جلسه، یادداشت محرمانه یا ارجاع"
+                  icon={
                     <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
                       <MessageSquare className="size-5" />
                     </div>
-                    <div>
-                      <h3 className="text-base font-black text-slate-900">ثبت اقدام یا لاگ جدید</h3>
-                      <p className="text-xs text-slate-400 mt-0.5">تماس تلفنی، جلسه، یادداشت محرمانه یا ارجاع</p>
-                    </div>
-                  </div>
+                  }
+                  bodyClassName="space-y-5"
+                >
 
                   <div className="space-y-2">
                     <span className="text-xs text-slate-500 font-bold block">نوع تعامل / اقدام:</span>
@@ -3518,26 +3695,26 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     <Send className="size-4" />
                     <span>ثبت اقدام در پرونده مراجع</span>
                   </button>
-                </div>
+                </CollapsibleCard>
               </div>
 
               {/* ستون تاریخچه و تایم‌لاین کامل پیگیری‌ها (۷ ستون در دسکتاپ) */}
               <div className="lg:col-span-7">
-                <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200 shadow-2xs space-y-5">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-xl bg-slate-100 text-slate-700 grid place-items-center">
-                        <Clock className="size-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-black text-slate-900">تاریخچه کامل پیگیری‌ها و اقدامات</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">گاه‌شمار کلیه مکالمات، جلسات و یادداشت‌های مدیران</p>
-                      </div>
+                <CollapsibleCard
+                  defaultOpen={false}
+                  title={<h3 className="text-base font-black text-slate-900">تاریخچه کامل پیگیری‌ها و اقدامات</h3>}
+                  subtitle="گاه‌شمار کلیه مکالمات، جلسات و یادداشت‌های مدیران"
+                  icon={
+                    <div className="size-10 rounded-xl bg-slate-100 text-slate-700 grid place-items-center">
+                      <Clock className="size-5" />
                     </div>
+                  }
+                  headerExtra={
                     <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700">
                       {toPersianDigits(allFollowupComments.length)} مورد
                     </span>
-                  </div>
+                  }
+                >
 
                   <div className="space-y-4">
                     {allFollowupComments.length === 0 ? (
@@ -3631,7 +3808,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       ))
                     )}
                   </div>
-                </div>
+                </CollapsibleCard>
               </div>
             </div>
           </div>
@@ -3675,9 +3852,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-400 font-bold">استاد مشاور پرونده:</span>
-                  <div className="size-8 rounded-xl bg-indigo-50 text-indigo-700 grid place-items-center">
-                    <User className="size-4" />
-                  </div>
+                  <ConsultantAvatar
+                    name={latestRecommendation?.counselor || appointments[0]?.counselor}
+                    size="sm"
+                  />
                 </div>
                 <span className="text-base font-black text-slate-900 block truncate">
                   {latestRecommendation?.counselor || (appointments[0]?.counselor ? appointments[0].counselor : 'مشاور تعیین‌نشده')}
@@ -3704,19 +3882,19 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             </div>
 
             {/* لیست جلسات مشاوره با جدول استاندارد و عریض دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs p-6 sm:p-7 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
-                    <Calendar className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">جدول جامع نوبت‌ها و جلسات مشاوره مراجع</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">برای مشاهده یا ثبت گزارش بالینی هر جلسه، روی دکمه عملیات کلیک کنید.</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              title={<h3 className="text-base font-black text-slate-900">جدول جامع نوبت‌ها و جلسات مشاوره مراجع</h3>}
+              subtitle="برای مشاهده یا ثبت گزارش بالینی هر جلسه، روی دکمه عملیات کلیک کنید."
+              icon={
+                <div className="size-10 rounded-xl bg-blue-100 text-[#173f6b] grid place-items-center">
+                  <Calendar className="size-5" />
                 </div>
+              }
+              headerExtra={
                 <div className="text-xs text-slate-500 font-bold bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">سامانه جامع نوبت‌دهی بالحق</div>
-              </div>
+              }
+            >
 
               {appointments.length === 0 ? (
                 <div className="p-12 text-center bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 space-y-2">
@@ -3745,7 +3923,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                             <td className="py-4 px-4 font-mono font-bold text-slate-400">{toPersianDigits(idx + 1)}</td>
                             <td className="py-4 px-4 font-mono font-bold text-slate-900">{toPersianDigits(item.date)}</td>
-                            <td className="py-4 px-4 font-bold text-slate-800">{item.counselor}</td>
+                            <td className="py-4 px-4 font-bold text-slate-800">
+                              <div className="flex items-center gap-2">
+                                <ConsultantAvatar name={item.counselor} size="xs" />
+                                <span>{item.counselor}</span>
+                              </div>
+                            </td>
                             <td className="py-4 px-4 text-slate-600">{item.topic}</td>
                             <td className="py-4 px-4">
                               <span
@@ -3814,21 +3997,20 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 </>
               )}
-            </div>
+            </CollapsibleCard>
 
             {/* سوابق و ریز تراکنش‌های پرداخت الکترونیک شاپرک در جدول دسکتاپ */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-              <div className="p-5 sm:p-6 bg-slate-50/80 border-b border-slate-200/90 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
-                    <CreditCard className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-slate-900">ریز تراکنش‌های پرداخت الکترونیک شاپرک</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">صورتحساب تراکنش‌های مالی، شناسه رهگیری و رسیدهای پرداخت</p>
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              headerClassName="bg-slate-50/70"
+              title={<h3 className="text-base font-black text-slate-900">ریز تراکنش‌های پرداخت الکترونیک شاپرک</h3>}
+              subtitle="صورتحساب تراکنش‌های مالی، شناسه رهگیری و رسیدهای پرداخت"
+              icon={
+                <div className="size-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center">
+                  <CreditCard className="size-5" />
                 </div>
-              </div>
+              }
+            >
 
               {currentSubmissions.filter((s) => s.paymentAmount && s.paymentAmount > 0).length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs sm:text-sm">
@@ -3897,7 +4079,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                   </div>
                 </>
               )}
-            </div>
+            </CollapsibleCard>
           </div>
         )}
       </div>
@@ -3905,23 +4087,25 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       {/* مودال ثبت نوبت جدید */}
       {isNewAppointmentModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden bg-slate-950/60 backdrop-blur-sm select-none"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setIsNewAppointmentModalOpen(false);
           }}
         >
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 max-h-[80dvh] sm:max-h-[85vh] flex flex-col overflow-hidden select-text">
+            <div className="shrink-0 p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white">
               <h3 className="text-base font-black text-slate-900">ثبت نوبت مشاوره جدید</h3>
               <button
                 onClick={() => setIsNewAppointmentModalOpen(false)}
-                className="grid size-8 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                className="grid size-8 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer"
+                title="بستن"
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain">
+              <form onSubmit={handleCreateAppointment} className="space-y-4 text-xs">
               <div>
                 <label className="block text-slate-700 font-bold mb-1.5">تاریخ و ساعت نوبت:</label>
                 <input
@@ -3976,6 +4160,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
@@ -3983,13 +4168,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       {/* مودال ثبت گزارش جلسه مشاوره */}
       {editing && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm md:items-center md:p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden bg-slate-950/60 backdrop-blur-sm select-none"
           onMouseDown={(event) => {
             if (event.currentTarget === event.target) setEditing(null);
           }}
         >
-          <section className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-[28px] bg-white shadow-2xl md:rounded-[28px]">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 p-5 backdrop-blur">
+          <section className="w-full max-w-2xl max-h-[80dvh] sm:max-h-[85vh] flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200 select-text">
+            <div className="shrink-0 flex items-center justify-between border-b border-slate-100 bg-white p-4 sm:p-5 z-10">
               <div>
                 <div className="text-base font-black text-slate-900">ثبت گزارش جلسه مشاوره</div>
                 <div className="mt-1 text-[11px] text-slate-400">
@@ -3999,11 +4184,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <button
                 onClick={() => setEditing(null)}
                 className="grid size-9 place-items-center rounded-full bg-slate-100 text-lg text-slate-500 hover:bg-slate-200 transition cursor-pointer"
+                title="بستن"
               >
                 ×
               </button>
             </div>
-            <div className="p-5">
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 overscroll-contain">
               {/* وضعیت نوبت */}
               <div
                 className={`mb-4 flex items-center justify-between rounded-2xl px-4 py-2.5 text-xs font-bold ${
@@ -4031,16 +4217,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       <p className="text-[11px] text-amber-800/80">راهکارها، تمرین‌ها و پروتکل تجویزی جلسه</p>
                     </div>
                   </div>
-                  <span className="rounded-full bg-amber-200/90 px-2.5 py-0.5 text-[10px] font-black text-amber-900 border border-amber-300">
-                    بخش هایلایت بالینی
-                  </span>
                 </div>
 
                 {/* منوی کشویی / کرکره‌ای انتخاب سرفصل بالینی */}
                 <div className="relative">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-                      <span>سرفصل بالینی توصیه (انتخاب کشویی / کرکره‌ای):</span>
+                      <span>سرفصل بالینی توصیه:</span>
                     </span>
                     {selectedClinicalCategory && (
                       <button
@@ -4074,13 +4257,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                         </span>
                       ) : (
                         <span className="text-slate-500 font-medium truncate">
-                          جهت انتخاب سرفصل بالینی کلیک کنید (منوی کشویی / کرکره‌ای)...
+                          جهت انتخاب سرفصل بالینی کلیک کنید...
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 text-amber-800 mr-2">
                       <span className="text-[11px] font-bold hidden sm:inline">
-                        {isClinicalCategoryOpen ? 'بستن منو' : 'باز کردن گزینه‌ها (کشویی)'}
+                        {isClinicalCategoryOpen ? 'بستن منو' : 'باز کردن گزینه‌ها'}
                       </span>
                       <ChevronDown
                         className={`size-4 transition-transform duration-300 ${
@@ -4156,9 +4339,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
                     <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۱</span>
-                    موارد بررسی‌شده در جلسه
+                    موارد بررسی‌شده در جلسه <span className="text-rose-500">*</span>
                   </span>
                   <textarea
+                    required
                     value={reportForm.reviewed}
                     onChange={(e) => setReportForm((old) => ({ ...old, reviewed: e.target.value }))}
                     placeholder="مباحث، شرح‌حال و سرفصل‌های گفت‌وگو شده در جلسه..."
@@ -4171,9 +4355,10 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <label className="block">
                   <span className="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
                     <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۲</span>
-                    معضلات و چالش‌های مراجع
+                    معضلات و چالش‌های مراجع <span className="text-rose-500">*</span>
                   </span>
                   <textarea
+                    required
                     value={reportForm.challenges}
                     onChange={(e) => setReportForm((old) => ({ ...old, challenges: e.target.value }))}
                     placeholder="مشکلات رفتاری، خانوادگی، روحی یا تحصیلی تشخیص داده‌شده..."
@@ -4186,14 +4371,14 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 <div className="pt-2 border-t border-slate-100 space-y-2">
                   <span className="flex items-center gap-2 text-xs font-black text-slate-700">
                     <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">۳</span>
-                    تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه:
+                    تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه: <span className="text-rose-500">*</span>
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
                       { id: 'regressing', label: 'عقب گرد', color: 'rose' },
                       { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'amber' },
-                      { id: 'optimal', label: 'وضعیت مطلوب', color: 'emerald' },
-                      { id: 'growing', label: 'در حال رشد', color: 'blue' },
+                      { id: 'optimal', label: 'وضعیت مطلوب', color: 'blue' },
+                      { id: 'growing', label: 'در حال رشد', color: 'emerald' },
                     ].map((st) => {
                       const isSel = selectedAppointmentStatus === st.id;
                       return (
@@ -4207,9 +4392,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                 ? 'bg-rose-600 text-white border-rose-600 shadow-xs ring-2 ring-rose-200'
                                 : st.color === 'amber'
                                 ? 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-200'
-                                : st.color === 'emerald'
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-200'
-                                : 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-200'
+                                : st.color === 'blue'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-200'
+                                : 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-200'
                               : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                           }`}
                         >
@@ -4241,13 +4426,15 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </div>
               )}
 
+              {!isSessionReportComplete && (
+                <p className="mt-4 text-[11px] font-bold text-rose-600 text-center">
+                  تکمیل موارد ۱، ۲ و انتخاب وضعیت در مورد ۳ برای ثبت گزارش الزامی است.
+                </p>
+              )}
+
               <button
                 onClick={submitReport}
-                disabled={
-                  !reportForm.reviewed.trim() ||
-                  !reportForm.challenges.trim() ||
-                  !reportForm.recommendation.trim()
-                }
+                disabled={!isSessionReportComplete}
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#173f6b] px-5 py-4 text-sm font-black text-white transition hover:bg-[#0f3155] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
               >
                 <Check className="size-4" />
@@ -4261,9 +4448,9 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     
       {/* مودال ویرایش مشخصات مراجع توسط مشاور */}
       {isEditProfileModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in" dir="rtl">
-          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden bg-slate-950/60 backdrop-blur-sm select-none animate-in fade-in" dir="rtl">
+          <div className="w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80dvh] sm:max-h-[85vh] select-text">
+            <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
                   <Edit className="w-4 h-4" />
@@ -4276,12 +4463,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
               <button
                 onClick={() => setIsEditProfileModalOpen(false)}
                 className="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition flex items-center justify-center cursor-pointer"
+                title="بستن"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 text-xs overscroll-contain">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-slate-600 font-bold mb-1">نام:</label>

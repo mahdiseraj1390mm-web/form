@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import { AdminLoginView } from '@/components/auth/admin-login-view';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
+import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 import dynamic from 'next/dynamic';
-import { Layers, ShieldAlert, LayoutDashboard, Inbox, CalendarClock, PenTool, Menu } from 'lucide-react';
+import { Layers } from 'lucide-react';
 
 function ViewSkeleton() {
   return (
@@ -83,56 +84,6 @@ export default function AppHome() {
     currentUser?.role === 'super_admin'
   );
   const userAllowedTabs = currentUser?.allowedTabs;
-
-  // گزینه‌های نوار ناوبری اختصاصی پایینی در نمایش موبایل
-  const mobileNavItems = useMemo(() => {
-    const items: Array<{ id: string; label: string; icon: any }> = [];
-
-    // ۱. نوبت‌ها و مشاوران
-    if (isSuperAdmin || userAllowedTabs?.includes('consultants')) {
-      items.push({
-        id: 'consultants',
-        label: 'نوبت‌ها و مشاور',
-        icon: CalendarClock,
-      });
-    }
-
-    // ۲. پرونده مراجعان
-    if (isSuperAdmin || userAllowedTabs?.includes('submissions') || (!userAllowedTabs && !isSuperAdmin)) {
-      items.push({
-        id: 'submissions',
-        label: 'پرونده مراجعان',
-        icon: Inbox,
-      });
-    }
-
-    // ۳. داشبورد مدیریت (در صورت مجاز بودن)
-    if (isSuperAdmin || userAllowedTabs?.includes('dashboard')) {
-      items.push({
-        id: 'dashboard',
-        label: 'داشبورد',
-        icon: LayoutDashboard,
-      });
-    }
-
-    // ۴. طراحی فرم (برای ادمین‌ها)
-    if (isSuperAdmin || userAllowedTabs?.includes('builder')) {
-      items.push({
-        id: 'builder',
-        label: 'طراحی فرم',
-        icon: PenTool,
-      });
-    }
-
-    // ۵. دکمه منوی کشویی جانبی
-    items.push({
-      id: '__menu__',
-      label: 'منو',
-      icon: Menu,
-    });
-
-    return items;
-  }, [isSuperAdmin, userAllowedTabs]);
 
   // انتخاب خودکار اولین تب مجاز برای کاربر
   useEffect(() => {
@@ -212,7 +163,7 @@ export default function AppHome() {
       />
 
       {/* بوم اصلی نرم‌افزار */}
-      <div className="flex-1 min-h-0 flex overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex overflow-hidden">
         
         {/* منوی کناری ثابت و کشویی موبایل */}
         <Sidebar 
@@ -223,7 +174,7 @@ export default function AppHome() {
         />
 
         {/* محتوای تب فعال */}
-        <main className="flex-1 min-h-0 flex flex-col overflow-hidden bottom-nav-safe md:pb-0">
+        <main className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden bottom-nav-safe md:pb-0">
           {currentTab === 'dashboard' && isTabAllowed('dashboard') && (
             <DashboardView
               onOpenNewFormModal={() => setIsNewFormModalOpen(true)}
@@ -277,36 +228,12 @@ export default function AppHome() {
       </div>
 
       {/* نوار ناوبری ثابت پایینی ویژه دسترسی سریع در موبایل */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-2 py-1.5 flex items-center justify-around pb-safe">
-        {mobileNavItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.id === '__menu__') {
-                  setIsMobileNavOpen(true);
-                } else {
-                  handleTabChange(item.id);
-                }
-              }}
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all cursor-pointer min-w-[56px] select-none ${
-                isActive
-                  ? 'text-blue-600 font-extrabold'
-                  : 'text-slate-500 hover:text-slate-800 font-medium'
-              }`}
-            >
-              <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}>
-                <Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
-              </div>
-              <span className={`text-[10px] mt-0.5 tracking-tight leading-none ${isActive ? 'font-black' : 'font-semibold'}`}>
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+      <MobileBottomNav
+        currentTab={currentTab}
+        onSelectTab={handleTabChange}
+        isSuperAdmin={isSuperAdmin}
+        allowedTabs={userAllowedTabs}
+      />
 
       {/* مودال ایجاد فرم جدید */}
       <NewFormModal

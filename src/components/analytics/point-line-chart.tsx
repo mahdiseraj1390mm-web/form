@@ -61,9 +61,14 @@ export const PointLineChart: React.FC<PointLineChartProps> = ({
   const valueRange = Math.max(resolvedMax - resolvedMin, 1);
 
   // مختصات ابعاد SVG
-  const svgWidth = 600;
+  const paddingX = 68;
+  const svgWidth = Math.max(
+    600,
+    data.length > 6 ? paddingX * 2 + (data.length - 1) * 76 : 600
+  );
+  const isDenseSeries = data.length > 6;
   const svgHeight = height;
-  const paddingX = 56;
+
   const paddingTop = 42;
   const paddingBottom = 45;
 
@@ -125,7 +130,7 @@ export const PointLineChart: React.FC<PointLineChartProps> = ({
   const isPositiveProgress = delta > 0;
 
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full min-w-0 space-y-3">
       {(title || subtitle) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 gap-1.5">
           <div>
@@ -136,7 +141,7 @@ export const PointLineChart: React.FC<PointLineChartProps> = ({
             )}
             {subtitle && <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {badgeText && (
               <span className="text-[10px] font-bold text-sky-800 bg-sky-50 border border-sky-200 px-2.5 py-0.5 rounded-full shrink-0">
                 {badgeText}
@@ -161,11 +166,17 @@ export const PointLineChart: React.FC<PointLineChartProps> = ({
       )}
 
       {/* محدوده اصلی رسم نمودار نقطه و خط */}
-      <div className="relative w-full bg-slate-50/70 rounded-2xl border border-slate-100/90 p-2 sm:p-3 overflow-hidden">
+      <div className="w-full max-w-full min-w-0 overflow-x-auto pb-2 custom-scrollbar">
+        <div
+          className={`relative w-full bg-slate-50/70 rounded-2xl border border-slate-100/90 p-2 sm:p-3 overflow-hidden ${
+            isDenseSeries ? '' : 'min-w-[460px] sm:min-w-0'
+          }`}
+          style={isDenseSeries ? { minWidth: `${Math.max(540, data.length * 70)}px` } : undefined}
+        >
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="w-full h-auto overflow-visible select-none"
-          style={{ maxHeight: `${height + 30}px` }}
+          className="w-full h-auto block select-none"
+          style={svgWidth <= 600 ? { maxHeight: `${height + 30}px` } : undefined}
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -334,7 +345,10 @@ export const PointLineChart: React.FC<PointLineChartProps> = ({
                         textAnchor="middle"
                         className="text-[8.5px] fill-slate-400 font-mono select-none"
                       >
-                        {pt.item.secondaryLabel}
+                        <title>{pt.item.secondaryLabel}</title>
+                        {pt.item.secondaryLabel.length > 16
+                          ? `${pt.item.secondaryLabel.slice(0, 15)}…`
+                          : pt.item.secondaryLabel}
                       </text>
                     )}
                   </g>
@@ -342,6 +356,7 @@ export const PointLineChart: React.FC<PointLineChartProps> = ({
               );
             })}
         </svg>
+    </div>
 
         </div>
     </div>

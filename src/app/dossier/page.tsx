@@ -162,6 +162,24 @@ function DossierContent() {
       0
     );
 
+    let clinicalSt: FormSubmission['status'] | null = null;
+    for (const s of clientSubs) {
+      const cand = s.data?.clinical_status || s.data?.caseStatus || s.data?.report?.status;
+      if (cand && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(cand)) {
+        clinicalSt = cand as FormSubmission['status'];
+        break;
+      }
+    }
+    if (!clinicalSt) {
+      for (const s of clientSubs) {
+        if (s.status && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(s.status)) {
+          clinicalSt = s.status;
+          break;
+        }
+      }
+    }
+    const resolvedStatus = clinicalSt || (matchSub.status === 'approved' ? 'optimal' : matchSub.status === 'rejected' ? 'regressing' : matchSub.status || 'new');
+
     return {
       caseCode: cCode,
       fullName: candidateName,
@@ -171,7 +189,7 @@ function DossierContent() {
       formTitles: clientSubs.map((s) => s.formId),
       totalFormsCount: clientSubs.length > 0 ? clientSubs.length : 1,
       latestDate: matchSub.createdAt || new Date().toISOString(),
-      overallStatus: matchSub.status || 'new',
+      overallStatus: resolvedStatus as any,
       totalPaidAmount: totalPaid,
       roleInFamily: matchSub.data?.f_role_in_family || 'عضو خانواده',
     };
@@ -214,7 +232,7 @@ function DossierContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f5f7fa]">
       <ClientDossierFullview clientCase={targetCase} onClose={() => router.push('/')} />
     </div>
   );

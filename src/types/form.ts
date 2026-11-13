@@ -114,6 +114,7 @@ export interface FormConsultantBookingConfig {
   consultantId: string; // شناسه مشاور در سامانه
   consultantName: string; // نام مشاور
   genderPrefix?: 'آقا' | 'خانم'; // پیشوند آقا یا خانم
+  avatarUrl?: string; // تصویر پروفایل مشاور
   enabled: boolean; // فعال بودن این مشاور در این فرم
   enabledTopics: string[]; // موضوعات فعال این مشاور در این فرم
   customWorkingHours?: AppointmentData; // ساعات کاری سفارشی برای این فرم خاص (در صورت ویرایش)

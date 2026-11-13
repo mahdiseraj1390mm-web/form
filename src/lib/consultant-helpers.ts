@@ -34,6 +34,7 @@ export interface ConsultantProfile {
   id: string;
   name: string;
   genderPrefix?: 'آقا' | 'خانم';
+  avatarUrl?: string;
   mobile: string;
   jobTitle: string;
   specialization: string;
@@ -132,9 +133,11 @@ export function appointmentDataToDefinedSlots(
     });
   };
 
-  // اگر برنامه‌ریزی تفکیک‌شده بر اساس موضوع وجود دارد
-  if (config.topicSchedules && typeof config.topicSchedules === 'object' && Object.keys(config.topicSchedules).length > 0) {
-    Object.entries(config.topicSchedules).forEach(([topicKey, topicConfig]) => {
+  // اگر برنامه‌ریزی تفکیک‌شده بر اساس موضوع وجود دارد (همراه با یکسان‌سازی کلیدهای تکراری)
+  const normalizedTopics = normalizeTopicSchedulesMap(config.topicSchedules);
+  const topicEntries = Object.entries(normalizedTopics);
+  if (topicEntries.length > 0) {
+    topicEntries.forEach(([topicKey, topicConfig]) => {
       if (topicConfig) {
         const topicObj = matchCounselingTopic(topicKey);
         const topicName = topicObj ? topicObj.name : topicKey;
@@ -142,11 +145,11 @@ export function appointmentDataToDefinedSlots(
         addSlots(topicOpts, topicName);
       }
     });
+  } else {
+    // اسلات‌های عمومی مشاور در صورت نبود برنامه اختصاصی موضوع
+    const generalOpts = generateSlotsFromAppointmentData(config, fieldId);
+    addSlots(generalOpts);
   }
-
-  // اسلات‌های عمومی مشاور
-  const generalOpts = generateSlotsFromAppointmentData(config, fieldId);
-  addSlots(generalOpts);
 
   return results;
 }
@@ -212,17 +215,80 @@ export const COUNSELING_TOPICS: CounselingTopicOption[] = [
 /**
  * تطبیق هوشمند عنوان یا شناسه موضوع با گزینه‌های مشاوره رسمی
  */
+const TOPIC_ID_ALIASES: Record<string, string> = {
+  academic: 'education',
+  individual: 'clinical',
+};
+
 export function matchCounselingTopic(topicKey: string): CounselingTopicOption | undefined {
   if (!topicKey) return undefined;
   const cleanKey = topicKey.trim();
+  const aliased = TOPIC_ID_ALIASES[cleanKey] || cleanKey;
   return COUNSELING_TOPICS.find(
     (t) =>
-      t.id === cleanKey ||
+      t.id === aliased ||
       t.name === cleanKey ||
       t.name.includes(cleanKey) ||
       cleanKey.includes(t.name) ||
       t.keywords.some((kw) => cleanKey.includes(kw) || kw.includes(cleanKey))
   );
+}
+
+/**
+ * تبدیل کلید یا عنوان موضوع مشاوره به شناسه رسمی یکتا (یا بازگشت همان متن در صورت سفارشی بودن)
+ */
+export function normalizeCounselingTopicId(topicKey: string): string {
+  const cleanKey = (topicKey || '').trim();
+  if (!cleanKey) return '';
+  if (TOPIC_ID_ALIASES[cleanKey]) return TOPIC_ID_ALIASES[cleanKey];
+  const matched = matchCounselingTopic(cleanKey);
+  return matched ? matched.id : cleanKey;
+}
+
+/**
+ * یکسان‌سازی و حذف کلیدهای تکراری در نگاشت ساعات کاری موضوعات
+ */
+export function normalizeTopicSchedulesMap(
+  raw?: Record<string, AppointmentData>
+): Record<string, AppointmentData> {
+  const result: Record<string, AppointmentData> = {};
+  if (!raw || typeof raw !== 'object') return result;
+  for (const [rawKey, schedule] of Object.entries(raw)) {
+    if (!schedule) continue;
+    const canonicalKey = normalizeCounselingTopicId(rawKey);
+    if (!canonicalKey) continue;
+    if (!result[canonicalKey] || rawKey === canonicalKey) {
+      result[canonicalKey] = schedule;
+    }
+  }
+  return result;
+}
+
+/**
+ * بررسی فعال بودن حداقل یک روز کاری در برنامه عمومی یا یکی از موضوعات مشاوره
+ */
+export function hasConsultantActiveSchedule(wh?: AppointmentData): boolean {
+  if (!wh) return false;
+  if (Array.isArray(wh.availableDays) && wh.availableDays.length > 0) {
+    return true;
+  }
+  if (wh.topicSchedules && typeof wh.topicSchedules === 'object') {
+    return Object.values(wh.topicSchedules).some(
+      (ts) => Array.isArray(ts?.availableDays) && ts.availableDays.length > 0
+    );
+  }
+  return false;
+}
+
+/**
+ * قالب‌بندی نام کامل مشاور بدون تکرار پیشوند جنسیت
+ */
+export function formatConsultantDisplayName(name: string, genderPrefix?: string): string {
+  const raw = (name || '').trim();
+  if (!raw) return 'مشاور';
+  const hasPrefix = raw.startsWith('خانم') || raw.startsWith('آقا') || raw.startsWith('دکتر');
+  if (hasPrefix || !genderPrefix) return raw;
+  return `${genderPrefix} ${raw}`;
 }
 
 /**
@@ -689,6 +755,7 @@ export function matchMemberToConsultant(
     id: profileId,
     name: member.name || matchedKnown?.name || 'مشاور',
     genderPrefix: member.genderPrefix || matchedKnown?.genderPrefix,
+    avatarUrl: member.avatarUrl || matchedKnown?.avatarUrl,
     mobile: member.mobile || member.username || matchedKnown?.mobile || '',
     jobTitle: member.jobTitle || matchedKnown?.jobTitle || 'مشاور',
     specialization: member.jobTitle || matchedKnown?.specialization || 'مشاوره تخصصی',

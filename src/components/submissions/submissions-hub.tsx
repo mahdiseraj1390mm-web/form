@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import { ShieldAlert, Lock, Key } from 'lucide-react';
@@ -40,13 +40,14 @@ import {
   X
 } from 'lucide-react';
 import { formatPersianDateTime, formatCurrency, toPersianDigits, getFieldDisplayValue } from '@/lib/persian';
+import { isSuperAdminUser } from '@/lib/team-constants';
 import { isUnassignedSafaSubmission } from '@/lib/safa-utils';
 import type { ConsultantProfile } from '@/lib/consultant-helpers';
 import { 
   matchMemberToConsultant, 
   extractBookingItemFromSubmission, 
   isBookingAssignedToConsultant, 
-  COUNSELING_TOPICS 
+  matchCounselingTopic 
 } from '@/lib/consultant-helpers';
 
 interface ClientCaseGroup {
@@ -67,11 +68,7 @@ export const SubmissionsHub: React.FC = () => {
   const { forms, activeForm, submissions, teamMembers, updateSubmissionStatus, addSubmissionComment, refreshSubmissionsFromDb } = useForm();
   const { currentUser } = useAdminAuth();
 
-  const isSuperAdmin = !!(
-    currentUser?.isSuperAdmin ||
-    currentUser?.username === 'admin' ||
-    currentUser?.role === 'super_admin'
-  );
+  const isSuperAdmin = isSuperAdminUser(currentUser);
 
   const currentMember = teamMembers?.find(
     (m) =>
@@ -86,19 +83,26 @@ export const SubmissionsHub: React.FC = () => {
       ? currentMember.requireCaseCode
       : (currentUser?.requireCaseCode !== false)
   );
-  // همگام‌سازی کاملاً خودکار و زنده با پایگاه‌داده سرور
+  const refreshRef = useRef(refreshSubmissionsFromDb);
+  useEffect(() => {
+    refreshRef.current = refreshSubmissionsFromDb;
+  }, [refreshSubmissionsFromDb]);
+
+  // همگام‌سازی هوشمند با پایگاه‌داده سرور: در بدو ورود، بازگشت به تب، و هر ۶۰ ثانیه به شرط فعال بودن تب
   useEffect(() => {
     // ۱. دریافت بلافاصله در بدو ورود به کارتابل
-    refreshSubmissionsFromDb('all');
+    refreshRef.current?.('all');
 
-    // ۲. به‌روزرسانی خودکار در پس‌زمینه هر ۱۵ ثانیه بدون نیاز به هیچ کلیک
+    // ۲. به‌روزرسانی خودکار در پس‌زمینه هر ۶۰ ثانیه فقط در صورتی که صفحه در دید کاربر باشد
     const interval = setInterval(() => {
-      refreshSubmissionsFromDb('all');
-    }, 45000);
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refreshRef.current?.('all');
+      }
+    }, 60000);
 
     // ۳. دریافت آخرین اطلاعات به محض بازگشت کاربر به تب مرورگر
     const handleFocus = () => {
-      refreshSubmissionsFromDb('all');
+      refreshRef.current?.('all');
     };
     window.addEventListener('focus', handleFocus);
 
@@ -106,7 +110,7 @@ export const SubmissionsHub: React.FC = () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [refreshSubmissionsFromDb]);
+  }, []);
   
   // دو زبانه اصلی: کارتابل پرونده‌های مراجعین (پیش‌فرض) و بانک ارسالی‌های تفکیکی فرم‌ها
   const [hubTab, setHubTab] = useState<'cases' | 'submissions'>('cases');
@@ -123,8 +127,8 @@ export const SubmissionsHub: React.FC = () => {
     approved: { label: 'تأیید شده / فعال', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
     rejected: { label: 'رد شده', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
     archived: { label: 'بایگانی', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
-    optimal: { label: 'وضعیت مطلوب', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-    growing: { label: 'در حال رشد', color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
+    optimal: { label: 'وضعیت مطلوب', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+    growing: { label: 'در حال رشد', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
     needs_followup: { label: 'نیازمند پیگیری', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
     regressing: { label: 'عقب گرد', color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
   };
@@ -193,7 +197,8 @@ export const SubmissionsHub: React.FC = () => {
       const rawMobile = sub.data?.f_mobile || sub.data?.bk_mobile || sub.data?.mobile || (sub as any).mobile;
       const clean = normalizeMob(rawMobile);
       if (clean) {
-        const cCode = sub.data?.caseCode || sub.trackingCode;
+        const rawCCode = (sub.data?.caseCode || sub.trackingCode || '').trim();
+        const cCode = rawCCode.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
         if (cCode) {
           const current = mobileToPrimaryCase.get(clean);
           if (!current || (!cCode.startsWith('BH-') && current.startsWith('BH-')) || (!cCode.startsWith('CASE-') && current.startsWith('CASE-'))) {
@@ -208,7 +213,8 @@ export const SubmissionsHub: React.FC = () => {
       const cleanMobile = normalizeMob(rawMobile);
 
       // استخراج کد پرونده واحد (تجمیع بر اساس شماره تماس یا کد اختصاصی، بدون حذف هیچ سابقه‌ای)
-      const caseCode = (cleanMobile && mobileToPrimaryCase.get(cleanMobile)) || sub.data?.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
+      const rawCaseCode = (cleanMobile && mobileToPrimaryCase.get(cleanMobile)) || sub.data?.caseCode || sub.trackingCode || `CASE-${sub.id.slice(-6)}`;
+      const caseCode = String(rawCaseCode).replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
       
       const candidateName =
         sub.data.fullName ||
@@ -237,7 +243,7 @@ export const SubmissionsHub: React.FC = () => {
           formTitles: [formTitle],
           totalFormsCount: 1,
           latestDate: sub.createdAt,
-          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.caseStatus || sub.status) ? (sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'new')) as any,
+          overallStatus: (['regressing', 'needs_followup', 'optimal', 'growing'].includes(sub.data?.clinical_status || sub.data?.caseStatus || sub.status) ? (sub.data?.clinical_status || sub.data?.caseStatus || sub.status) : (sub.status === 'approved' ? 'optimal' : sub.status === 'rejected' ? 'regressing' : 'new')) as any,
           totalPaidAmount: sub.paymentStatus === 'paid' ? (sub.paymentAmount || 0) : 0,
           roleInFamily,
         });
@@ -257,6 +263,61 @@ export const SubmissionsHub: React.FC = () => {
         if (candidateName && (existing.fullName === 'مراجع مرکز بالحق' || !existing.fullName)) {
           existing.fullName = candidateName;
         }
+      }
+    });
+
+    // ارزیابی جامع و دقیق وضعیت بالینی کلیه پرونده‌ها بر اساس آخرین جلسه و گزارش ثبت‌شده
+    caseMap.forEach((c) => {
+      let clinicalSt: SubmissionStatus | null = null;
+      // ۱. بررسی گزارش بالینی ثبت‌شده در فیلدهای داده سابمیشن‌ها
+      for (const s of c.submissions) {
+        const candidate = s.data?.clinical_status || s.data?.caseStatus || s.data?.report?.status;
+        if (candidate && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(candidate)) {
+          clinicalSt = candidate as SubmissionStatus;
+          break;
+        }
+      }
+      // ۲. بررسی وضعیت صریح سابمیشن
+      if (!clinicalSt) {
+        for (const s of c.submissions) {
+          if (s.status && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(s.status)) {
+            clinicalSt = s.status;
+            break;
+          }
+        }
+      }
+      // ۳. بررسی در حافظه محلی مرورگر (برای جلساتی که اخیراً توسط مشاور ثبت شده‌اند)
+      if (!clinicalSt && typeof window !== 'undefined') {
+        try {
+          const keys = [
+            `belhagh_real_sessions_v3_${c.caseCode}`,
+            `belhagh_real_sessions_v3_sub-case-${c.caseCode}`,
+          ];
+          for (const k of keys) {
+            const saved = localStorage.getItem(k);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed)) {
+                for (const item of parsed) {
+                  const itemSt = item.report?.status;
+                  if (itemSt && ['regressing', 'needs_followup', 'growing', 'optimal'].includes(itemSt)) {
+                    clinicalSt = itemSt;
+                    break;
+                  }
+                }
+              }
+            }
+            if (clinicalSt) break;
+          }
+        } catch {}
+      }
+
+      if (clinicalSt) {
+        c.overallStatus = clinicalSt;
+      } else {
+        const hasApproved = c.submissions.some((s) => s.status === 'approved');
+        const hasRejected = c.submissions.some((s) => s.status === 'rejected');
+        c.overallStatus = hasApproved ? 'optimal' : hasRejected ? 'regressing' : 'new';
       }
     });
 
@@ -280,7 +341,7 @@ export const SubmissionsHub: React.FC = () => {
           if (consultantAllowedTopics.length > 0) {
             const subTopic = String(sub.data?.f_topic || sub.data?.f_counseling_subject || sub.data?.topic || '').toLowerCase();
             const matchesTopic = consultantAllowedTopics.some((tId) => {
-              const topicObj = COUNSELING_TOPICS.find((t) => t.id === tId);
+              const topicObj = matchCounselingTopic(tId);
               return topicObj && topicObj.keywords.some((kw) => subTopic.includes(kw));
             });
             if (matchesTopic) {
@@ -433,6 +494,7 @@ function normalizeSearchText(str: string): string {
   };
 
   const handleExportExcel = async () => {
+    if (!isSuperAdmin) return;
     try {
       setIsExporting(true);
       const { exportClientCasesToXLSX, exportSingleClientDossierToXLSX, exportSubmissionsListToXLSX, exportFormSubmissionsToXLSX } = await import('@/lib/excel-export');
@@ -557,15 +619,17 @@ function normalizeSearchText(str: string): string {
               <span className="sm:hidden">تطبیق</span>
             </button>
 
-            <button
-              onClick={handleExportExcel}
-              disabled={isExporting}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-              title="خروجی فایل اکسل XLSX" 
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-              <span>اکسل</span>
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={handleExportExcel}
+                disabled={isExporting}
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                title="خروجی فایل اکسل XLSX" 
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                <span>اکسل</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -605,24 +669,62 @@ function normalizeSearchText(str: string): string {
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-slate-500 text-xs hidden sm:inline">وضعیت:</span>
             {[
-              { id: 'all', label: 'همه' },
-              { id: 'regressing', label: 'عقب گرد' },
-              { id: 'needs_followup', label: 'نیازمند پیگیری' },
-              { id: 'optimal', label: 'وضعیت مطلوب' },
-              { id: 'growing', label: 'در حال رشد' },
-            ].map((st) => (
-              <button
-                key={st.id}
-                onClick={() => setStatusFilter(st.id)}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  statusFilter === st.id
-                    ? 'bg-sky-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
+              {
+                id: 'all',
+                label: 'همه',
+                active: 'bg-slate-800 text-white border-slate-800 shadow-xs ring-2 ring-slate-300',
+                inactive: 'bg-slate-100 text-slate-600 border-slate-200/80 hover:bg-slate-200 hover:text-slate-800',
+                dot: '',
+              },
+              {
+                id: 'regressing',
+                label: 'عقب گرد',
+                active: 'bg-rose-600 text-white border-rose-600 shadow-xs ring-2 ring-rose-200',
+                inactive: 'bg-rose-50 text-rose-700 border-rose-200/90 hover:bg-rose-100',
+                dot: 'bg-rose-500',
+              },
+              {
+                id: 'needs_followup',
+                label: 'نیازمند پیگیری',
+                active: 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-200',
+                inactive: 'bg-amber-50 text-amber-800 border-amber-200/90 hover:bg-amber-100',
+                dot: 'bg-amber-500',
+              },
+              {
+                id: 'optimal',
+                label: 'وضعیت مطلوب',
+                active: 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-200',
+                inactive: 'bg-blue-50 text-blue-700 border-blue-200/90 hover:bg-blue-100',
+                dot: 'bg-blue-500',
+              },
+              {
+                id: 'growing',
+                label: 'در حال رشد',
+                active: 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-200',
+                inactive: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 hover:bg-emerald-100',
+                dot: 'bg-emerald-500',
+              },
+            ].map((st) => {
+              const isSelected = statusFilter === st.id;
+              return (
+                <button
+                  key={st.id}
+                  onClick={() => setStatusFilter(isSelected && st.id !== 'all' ? 'all' : st.id)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+                    isSelected ? st.active : st.inactive
+                  }`}
+                >
+                  {st.dot && (
+                    <span
+                      className={`size-1.5 rounded-full shrink-0 transition-colors ${
+                        isSelected ? 'bg-white' : st.dot
+                      }`}
+                    />
+                  )}
+                  <span>{st.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -630,9 +732,9 @@ function normalizeSearchText(str: string): string {
       {/* محتوای کارتابل: ۱. کارتابل پرونده‌های مراجعین بالحق */}
       {hubTab === 'cases' && (
         <div className="flex-1 overflow-auto p-3 sm:p-6 overscroll-contain">
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
-            {/* نمایش جدولی استاندارد ویژه لپ‌تاپ و دسکتاپ */}
-            <div className="hidden md:block overflow-x-auto">
+          {/* نمایش جدولی استاندارد ویژه لپ‌تاپ و دسکتاپ */}
+          <div className="hidden md:block bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-right text-xs sm:text-sm border-collapse">
                 <thead>
                   <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-extrabold">
@@ -667,7 +769,7 @@ function normalizeSearchText(str: string): string {
                           {/* کد پرونده */}
                           <td className="p-3.5 sm:p-4">
                             <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200/80 inline-block text-xs">
-                              {c.caseCode}
+                              {c.caseCode.replace(/^sub-case-/, '')}
                             </span>
                           </td>
 
@@ -675,10 +777,10 @@ function normalizeSearchText(str: string): string {
                           <td className="p-3.5 sm:p-4">
                             <div className="flex items-center gap-2.5">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center font-mono font-bold text-[11px] shrink-0 shadow-2xs">
-                                SP
+                                {c.caseCode.replace(/^sub-case-/, '').slice(0, 2).toUpperCase() || 'SP'}
                               </div>
                               <div>
-                                <span className="font-mono font-black text-slate-900 block text-xs">{c.caseCode}</span>
+                                <span className="font-mono font-black text-slate-900 block text-xs">{c.caseCode.replace(/^sub-case-/, '')}</span>
                                 {c.roleInFamily && (
                                   <span className="text-[11px] text-slate-400 block -mt-0.5">
                                     نقش: {c.roleInFamily} خانواده
@@ -742,23 +844,25 @@ function normalizeSearchText(str: string): string {
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>مشاهده پرونده</span>
                               </button>
-                              <button
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  try {
-                                    const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
-                                    await exportSingleClientDossierToXLSX(c, forms);
-                                  } catch (err) {
-                                    console.error(err);
-                                    alert('خطا در صدور اکسل این پرونده');
-                                  }
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
-                                title="خروجی اکسل اختصاصی فقط این پرونده"
-                              >
-                                <FileSpreadsheet className="w-3.5 h-3.5" />
-                                <span>اکسل</span>
-                              </button>
+                              {isSuperAdmin && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
+                                      await exportSingleClientDossierToXLSX(c, forms);
+                                    } catch (err) {
+                                      console.error(err);
+                                      alert('خطا در صدور اکسل این پرونده');
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
+                                  title="خروجی اکسل اختصاصی فقط این پرونده"
+                                >
+                                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                                  <span>اکسل</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -768,92 +872,111 @@ function normalizeSearchText(str: string): string {
                 </tbody>
               </table>
             </div>
+          </div>
 
-            {/* نمایش کارتی بهینه و لمسی اختصاصی برای گوشی تلفن همراه */}
-            <div className="block md:hidden divide-y divide-slate-100">
-              {filteredCases.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 text-xs space-y-2">
-                  <User className="w-8 h-8 mx-auto text-slate-300" />
-                  <p className="font-bold text-slate-600">پرونده‌ای با این مشخصات یافت نشد.</p>
-                </div>
-              ) : (
-                filteredCases.map((c) => {
-                  const st = statusConfigs[c.overallStatus] || statusConfigs.new;
+          {/* نمایش کارتی مدرن، مجزا و لمسی اختصاصی برای گوشی تلفن همراه */}
+          <div className="block md:hidden space-y-3.5 pb-4">
+            {filteredCases.length === 0 ? (
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-12 text-center text-slate-400 text-xs space-y-2">
+                <User className="w-8 h-8 mx-auto text-slate-300" />
+                <p className="font-bold text-slate-600">پرونده‌ای با این مشخصات یافت نشد.</p>
+              </div>
+            ) : (
+              filteredCases.map((c) => {
+                const st = statusConfigs[c.overallStatus] || statusConfigs.new;
 
-                  return (
-                    <div key={c.caseCode} className="p-4 space-y-3 bg-white hover:bg-slate-50/70 transition">
-                      {/* ردیف بالا: کد پرونده و برچسب وضعیت */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2.5 py-1 rounded-xl border border-sky-200/80 text-xs">
-                          {c.caseCode}
-                        </span>
-
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${st.bg} ${st.color} ${st.border}`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                          <span>{st.label}</span>
-                        </span>
-                      </div>
-
-                      {/* اطلاعات مراجع و نقش در خانواده */}
-                      <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                        <div>
-                          <span className="text-[10px] text-slate-400 block mb-0.5">شناسه مراجع:</span>
-                          <span className="font-mono font-bold text-slate-900 block">{c.caseCode}</span>
+                return (
+                  <div
+                    key={c.caseCode}
+                    className="bg-white rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-sky-200/80 transition-all duration-200 p-4 space-y-3.5"
+                  >
+                    {/* ردیف بالا: آواتار، کد پرونده و برچسب وضعیت */}
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-xs">
+                          {c.caseCode.replace(/^sub-case-/, '').slice(0, 2).toUpperCase() || 'SP'}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-mono font-extrabold text-slate-900 text-sm block tracking-tight">
+                            {c.caseCode.replace(/^sub-case-/, '')}
+                          </span>
                           {c.roleInFamily && (
-                            <span className="text-[10px] text-slate-500 font-medium">نقش: {c.roleInFamily}</span>
-                          )}
-                        </div>
-
-                        <div>
-                          <span className="text-[10px] text-slate-400 block mb-0.5">شهر و استان:</span>
-                          <span className="font-semibold text-slate-700 block truncate">{c.provinceCity}</span>
-                        </div>
-
-                        <div className="col-span-2 flex items-center justify-between pt-2 border-t border-slate-200/50 mt-0.5">
-                          <span className="text-[10px] text-slate-400">شماره تماس:</span>
-                          {c.mobile ? (
-                            <a
-                              href={`tel:${c.mobile}`}
-                              className="font-mono font-bold text-blue-700 flex items-center gap-1.5 hover:underline"
-                              title="تماس با مراجع"
-                            >
-                              <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>{toPersianDigits(c.mobile)}</span>
-                            </a>
-                          ) : (
-                            <span className="text-slate-400">ثبت‌نشده</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* فرم‌ها و مالی */}
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-extrabold text-[11px] border border-indigo-200 flex items-center gap-1">
-                          <BadgeCheck className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>{toPersianDigits(c.totalFormsCount)} فرم تکمیل‌شده</span>
-                        </span>
-
-                        <div>
-                          {c.totalPaidAmount > 0 ? (
-                            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 font-mono">
-                              {formatCurrency(c.totalPaidAmount, 'IRT')}
+                            <span className="text-[11px] text-slate-500 font-medium block truncate">
+                              نقش: {c.roleInFamily} خانواده
                             </span>
-                          ) : (
-                            <span className="text-[11px] text-slate-400">بدون هزینه</span>
                           )}
                         </div>
                       </div>
 
-                      {/* دکمه‌های عملیات کارت پرونده */}
-                      <div className="grid grid-cols-3 gap-2 pt-1">
-                        <button
-                          onClick={() => setActiveCaseModal(c)}
-                          className="col-span-2 py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span>مشاهده پرونده کامل</span>
-                        </button>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                        <span>{st.label}</span>
+                      </span>
+                    </div>
 
+                    {/* اطلاعات مراجع و شماره تماس */}
+                    <div className="grid grid-cols-2 gap-2.5 text-xs bg-slate-50/90 p-3.5 rounded-2xl border border-slate-100">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block mb-1">شناسه مراجع:</span>
+                        <span className="font-mono font-bold text-sky-800 bg-sky-50/90 px-2 py-0.5 rounded-lg border border-sky-200/70 inline-block text-[11px]">
+                          {c.caseCode.replace(/^sub-case-/, '')}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="flex items-center gap-1 text-[10px] text-slate-400 mb-1">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          <span>شهر و استان:</span>
+                        </span>
+                        <span className="font-semibold text-slate-700 block truncate">{c.provinceCity}</span>
+                      </div>
+
+                      <div className="col-span-2 flex items-center justify-between pt-2.5 border-t border-slate-200/60 mt-0.5">
+                        <span className="text-[11px] text-slate-400">شماره تماس:</span>
+                        {c.mobile ? (
+                          <a
+                            href={`tel:${c.mobile}`}
+                            className="font-mono font-bold text-blue-700 flex items-center gap-1.5 hover:underline bg-white px-2.5 py-1 rounded-xl border border-slate-200/70 shadow-2xs"
+                            title="تماس با مراجع"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{toPersianDigits(c.mobile)}</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">ثبت‌نشده</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* فرم‌ها و مالی */}
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="px-3 py-1.5 rounded-xl bg-indigo-50/90 text-indigo-700 font-extrabold text-[11px] border border-indigo-200/70 flex items-center gap-1.5">
+                        <BadgeCheck className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>{toPersianDigits(c.totalFormsCount)} فرم تکمیل‌شده</span>
+                      </span>
+
+                      <div>
+                        {c.totalPaidAmount > 0 ? (
+                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200/80 font-mono">
+                            {formatCurrency(c.totalPaidAmount, 'IRT')}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium px-2 py-1">بدون هزینه</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* دکمه‌های عملیات کارت پرونده */}
+                    <div className={`grid ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-1'} gap-2.5 pt-0.5`}>
+                      <button
+                        onClick={() => setActiveCaseModal(c)}
+                        className={`${isSuperAdmin ? 'col-span-2' : 'col-span-1'} py-2.5 px-3 bg-gradient-to-l from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white text-xs font-bold rounded-2xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]`}
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>مشاهده پرونده کامل</span>
+                      </button>
+
+                      {isSuperAdmin && (
                         <button
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -865,17 +988,17 @@ function normalizeSearchText(str: string): string {
                               alert('خطا در صدور اکسل این پرونده');
                             }
                           }}
-                          className="py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                          className="py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-[0.98]"
                         >
                           <FileSpreadsheet className="w-3.5 h-3.5" />
                           <span>اکسل</span>
                         </button>
-                      </div>
+                      )}
                     </div>
-                  );
-                })
-              )}
-            </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
@@ -883,9 +1006,9 @@ function normalizeSearchText(str: string): string {
       {/* محتوای کارتابل: ۲. بانک کلیه ارسالی‌های تفکیکی فرم‌ها */}
       {hubTab === 'submissions' && (
         <div className="flex-1 overflow-auto p-3 sm:p-6 overscroll-contain">
-          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
-            {/* نمایش جدولی دسکتاپ */}
-            <div className="hidden md:block overflow-x-auto">
+          {/* نمایش جدولی دسکتاپ */}
+          <div className="hidden md:block bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
               <table className="w-full text-right text-xs sm:text-sm border-collapse">
                 <thead>
                   <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-extrabold">
@@ -954,58 +1077,61 @@ function normalizeSearchText(str: string): string {
                 </tbody>
               </table>
             </div>
+          </div>
 
-            {/* نمایش کارتی موبایل برای پاسخ‌های دریافتی */}
-            <div className="block md:hidden divide-y divide-slate-100">
-              {filteredSubmissions.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 text-xs">
-                  پاسخی برای این فرم یافت نشد.
-                </div>
-              ) : (
-                filteredSubmissions.map((sub) => {
-                  const formObj = forms.find((f) => f.id === sub.formId);
-                  const st = statusConfigs[sub.status] || statusConfigs.new;
+          {/* نمایش کارتی مدرن و مجزای موبایل برای پاسخ‌های دریافتی */}
+          <div className="block md:hidden space-y-3.5 pb-4">
+            {filteredSubmissions.length === 0 ? (
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-12 text-center text-slate-400 text-xs">
+                پاسخی برای این فرم یافت نشد.
+              </div>
+            ) : (
+              filteredSubmissions.map((sub) => {
+                const formObj = forms.find((f) => f.id === sub.formId);
+                const st = statusConfigs[sub.status] || statusConfigs.new;
 
-                  return (
-                    <div key={sub.id} className="p-4 space-y-3 bg-white hover:bg-slate-50/70 transition">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono font-bold text-sky-800 bg-sky-50 px-2.5 py-0.5 rounded-lg border border-sky-200 text-xs">
-                          {sub.trackingCode}
-                        </span>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${st.bg} ${st.color} ${st.border}`}>
-                          {st.label}
-                        </span>
-                      </div>
-
-                      <div>
-                        <span className="font-bold text-slate-900 text-sm block">
-                          {formObj ? formObj.title : sub.formId}
-                        </span>
-                        <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
-                          <span className="font-mono">{formatPersianDateTime(sub.createdAt)}</span>
-                          {sub.paymentStatus === 'paid' ? (
-                            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 text-[10px]">
-                              {formatCurrency(sub.paymentAmount || 0, 'IRT')}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">بدون هزینه</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => setActiveSubmissionModal(sub)}
-                        className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-slate-600" />
-                        <span>مشاهده جزئیات کامل فرم</span>
-                      </button>
+                return (
+                  <div
+                    key={sub.id}
+                    className="bg-white rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-sky-200/80 transition-all duration-200 p-4 space-y-3.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono font-bold text-sky-800 bg-sky-50 px-2.5 py-1 rounded-xl border border-sky-200/80 text-xs">
+                        {sub.trackingCode}
+                      </span>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${st.bg} ${st.color} ${st.border}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                        <span>{st.label}</span>
+                      </span>
                     </div>
-                  );
-                })
-              )}
-            </div>
 
+                    <div className="bg-slate-50/90 rounded-2xl border border-slate-100 p-3 space-y-2">
+                      <span className="font-bold text-slate-900 text-sm block">
+                        {formObj ? formObj.title : sub.formId}
+                      </span>
+                      <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200/60">
+                        <span className="font-mono text-[11px]">{formatPersianDateTime(sub.createdAt)}</span>
+                        {sub.paymentStatus === 'paid' ? (
+                          <span className="font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-xl border border-emerald-200 text-[11px]">
+                            {formatCurrency(sub.paymentAmount || 0, 'IRT')}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">بدون هزینه</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setActiveSubmissionModal(sub)}
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-slate-600" />
+                      <span>مشاهده جزئیات کامل فرم</span>
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
@@ -1023,8 +1149,8 @@ function normalizeSearchText(str: string): string {
 
       {/* مودال مشاهده رکورد تکی ارسالی */}
       {activeSubmissionModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-5 border border-slate-200 shadow-2xl text-right">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 pt-16 sm:pt-20 pb-4 animate-in fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-2xl w-full p-6 space-y-5 border border-slate-200 shadow-2xl text-right max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-sky-600" />

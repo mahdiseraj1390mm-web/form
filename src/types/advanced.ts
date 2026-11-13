@@ -75,6 +75,7 @@ export interface TeamMember {
   id: string;
   name: string;
   genderPrefix?: 'آقا' | 'خانم'; // پیشوند: آقا یا خانم
+  avatarUrl?: string; // آدرس تصویر پروفایل مشاور
   email: string;
   mobile: string;
   username?: string;
@@ -89,6 +90,7 @@ export interface TeamMember {
   allowedTabs: string[]; // شناسه‌های تب‌های مجاز در سایدبار
   requireCaseCode?: boolean; // آیا در صفحه پرونده مراجعین نیاز به وارد کردن کد پرونده دارد؟
   clientDossierAccess?: 'restricted' | 'unrestricted'; // دسترسی به پرونده مراجعان: محدود شده یا محدود نشده
+  canEditWorkingHours?: boolean; // آیا مشاور اجازه تغییر ساعت کاری خود را دارد؟ (پیش‌فرض: خیر)
   consultantId?: string; // شناسه یا عنوان مشاور متناظر در سامانه نوبت‌دهی (در صورت انتصاب به عنوان مشاور)
   assignedConsultantIds?: string[]; // شناسه‌های مشاورین متصل به این کاربر در سامانه نوبت‌دهی
   allowedTopics?: string[]; // موضوعات و حوزه‌های مشاوره مجاز (مثلاً کودک، نوجوان، تحصیلی، بالینی، ازدواج و خانواده)

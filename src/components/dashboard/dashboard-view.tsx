@@ -33,6 +33,7 @@ import { toPersianDigits, formatCurrency, formatPersianDateTime, getTopItemSumma
 import { isAssignedSafaSubmission, filterActiveSubmissions } from '@/lib/safa-utils';
 import { VerticalBarChart, BarChartItem } from '../analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '../analytics/point-line-chart';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
 
 interface DashboardViewProps {
   onOpenNewFormModal: () => void;
@@ -501,7 +502,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [activeSubmissions]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-7 pb-20 sm:pb-12 space-y-6 bg-slate-50 overscroll-contain">
+    <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 sm:p-7 pb-20 sm:pb-12 space-y-6 bg-slate-50 overscroll-contain">
       
       {/* سربرگ داشبورد مدیریت */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs">
@@ -592,24 +593,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* پایش پیشرفت مرکز بالحق: نمودار نقطه و خط برای نشان دادن پیشرفت در مراجعات و نوبت‌ها */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-sm font-extrabold text-slate-900">
-                پایش روند پیشرفت پذیرش پرونده‌ها و استمرار جلسات بالحق
-              </h2>
-              <span className="text-[11px] text-slate-400">
-                نمودار نقطه و خط پیشرفت در طول ماه‌ها با قابلیت تفکیک نوبت‌ها، پرونده‌ها و نرخ پایداری
-              </span>
-            </div>
+      <CollapsibleCard
+        defaultOpen={true}
+        title="پایش روند پیشرفت پذیرش پرونده‌ها و استمرار جلسات بالحق"
+        icon={
+          <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
+            <TrendingUp className="w-5 h-5" />
           </div>
-
-          {/* تب سوییچر شاخص پیشرفت */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold self-start sm:self-auto">
+        }
+        headerExtra={
+          <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold max-w-full">
             <button
               onClick={() => setProgressMetric('bookings')}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
@@ -641,8 +634,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               نرخ پایداری مراجعین (٪)
             </button>
           </div>
-        </div>
-
+        }
+      >
         <PointLineChart
           data={monthlyProgressData}
           unit={progressMetric === 'attendance' ? '٪' : progressMetric === 'cases' ? 'پرونده' : 'جلسه'}
@@ -650,238 +643,205 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           lineColor={progressMetric === 'attendance' ? '#8b5cf6' : progressMetric === 'cases' ? '#059669' : '#0284c7'}
           showPoints={true}
           showValues={true}
-          badgeText="نمودار نقطه و خط پیشرفت زمانی"
+          badgeText=""
         />
-      </div>
+      </CollapsibleCard>
 
       {/* بخش میانی: ۳ نمودار عمودی تفکیک‌شده (موضوعات توصیه + موضوعات مراجعه + نوبت‌های مشاوران) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
         {/* ۲-الف. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-violet-600" />
-                <div>
-                  <h2 className="text-sm font-extrabold text-slate-900">
-                    بیشترین موضوعات توصیه شده توسط مشاوران
-                  </h2>
-                  <span className="text-[11px] text-slate-400">توصیه‌ها و مداخلات تجویزی اساتید مرکز بالحق</span>
-                </div>
-              </div>
-              <span className="text-[10px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-md font-bold border border-violet-100 shrink-0">
-                توصیه مشاوران
-              </span>
+        <CollapsibleCard
+          defaultOpen={true}
+          title="بیشترین موضوعات توصیه شده توسط مشاوران"
+          subtitle="توصیه‌ها و مداخلات تجویزی اساتید مرکز بالحق"
+          icon={<Sparkles className="w-5 h-5 text-violet-600" />}
+          headerExtra={
+            <span className="text-[10px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-md font-bold border border-violet-100 shrink-0">
+              توصیه مشاوران
+            </span>
+          }
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span>محورهای تجویزی اساتید</span>
+              <span className="font-bold text-violet-700">{getTopItemSummary(topRecommendedTopicsData, 'توصیه')}</span>
             </div>
-
-            <VerticalBarChart
-              data={topRecommendedTopicsData}
-              unit="مورد"
-              height={230}
-              barColor="bg-violet-600"
-              showValues={true}
-            />
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>محورهای تجویزی اساتید</span>
-            <span className="font-bold text-violet-700">{getTopItemSummary(topRecommendedTopicsData, 'توصیه')}</span>
-          </div>
-        </div>
+          }
+        >
+          <VerticalBarChart
+            data={topRecommendedTopicsData}
+            unit="مورد"
+            height={230}
+            barColor="bg-violet-600"
+            showValues={true}
+          />
+        </CollapsibleCard>
 
         {/* ۲-ب. باکس بیشترین موضوعات مراجعه به مشاوران */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Compass className="w-5 h-5 text-sky-600" />
-                <div>
-                  <h2 className="text-sm font-extrabold text-slate-900">
-                    بیشترین موضوعات مراجعه به مشاوران
-                  </h2>
-                  <span className="text-[11px] text-slate-400">علت و تقاضای اولیه مراجعه مراجعان</span>
-                </div>
-              </div>
-              <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md font-bold border border-sky-100 shrink-0">
-                تقاضای مراجعه
-              </span>
+        <CollapsibleCard
+          defaultOpen={true}
+          title="بیشترین موضوعات مراجعه به مشاوران"
+          subtitle="علت و تقاضای اولیه مراجعه مراجعان"
+          icon={<Compass className="w-5 h-5 text-sky-600" />}
+          headerExtra={
+            <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md font-bold border border-sky-100 shrink-0">
+              تقاضای مراجعه
+            </span>
+          }
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span>۵ حوزه تقاضای مراجعان</span>
+              <span className="font-bold text-sky-700">{getTopItemSummary(topReferralTopicsData, 'مراجعه')}</span>
             </div>
-
-            <VerticalBarChart
-              data={topReferralTopicsData}
-              unit="مورد"
-              height={230}
-              barColor="bg-sky-500"
-              showValues={true}
-            />
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>۵ حوزه تقاضای مراجعان</span>
-            <span className="font-bold text-sky-700">{getTopItemSummary(topReferralTopicsData, 'مراجعه')}</span>
-          </div>
-        </div>
+          }
+        >
+          <VerticalBarChart
+            data={topReferralTopicsData}
+            unit="مورد"
+            height={230}
+            barColor="bg-sky-500"
+            showValues={true}
+          />
+        </CollapsibleCard>
 
         {/* ۴. باکس بیشترین نوبت‌ها از مشاوران (از کدام مشاوران بیشترین نوبت ها دریافت شده) */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-emerald-600" />
-                <div>
-                  <h2 className="text-sm font-extrabold text-slate-900">
-                    بیشترین نوبت‌های دریافتی از مشاوران
-                  </h2>
-                  <span className="text-[11px] text-slate-400">رتبه‌بندی اساتید بر اساس تعداد جلسات رزرو شده</span>
-                </div>
-              </div>
-              <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold border border-emerald-100 shrink-0">
-                نوبت اساتید
-              </span>
+        <CollapsibleCard
+          defaultOpen={true}
+          title="بیشترین نوبت‌های دریافتی از مشاوران"
+          subtitle="رتبه‌بندی اساتید بر اساس تعداد جلسات رزرو شده"
+          icon={<BarChart3 className="w-5 h-5 text-emerald-600" />}
+          headerExtra={
+            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold border border-emerald-100 shrink-0">
+              نوبت اساتید
+            </span>
+          }
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span>اساتید مشاور برتر بالحق</span>
+              <button
+                onClick={() => onNavigateTab('submissions')}
+                className="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <span>مشاهده نوبت‌ها در کارتابل</span>
+                <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+              </button>
             </div>
-
-            <VerticalBarChart
-              data={topCounselorsData}
-              unit="نوبت"
-              height={230}
-              barColor="bg-emerald-600"
-              showValues={true}
-            />
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>اساتید مشاور برتر بالحق</span>
-            <button
-              onClick={() => onNavigateTab('submissions')}
-              className="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 cursor-pointer"
-            >
-              <span>مشاهده نوبت‌ها در کارتابل</span>
-              <ChevronRight className="w-3.5 h-3.5 rotate-180" />
-            </button>
-          </div>
-        </div>
+          }
+        >
+          <VerticalBarChart
+            data={topCounselorsData}
+            unit="نوبت"
+            height={230}
+            barColor="bg-emerald-600"
+            showValues={true}
+          />
+        </CollapsibleCard>
 
       </div>
 
       {/* بخش پایینی: آخرین فعالیت‌ها + بیشترین نوبت‌ها و فرم‌های مراجعان */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* ۱. باکس آخرین فعالیت‌ها (ثبت پرونده، نوبت‌ها، پرسش‌نامه‌ها - حفظ محرمانگی نام) */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-indigo-600" />
-                <h2 className="text-sm font-extrabold text-slate-900">
-                  آخرین فعالیت‌ها و رویدادهای سامانه
-                </h2>
-              </div>
-
-              {/* فیلتر تب رویدادها */}
-              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-[11px] font-bold">
-                {[
-                  { id: 'all', label: 'همه' },
-                  { id: 'cases', label: 'ثبت پرونده' },
-                  { id: 'bookings', label: 'نوبت‌ها' },
-                  { id: 'quizzes', label: 'پرسش‌نامه‌ها' },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActivityFilter(tab.id as any)}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                      activityFilter === tab.id
-                        ? 'bg-white text-indigo-900 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+        <CollapsibleCard
+          defaultOpen={true}
+          className="lg:col-span-6"
+          title="آخرین فعالیت‌ها و رویدادهای سامانه"
+          icon={<Clock className="w-5 h-5 text-indigo-600" />}
+          headerExtra={
+            <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-[11px] font-bold max-w-full">
+              {[
+                { id: 'all', label: 'همه' },
+                { id: 'cases', label: 'ثبت پرونده' },
+                { id: 'bookings', label: 'نوبت‌ها' },
+                { id: 'quizzes', label: 'پرسش‌نامه‌ها' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActivityFilter(tab.id as any)}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    activityFilter === tab.id
+                      ? 'bg-white text-indigo-900 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-
-            {/* لیست رویدادها */}
-            <div className="space-y-3 mt-4 max-h-[380px] overflow-y-auto pr-1">
-              {recentActivities.length === 0 ? (
-                <div className="py-12 text-center text-slate-400 text-xs">
-                  هیچ فعالیتی در این دسته یافت نشد.
-                </div>
-              ) : (
-                recentActivities.slice(0, 7).map((act) => (
-                  <div
-                    key={act.id}
-                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/70 border border-slate-200/80 transition-all flex items-start justify-between gap-3 text-xs"
-                  >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 text-xs">
-                          {act.caseCode}
-                        </span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${act.badgeColor}`}>
-                          {act.badge}
-                        </span>
-                        <span className="font-extrabold text-slate-800 text-xs">{act.title}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-600 truncate">{act.detail}</p>
-                    </div>
-
-                    <div className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap">
-                      {formatPersianDateTime(act.createdAt).split(' ')[1] || formatPersianDateTime(act.createdAt)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={() => onNavigateTab('submissions')}
-            className="w-full py-2.5 mt-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <span>مشاهده تاریخچه کامل در کارتابل</span>
-            <ChevronRight className="w-3.5 h-3.5 rotate-180" />
-          </button>
-        </div>
-
-        {/* ۵. باکس بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی) */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-amber-600" />
-                <div>
-                  <h2 className="text-sm font-extrabold text-slate-900">
-                    بیشترین نوبت‌ها توسط مراجعان
-                  </h2>
-                  <span className="text-[11px] text-slate-400">کد پرونده مراجعینی که بیشترین نوبت را دریافت کرده‌اند</span>
-                </div>
-              </div>
-              <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold border border-amber-100 shrink-0">
-                نمودار میله‌ای عمودی
-              </span>
-            </div>
-
-            <VerticalBarChart
-              data={topClientsBarData}
-              unit="نوبت"
-              height={230}
-              barColor="bg-amber-500"
-              showValues={true}
-            />
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>مراجعین با بیشترین حجم نوبت‌های مشاوره</span>
+          }
+          footer={
             <button
               onClick={() => onNavigateTab('submissions')}
-              className="text-amber-700 hover:text-amber-900 font-bold flex items-center gap-1 cursor-pointer"
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>مشاهده پرونده‌ها در کارتابل</span>
+              <span>مشاهده تاریخچه کامل در کارتابل</span>
               <ChevronRight className="w-3.5 h-3.5 rotate-180" />
             </button>
+          }
+        >
+          {/* لیست رویدادها */}
+          <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+            {recentActivities.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 text-xs">
+                هیچ فعالیتی در این دسته یافت نشد.
+              </div>
+            ) : (
+              recentActivities.slice(0, 7).map((act) => (
+                <div
+                  key={act.id}
+                  className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/70 border border-slate-200/80 transition-all flex items-start justify-between gap-3 text-xs"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 text-xs">
+                        {act.caseCode}
+                      </span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${act.badgeColor}`}>
+                        {act.badge}
+                      </span>
+                      <span className="font-extrabold text-slate-800 text-xs">{act.title}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 truncate">{act.detail}</p>
+                  </div>
+
+                  <div className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap">
+                    {formatPersianDateTime(act.createdAt).split(' ')[1] || formatPersianDateTime(act.createdAt)}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-        </div>
+        </CollapsibleCard>
+
+        {/* ۵. باکس بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی) */}
+        <CollapsibleCard
+          defaultOpen={true}
+          className="lg:col-span-6"
+          title="بیشترین نوبت‌ها توسط مراجعان"
+          subtitle="کد پرونده مراجعینی که بیشترین نوبت را دریافت کرده‌اند"
+          icon={<Award className="w-5 h-5 text-amber-600" />}
+          footer={
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span>مراجعین با بیشترین حجم نوبت‌های مشاوره</span>
+              <button
+                onClick={() => onNavigateTab('submissions')}
+                className="text-amber-700 hover:text-amber-900 font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <span>مشاهده پرونده‌ها در کارتابل</span>
+                <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+              </button>
+            </div>
+          }
+        >
+          <VerticalBarChart
+            data={topClientsBarData}
+            unit="نوبت"
+            height={230}
+            barColor="bg-amber-500"
+            showValues={true}
+          />
+        </CollapsibleCard>
 
       </div>
 

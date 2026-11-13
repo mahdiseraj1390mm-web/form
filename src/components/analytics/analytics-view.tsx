@@ -3,6 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from '@/context/form-context';
+import { useAdminAuth } from '@/context/admin-auth-context';
+import { isSuperAdminUser } from '@/lib/team-constants';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -53,6 +55,7 @@ import { isAssignedSafaSubmission, filterActiveSubmissions } from '@/lib/safa-ut
 import { getSemanticColorByPercentage, getFourColorByIndex } from '@/lib/chart-colors';
 import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '@/components/analytics/point-line-chart';
+import { CollapsibleCard } from '@/components/ui/collapsible-card';
 
 // بررسی این‌که آیا سابمیشن یک نوبت مشاوره واقعی با مشاور مشخص یا زمان مشخص است
 export const isRealBookingSubmission = (s: any): boolean => {
@@ -85,6 +88,8 @@ interface AnalyticsViewProps {
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner }) => {
   const router = useRouter();
   const { forms, submissions, setActiveForm, activeForm } = useForm();
+  const { currentUser } = useAdminAuth();
+  const isSuperAdmin = isSuperAdminUser(currentUser);
 
   // دو زبانه اصلی: داشبورد جامع آمارهای کلان مدیریتی (پیش‌فرض) و تحلیل تفکیکی فیلدهای فرم‌ها
   const [activeTab, setActiveTab] = useState<'overview' | 'formDetail'>('overview');
@@ -988,7 +993,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
   }
 
   const handleExportExcel = async () => {
-    if (!currentForm) return;
+    if (!isSuperAdmin || !currentForm) return;
     if (formSubmissions.length === 0) {
       alert('پاسخی برای خروجی اکسل در این فرم وجود ندارد.');
       return;
@@ -1006,7 +1011,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 bg-slate-50 select-none pb-20">
+    <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 sm:p-8 space-y-6 bg-slate-50 select-none pb-20">
       
       {/* سربرگ هوشمند و سوئیچر دو زبانه اصلی */}
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -1027,7 +1032,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
         </div>
 
         {/* دکمه‌های جابجایی بین دو نمای تحلیلی */}
-        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+        <div className="flex flex-wrap items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200 max-w-full">
           <button
             onClick={() => setActiveTab('overview')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1159,24 +1164,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
           </div>
 
           {/* پایش پیشرفت بالینی: نمودار نقطه و خط برای نشان دادن پیشرفت در مراجعات، پرونده‌ها و شاخص تعادل */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-extrabold text-slate-900">
-                    پایش روند پیشرفت زمانی شاخص‌های بالینی و پرونده‌ها
-                  </h2>
-                  <span className="text-[11px] text-slate-400">
-                    نمودار نقطه و خط پیشرفت جهت تحلیل رشد جلسات، پرونده‌ها و شاخص تعادل بالینی مراجعان مرکز
-                  </span>
-                </div>
+          <CollapsibleCard
+            defaultOpen={false}
+            title="پایش روند پیشرفت زمانی شاخص‌های بالینی و پرونده‌ها"
+            subtitle="نمودار نقطه و خط پیشرفت جهت تحلیل رشد جلسات، پرونده‌ها و شاخص تعادل بالینی مراجعان مرکز"
+            icon={
+              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <TrendingUp className="w-5 h-5" />
               </div>
-
-              {/* تب سوییچر شاخص پیشرفت */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold self-start sm:self-auto">
+            }
+            headerExtra={
+              <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold max-w-full">
                 <button
                   onClick={() => setAnalyticsProgressMetric('sessions')}
                   className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
@@ -1208,8 +1206,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   شاخص تعادل بالینی مراجعین (٪)
                 </button>
               </div>
-            </div>
-
+            }
+          >
             <PointLineChart
               data={analyticsProgressData}
               unit={analyticsProgressMetric === 'clinicalEquilibrium' ? '٪' : analyticsProgressMetric === 'cases' ? 'پرونده' : 'جلسه'}
@@ -1219,239 +1217,209 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               showValues={true}
               badgeText="نمودار نقطه و خط پیشرفت بالینی"
             />
-          </div>
+          </CollapsibleCard>
 
           {/* بخش میانی: ۳ نمودار عمودی تفکیک‌شده (موضوعات توصیه‌شده + موضوعات مراجعه + نوبت‌های مشاوران) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             
             {/* ۱. باکس بیشترین موضوعات توصیه شده برای مراجعان توسط مشاوران */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-violet-600" />
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900">
-                        بیشترین موضوعات توصیه شده توسط مشاوران
-                      </h2>
-                      <span className="text-[11px] text-slate-400">توصیه‌ها و مداخلات درمانی تجویز شده مشاوران</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-md font-bold border border-violet-100 shrink-0">
-                    توصیه مشاوران
-                  </span>
+            <CollapsibleCard
+              defaultOpen={false}
+              title="بیشترین موضوعات توصیه شده توسط مشاوران"
+              subtitle="توصیه‌ها و مداخلات درمانی تجویز شده مشاوران"
+              icon={<Sparkles className="w-5 h-5 text-violet-600" />}
+              headerExtra={
+                <span className="text-[10px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded-md font-bold border border-violet-100 shrink-0">
+                  توصیه مشاوران
+                </span>
+              }
+              footer={
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <span>محورهای تجویزی اساتید</span>
+                  <span className="font-bold text-violet-700">{getTopItemSummary(topRecommendedTopicsData, 'توصیه')}</span>
                 </div>
-
-                <VerticalBarChart
-                  data={topRecommendedTopicsData}
-                  unit="مورد"
-                  height={230}
-                  barColor="bg-violet-600"
-                  showValues={true}
-                />
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>محورهای تجویزی اساتید</span>
-                <span className="font-bold text-violet-700">{getTopItemSummary(topRecommendedTopicsData, 'توصیه')}</span>
-              </div>
-            </div>
+              }
+            >
+              <VerticalBarChart
+                data={topRecommendedTopicsData}
+                unit="مورد"
+                height={230}
+                barColor="bg-violet-600"
+                showValues={true}
+              />
+            </CollapsibleCard>
 
             {/* ۲. باکس بیشترین موضوعات مراجعه به مشاوران */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <Compass className="w-5 h-5 text-sky-600" />
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900">
-                        بیشترین موضوعات مراجعه به مشاوران
-                      </h2>
-                      <span className="text-[11px] text-slate-400">علت و تقاضای اولیه مراجعه مراجعان مرکز</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md font-bold border border-sky-100 shrink-0">
-                    تقاضای مراجعه
-                  </span>
+            <CollapsibleCard
+              defaultOpen={false}
+              title="بیشترین موضوعات مراجعه به مشاوران"
+              subtitle="علت و تقاضای اولیه مراجعه مراجعان مرکز"
+              icon={<Compass className="w-5 h-5 text-sky-600" />}
+              headerExtra={
+                <span className="text-[10px] bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md font-bold border border-sky-100 shrink-0">
+                  تقاضای مراجعه
+                </span>
+              }
+              footer={
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <span>۵ حوزه درخواست مراجعین</span>
+                  <span className="font-bold text-sky-700">{getTopItemSummary(topReferralTopicsData, 'مراجعه')}</span>
                 </div>
-
-                <VerticalBarChart
-                  data={topReferralTopicsData}
-                  unit="مورد"
-                  height={230}
-                  barColor="bg-sky-500"
-                  showValues={true}
-                />
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>۵ حوزه درخواست مراجعین</span>
-                <span className="font-bold text-sky-700">{getTopItemSummary(topReferralTopicsData, 'مراجعه')}</span>
-              </div>
-            </div>
+              }
+            >
+              <VerticalBarChart
+                data={topReferralTopicsData}
+                unit="مورد"
+                height={230}
+                barColor="bg-sky-500"
+                showValues={true}
+              />
+            </CollapsibleCard>
 
             {/* ۳. باکس بیشترین نوبت‌ها از مشاوران (از کدام مشاوران بیشترین نوبت ها دریافت شده) */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-emerald-600" />
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900">
-                        بیشترین نوبت‌های دریافتی از مشاوران
-                      </h2>
-                      <span className="text-[11px] text-slate-400">رتبه‌بندی اساتید بر اساس تعداد نوبت‌های رزرو شده</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold border border-emerald-100 shrink-0">
-                    نوبت اساتید
-                  </span>
+            <CollapsibleCard
+              defaultOpen={false}
+              title="بیشترین نوبت‌های دریافتی از مشاوران"
+              subtitle="رتبه‌بندی اساتید بر اساس تعداد نوبت‌های رزرو شده"
+              icon={<BarChart3 className="w-5 h-5 text-emerald-600" />}
+              headerExtra={
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold border border-emerald-100 shrink-0">
+                  نوبت اساتید
+                </span>
+              }
+              footer={
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <span>اساتید مشاور برتر بالحق</span>
+                  <span className="text-emerald-700 font-bold">بازه: {timeRange === 'all' ? 'کل سوابق' : 'انتخابی'}</span>
                 </div>
-
-                <VerticalBarChart
-                  data={topCounselorsData}
-                  unit="نوبت"
-                  height={230}
-                  barColor="bg-emerald-600"
-                  showValues={true}
-                />
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>اساتید مشاور برتر بالحق</span>
-                <span className="text-emerald-700 font-bold">بازه: {timeRange === 'all' ? 'کل سوابق' : 'انتخابی'}</span>
-              </div>
-            </div>
+              }
+            >
+              <VerticalBarChart
+                data={topCounselorsData}
+                unit="نوبت"
+                height={230}
+                barColor="bg-emerald-600"
+                showValues={true}
+              />
+            </CollapsibleCard>
 
           </div>
 
           {/* بخش سوم: آخرین فعالیت‌ها + بیشترین نوبت‌ها و فرم‌های مراجعان */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             {/* ۱. باکس آخرین فعالیت‌ها (ثبت پرونده، نوبت‌ها، پرسش‌نامه‌ها) */}
-            <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
-              <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-indigo-600" />
-                    <h2 className="text-sm font-extrabold text-slate-900">
-                      آخرین فعالیت‌ها و رویدادهای سامانه
-                    </h2>
-                  </div>
-
-                  {/* فیلتر تب رویدادها */}
-                  <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-[11px] font-bold">
-                    {[
-                      { id: 'all', label: 'همه' },
-                      { id: 'cases', label: 'ثبت پرونده' },
-                      { id: 'bookings', label: 'نوبت‌ها' },
-                      { id: 'quizzes', label: 'پرسش‌نامه‌ها' },
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActivityFilter(tab.id as any)}
-                        className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                          activityFilter === tab.id
-                            ? 'bg-white text-indigo-900 shadow-2xs'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-6"
+              title="آخرین فعالیت‌ها و رویدادهای سامانه"
+              icon={<Clock className="w-5 h-5 text-indigo-600" />}
+              headerExtra={
+                <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-0.5 rounded-xl text-[11px] font-bold max-w-full">
+                  {[
+                    { id: 'all', label: 'همه' },
+                    { id: 'cases', label: 'ثبت پرونده' },
+                    { id: 'bookings', label: 'نوبت‌ها' },
+                    { id: 'quizzes', label: 'پرسش‌نامه‌ها' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActivityFilter(tab.id as any)}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                        activityFilter === tab.id
+                          ? 'bg-white text-indigo-900 shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
-
-                {/* لیست رویدادها */}
-                <div className="space-y-3 mt-4 max-h-[380px] overflow-y-auto pr-1">
-                  {recentActivities.length === 0 ? (
-                    <div className="py-12 text-center text-slate-400 text-xs">
-                      هیچ فعالیتی در این دسته یافت نشد.
-                    </div>
-                  ) : (
-                    recentActivities.slice(0, 7).map((act) => (
-                      <div
-                        key={act.id}
-                        className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/70 border border-slate-200/80 transition-all flex items-start justify-between gap-3 text-xs"
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 text-xs">
-                              {act.caseCode}
-                            </span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${act.badgeColor}`}>
-                              {act.badge}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-600 truncate">{act.detail}</p>
+              }
+              footer={
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>نمایش بر اساس تازه‌ترین رویدادها</span>
+                  <span className="font-bold text-indigo-700">{toPersianDigits(recentActivities.length)} رویداد فعال</span>
+                </div>
+              }
+            >
+              {/* لیست رویدادها */}
+              <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                {recentActivities.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 text-xs">
+                    هیچ فعالیتی در این دسته یافت نشد.
+                  </div>
+                ) : (
+                  recentActivities.slice(0, 7).map((act) => (
+                    <div
+                      key={act.id}
+                      className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100/70 border border-slate-200/80 transition-all flex items-start justify-between gap-3 text-xs"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-extrabold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 text-xs">
+                            {act.caseCode}
+                          </span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${act.badgeColor}`}>
+                            {act.badge}
+                          </span>
                         </div>
-
-                        <div className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap">
-                          {formatPersianDateTime(act.createdAt).split(' ')[1] || formatPersianDateTime(act.createdAt)}
-                        </div>
+                        <p className="text-[11px] text-slate-600 truncate">{act.detail}</p>
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>نمایش بر اساس تازه‌ترین رویدادها</span>
-                <span className="font-bold text-indigo-700">{toPersianDigits(recentActivities.length)} رویداد فعال</span>
+                      <div className="text-[10px] text-slate-400 font-mono shrink-0 whitespace-nowrap">
+                        {formatPersianDateTime(act.createdAt).split(' ')[1] || formatPersianDateTime(act.createdAt)}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* ۵. باکس بیشترین نوبت‌ها توسط مراجعان (نمودار میله‌ای عمودی) */}
-            <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-amber-600" />
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900">
-                        بیشترین نوبت‌ها توسط مراجعان
-                      </h2>
-                      <span className="text-[11px] text-slate-400">کد پرونده مراجعینی که بیشترین نوبت را دریافت کرده‌اند</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold border border-amber-100 shrink-0">
-                    نمودار میله‌ای عمودی
-                  </span>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-6"
+              title="بیشترین نوبت‌ها توسط مراجعان"
+              subtitle="کد پرونده مراجعینی که بیشترین نوبت را دریافت کرده‌اند"
+              icon={<Award className="w-5 h-5 text-amber-600" />}
+              headerExtra={
+                <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold border border-amber-100 shrink-0">
+                  نمودار میله‌ای عمودی
+                </span>
+              }
+              footer={
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <span>مرتب‌سازی بر اساس حجم جلسات رزرو شده</span>
+                  <span className="text-amber-700 font-bold">بازه: {timeRange === 'all' ? 'کل سوابق' : 'انتخابی'}</span>
                 </div>
-
-                <VerticalBarChart
-                  data={topClientsBarData}
-                  unit="نوبت"
-                  height={230}
-                  barColor="bg-amber-500"
-                  showValues={true}
-                />
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>مرتب‌سازی بر اساس حجم جلسات رزرو شده</span>
-                <span className="text-amber-700 font-bold">بازه: {timeRange === 'all' ? 'کل سوابق' : 'انتخابی'}</span>
-              </div>
-            </div>
+              }
+            >
+              <VerticalBarChart
+                data={topClientsBarData}
+                unit="نوبت"
+                height={230}
+                barColor="bg-amber-500"
+                showValues={true}
+              />
+            </CollapsibleCard>
 
           </div>
 
           {/* ردیف اول: تحلیل نوبت‌های هر فرد در بازه زمانی + جدول تاپ ۱۰ مراجعین پرتکرار */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             {/* توزیع تعداد نوبت‌ها به ازای هر مراجع */}
-            <div className="lg:col-span-5 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4 text-blue-600" />
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    تعداد نوبت‌ها به ازای هر مراجع
-                  </h3>
-                </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-5"
+              title="تعداد نوبت‌ها به ازای هر مراجع"
+              icon={<CalendarDays className="w-4 h-4 text-blue-600" />}
+              headerExtra={
                 <span className="text-[11px] text-slate-400 font-medium">بازه {timeRange === 'all' ? 'کل سوابق' : 'انتخابی'}</span>
-              </div>
-
-              <p className="text-xs text-slate-500 leading-relaxed">
+              }
+            >
+              <p className="text-xs text-slate-500 leading-relaxed mb-4">
                 تفکیک فراوانی مراجعه‌کنندگان بر اساس تعداد جلسات مشاوره‌ای که در مرکز بالحق ثبت و برگزار کرده‌اند:
               </p>
 
@@ -1473,22 +1441,20 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   badgeText="نمودار میله‌ای عمودی مقایسه"
                 />
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* جدول ۱۰ مراجع با بیشترین تعداد نوبت و جلسه */}
-            <div className="lg:col-span-7 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-emerald-600" />
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    مراجعین با بیشترین حجم ارجاع و نوبت
-                  </h3>
-                </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-7"
+              title="مراجعین با بیشترین حجم ارجاع و نوبت"
+              icon={<UserCheck className="w-4 h-4 text-emerald-600" />}
+              headerExtra={
                 <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                   ۱۰ مراجع برتر
                 </span>
-              </div>
-
+              }
+            >
               <div className="overflow-x-auto">
                 <table className="w-full text-right text-xs">
                   <thead>
@@ -1530,25 +1496,23 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   </tbody>
                 </table>
               </div>
-            </div>
+            </CollapsibleCard>
 
           </div>
 
           {/* ردیف دوم: پراکندگی جغرافیایی شهرها + توزیع بعد خانوار */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             {/* پراکندگی جغرافیایی ثبت‌نامی‌ها بر اساس شهرها */}
-            <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-purple-600" />
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    پراکندگی جغرافیایی (بیشتر ثبت‌نامی‌ها از کدام شهرها هستند)
-                  </h3>
-                </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-6"
+              title="پراکندگی جغرافیایی (بیشتر ثبت‌نامی‌ها از کدام شهرها هستند)"
+              icon={<MapPin className="w-4 h-4 text-purple-600" />}
+              headerExtra={
                 <span className="text-[11px] text-slate-400 font-medium">سهم از کل</span>
-              </div>
-
+              }
+            >
               <div className="pt-2">
                 <VerticalBarChart
                   data={cityDistribution.map((item) => {
@@ -1567,23 +1531,21 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   badgeText="نمودار میله‌ای عمودی شهرها"
                 />
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* بعد خانوار (بیشتر خانواده‌ها چند نفره هستند) */}
-            <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Baby className="w-4 h-4 text-emerald-600" />
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    بُعد خانوار (بیشتر مراجعین در خانواده‌های چند نفره هستند)
-                  </h3>
-                </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-6"
+              title="بُعد خانوار (بیشتر مراجعین در خانواده‌های چند نفره هستند)"
+              icon={<Baby className="w-4 h-4 text-emerald-600" />}
+              headerExtra={
                 <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                   بیشترین: ۴ نفره
                 </span>
-              </div>
-
-              <p className="text-xs text-slate-500 leading-relaxed">
+              }
+            >
+              <p className="text-xs text-slate-500 leading-relaxed mb-4">
                 تحلیل فراوانی بعد خانوار مراجعین مرکز بالحق جهت طراحی بسته‌های مشاوره‌ای و دوره‌های خانواده‌محور:
               </p>
 
@@ -1606,27 +1568,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   badgeText="نمودار میله‌ای عمودی خانوار"
                 />
               </div>
-            </div>
+            </CollapsibleCard>
 
           </div>
 
           {/* ردیف سوم: هرم سنی و سهم ویژه نوجوانان + تفکیک وضعیت تأهل */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             {/* توزیع رده‌های سنی با تمرکز بر نوجوانان و جوانان */}
-            <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4 text-blue-600" />
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    توزیع رده‌های سنی مراجعین و سهم نوجوانان
-                  </h3>
-                </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-6"
+              title="توزیع رده‌های سنی مراجعین و سهم نوجوانان"
+              icon={<GraduationCap className="w-4 h-4 text-blue-600" />}
+              headerExtra={
                 <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
                   هرم سنی
                 </span>
-              </div>
-
+              }
+            >
               <div className="pt-2">
                 <VerticalBarChart
                   data={ageDistribution.map((item) => {
@@ -1646,88 +1606,86 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   badgeText="نمودار میله‌ای عمودی هرم سنی"
                 />
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* تفکیک وضعیت تأهل (درصد مجرد، متأهل، مطلقه) */}
-            <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <HeartHandshake className="w-4 h-4 text-rose-600" />
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    وضعیت تأهل مراجعین (درصد مجرد، متأهل، مطلقه)
-                  </h3>
-                </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-6"
+              title="وضعیت تأهل مراجعین (درصد مجرد، متأهل، مطلقه)"
+              icon={<HeartHandshake className="w-4 h-4 text-rose-600" />}
+              headerExtra={
                 <span className="text-[11px] text-slate-400 font-medium">سهم ازدواج و خانواده</span>
-              </div>
+              }
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
+                  {maritalDistribution.map((m) => {
+                    const sc = getSemanticColorByPercentage(m.pct);
+                    return (
+                      <div 
+                        key={m.label} 
+                        className={`p-4 rounded-xl border ${sc.badgeBorder} ${sc.badgeBg} text-center space-y-1.5`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-1 ${sc.ringColor}`} />
+                          <span className="text-xs font-extrabold text-slate-800">{m.label}</span>
+                        </div>
+                        <div className="text-2xl font-black font-mono" style={{ color: sc.hex }}>
+                          {toPersianDigits(m.pct)}٪
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono text-center">
+                          ({toPersianDigits(m.count)} نفر)
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-              <div className="grid grid-cols-3 gap-3 pt-1">
-                {maritalDistribution.map((m) => {
-                  const sc = getSemanticColorByPercentage(m.pct);
-                  return (
-                    <div 
-                      key={m.label} 
-                      className={`p-4 rounded-xl border ${sc.badgeBorder} ${sc.badgeBg} text-center space-y-1.5`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-1 ${sc.ringColor}`} />
-                        <span className="text-xs font-extrabold text-slate-800">{m.label}</span>
-                      </div>
-                      <div className="text-2xl font-black font-mono" style={{ color: sc.hex }}>
-                        {toPersianDigits(m.pct)}٪
-                      </div>
-                      <div className="text-[10px] text-slate-500 font-mono text-center">
-                        ({toPersianDigits(m.count)} نفر)
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* ترکیب اعضای ثبت‌نامی در خانواده */}
-              <div className="pt-2 border-t border-slate-100 space-y-2">
-                <span className="text-xs font-bold text-slate-700 block">
-                  نقش فرد ثبت‌نام‌کننده در خانواده:
-                </span>
-                <div className="pt-1">
-                  <VerticalBarChart
-                    data={genderStats.roles.map((r) => {
-                      const sc = getSemanticColorByPercentage(r.pct);
-                      return {
-                        label: r.label,
-                        value: r.count,
-                        percentage: r.pct,
-                        color: sc.hex,
-                        secondaryLabel: `${toPersianDigits(r.pct)}٪`,
-                      };
-                    })}
-                    unit="نفر"
-                    height={180}
-                    showValues={true}
-                    badgeText="نمودار میله‌ای نقش‌ها"
-                  />
+                {/* ترکیب اعضای ثبت‌نامی در خانواده */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <span className="text-xs font-bold text-slate-700 block">
+                    نقش فرد ثبت‌نام‌کننده در خانواده:
+                  </span>
+                  <div className="pt-1">
+                    <VerticalBarChart
+                      data={genderStats.roles.map((r) => {
+                        const sc = getSemanticColorByPercentage(r.pct);
+                        return {
+                          label: r.label,
+                          value: r.count,
+                          percentage: r.pct,
+                          color: sc.hex,
+                          secondaryLabel: `${toPersianDigits(r.pct)}٪`,
+                        };
+                      })}
+                      unit="نفر"
+                      height={180}
+                      showValues={true}
+                      badgeText="نمودار میله‌ای نقش‌ها"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            </CollapsibleCard>
 
           </div>
 
           {/* ردیف چهارم: رتبه‌بندی مشاورین مرکز + شاخص‌های بالینی جمعی */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             {/* رتبه‌بندی مشاوران بر اساس تعداد نوبت‌های اخذ شده */}
-            <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-amber-600" />
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    فراوانی و رتبه‌بندی مشاورین (بیشترین نوبت‌های اخذ شده)
-                  </h3>
-                </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-6"
+              title="فراوانی و رتبه‌بندی مشاورین (بیشترین نوبت‌های اخذ شده)"
+              icon={<Award className="w-4 h-4 text-amber-600" />}
+              headerExtra={
                 <span className="text-[11px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                   مشاوران مرکز
                 </span>
-              </div>
-
+              }
+            >
               <div className="pt-2">
                 <VerticalBarChart
                   data={counselorRanking.slice(0, 6).map((c) => {
@@ -1747,23 +1705,21 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   badgeText="نمودار میله‌ای عمودی اساتید"
                 />
               </div>
-            </div>
+            </CollapsibleCard>
 
             {/* شاخص‌های جمعی بالینی و خودسنجی صفا */}
-            <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                  <h3 className="text-sm font-extrabold text-slate-900">
-                    شاخص‌های جمعی بالینی و اولویت‌های رشد در جامعه مراجعین
-                  </h3>
-                </div>
+            <CollapsibleCard
+              defaultOpen={false}
+              className="lg:col-span-6"
+              title="شاخص‌های جمعی بالینی و اولویت‌های رشد در جامعه مراجعین"
+              icon={<Sparkles className="w-4 h-4 text-emerald-600" />}
+              headerExtra={
                 <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                   ارزیابی جمعی
                 </span>
-              </div>
-
-              <p className="text-xs text-slate-500 leading-relaxed">
+              }
+            >
+              <p className="text-xs text-slate-500 leading-relaxed mb-4">
                 میانگین نمرات خودسنجی در کل مراجعین جهت شناسایی حوزه‌های قوت و مؤلفه‌های نیازمند مداخله و کارگاه‌های توانمندسازی:
               </p>
 
@@ -1786,7 +1742,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                   badgeText="نمودار میله‌ای عمودی شاخص‌ها"
                 />
               </div>
-            </div>
+            </CollapsibleCard>
 
           </div>
 
@@ -1799,13 +1755,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
           
           {/* سربرگ انتخاب فرم و دکمه خروجی اکسل */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <FolderKanban className="w-4 h-4 text-blue-600" />
               <span className="text-xs font-bold text-slate-700">فرم مورد نظر جهت تحلیل فیلد به فیلد:</span>
               <select
                 value={selectedFormId}
                 onChange={(e) => setSelectedFormId(e.target.value)}
-                className="text-xs font-bold text-slate-900 border border-slate-300 rounded-lg px-3 py-1.5 bg-white max-w-xs focus:ring-1 focus:ring-blue-600 cursor-pointer"
+                className="w-full sm:w-auto text-xs font-bold text-slate-900 border border-slate-300 rounded-lg px-3 py-1.5 bg-white max-w-full sm:max-w-xs focus:ring-1 focus:ring-blue-600 cursor-pointer"
               >
                 {forms.map((f) => (
                   <option key={f.id} value={f.id}>
@@ -1815,7 +1771,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               </select>
             </div>
 
-            {formSubmissions.length > 0 && (
+            {isSuperAdmin && formSubmissions.length > 0 && (
               <button
                 onClick={handleExportExcel}
                 disabled={isExporting}
@@ -1859,29 +1815,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
 
               {/* تحلیل فیلدهای گزینه‌ای با طرح ۴ رنگ */}
               {activeChoiceField && optionDistribution.length > 0 && (
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100">
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-900">
-                        نمودار فراوانی و تفکیک پاسخ‌های گزینه‌ای
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">درصد و تعداد دقیق هر یک از گزینه‌ها</p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
+                <CollapsibleCard
+                  defaultOpen={false}
+                  title="نمودار فراوانی و تفکیک پاسخ‌های گزینه‌ای"
+                  subtitle="درصد و تعداد دقیق هر یک از گزینه‌ها"
+                  headerExtra={
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                       <span className="text-xs text-slate-500 font-medium">فیلد مورد بررسی:</span>
                       <select
                         value={activeChoiceField.id}
                         onChange={(e) => setSelectedChoiceFieldId(e.target.value)}
-                        className="text-xs font-bold text-slate-900 border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white cursor-pointer"
+                        className="w-full sm:w-auto max-w-full text-xs font-bold text-slate-900 border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white cursor-pointer"
                       >
                         {choiceFields.map((f) => (
                           <option key={f.id} value={f.id}>{f.label}</option>
                         ))}
                       </select>
                     </div>
-                  </div>
-
+                  }
+                >
                   <div className="space-y-4 pt-2">
                     <VerticalBarChart
                       data={optionDistribution.map((opt) => ({
@@ -1917,18 +1869,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                     })}
                     </div>
                   </div>
-                </div>
+                </CollapsibleCard>
               )}
 
               {/* تحلیل فیلدهای عددی در صورت وجود */}
               {activeNumericField && numericStats.count > 0 && (
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 className="text-sm font-extrabold text-slate-900">
-                      محاسبات آماری فیلد عددی: {activeNumericField.label}
-                    </h3>
-                  </div>
-
+                <CollapsibleCard
+                  defaultOpen={false}
+                  title={`محاسبات آماری فیلد عددی: ${activeNumericField.label}`}
+                >
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="p-3 bg-slate-50 rounded-xl text-center">
                       <span className="text-[11px] text-slate-500 block">مجموع کل (Sum)</span>
@@ -1947,7 +1896,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
                       <span className="text-base font-black text-slate-700 font-mono">{toPersianDigits(numericStats.max)}</span>
                     </div>
                   </div>
-                </div>
+                </CollapsibleCard>
               )}
             </div>
           )}

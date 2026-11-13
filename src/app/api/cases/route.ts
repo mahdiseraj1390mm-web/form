@@ -317,6 +317,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // ۴.۱. به‌روزرسانی وضعیت ارسالی و پرونده
+    if (action === 'update_submission_status') {
+      const { submissionId, status } = body;
+      if (!submissionId || !status) {
+        return NextResponse.json({ error: 'شناسه یا وضعیت ارسالی ناقص است' }, { status: 400 });
+      }
+      await updateSubmissionDataInDb(submissionId, { status, caseStatus: status, clinical_status: status });
+      return NextResponse.json({ success: true });
+    }
+
     // ۵. ویرایش متن یادداشت / پیگیری مراجع
     if (action === 'edit_submission_comment') {
       const { submissionId, commentId, newContent } = body;

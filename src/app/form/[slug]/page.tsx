@@ -4,6 +4,7 @@ import React, { Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useForm } from '@/context/form-context';
 import { FormRunner } from '@/components/runner/form-runner';
+import { PwaInstallButton } from '@/components/pwa/pwa-install-button';
 import { Layers } from 'lucide-react';
 import Link from 'next/link';
 
@@ -85,8 +86,11 @@ function PublicFormContent() {
             </span>
           </div>
 
-          <div className="text-[10px] sm:text-xs text-slate-500 font-medium whitespace-nowrap shrink-0">
-            سامانه امن ثبت داده‌ها
+          <div className="flex items-center gap-2 shrink-0">
+            <PwaInstallButton variant="public-header" />
+            <span className="hidden sm:inline text-xs text-slate-500 font-medium whitespace-nowrap">
+              سامانه امن ثبت داده‌ها
+            </span>
           </div>
         </div>
       </header>

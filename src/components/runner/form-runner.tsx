@@ -313,11 +313,11 @@ const RealFileUploadField: React.FC<{
       {previewOpen && fileData?.dataUrl && (
         <div
           onClick={() => setPreviewOpen(false)}
-          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-xs"
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-5 overflow-hidden backdrop-blur-sm select-none"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl max-w-2xl max-h-[90vh] overflow-hidden p-3 shadow-2xl relative flex flex-col"
+            className="bg-white rounded-2xl max-w-2xl max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-hidden p-3 shadow-2xl relative flex flex-col"
           >
             <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
               <span className="text-xs font-bold text-slate-800">{fileData.name}</span>
@@ -2600,8 +2600,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* مودال بازیابی کد پرونده در صورت فراموشی */}
         {showForgotModal && (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-2xl text-right">
+          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-in fade-in select-none">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-2xl text-right max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2 text-slate-900 font-extrabold text-xs sm:text-sm">
                   <KeyRound className="w-4 h-4 text-blue-600" />
@@ -4013,8 +4013,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
       {/* مودال اطلاع‌رسانی ثبت‌نام تکراری */}
       {duplicateCaseInfo && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-amber-200 text-center relative overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-in fade-in duration-200 select-none">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-amber-200 text-center relative overflow-hidden max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto">
             <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 border border-amber-200 shadow-inner">
               <AlertCircle className="w-9 h-9" />
             </div>

@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { useForm } from '@/context/form-context';
+import { useAdminAuth } from '@/context/admin-auth-context';
+import { isSuperAdminUser } from '@/lib/team-constants';
 import { Form } from '@/types/form';
 import { 
   FolderKanban, 
@@ -35,6 +37,8 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
   onNavigateTab,
 }) => {
   const { forms, submissions, setActiveForm, deleteForm } = useForm();
+  const { currentUser } = useAdminAuth();
+  const isSuperAdmin = isSuperAdminUser(currentUser);
   const [sharingForm, setSharingForm] = useState<Form | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
@@ -42,6 +46,7 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
   const [exportingFormId, setExportingFormId] = useState<string | null>(null);
 
   const handleExportFormExcel = async (form: Form) => {
+    if (!isSuperAdmin) return;
     const formSubs = form.id === 'form-safaan-assessment'
       ? submissions.filter((s) => s.formId === form.id && isAssignedSafaSubmission(s))
       : submissions.filter((s) => s.formId === form.id);
@@ -209,17 +214,19 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                 >
                   <BarChart3 className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleExportFormExcel(form);
-                  }}
-                  disabled={exportingFormId === form.id}
-                  className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
-                  title="خروجی مستقیم اکسل (XLSX) با فونت B Lotus"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                </button>
+                {isSuperAdmin && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExportFormExcel(form);
+                    }}
+                    disabled={exportingFormId === form.id}
+                    className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                    title="خروجی مستقیم اکسل (XLSX) با فونت B Lotus"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  </button>
+                )}
               </div>
 
               <button
@@ -240,8 +247,8 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
 
       {/* مودال اشتراک‌گذاری فرم و کدهای تعبیه */}
       {sharingForm && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 text-xs space-y-5">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 pt-16 sm:pt-20 pb-4 animate-in fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 text-xs space-y-5 max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto">
             
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">

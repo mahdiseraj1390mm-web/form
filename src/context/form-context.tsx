@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus, EvaluationResult, SimilarityNotification } from '@/types/form';
 import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
@@ -120,6 +120,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
   const [activeForm, setActiveForm] = useState<Form | null>(initialForms[0]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const isRefreshingSubmissionsRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -678,17 +679,69 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSubmissionStatus = (submissionId: string, newStatus: SubmissionStatus) => {
+    const cleanId = (submissionId || '').trim();
+    const bareCode = cleanId.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+
     setSubmissions((prev) =>
-      prev.map((s) => (s.id === submissionId ? { ...s, status: newStatus, updatedAt: new Date().toISOString() } : s))
+      prev.map((s) => {
+        const sCode = (s.data?.caseCode || s.trackingCode || '').trim();
+        const sBare = sCode.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+        const isMatch =
+          s.id === cleanId ||
+          s.trackingCode === cleanId ||
+          s.data?.caseCode === cleanId ||
+          (bareCode && (s.id === `sub-case-${bareCode}` || s.trackingCode === bareCode || s.data?.caseCode === bareCode || sBare === bareCode));
+
+        if (isMatch) {
+          return {
+            ...s,
+            status: newStatus,
+            data: {
+              ...(s.data || {}),
+              caseStatus: newStatus,
+              clinical_status: newStatus,
+            },
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return s;
+      })
     );
+
+    try {
+      fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_submission_status',
+          submissionId,
+          status: newStatus,
+        }),
+      }).catch(() => {});
+    } catch {}
   };
 
   const updateSubmissionData = (submissionId: string, updatedFields: Record<string, any>) => {
+    const cleanId = (submissionId || '').trim();
+    const bareCode = cleanId.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+    const newStatus = updatedFields.clinical_status || updatedFields.caseStatus || updatedFields.status;
+
     setSubmissions((prev) =>
       prev.map((s) => {
-        if (s.id === submissionId || s.trackingCode === submissionId || (s.data && s.data.caseCode === submissionId)) {
+        const sCode = (s.data?.caseCode || s.trackingCode || '').trim();
+        const sBare = sCode.replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+        const isMatch =
+          s.id === cleanId ||
+          s.trackingCode === cleanId ||
+          s.data?.caseCode === cleanId ||
+          (bareCode && (s.id === `sub-case-${bareCode}` || s.trackingCode === bareCode || s.data?.caseCode === bareCode || sBare === bareCode));
+
+        if (isMatch) {
           return {
             ...s,
+            ...(newStatus && ['regressing', 'needs_followup', 'growing', 'optimal', 'approved', 'rejected', 'new'].includes(newStatus)
+              ? { status: newStatus }
+              : {}),
             data: { ...s.data, ...updatedFields },
             updatedAt: new Date().toISOString(),
           };
@@ -846,7 +899,9 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   const getSubmissionsByFormId = (formId: string) => submissions.filter((s) => s.formId === formId);
 
   // واکشی پاسخ‌های فرم از دیتابیس ابری Neon و ادغام با وضعیت موجود
-  const refreshSubmissionsFromDb = async (formId?: string): Promise<void> => {
+  const refreshSubmissionsFromDb = useCallback(async (formId?: string): Promise<void> => {
+    if (isRefreshingSubmissionsRef.current) return;
+    isRefreshingSubmissionsRef.current = true;
     try {
       const url = `/api/cases?formId=${formId || "all"}&_nocache=${Date.now()}`;
       const res = await fetch(url, { cache: 'no-store' });
@@ -857,11 +912,28 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         ...s,
         comments: Array.isArray(s.comments) ? s.comments : [],
       }));
-      if (formId === 'all' || !formId) {
-        setSubmissions(dbSubmissions);
-        return;
-      }
+
       setSubmissions((prev) => {
+        if (formId === 'all' || !formId) {
+          // مقایسه سطحی برای جلوگیری از رندرهای بیهوده در صورت عدم تغییر داده
+          if (prev.length === dbSubmissions.length) {
+            const isIdentical = dbSubmissions.every((dbs, idx) => {
+              const p = prev[idx];
+              return (
+                p &&
+                p.id === dbs.id &&
+                p.status === dbs.status &&
+                p.paymentStatus === dbs.paymentStatus &&
+                (p.comments?.length || 0) === (dbs.comments?.length || 0) &&
+                p.updatedAt === dbs.updatedAt &&
+                JSON.stringify(p.data) === JSON.stringify(dbs.data)
+              );
+            });
+            if (isIdentical) return prev;
+          }
+          return dbSubmissions;
+        }
+
         const cleanPrev = prev.filter(
           (s) =>
             !s.id.startsWith('sub-bh-') &&
@@ -871,14 +943,26 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         );
         const existingIds = new Set(cleanPrev.map((s) => s.id));
         const merged = [...cleanPrev];
+        let changed = false;
         dbSubmissions.forEach((s) => {
           if (!existingIds.has(s.id)) {
             merged.push(s);
+            changed = true;
           } else {
             const idx = merged.findIndex((m) => m.id === s.id);
-            if (idx !== -1) merged[idx] = { ...merged[idx], ...s };
+            if (idx !== -1 && (
+              merged[idx].status !== s.status ||
+              merged[idx].paymentStatus !== s.paymentStatus ||
+              (merged[idx].comments?.length || 0) !== (s.comments?.length || 0) ||
+              merged[idx].updatedAt !== s.updatedAt ||
+              JSON.stringify(merged[idx].data) !== JSON.stringify(s.data)
+            )) {
+              merged[idx] = { ...merged[idx], ...s };
+              changed = true;
+            }
           }
         });
+        if (!changed && cleanPrev.length === prev.length) return prev;
         return merged.map((s) => ({
           ...s,
           comments: Array.isArray(s.comments) ? s.comments : [],
@@ -886,8 +970,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (err) {
       console.warn('refreshSubmissionsFromDb error:', err);
+    } finally {
+      isRefreshingSubmissionsRef.current = false;
     }
-  };
+  }, []);
 
   const sendChatMessage = (
     formId: string,
@@ -923,7 +1009,23 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teamMembers: members }),
-    }).catch((err) => console.warn('Error saving team to server:', err));
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const refreshRes = await fetch(`/api/team?_nocache=${Date.now()}`, { cache: 'no-store' });
+          const refreshData = await refreshRes.json();
+          if (refreshData?.teamMembers && Array.isArray(refreshData.teamMembers) && refreshData.teamMembers.length > 0) {
+            const clean = refreshData.teamMembers.filter(
+              (m: TeamMember) => m.id !== 'user-booking-op' && m.id !== 'user-reviewer' && m.id !== 'user-admin'
+            );
+            setTeamMembers(clean);
+            try {
+              localStorage.setItem('formafzar_team_members', JSON.stringify(clean));
+            } catch {}
+          }
+        }
+      })
+      .catch((err) => console.warn('Error saving team to server:', err));
   };
 
   const inviteTeamMember = (member: Omit<TeamMember, 'id' | 'invitedAt'>): TeamMember => {

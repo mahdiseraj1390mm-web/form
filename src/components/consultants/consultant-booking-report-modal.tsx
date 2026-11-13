@@ -28,8 +28,8 @@ const CLINICAL_CATEGORIES = [
 const CLINICAL_STATUSES = [
   { id: 'regressing', label: 'عقب گرد', color: 'rose' },
   { id: 'needs_followup', label: 'نیازمند پیگیری', color: 'amber' },
-  { id: 'optimal', label: 'وضعیت مطلوب', color: 'emerald' },
-  { id: 'growing', label: 'در حال رشد', color: 'blue' },
+  { id: 'optimal', label: 'وضعیت مطلوب', color: 'blue' },
+  { id: 'growing', label: 'در حال رشد', color: 'emerald' },
 ] as const;
 
 function getClientCaseIdentifier(booking: ConsultantBookingItem): string {
@@ -191,9 +191,18 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
 
   if (!isOpen || !booking) return null;
 
+  const isRequiredFieldsComplete =
+    Boolean(reportForm.reviewed.trim()) &&
+    Boolean(reportForm.challenges.trim()) &&
+    Boolean(selectedAppointmentStatus);
+
   const handleSubmitReport = () => {
+    if (!isRequiredFieldsComplete) return;
     const catPrefix = selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}] ` : '';
-    const fullRecommendation = `${catPrefix}${reportForm.recommendation.trim()}`;
+    const cleanRecText = reportForm.recommendation.trim().replace(/^\[محور بالینی:\s*[^\]]+\]\s*/, '');
+    const fullRecommendation = cleanRecText
+      ? `${catPrefix}${cleanRecText}`
+      : (selectedClinicalCategory ? `[محور بالینی: ${selectedClinicalCategory}]` : '');
     const caseIdentifier = getClientCaseIdentifier(booking);
     const bookingId = booking.id;
     const statusToSave = selectedAppointmentStatus || 'optimal';
@@ -257,39 +266,26 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
       updateSubmissionData(booking.submissionId, {
         session_status: 'done',
         clinical_status: statusToSave,
+        caseStatus: statusToSave,
         clinical_category: selectedClinicalCategory,
         report_reviewed: reportForm.reviewed.trim(),
         report_challenges: reportForm.challenges.trim(),
         report_recommendation: fullRecommendation,
         report: reportPayload,
       });
+      if (booking.caseCode && booking.caseCode !== 'ثبت‌نشده') {
+        updateSubmissionData(booking.caseCode, {
+          clinical_status: statusToSave,
+          caseStatus: statusToSave,
+        });
+      }
     }
 
     if (updateSubmissionStatus && booking.submissionId) {
       updateSubmissionStatus(booking.submissionId, statusToSave as any);
-    }
-
-    if (addSubmissionComment && booking.submissionId) {
-      const adminName = currentUser?.name || 'مشاور مرکز بالحق';
-      const statusLabel =
-        statusToSave === 'growing'
-          ? 'در حال رشد'
-          : statusToSave === 'optimal'
-          ? 'وضعیت مطلوب'
-          : statusToSave === 'regressing'
-          ? 'عقب گرد'
-          : statusToSave === 'needs_followup'
-          ? 'نیازمند پیگیری'
-          : 'انجام شده';
-
-      addSubmissionComment(
-        booking.submissionId,
-        adminName,
-        'مشاور ارشد پرونده',
-        `🤝 ثبت گزارش جلسه مشاوره (${booking.topic} - ${displayDateTime.split('،')[0]}): وضعیت بالینی: ${statusLabel}${
-          selectedClinicalCategory ? ` | محور: ${selectedClinicalCategory}` : ''
-        } | توصیه: ${reportForm.recommendation.trim()}`
-      );
+      if (booking.caseCode && booking.caseCode !== 'ثبت‌نشده') {
+        updateSubmissionStatus(booking.caseCode, statusToSave as any);
+      }
     }
 
     setIsDone(true);
@@ -303,15 +299,15 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-sm md:items-center md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden bg-slate-950/60 backdrop-blur-sm select-none"
       onMouseDown={(e) => {
         if (e.currentTarget === e.target) onClose();
       }}
       dir="rtl"
     >
-      <section className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-[28px] bg-white shadow-2xl md:rounded-[28px]">
+      <section className="w-full max-w-2xl max-h-[80dvh] sm:max-h-[85vh] flex flex-col overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl border border-slate-200 select-text">
         {/* نوار بالایی مودال */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 p-5 backdrop-blur">
+        <div className="shrink-0 flex items-center justify-between border-b border-slate-100 bg-white p-4 sm:p-5 z-10">
           <div>
             <div className="text-base font-black text-slate-900">ثبت گزارش جلسه مشاوره</div>
             <div className="mt-1 text-[11px] text-slate-400">
@@ -322,12 +318,13 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
             type="button"
             onClick={onClose}
             className="grid size-9 place-items-center rounded-full bg-slate-100 text-lg text-slate-500 hover:bg-slate-200 transition cursor-pointer"
+            title="بستن"
           >
             ×
           </button>
         </div>
 
-        <div className="p-5">
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 overscroll-contain">
           {/* بنر وضعیت بررسی نوبت */}
           <div
             className={`mb-4 flex items-center justify-between rounded-2xl px-4 py-2.5 text-xs font-bold ${
@@ -355,16 +352,13 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                   <p className="text-[11px] text-amber-800/80">راهکارها، تمرین‌ها و پروتکل تجویزی جلسه</p>
                 </div>
               </div>
-              <span className="rounded-full bg-amber-200/90 px-2.5 py-0.5 text-[10px] font-black text-amber-900 border border-amber-300">
-                بخش هایلایت بالینی
-              </span>
             </div>
 
             {/* منوی کشویی / کرکره‌ای انتخاب سرفصل بالینی */}
             <div className="relative">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-                  <span>سرفصل بالینی توصیه (انتخاب کشویی / کرکره‌ای):</span>
+                  <span>سرفصل بالینی توصیه:</span>
                 </span>
                 {selectedClinicalCategory && (
                   <button
@@ -398,13 +392,13 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                     </span>
                   ) : (
                     <span className="text-slate-500 font-medium truncate">
-                      جهت انتخاب سرفصل بالینی کلیک کنید (منوی کشویی / کرکره‌ای)...
+                      جهت انتخاب سرفصل بالینی کلیک کنید...
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 text-amber-800 mr-2">
                   <span className="text-[11px] font-bold hidden sm:inline">
-                    {isClinicalCategoryOpen ? 'بستن منو' : 'باز کردن گزینه‌ها (کشویی)'}
+                    {isClinicalCategoryOpen ? 'بستن منو' : 'باز کردن گزینه‌ها'}
                   </span>
                   <ChevronDown
                     className={`size-4 transition-transform duration-300 ${
@@ -471,9 +465,10 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                 <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">
                   ۱
                 </span>
-                موارد بررسی‌شده در جلسه
+                موارد بررسی‌شده در جلسه <span className="text-rose-500">*</span>
               </span>
               <textarea
+                required
                 value={reportForm.reviewed}
                 onChange={(e) => setReportForm((old) => ({ ...old, reviewed: e.target.value }))}
                 placeholder="مباحث، شرح‌حال و سرفصل‌های گفت‌وگو شده در جلسه..."
@@ -488,9 +483,10 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                 <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">
                   ۲
                 </span>
-                معضلات و چالش‌های مراجع
+                معضلات و چالش‌های مراجع <span className="text-rose-500">*</span>
               </span>
               <textarea
+                required
                 value={reportForm.challenges}
                 onChange={(e) => setReportForm((old) => ({ ...old, challenges: e.target.value }))}
                 placeholder="مشکلات رفتاری، خانوادگی، روحی یا تحصیلی تشخیص داده‌شده..."
@@ -505,7 +501,7 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
                 <span className="grid size-6 place-items-center rounded-full bg-blue-50 text-[10px] text-blue-700 font-bold font-mono">
                   ۳
                 </span>
-                تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه:
+                تعیین آخرین وضعیت پرونده مراجع بر اساس این جلسه: <span className="text-rose-500">*</span>
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {CLINICAL_STATUSES.map((st) => {
@@ -557,15 +553,17 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
             </div>
           )}
 
+          {!isRequiredFieldsComplete && (
+            <p className="mt-4 text-[11px] font-bold text-rose-600 text-center">
+              تکمیل موارد ۱، ۲ و انتخاب وضعیت در مورد ۳ برای ثبت گزارش الزامی است.
+            </p>
+          )}
+
           {/* دکمه ارسال و ذخیره */}
           <button
             type="button"
             onClick={handleSubmitReport}
-            disabled={
-              !reportForm.reviewed.trim() ||
-              !reportForm.challenges.trim() ||
-              !reportForm.recommendation.trim()
-            }
+            disabled={!isRequiredFieldsComplete}
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#173f6b] px-5 py-4 text-sm font-black text-white transition hover:bg-[#0f3155] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer shadow-md"
           >
             <Check className="size-4" />

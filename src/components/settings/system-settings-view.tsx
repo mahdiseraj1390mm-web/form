@@ -38,12 +38,14 @@ import {
 import { WebhookTester } from './webhook-tester';
 import { PortalSettingsTab } from './portal-settings-tab';
 import { SmsSettingsTab } from './sms-settings-tab';
+import { ScrollableTabCarousel } from '@/components/ui/scrollable-tab-carousel';
 import { useForm } from '@/context/form-context';
 import { TeamMember, TeamRole } from '@/types/advanced';
 import { InviteMemberModal } from '@/components/team/invite-member-modal';
 import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
-import { COUNSELING_TOPICS } from '@/lib/consultant-helpers';
+import { matchCounselingTopic } from '@/lib/consultant-helpers';
 import { toPersianDigits } from '@/lib/persian';
+import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
 
 const TAB_NAME_MAP: Record<string, string> = {
   dashboard: 'داشبورد مدیریت',
@@ -178,33 +180,20 @@ export const SystemSettingsView: React.FC = () => {
         </p>
 
         {/* منوی تب‌های تنظیمات */}
-        <div className="flex items-center gap-2 mt-6 border-b border-slate-100 pb-0 text-xs font-semibold overflow-x-auto">
-          {[
+        <ScrollableTabCarousel
+          variant="underline"
+          className="mt-6"
+          activeId={activeTab}
+          onChange={(id) => setActiveTab(id as any)}
+          items={[
             { id: 'general', label: 'اطلاعات سازمان', icon: Building2 },
             { id: 'portal', label: 'صفحه ورود (پورتال پرونده)', icon: LogIn },
             { id: 'sms', label: 'سامانه پیامک', icon: Smartphone },
             { id: 'payment', label: 'درگاه‌های شاپرک', icon: CreditCard },
             { id: 'api', label: 'وب‌هوک و API', icon: Webhook },
             { id: 'team', label: 'مشاوران', icon: Users },
-          ].map((t) => {
-            const Icon = t.icon;
-            const isActive = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setActiveTab(t.id as any)}
-                className={`flex items-center gap-2 py-3 px-3 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'border-blue-600 text-blue-600 font-bold'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
+          ]}
+        />
       </div>
 
       {/* محتوای تب فعال */}
@@ -471,9 +460,13 @@ export const SystemSettingsView: React.FC = () => {
                         {/* مشخصات مشاور */}
                         <div className="flex items-start gap-3">
                           <div className="relative">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-100 to-indigo-100 border border-slate-300 text-indigo-950 font-extrabold flex items-center justify-center text-xs shadow-xs">
-                              {prefix ? prefix : (cleanNameOnly ? cleanNameOnly.slice(0, 2) : 'مش')}
-                            </div>
+                            <ConsultantAvatar
+                              avatarUrl={member.avatarUrl}
+                              genderPrefix={member.genderPrefix}
+                              name={member.name}
+                              size="md"
+                              className="w-12 h-12"
+                            />
                             <span
                               className={`absolute -bottom-1 -left-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
                                 isActive ? 'bg-emerald-500' : 'bg-rose-400'
@@ -552,7 +545,7 @@ export const SystemSettingsView: React.FC = () => {
                               <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                                 <span className="text-[10px] text-slate-400 font-medium">موضوعات:</span>
                                 {member.allowedTopics.map((topId) => {
-                                  const topicObj = COUNSELING_TOPICS.find((t) => t.id === topId);
+                                  const topicObj = matchCounselingTopic(topId);
                                   return (
                                     <span
                                       key={topId}
@@ -626,7 +619,20 @@ export const SystemSettingsView: React.FC = () => {
                           ))}
                         </div>
 
-                        <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {!isSuper && (
+                            member.canEditWorkingHours === true ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-bold">
+                                <Clock className="w-3 h-3 text-blue-600" />
+                                <span>تغییر ساعت کاری: مجاز برای مشاور</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold">
+                                <Lock className="w-3 h-3 text-slate-500" />
+                                <span>تغییر ساعت کاری: قفل (فقط ادمین)</span>
+                              </span>
+                            )
+                          )}
                           {hasCaseCodeRestriction ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
                               <ShieldAlert className="w-3 h-3 text-amber-600" />
