@@ -50,8 +50,7 @@ import {
   LogOut,
   FileEdit,
   ChevronLeft,
-  Search,
-  Sparkles
+  Search
 } from 'lucide-react';
 import { 
   isValidIranianNationalCode, 
@@ -3178,20 +3177,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         )}
 
         <div className="grid grid-cols-12 gap-5">
-          {form.slug === '3uu4z' && currentStep?.id === 'step-4' && (
-            <div className="col-span-12 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 text-xs flex items-center gap-2.5 mb-1">
-              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-              <div className="leading-relaxed">
-                <span className="font-extrabold block text-emerald-900">مرحله چهارم: موضوع مراجعه، انتخاب مشاور و تعیین نوبت</span>
-                <span className="text-[11px] text-emerald-800">
-                  {formData['f_topic']
-                    ? 'موضوع مراجعه انتخاب شد. اکنون مشاور مورد نظر و نوبت تقویم را رزرو فرمایید.'
-                    : 'لطفاً ابتدا موضوع مراجعه را انتخاب فرمایید تا لیست مشاوران و تقویم نوبت‌دهی فعال گردد.'}
-                </span>
-              </div>
-            </div>
-          )}
-
           {activePageFields.map((field) => {
             if (!isFieldVisible(field.id)) return null;
 

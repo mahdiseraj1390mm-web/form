@@ -1,4 +1,4 @@
-const CACHE_NAME = 'belhagh-pwa-v2';
+const CACHE_NAME = 'belhagh-pwa-v3';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE_ASSETS = [
   OFFLINE_URL,
@@ -43,6 +43,15 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // در محیط لوکال و توسعه هیچ درخواستی را کش یا رهگیری نمی‌کنیم تا با Fast Refresh تداخل نکند
+  const isDevHost =
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.hostname === '::1';
+  if (isDevHost) {
+    return;
+  }
 
   // Never intercept API calls, user uploads, or HMR streams
   if (

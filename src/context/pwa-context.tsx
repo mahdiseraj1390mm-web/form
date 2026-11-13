@@ -171,11 +171,32 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js', { scope: '/', updateViaCache: 'none' })
-        .catch((err) => {
-          console.warn('Service worker registration failed:', err);
+      const isDev =
+        process.env.NODE_ENV === 'development' ||
+        (typeof window !== 'undefined' &&
+          (window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1' ||
+            window.location.hostname === '::1'));
+
+      if (isDev) {
+        // در محیط توسعه، سرویس‌ورکر و کش‌های محلی را پاک می‌کنیم تا با کامپایل توربوپک و Fast Refresh تداخل نکند
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
         });
+        if ('caches' in window) {
+          caches.keys().then((keys) => {
+            keys.forEach((key) => caches.delete(key));
+          });
+        }
+      } else {
+        navigator.serviceWorker
+          .register('/sw.js', { scope: '/', updateViaCache: 'none' })
+          .catch((err) => {
+            console.warn('Service worker registration failed:', err);
+          });
+      }
     }
 
     if (isStandalone) {
