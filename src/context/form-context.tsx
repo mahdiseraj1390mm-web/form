@@ -124,7 +124,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-11-14-bank-card-field-v1';
+      const CACHE_VERSION = 'v-2026-11-14-bank-card-step5-v3';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');

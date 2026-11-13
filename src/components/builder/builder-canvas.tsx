@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Form, FormField, FieldType, FormPanel } from '@/types/form';
 import { 
   GripVertical, 
@@ -329,9 +329,16 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
     ? form.steps[activeStepIndex] 
     : null;
 
-  const displayedFields = form.mode === 'wizard' && activeStep
-    ? form.fields.filter((f) => !f.stepId || f.stepId === activeStep.id)
-    : form.fields;
+  const displayedFields = useMemo(() => {
+    if (form.mode !== 'wizard' || !activeStep) return form.fields;
+    if (activeStep.fieldIds && activeStep.fieldIds.length > 0) {
+      const mapped = activeStep.fieldIds
+        .map((fId) => form.fields.find((f) => f.id === fId))
+        .filter(Boolean) as FormField[];
+      if (mapped.length > 0) return mapped;
+    }
+    return form.fields.filter((f) => !f.stepId || f.stepId === activeStep.id);
+  }, [form.mode, activeStep, form.fields]);
 
   const viewportWidthClass = {
     desktop: 'max-w-4xl',

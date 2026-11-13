@@ -3825,22 +3825,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
-        {/* فیلد مبلغ اختیاری در انتهای فرم‌ها همراه با شماره کارت (کنترل‌شده با تنظیمات در صورت عدم وجود فیلد اختصاصی) */}
-        {donationSettings.enabled &&
-          !form.fields.some((f) => f.type === 'bankCard') &&
-          ((form.mode !== "wizard" || currentStepIndex === (form.steps?.length || 1) - 1) &&
-          (activePageIndex >= pages.length - 1)) && (
-          <BankCardDisplay
-            cardNumber={donationSettings.cardNumber || "6037-9979-1234-5678"}
-            cardHolder={donationSettings.cardHolder || "مرکز خدمات روانشناسی بالحق"}
-            title={donationSettings.title || "مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)"}
-            description={donationSettings.description || "در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید"}
-            amountValue={formData["f_optional_contribution"] || ""}
-            onAmountChange={(val) => handleFieldChange("f_optional_contribution", val)}
-            showContainerBorder={true}
-          />
-        )}
-
         {/* دکمه‌های ناوبری مرحله‌ای و ثبت فرم با چیدمان لمسی بهینه‌شده موبایل */}
         <div className="pt-6 border-t border-slate-100 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">

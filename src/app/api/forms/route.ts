@@ -59,7 +59,49 @@ function sanitizeForms(rawForms: Form[]): Form[] {
     }
 
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-      const updatedFields = form.fields.map((f) => {
+      let fields = [...form.fields];
+      const hasBankCard = fields.some((f) => f.id === 'f_optional_contribution' || f.type === 'bankCard');
+      if (!hasBankCard) {
+        fields.push({
+          id: 'f_optional_contribution',
+          type: 'bankCard',
+          label: 'مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)',
+          placeholder: 'مثال: ۵۰,۰۰۰',
+          helpText: 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید',
+          stepId: 'step-5',
+          gridCols: 12,
+          validations: {},
+          bankCardData: {
+            cardNumber: '6037-9979-1234-5678',
+            cardHolder: 'مرکز خدمات روانشناسی بالحق',
+            bankKey: 'melli',
+            bankName: 'بانک ملی ایران',
+            presetAmounts: [30000, 50000, 100000, 200000],
+            showPresetAmounts: true,
+            showCustomAmount: true,
+            depositTitle: 'شماره کارت جهت واریز اختیاری:',
+            description: 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید',
+            allowCopy: true,
+          },
+        });
+      }
+
+      let steps = form.steps
+        ? form.steps.map((st) => {
+            if (st.id === 'step-5' && !st.fieldIds.includes('f_optional_contribution')) {
+              return { ...st, fieldIds: [...st.fieldIds, 'f_optional_contribution'] };
+            }
+            return st;
+          })
+        : form.steps;
+
+      const updatedFields = fields.map((f) => {
+        if (f.id === 'f_alert_guideline' || f.id === 'f_terms') {
+          return {
+            ...f,
+            stepId: 'step-5',
+          };
+        }
         if (f.id === 'f_prev_counselor_name') {
           return {
             ...f,
@@ -72,7 +114,7 @@ function sanitizeForms(rawForms: Form[]): Form[] {
         }
         return f;
       });
-      return { ...form, fields: updatedFields };
+      return { ...form, steps, fields: updatedFields };
     }
 
     return form;

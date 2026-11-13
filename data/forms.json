@@ -460,7 +460,7 @@
     "submissionCount": 89,
     "viewCount": 1420,
     "createdAt": "2026-03-01T08:30:00Z",
-    "updatedAt": "2026-11-13T21:43:07.430Z",
+    "updatedAt": "2026-11-13T22:04:08.100Z",
     "steps": [
       {
         "id": "step-1",
@@ -504,7 +504,8 @@
         "description": "تایید شرایط و قوانین نوبت‌دهی",
         "fieldIds": [
           "f_alert_guideline",
-          "f_terms"
+          "f_terms",
+          "f_optional_contribution"
         ]
       }
     ],
@@ -519,7 +520,8 @@
         "gridCols": 12,
         "validations": {
           "required": true
-        }
+        },
+        "panelId": "p_1"
       },
       {
         "id": "f_mobile",
@@ -531,7 +533,8 @@
         "gridCols": 12,
         "validations": {
           "required": true
-        }
+        },
+        "panelId": "p_1"
       },
       {
         "id": "f_province_city",
@@ -541,7 +544,8 @@
         "gridCols": 12,
         "validations": {
           "required": true
-        }
+        },
+        "panelId": "p_1"
       },
       {
         "id": "f_for_whom",
@@ -573,7 +577,8 @@
             "label": "بنده و همسرم",
             "value": "بنده و همسرم"
           }
-        ]
+        ],
+        "panelId": "p_1"
       },
       {
         "id": "f_prev_consultation",
@@ -595,7 +600,8 @@
             "label": "خیر",
             "value": "خیر"
           }
-        ]
+        ],
+        "panelId": "p_1"
       },
       {
         "id": "f_prev_counselor_name",
@@ -607,7 +613,8 @@
         "validations": {
           "required": true,
           "customErrorMessage": "درج نام مشاور یا مشاوران سابق الزامی است."
-        }
+        },
+        "panelId": "p_1"
       },
       {
         "id": "f_khankaram_member",
@@ -629,7 +636,8 @@
             "label": "خیر",
             "value": "خیر"
           }
-        ]
+        ],
+        "panelId": "p_1"
       },
       {
         "id": "f_booking",
@@ -2417,7 +2425,8 @@
               }
             }
           ]
-        }
+        },
+        "panelId": "p_1"
       },
       {
         "id": "f_alert_guideline",
@@ -2428,7 +2437,8 @@
         "gridCols": 12,
         "validations": {
           "required": false
-        }
+        },
+        "panelId": "p_1"
       },
       {
         "id": "f_terms",
@@ -2438,6 +2448,34 @@
         "gridCols": 12,
         "validations": {
           "required": true
+        },
+        "panelId": "p_1"
+      },
+      {
+        "id": "f_optional_contribution",
+        "type": "bankCard",
+        "label": "مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)",
+        "placeholder": "مثال: ۵۰,۰۰۰",
+        "helpText": "در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید",
+        "stepId": "step-5",
+        "gridCols": 12,
+        "validations": {},
+        "bankCardData": {
+          "cardNumber": "6037-9979-1234-5678",
+          "cardHolder": "مرکز خدمات روانشناسی بالحق",
+          "bankKey": "melli",
+          "bankName": "بانک ملی ایران",
+          "presetAmounts": [
+            30000,
+            50000,
+            100000,
+            200000
+          ],
+          "showPresetAmounts": true,
+          "showCustomAmount": true,
+          "depositTitle": "شماره کارت جهت واریز اختیاری:",
+          "description": "در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید",
+          "allowCopy": true
         }
       }
     ],
@@ -2519,7 +2557,14 @@
       "buttonColor": "#00897b",
       "buttonTextColor": "#ffffff"
     },
-    "clientAvailability": "active_submittable"
+    "clientAvailability": "active_submittable",
+    "panels": [
+      {
+        "id": "p_1",
+        "title": "پنل ۱",
+        "columns": 1
+      }
+    ]
   },
   {
     "id": "form-safaan-assessment",
