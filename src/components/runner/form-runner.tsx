@@ -3523,8 +3523,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                           handleFieldChange('f_booking_slot', meta.slot);
                         }
                         if (meta.phone) {
-                          handleFieldChange('f_phone', meta.phone);
                           handleFieldChange('counselorPhone', meta.phone);
+                          handleFieldChange('counselorMobile', meta.phone);
                         }
                       }
                     }}

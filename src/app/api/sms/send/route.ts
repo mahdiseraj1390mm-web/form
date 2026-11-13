@@ -41,6 +41,13 @@ export async function POST(req: NextRequest) {
           date: date || 'تعیین‌شده',
           time: time || 'مشخص‌شده',
         });
+      } else {
+        console.warn('⚠️ /api/sms/send: counselorMobile is missing for appointment_booked. Details:', {
+          counselorName,
+          clientName,
+          date,
+          time,
+        });
       }
 
       return NextResponse.json({ success: true, results });
