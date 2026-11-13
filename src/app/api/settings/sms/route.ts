@@ -57,8 +57,8 @@ export async function POST(req: NextRequest) {
         : patternKey === 'case_registration'
         ? ['SP260120']
         : patternKey === 'appointment_client'
-        ? ['مسیح مهدی پور', 'آقای فرهمندی', '۰۹:۰۰ صبح', 'یکشنبه : ۱۴۰۵/۸/۷']
-        : ['مهدی سراج', 'اصفهان', 'نجف آباد', mobile, 'پنجشنبه ۱۴۰۵/۸/۷', '۰۹:۰۰ الی ۰۹:۳۰ صبح'];
+        ? ['مسیح مهدی پور', 'دکتر علیرضا برهانی', '۰۹:۰۰ صبح', '۱۴۰۵/۰۸/۱۰']
+        : ['مهدی سراج', 'اصفهان', 'نجف آباد', mobile, '۱۴۰۵/۰۸/۱۰', '۰۹:۰۰ صبح'];
 
       let exactMessage = patternConfig.template || 'پیامک آزمایشی سامانه';
       testArgs.forEach((arg, idx) => {
