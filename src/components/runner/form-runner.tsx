@@ -68,6 +68,7 @@ import { matchTimeRanges, extractTimeRange, detectDayIndex } from '@/lib/consult
 import { iranProvinces } from '@/lib/iran-geo';
 import { PaymentModal } from './payment-modal';
 import { AppointmentScheduler } from './appointment-scheduler';
+import { BankCardDisplay } from '@/components/ui/bank-card-display';
 
 interface FormRunnerProps {
   form: Form;
@@ -3206,22 +3207,24 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               <div key={field.id} id={`field-${field.id}`} className={`${colClass} space-y-1.5 scroll-mt-24`}>
                 
                 {/* عنوان و وضعیت اعتبارسنجی زنده */}
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs sm:text-sm font-bold" style={{ color: theme?.labelColor || '#1e293b' }}>
-                    {field.label}
-                    {Boolean(field.validations?.required) && <span className="text-rose-500 mr-1">*</span>}
-                  </label>
+                {field.type !== 'bankCard' && field.type !== 'sectionDivider' && field.type !== 'alertBox' && !field.hideLabel && (
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs sm:text-sm font-bold" style={{ color: theme?.labelColor || '#1e293b' }}>
+                      {field.label}
+                      {Boolean(field.validations?.required) && <span className="text-rose-500 mr-1">*</span>}
+                    </label>
 
-                  {field.type === 'nationalCode' && formData[field.id] && (
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                      isValidIranianNationalCode(formData[field.id])
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}>
-                      {isValidIranianNationalCode(formData[field.id]) ? 'کد ملی معتبر است ✓' : 'الگوریتم نامعتبر'}
-                    </span>
-                  )}
-                </div>
+                    {field.type === 'nationalCode' && formData[field.id] && (
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                        isValidIranianNationalCode(formData[field.id])
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}>
+                        {isValidIranianNationalCode(formData[field.id]) ? 'کد ملی معتبر است ✓' : 'الگوریتم نامعتبر'}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* رندر کنترل متناسب با ابزارک */}
                 {field.type === 'textarea' ? (
@@ -3700,6 +3703,20 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     onChange={(val) => handleFieldChange(field.id, val)}
                     hasError={Boolean(hasError)}
                   />
+                ) : field.type === 'bankCard' ? (
+                  <BankCardDisplay
+                    cardNumber={field.bankCardData?.cardNumber || donationSettings.cardNumber || '6037-9979-1234-5678'}
+                    cardHolder={field.bankCardData?.cardHolder || donationSettings.cardHolder || 'مرکز خدمات روانشناسی بالحق'}
+                    bankKey={field.bankCardData?.bankKey}
+                    title={field.label || field.bankCardData?.depositTitle || donationSettings.title || 'مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)'}
+                    description={field.helpText || field.bankCardData?.description || donationSettings.description || 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید'}
+                    presetAmounts={field.bankCardData?.presetAmounts}
+                    showPresetAmounts={field.bankCardData?.showPresetAmounts !== false}
+                    showCustomAmount={field.bankCardData?.showCustomAmount !== false}
+                    amountValue={formData[field.id] || ''}
+                    onAmountChange={(val) => handleFieldChange(field.id, val)}
+                    isReadOnly={Boolean(field.validations?.isReadOnly)}
+                  />
                 ) : (
                   <input
                     type={field.type === 'number' ? 'number' : field.type === 'password' ? 'password' : 'text'}
@@ -3808,54 +3825,20 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
-        {/* فیلد مبلغ اختیاری در انتهای فرم‌ها همراه با شماره کارت (کنترل‌شده با تنظیمات) */}
+        {/* فیلد مبلغ اختیاری در انتهای فرم‌ها همراه با شماره کارت (کنترل‌شده با تنظیمات در صورت عدم وجود فیلد اختصاصی) */}
         {donationSettings.enabled &&
+          !form.fields.some((f) => f.type === 'bankCard') &&
           ((form.mode !== "wizard" || currentStepIndex === (form.steps?.length || 1) - 1) &&
           (activePageIndex >= pages.length - 1)) && (
-          <div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-3 animate-in fade-in">
-            <div className="flex items-center gap-2.5">
-              <div className="size-8 rounded-xl bg-amber-100 text-amber-800 grid place-items-center">
-                <CreditCard className="size-4" />
-              </div>
-              <div>
-                <span className="text-xs font-black text-amber-950 block">{donationSettings.title || "مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)"}</span>
-                <span className="text-[11px] text-amber-700">{donationSettings.description || "در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید"}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
-              <div className="p-3 bg-white rounded-xl border border-amber-200/70 space-y-1">
-                <span className="text-[10px] text-slate-400 block">شماره کارت جهت واریز اختیاری:</span>
-                <span className="font-mono font-bold text-slate-900 text-sm tracking-wider block" dir="ltr">
-                  {toPersianDigits(donationSettings.cardNumber || "6037-9979-1234-5678")}
-                </span>
-                <span className="text-[11px] text-slate-500 block">به نام: {donationSettings.cardHolder || "مرکز خدمات روانشناسی بالحق"}</span>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-[11px] text-slate-600 font-bold block">مبلغ دلخواه پرداختی (تومان):</span>
-                <input
-                  type="text"
-                  placeholder="مثال: ۵۰,۰۰۰"
-                  value={formData["f_optional_contribution"] || ""}
-                  onChange={(e) => handleFieldChange("f_optional_contribution", e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-300 bg-white text-xs font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                />
-                <div className="flex gap-1.5 pt-0.5">
-                  {["۳۰,۰۰۰", "۵۰,۰۰۰", "۱۰۰,۰۰۰", "۲۰۰,۰۰۰"].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => handleFieldChange("f_optional_contribution", amt)}
-                      className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 transition cursor-pointer"
-                    >
-                      {amt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <BankCardDisplay
+            cardNumber={donationSettings.cardNumber || "6037-9979-1234-5678"}
+            cardHolder={donationSettings.cardHolder || "مرکز خدمات روانشناسی بالحق"}
+            title={donationSettings.title || "مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)"}
+            description={donationSettings.description || "در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید"}
+            amountValue={formData["f_optional_contribution"] || ""}
+            onAmountChange={(val) => handleFieldChange("f_optional_contribution", val)}
+            showContainerBorder={true}
+          />
         )}
 
         {/* دکمه‌های ناوبری مرحله‌ای و ثبت فرم با چیدمان لمسی بهینه‌شده موبایل */}

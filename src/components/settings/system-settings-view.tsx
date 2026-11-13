@@ -46,6 +46,14 @@ import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
 import { matchCounselingTopic } from '@/lib/consultant-helpers';
 import { toPersianDigits } from '@/lib/persian';
 import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
+import { BankCardDisplay } from '@/components/ui/bank-card-display';
+import { 
+  IRANIAN_BANKS, 
+  getBankByKey, 
+  detectBankFromCardNumber, 
+  formatCardNumber, 
+  cleanCardNumber 
+} from '@/lib/iran-banks';
 
 const TAB_NAME_MAP: Record<string, string> = {
   dashboard: 'داشبورد مدیریت',
@@ -72,6 +80,7 @@ export const SystemSettingsView: React.FC = () => {
     enabled: true,
     cardNumber: '6037-9979-1234-5678',
     cardHolder: 'مرکز خدمات روانشناسی بالحق',
+    bankKey: 'melli',
     title: 'مشارکت مالی اختیاری در هزینه‌های مرکز (اختیاری)',
     description: 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید',
   });
@@ -266,16 +275,63 @@ export const SystemSettingsView: React.FC = () => {
               </div>
 
               <div className="space-y-3 pt-1">
+                {/* پیش‌نمایش زنده کارت */}
+                <div>
+                  <span className="text-xs font-bold text-slate-700 block mb-1.5">پیش‌نمایش زنده طرح کارت بانکی:</span>
+                  <BankCardDisplay
+                    cardNumber={donationSettings.cardNumber}
+                    cardHolder={donationSettings.cardHolder}
+                    bankKey={donationSettings.bankKey}
+                    title={donationSettings.title}
+                    description={donationSettings.description}
+                    isReadOnly={true}
+                    showContainerBorder={false}
+                  />
+                </div>
+
+                {/* انتخاب بانک */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-700">انتخاب بانک و طرح کارت:</label>
+                    <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded-full">
+                      {getBankByKey(donationSettings.bankKey).name}
+                    </span>
+                  </div>
+                  <select
+                    value={donationSettings.bankKey}
+                    onChange={(e) => setDonationSettings({ ...donationSettings, bankKey: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  >
+                    {IRANIAN_BANKS.map((b) => (
+                      <option key={b.key} value={b.key}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="block font-bold text-slate-700 mb-1 text-xs">شماره کارت مرکز (جهت نمایش به مراجعان):</label>
                   <input
                     type="text"
                     value={donationSettings.cardNumber}
-                    onChange={(e) => setDonationSettings({ ...donationSettings, cardNumber: e.target.value })}
+                    onChange={(e) => {
+                      const clean = cleanCardNumber(e.target.value);
+                      const formatted = formatCardNumber(clean);
+                      const detected = detectBankFromCardNumber(clean);
+                      setDonationSettings((prev) => ({
+                        ...prev,
+                        cardNumber: formatted,
+                        ...(detected ? { bankKey: detected.key } : {}),
+                      }));
+                    }}
                     placeholder="6037-9979-1234-5678"
-                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-mono text-left text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-mono text-left text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none tracking-wider font-bold"
                     dir="ltr"
                   />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    با وارد کردن ۶ رقم اول، بانک و طرح رنگ به صورت خودکار شناسایی و تنظیم می‌گردد.
+                  </span>
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1 text-xs">نام صاحب حساب:</label>
