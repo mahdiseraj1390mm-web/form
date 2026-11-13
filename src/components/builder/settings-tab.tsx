@@ -7,7 +7,8 @@ import {
   SecuritySettings, 
   PaymentSettings, 
   NotificationSettings, 
-  FormBehaviorSettings 
+  FormBehaviorSettings,
+  ClientFormAvailability
 } from '@/types/form';
 import { 
   Settings, 
@@ -68,6 +69,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
     customIdStartNumber: 1000,
     liveChatEnabled: true,
   };
+
+  const currentAvailability: ClientFormAvailability = 
+    form.clientAvailability || 
+    generalSettings.clientAvailability || 
+    (form.status === 'published' && form.id !== 'form-belhagh-registration' ? 'active_submittable' : 'hidden_inactive');
 
   // تنظیمات امنیتی و محدودیت‌ها
   const sec: SecuritySettings = form.security || {
@@ -215,6 +221,85 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                 <span className="text-[11px] font-bold text-[#084d3e] bg-white px-3 py-1.5 rounded-xl border border-emerald-300 shadow-2xs shrink-0">
                   منوی تنظیمات و وب‌هوک‌ها
                 </span>
+              </div>
+
+              {/* وضعیت نمایش و ثبت در صفحه مراجعین */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
+                <div className="border-b border-slate-200/70 pb-2.5">
+                  <span className="text-sm font-extrabold text-slate-800 block">وضعیت در صفحه مراجعین</span>
+                  <span className="text-xs text-slate-500 block mt-0.5">تعیین نحوه نمایش و امکان ثبت فرم در پورتال مراجع</span>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  {/* حالت ۱: فعال با امکان ثبت */}
+                  <label className={`flex items-center justify-between p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    currentAvailability === 'active_submittable'
+                      ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-bold shadow-xs'
+                      : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="clientAvailability"
+                        value="active_submittable"
+                        checked={currentAvailability === 'active_submittable'}
+                        onChange={() => {
+                          updateGeneral({ clientAvailability: 'active_submittable' });
+                          onUpdateForm({ clientAvailability: 'active_submittable' });
+                        }}
+                        className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span className="text-xs sm:text-sm">۱ـ فعال با امکان ثبت (روشن و قابل کلیک)</span>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                  </label>
+
+                  {/* حالت ۲: فعال بدون امکان ثبت */}
+                  <label className={`flex items-center justify-between p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    currentAvailability === 'active_readonly'
+                      ? 'bg-amber-50/90 border-amber-400 text-amber-950 font-bold shadow-xs'
+                      : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="clientAvailability"
+                        value="active_readonly"
+                        checked={currentAvailability === 'active_readonly'}
+                        onChange={() => {
+                          updateGeneral({ clientAvailability: 'active_readonly' });
+                          onUpdateForm({ clientAvailability: 'active_readonly' });
+                        }}
+                        className="w-4 h-4 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <span className="text-xs sm:text-sm">۲ـ فعال اما بدون امکان ثبت (انتهای لیست و غیرفعال)</span>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                  </label>
+
+                  {/* حالت ۳: غیرفعال و عدم نمایش */}
+                  <label className={`flex items-center justify-between p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer ${
+                    currentAvailability === 'hidden_inactive'
+                      ? 'bg-rose-50/90 border-rose-400 text-rose-950 font-bold shadow-xs'
+                      : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="clientAvailability"
+                        value="hidden_inactive"
+                        checked={currentAvailability === 'hidden_inactive'}
+                        onChange={() => {
+                          updateGeneral({ clientAvailability: 'hidden_inactive' });
+                          onUpdateForm({ clientAvailability: 'hidden_inactive' });
+                        }}
+                        className="w-4 h-4 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                      />
+                      <span className="text-xs sm:text-sm">۳ـ غیرفعال و بدون امکان ثبت (عدم نمایش در لیست)</span>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0" />
+                  </label>
+                </div>
               </div>
               {/* رنگ شناسایی فرم */}
               <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100">

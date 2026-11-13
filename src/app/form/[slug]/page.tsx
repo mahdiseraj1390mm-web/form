@@ -13,6 +13,15 @@ function PublicFormContent() {
   const router = useRouter();
   const slug = params?.slug as string;
   const { getFormBySlug, forms } = useForm();
+  const [hasClientSession, setHasClientSession] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && localStorage.getItem('belhagh_current_case_code')) {
+        setHasClientSession(true);
+      }
+    } catch {}
+  }, []);
 
   const form = getFormBySlug(slug);
 
@@ -87,6 +96,14 @@ function PublicFormContent() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {hasClientSession && (
+              <Link
+                href="/portal"
+                className="px-2.5 py-1 text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span>لیست فرم‌ها</span>
+              </Link>
+            )}
             <PwaInstallButton variant="public-header" />
             <span className="hidden sm:inline text-xs text-slate-500 font-medium whitespace-nowrap">
               سامانه امن ثبت داده‌ها

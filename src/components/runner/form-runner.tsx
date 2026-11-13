@@ -832,17 +832,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         ...prefilledData,
       }));
 
-      // انتقال مستقیم به صفحه نوبت‌دهی بدون نمایش صفحه میانی
-      if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-        setAuthGateMode('filling');
-        setCurrentStepIndex(0);
-        setInternalPageIndex(0);
-      } else {
-        if (onNavigateToForm) {
-          onNavigateToForm('3uu4z');
-        } else if (typeof window !== 'undefined') {
-          window.location.href = '/form/3uu4z';
-        }
+      // انتقال مستقیم به صفحه لیست فرم‌های مراجع
+      if (typeof window !== 'undefined') {
+        window.location.href = '/portal';
       }
     } else {
       setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید.');
@@ -2683,14 +2675,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                               setFormData((prev) => ({ ...prev, ...prefilledData }));
                               setShowForgotModal(false);
 
-                              if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-                                setAuthGateMode('filling');
-                                setCurrentStepIndex(0);
-                                setInternalPageIndex(0);
-                              } else if (onNavigateToForm) {
-                                onNavigateToForm('3uu4z');
-                              } else if (typeof window !== 'undefined') {
-                                window.location.href = '/form/3uu4z';
+                              if (typeof window !== 'undefined') {
+                                window.location.href = '/portal';
                               }
                             }
                           }}
@@ -2983,21 +2969,29 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  localStorage.removeItem('belhagh_active_case_data');
-                  localStorage.removeItem('belhagh_current_case_code');
-                }
-                setFormData((prev) => ({ ...prev, f_case_code: '' }));
-                setAuthGateMode('portal');
-                setIsLoginBoxOpen(true);
-              }}
-              className="text-[11px] text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
-            >
-              تغییر پرونده / ورود مجدد
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href="/portal"
+                className="text-[11px] text-emerald-800 hover:text-emerald-950 font-bold bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs transition-colors inline-flex items-center gap-1"
+              >
+                <span>لیست فرم‌ها</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('belhagh_active_case_data');
+                    localStorage.removeItem('belhagh_current_case_code');
+                  }
+                  setFormData((prev) => ({ ...prev, f_case_code: '' }));
+                  setAuthGateMode('portal');
+                  setIsLoginBoxOpen(true);
+                }}
+                className="text-[11px] text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
+              >
+                تغییر پرونده / خروج
+              </button>
+            </div>
           </div>
         )}
 
@@ -4051,16 +4045,14 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     } catch (e) {}
                   }
                   setDuplicateCaseInfo(null);
-                  if (onNavigateToForm) {
-                    onNavigateToForm('3uu4z');
-                  } else if (typeof window !== 'undefined') {
-                    window.location.href = '/form/3uu4z';
+                  if (typeof window !== 'undefined') {
+                    window.location.href = '/portal';
                   }
                 }}
                 className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <LogIn className="w-4 h-4" />
-                <span>ورود به سامانه نوبت‌دهی با این پرونده</span>
+                <span>ورود به لیست فرم‌ها با این پرونده</span>
               </button>
 
               <button

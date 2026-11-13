@@ -263,9 +263,15 @@ export interface FormBehaviorSettings {
   };
 }
 
+export type ClientFormAvailability = 
+  | 'active_submittable' // ۱ـ فعال و دارای امکان ثبت (روشن و قابل کلیک)
+  | 'active_readonly'    // ۲ـ فعال اما بدون امکان ثبت (انتهای لیست، خاکستری و غیرفعال)
+  | 'hidden_inactive';   // ۳ـ غیرفعال و بدون امکان ثبت (عدم نمایش در لیست)
+
 export interface FormGeneralSettings {
   identifierColor?: string; // رنگ شناسایی فرم (مطابق فرم‌افزار)
   showPortalGate?: boolean; // نمایش صفحه پورتال پرونده پیش از ورود به فرم
+  clientAvailability?: ClientFormAvailability; // وضعیت فرم در پورتال مراجعین (۱- فعال با ثبت، ۲- فعال بدون ثبت، ۳- غیرفعال)
   portalTitle?: string; // نوشته عنوان‌گونه بالای صفحه یا پورتال (مثال: «مرکز خدمات روانشناسی بالحق»)
   portalSubtitle?: string; // زیرعنوان یا متن توضیحی پورتال
   portalHeroImage?: string; // تصویر سربرگ / بنر پورتال
@@ -323,6 +329,7 @@ export interface Form {
   category: string;
   mode: 'classic' | 'wizard' | 'singleQuestion'; // کلاسیک (یک صفحه)، چندمرحله‌ای، یا تک‌سوالی (اسلایدی با دکمه بعدی)
   status: 'published' | 'draft' | 'archived';
+  clientAvailability?: ClientFormAvailability; // وضعیت نمایش در پورتال مراجع: ۱ـ فعال با امکان ثبت، ۲ـ فعال بدون امکان ثبت، ۳ـ غیرفعال و عدم نمایش
   fields: FormField[];
   panels?: FormPanel[];
   steps: FormStep[];
