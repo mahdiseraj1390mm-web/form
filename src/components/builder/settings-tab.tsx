@@ -255,12 +255,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                         }}
                         className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                       />
-                      <span className="text-xs sm:text-sm">۱ـ فعال با امکان ثبت (روشن و قابل کلیک)</span>
+                      <span className="text-xs sm:text-sm font-bold">در حال اجرا</span>
                     </div>
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
                   </label>
 
-                  {/* حالت ۲: فعال بدون امکان ثبت */}
+                  {/* حالت ۲: متوقف */}
                   <label className={`flex items-center justify-between p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer ${
                     currentAvailability === 'active_readonly'
                       ? 'bg-amber-50/90 border-amber-400 text-amber-950 font-bold shadow-xs'
@@ -284,15 +284,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                         }}
                         className="w-4 h-4 text-amber-600 focus:ring-amber-500 cursor-pointer"
                       />
-                      <span className="text-xs sm:text-sm">۲ـ فعال اما بدون امکان ثبت (انتهای لیست و غیرفعال)</span>
+                      <span className="text-xs sm:text-sm font-bold">متوقف</span>
                     </div>
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
                   </label>
 
-                  {/* حالت ۳: غیرفعال و عدم نمایش */}
+                  {/* حالت ۳: غیرفعال */}
                   <label className={`flex items-center justify-between p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer ${
                     currentAvailability === 'hidden_inactive'
-                      ? 'bg-rose-50/90 border-rose-400 text-rose-950 font-bold shadow-xs'
+                      ? 'bg-slate-100 border-slate-400 text-slate-900 font-bold shadow-xs'
                       : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
                   }`}>
                     <div className="flex items-center gap-3">
@@ -311,11 +311,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                             },
                           });
                         }}
-                        className="w-4 h-4 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                        className="w-4 h-4 text-slate-600 focus:ring-slate-500 cursor-pointer"
                       />
-                      <span className="text-xs sm:text-sm">۳ـ غیرفعال و بدون امکان ثبت (عدم نمایش در لیست)</span>
+                      <span className="text-xs sm:text-sm font-bold">غیرفعال</span>
                     </div>
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0" />
                   </label>
                 </div>
               </div>

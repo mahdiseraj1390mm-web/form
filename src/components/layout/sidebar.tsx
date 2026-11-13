@@ -148,7 +148,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80">
             <div className="text-[11px] font-medium text-slate-500 mb-1 flex items-center justify-between">
               <span>فرم انتخابی</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  (activeForm.clientAvailability === 'active_readonly' || activeForm.status === 'draft')
+                    ? 'bg-amber-500'
+                    : (activeForm.clientAvailability === 'hidden_inactive' || activeForm.status === 'archived')
+                    ? 'bg-slate-400'
+                    : 'bg-emerald-500 animate-pulse'
+                }`}
+                title={
+                  (activeForm.clientAvailability === 'active_readonly' || activeForm.status === 'draft')
+                    ? 'متوقف'
+                    : (activeForm.clientAvailability === 'hidden_inactive' || activeForm.status === 'archived')
+                    ? 'غیرفعال'
+                    : 'در حال اجرا'
+                }
+              />
             </div>
             <div className="text-xs font-bold text-slate-900 truncate" title={activeForm.title}>
               {activeForm.title}

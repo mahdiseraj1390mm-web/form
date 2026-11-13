@@ -44,24 +44,24 @@ export const FORM_STATUS_MAP: Record<
 > = {
   active_submittable: {
     code: 1,
-    label: '۱ـ فعال با ثبت',
-    fullLabel: '۱ـ فعال با امکان ثبت (روشن و قابل کلیک)',
+    label: 'در حال اجرا',
+    fullLabel: 'در حال اجرا',
     badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100',
     dotClass: 'bg-emerald-500',
     pulse: true,
   },
   active_readonly: {
     code: 2,
-    label: '۲ـ فعال بدون ثبت',
-    fullLabel: '۲ـ فعال اما بدون امکان ثبت (انتهای لیست)',
+    label: 'متوقف',
+    fullLabel: 'متوقف',
     badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100',
     dotClass: 'bg-amber-500',
     pulse: false,
   },
   hidden_inactive: {
     code: 3,
-    label: '۳ـ غیرفعال و عدم نمایش',
-    fullLabel: '۳ـ غیرفعال و بدون امکان ثبت (عدم نمایش در لیست)',
+    label: 'غیرفعال',
+    fullLabel: 'غیرفعال',
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200',
     dotClass: 'bg-slate-400',
     pulse: false,
@@ -231,7 +231,7 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-            <span>۱ـ فعال با ثبت</span>
+            <span>در حال اجرا</span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'active_submittable' ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-100 text-emerald-800'}`}>
               {toPersianDigits(forms.filter((f) => getFormEffectiveStatus(f) === 'active_submittable').length)}
             </span>
@@ -247,7 +247,7 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-            <span>۲ـ فعال بدون ثبت</span>
+            <span>متوقف</span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'active_readonly' ? 'bg-amber-700 text-amber-100' : 'bg-amber-100 text-amber-800'}`}>
               {toPersianDigits(forms.filter((f) => getFormEffectiveStatus(f) === 'active_readonly').length)}
             </span>
@@ -263,7 +263,7 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-            <span>۳ـ غیرفعال و عدم نمایش</span>
+            <span>غیرفعال</span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter === 'hidden_inactive' ? 'bg-slate-600 text-slate-100' : 'bg-slate-100 text-slate-600'}`}>
               {toPersianDigits(forms.filter((f) => getFormEffectiveStatus(f) === 'hidden_inactive').length)}
             </span>
