@@ -1,5 +1,37 @@
 [
   {
+    "id": "sms-1794693510988-j8ays",
+    "timestamp": "2026-11-14T21:58:30.988Z",
+    "type": "recovery_otp",
+    "recipient": "09908595127",
+    "bodyId": 568830,
+    "args": [
+      "11208"
+    ],
+    "message": "با سلام\nکد تأیید شما: 11208 می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق",
+    "status": "sent",
+    "providerResponse": {
+      "status": "sent",
+      "recId": "4794168910671557387"
+    }
+  },
+  {
+    "id": "sms-1794693485880-entfd",
+    "timestamp": "2026-11-14T21:58:05.880Z",
+    "type": "recovery_otp",
+    "recipient": "09908595127",
+    "bodyId": 568830,
+    "args": [
+      "64511"
+    ],
+    "message": "با سلام\nکد تأیید شما: 64511 می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق",
+    "status": "sent",
+    "providerResponse": {
+      "status": "sent",
+      "recId": "4673168686145441199"
+    }
+  },
+  {
     "id": "sms-1794684678112-z8e1c",
     "timestamp": "2026-11-14T19:31:18.112Z",
     "type": "recovery_otp",
