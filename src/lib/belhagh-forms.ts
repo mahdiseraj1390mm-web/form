@@ -325,6 +325,7 @@ export const belhaghRegistrationForm: Form = {
     portalSubtitle: 'سامانه مشاوره تلفنی و پرونده مراجعین',
     portalHeroImage: '/images/belhagh-hero.png',
     showPortalHeroImage: true,
+    logoUrl: '/images/belhagh-logo.png',
     liveChatEnabled: true,
   },
   theme: {
@@ -588,6 +589,7 @@ export const belhaghBookingForm: Form = {
     portalSubtitle: 'سامانه مشاوره تلفنی و پرونده مراجعین',
     portalHeroImage: '/images/belhagh-hero.png',
     showPortalHeroImage: true,
+    logoUrl: '/images/belhagh-logo.png',
     liveChatEnabled: true,
   },
   theme: {

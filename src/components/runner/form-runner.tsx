@@ -2164,11 +2164,19 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       const booking = extractBookingDetails({ ...formData, ...submittedResult.data });
       return (
         <div className="max-w-2xl mx-auto my-6 sm:my-12 p-5 sm:p-8 bg-white rounded-3xl border border-emerald-200 shadow-xl text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-200 shadow-sm">
-            <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10" />
+          <div className="flex flex-col items-center justify-center gap-3">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white border border-slate-200 shadow-sm p-1.5 flex items-center justify-center">
+              <img src="/images/belhagh-logo.png" alt="مرکز خدمات روانشناسی بالحق" className="w-full h-full object-contain" />
+            </div>
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border-2 border-emerald-200 shadow-sm">
+              <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7" />
+            </div>
           </div>
 
           <div>
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mb-2">
+              مرکز خدمات روانشناسی و مشاوره بالحق
+            </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900">
               نوبت مشاوره شما با موفقیت ثبت شد
             </h2>
@@ -2261,7 +2269,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 try {
                   const printWin = window.open('', '_blank');
                   if (printWin) {
-                    printWin.document.write(`<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="utf-8"><title>رسید نوبت مشاوره روانشناسی بالحق</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { font-family: Tahoma, system-ui, sans-serif; padding: 20px; direction: rtl; text-align: right; background: #f8fafc; color: #1e293b; } .card { max-width: 480px; margin: 20px auto; background: #fff; border: 2px solid #059669; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); } h2 { color: #065f46; text-align: center; margin: 0 0 20px; font-size: 18px; border-bottom: 2px solid #ecfdf5; padding-bottom: 12px; } .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px; } .label { color: #64748b; font-weight: 500; } .val { font-weight: bold; color: #0f172a; } .highlight { color: #047857; font-size: 15px; } .guide { margin-top: 18px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 14px; border-radius: 12px; font-size: 13px; line-height: 1.7; color: #064e3b; } .btn { display: block; width: 100%; margin-top: 20px; padding: 14px; background: #084d3e; color: #fff; text-align: center; border-radius: 10px; font-weight: bold; font-size: 14px; border: none; cursor: pointer; } @media print { .btn { display: none !important; } body { background: #fff; padding: 0; } .card { box-shadow: none; border: 1px solid #ccc; } }</style></head><body><div class="card"><h2>رسید نوبت مشاوره تلفنی بالحق</h2><div class="row"><span class="label">مشاور انتخابی:</span><span class="val">${booking.counselorName}</span></div><div class="row"><span class="label">تاریخ نوبت:</span><span class="val highlight">${booking.date}</span></div><div class="row"><span class="label">ساعت نوبت:</span><span class="val highlight">${booking.time}</span></div><div class="row"><span class="label">مراجع محترم:</span><span class="val">${booking.clientName}</span></div><div class="row"><span class="label">شماره تماس مشاور:</span><span class="val" dir="ltr">${booking.counselorMobile || ''}</span></div><div class="row"><span class="label">کد پرونده:</span><span class="val" dir="ltr">${submittedResult.trackingCode || '-'}</span></div><div class="guide">📞 <strong>راهنما:</strong> لطفاً رأس ساعت مقرر با شماره مشاور (${booking.counselorMobile || ''}) تماس حاصل فرمایید.</div><button class="btn" onclick="window.print()">چاپ / ذخیره به صورت PDF</button></div><script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
+                    printWin.document.write(`<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="utf-8"><title>رسید نوبت مشاوره روانشناسی بالحق</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { font-family: Tahoma, system-ui, sans-serif; padding: 20px; direction: rtl; text-align: right; background: #f8fafc; color: #1e293b; } .card { max-width: 480px; margin: 20px auto; background: #fff; border: 2px solid #059669; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); } .logo-box { text-align: center; margin-bottom: 12px; } .logo-box img { height: 50px; object-fit: contain; } h2 { color: #065f46; text-align: center; margin: 0 0 20px; font-size: 18px; border-bottom: 2px solid #ecfdf5; padding-bottom: 12px; } .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px; } .label { color: #64748b; font-weight: 500; } .val { font-weight: bold; color: #0f172a; } .highlight { color: #047857; font-size: 15px; } .guide { margin-top: 18px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 14px; border-radius: 12px; font-size: 13px; line-height: 1.7; color: #064e3b; } .btn { display: block; width: 100%; margin-top: 20px; padding: 14px; background: #084d3e; color: #fff; text-align: center; border-radius: 10px; font-weight: bold; font-size: 14px; border: none; cursor: pointer; } @media print { .btn { display: none !important; } body { background: #fff; padding: 0; } .card { box-shadow: none; border: 1px solid #ccc; } }</style></head><body><div class="card"><div class="logo-box"><img src="/images/belhagh-logo.png" alt="لوگوی روانشناسی بالحق" /></div><h2>رسید نوبت مشاوره تلفنی بالحق</h2><div class="row"><span class="label">مشاور انتخابی:</span><span class="val">${booking.counselorName}</span></div><div class="row"><span class="label">تاریخ نوبت:</span><span class="val highlight">${booking.date}</span></div><div class="row"><span class="label">ساعت نوبت:</span><span class="val highlight">${booking.time}</span></div><div class="row"><span class="label">مراجع محترم:</span><span class="val">${booking.clientName}</span></div><div class="row"><span class="label">شماره تماس مشاور:</span><span class="val" dir="ltr">${booking.counselorMobile || ''}</span></div><div class="row"><span class="label">کد پرونده:</span><span class="val" dir="ltr">${submittedResult.trackingCode || '-'}</span></div><div class="guide">📞 <strong>راهنما:</strong> لطفاً رأس ساعت مقرر با شماره مشاور (${booking.counselorMobile || ''}) تماس حاصل فرمایید.</div><button class="btn" onclick="window.print()">چاپ / ذخیره به صورت PDF</button></div><script>window.onload=function(){setTimeout(function(){window.print();},300);};</script></body></html>`);
                     printWin.document.close();
                     return;
                   }
@@ -3194,7 +3202,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
           <div className="border-b border-slate-100 pb-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -3206,26 +3214,37 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                       window.location.href = '/portal';
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
                   title="بازگشت"
                 >
                   <ArrowRight className="w-3.5 h-3.5" />
                   <span>بازگشت</span>
                 </button>
-                <h1 className="text-base sm:text-xl font-extrabold" style={{ color: theme?.titleColor || '#0f172a' }}>{form.title}</h1>
+                {isBelhaghFamily && (
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-white border border-slate-200/90 shadow-2xs p-1 flex items-center justify-center shrink-0">
+                    <img
+                      src={form.generalSettings?.logoUrl || '/images/belhagh-logo.png'}
+                      alt="لوگوی روانشناسی بالحق"
+                      className="w-full h-full object-contain select-none"
+                    />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-xl font-extrabold truncate" style={{ color: theme?.titleColor || '#0f172a' }}>{form.title}</h1>
+                  {form.description && (
+                    <p className="text-xs mt-1 leading-relaxed line-clamp-2" style={{ color: theme?.textColor || '#64748b' }}>{form.description}</p>
+                  )}
+                </div>
               </div>
               {onBackToStudio && (
                 <button
                   onClick={onBackToStudio}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                  className="text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer shrink-0"
                 >
                   بازگشت به ویرایشگر فرم
                 </button>
               )}
             </div>
-            {form.description && (
-              <p className="text-xs mt-2 leading-relaxed" style={{ color: theme?.textColor || '#64748b' }}>{form.description}</p>
-            )}
           </div>
 
         {/* استپر استاندارد فرم‌افزار و نسخه بهینه‌شده موبایل */}

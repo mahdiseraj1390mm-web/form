@@ -115,17 +115,21 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <div className="flex items-center gap-2 sm:gap-3 cursor-pointer" onClick={handleLogoClick}>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold shadow-sm border border-slate-800 shrink-0">
-              <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center p-1 shrink-0 overflow-hidden">
+              <img
+                src="/images/belhagh-logo.png"
+                alt="لوگوی مرکز خدمات روانشناسی بالحق"
+                className="w-full h-full object-contain select-none"
+              />
             </div>
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight">فرم‌افزار</span>
-                <span className="text-[10px] sm:text-[11px] font-semibold px-1.5 sm:px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                  سازمانی Pro
+                <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight">روانشناسی بالحق</span>
+                <span className="text-[10px] sm:text-[11px] font-semibold px-1.5 sm:px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  سامانه مدیریت
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 hidden sm:block">سامانه فرم‌ساز، آزمون‌ساز و پرونده مراجعین بالحق</p>
+              <p className="text-[11px] text-slate-500 hidden sm:block">سامانه جامع پرونده الکترونیک و نوبت‌دهی مرکز بالحق</p>
             </div>
           </div>
 

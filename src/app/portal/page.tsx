@@ -280,9 +280,11 @@ function PortalContent() {
   if (isLoadingSession) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-        <div className="flex items-center gap-2.5 text-slate-500 font-bold text-xs sm:text-sm">
-          <Layers className="w-5 h-5 animate-spin text-[#084d8c]" />
-          <span>در حال بررسی پرونده...</span>
+        <div className="flex flex-col items-center gap-3 text-slate-600 font-bold text-xs sm:text-sm">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-md p-1.5 flex items-center justify-center animate-pulse">
+            <img src="/images/belhagh-logo.png" alt="لوگوی روانشناسی بالحق" className="w-full h-full object-contain" />
+          </div>
+          <span>در حال بررسی پرونده مراجع...</span>
         </div>
       </div>
     );
@@ -295,8 +297,10 @@ function PortalContent() {
     }
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center" dir="rtl">
-        <div className="flex items-center gap-2.5 text-slate-500 font-bold text-xs sm:text-sm">
-          <Layers className="w-5 h-5 animate-spin text-[#084d8c]" />
+        <div className="flex flex-col items-center gap-3 text-slate-600 font-bold text-xs sm:text-sm">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-md p-1.5 flex items-center justify-center animate-pulse">
+            <img src="/images/belhagh-logo.png" alt="لوگوی روانشناسی بالحق" className="w-full h-full object-contain" />
+          </div>
           <span>در حال هدایت به سامانه...</span>
         </div>
       </div>
@@ -310,10 +314,14 @@ function PortalContent() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           
-          {/* عنوان مرکز */}
+          {/* عنوان مرکز و لوگوی بالحق */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-[#084d8c] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-              <Layers className="w-4 h-4 text-blue-200" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-0.5 shrink-0 overflow-hidden">
+              <img
+                src="/images/belhagh-logo.png"
+                alt="لوگوی روانشناسی بالحق"
+                className="w-full h-full object-contain select-none"
+              />
             </div>
             <span className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
               مرکز خدمات روانشناسی بالحق

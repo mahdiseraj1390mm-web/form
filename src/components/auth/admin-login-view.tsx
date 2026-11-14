@@ -70,21 +70,25 @@ export const AdminLoginView: React.FC = () => {
           
           {/* لوگو و سربرگ برند */}
           <div className="text-center space-y-3">
-            <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/20 ring-4 ring-blue-500/10">
-              <Layers className="w-8 h-8" />
+            <div className="inline-flex items-center justify-center p-2 rounded-2xl bg-white shadow-xl shadow-blue-900/30 ring-4 ring-white/10 w-20 h-20 mx-auto overflow-hidden">
+              <img
+                src="/images/belhagh-logo.png"
+                alt="مرکز خدمات روانشناسی بالحق"
+                className="w-full h-full object-contain"
+              />
             </div>
 
             <div>
               <div className="flex items-center justify-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                  فرم‌افزار سازمانی
+                  روانشناسی بالحق
                 </h1>
-                <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                  سازمانی Pro
+                <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  پنل مدیریت
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1 font-medium">
-                سامانه هوشمند خدمات روانشناسی بالحق
+                سامانه هوشمند پرونده الکترونیک و نوبت‌دهی مشاوره
               </p>
             </div>
           </div>

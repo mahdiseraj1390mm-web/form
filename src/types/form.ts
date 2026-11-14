@@ -288,6 +288,7 @@ export type ClientFormAvailability =
 
 export interface FormGeneralSettings {
   identifierColor?: string; // رنگ شناسایی فرم (مطابق فرم‌افزار)
+  logoUrl?: string; // لوگوی اختصاصی فرم
   showPortalGate?: boolean; // نمایش صفحه پورتال پرونده پیش از ورود به فرم
   clientAvailability?: ClientFormAvailability; // وضعیت فرم: در حال اجرا، متوقف، یا غیرفعال
   portalTitle?: string; // نوشته عنوان‌گونه بالای صفحه یا پورتال (مثال: «مرکز خدمات روانشناسی بالحق»)

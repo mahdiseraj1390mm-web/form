@@ -13,8 +13,8 @@ import { Layers } from 'lucide-react';
 function ViewSkeleton() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-pulse">
-      <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-3">
-        <Layers className="w-5 h-5 animate-spin" />
+      <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-2xs p-1.5 flex items-center justify-center mb-3">
+        <img src="/images/belhagh-logo.png" alt="لوگوی روانشناسی بالحق" className="w-full h-full object-contain" />
       </div>
       <p className="text-xs text-slate-500 font-medium">در حال بارگذاری بخش مورد نظر...</p>
     </div>
@@ -129,8 +129,8 @@ export default function AppHome() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center mb-4 animate-pulse">
-          <Layers className="w-6 h-6 animate-spin" />
+        <div className="w-16 h-16 rounded-2xl bg-white p-2 flex items-center justify-center mb-4 animate-pulse shadow-xl ring-4 ring-white/10">
+          <img src="/images/belhagh-logo.png" alt="لوگوی بالحق" className="w-full h-full object-contain" />
         </div>
         <p className="text-xs text-slate-400 font-medium">در حال بررسی مجوزهای دسترسی مدیریت...</p>
       </div>

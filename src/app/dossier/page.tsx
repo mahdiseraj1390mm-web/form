@@ -199,9 +199,11 @@ function DossierContent() {
   if (isSearchingApi) {
     return (
       <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center">
-        <div className="flex items-center gap-2 text-slate-500 font-bold text-sm">
-          <Layers className="size-5 animate-spin text-[#173f6b]" />
-          <span>در حال استعلام پرونده مراجع از سرور...</span>
+        <div className="flex flex-col items-center gap-3 text-slate-600 font-bold text-xs sm:text-sm">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-md p-1.5 flex items-center justify-center animate-pulse">
+            <img src="/images/belhagh-logo.png" alt="مرکز خدمات روانشناسی بالحق" className="w-full h-full object-contain" />
+          </div>
+          <span>در حال استعلام پرونده مراجع از پایگاه بالحق...</span>
         </div>
       </div>
     );
@@ -211,8 +213,8 @@ function DossierContent() {
     return (
       <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center p-4" dir="rtl">
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm max-w-md w-full text-center space-y-4">
-          <div className="grid size-14 place-items-center rounded-2xl bg-slate-100 text-slate-400 mx-auto">
-            <FileQuestion className="size-7" />
+          <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-xs p-1.5 mx-auto flex items-center justify-center">
+            <img src="/images/belhagh-logo.png" alt="روانشناسی بالحق" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-lg font-black text-slate-800">پرونده‌ای یافت نشد</h2>
           <p className="text-xs text-slate-500 leading-relaxed">
@@ -244,8 +246,10 @@ export default function DossierPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center">
-          <div className="flex items-center gap-2 text-slate-500 font-bold text-sm">
-            <Layers className="size-5 animate-spin text-[#173f6b]" />
+          <div className="flex flex-col items-center gap-3 text-slate-600 font-bold text-xs sm:text-sm">
+            <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-md p-1.5 flex items-center justify-center animate-pulse">
+              <img src="/images/belhagh-logo.png" alt="مرکز خدمات روانشناسی بالحق" className="w-full h-full object-contain" />
+            </div>
             <span>در حال بارگذاری پرونده مراجع...</span>
           </div>
         </div>

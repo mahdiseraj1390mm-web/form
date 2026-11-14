@@ -1622,9 +1622,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
       {/* سربرگ ناوبری سراسری برند بالحق */}
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur shadow-2xs">
         <div className="mx-auto flex w-full items-center justify-between gap-6 px-4 sm:px-8 lg:px-12 py-3.5">
-          <div className="flex items-center gap-3.5">
-            <div className="grid size-11 place-items-center rounded-2xl bg-[#173f6b] text-base font-black text-white shadow-sm">
-              بـ
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-white border border-slate-200/90 shadow-2xs p-1 flex items-center justify-center shrink-0 overflow-hidden">
+              <img
+                src="/images/belhagh-logo.png"
+                alt="مرکز خدمات روانشناسی بالحق"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div className="text-sm font-black text-[#173f6b]">مرکز خدمات روانشناسی بالحق</div>

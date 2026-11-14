@@ -506,22 +506,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       
       {/* سربرگ داشبورد مدیریت */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              سامانه آنلاین و برخط
-            </span>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200 shadow-2xs p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
+            <img
+              src="/images/belhagh-logo.png"
+              alt="لوگوی روانشناسی بالحق"
+              className="w-full h-full object-contain"
+            />
           </div>
-          <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-            پنل جامع مدیریت مرکز خدمات روانشناسی و مشاوره بالحق
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            پایش لحظه‌ای پرونده‌ها، نوبت‌دهی تلفنی، ارزیابی‌های خودسنجی و گزارش‌های آماری
-          </p>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                سامانه آنلاین و برخط
+              </span>
+            </div>
+            <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+              پنل جامع مدیریت مرکز خدمات روانشناسی و مشاوره بالحق
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              پایش لحظه‌ای پرونده‌ها، نوبت‌دهی تلفنی، ارزیابی‌های خودسنجی و گزارش‌های آماری
+            </p>
+          </div>
         </div>
-
-        </div>
+      </div>
 
       {/* ۳. باکس آمار کلی سامانه (تعداد ثبت پرونده، تعداد نوبت‌های دریافتی، تعداد فرم‌های پرسشنامه و تراکنش‌ها) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -32,8 +32,12 @@ function PublicFormContent() {
   if (!form) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-12 h-12 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center mb-4">
-          <Layers className="w-6 h-6" />
+        <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex items-center justify-center p-1.5 mb-4">
+          <img
+            src="/images/belhagh-logo.png"
+            alt="لوگوی روانشناسی بالحق"
+            className="w-full h-full object-contain"
+          />
         </div>
         <h1 className="text-lg font-bold text-slate-800">فرم مورد نظر یافت نشد</h1>
         <p className="text-xs text-slate-500 mt-1 max-w-sm">
@@ -86,14 +90,18 @@ function PublicFormContent() {
         hasBgImage ? 'backdrop-blur-md bg-white/85' : 'bg-white'
       }`}>
         <div className="max-w-3xl mx-auto px-3 sm:px-4 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
-              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
+          <Link href="/portal" className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition-opacity" title="مرکز خدمات روانشناسی بالحق">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-center p-0.5 shrink-0 overflow-hidden">
+              <img
+                src={form.generalSettings?.logoUrl || '/images/belhagh-logo.png'}
+                alt="لوگوی روانشناسی بالحق"
+                className="w-full h-full object-contain select-none"
+              />
             </div>
             <span className="font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight block truncate">
               {headerTitle}
             </span>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-2 shrink-0">
             {hasClientSession && (
@@ -129,9 +137,12 @@ function PublicFormContent() {
       <footer className={`py-4 sm:py-6 text-center text-[11px] sm:text-xs text-slate-500 border-t border-slate-200/60 relative z-10 transition-colors ${
         hasBgImage ? 'backdrop-blur-md bg-white/85' : 'bg-white'
       }`}>
-        <div className="max-w-3xl mx-auto px-3 sm:px-4 flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2">
-          <span>قدرت گرفته از سامانه فرم‌افزار سازمانی</span>
-          <span className="text-[10px] sm:text-[11px] text-slate-400">رمزنگاری اطلاعات و اعتبارسنجی شبکه شاپرک</span>
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <img src="/images/belhagh-logo.png" alt="روانشناسی بالحق" className="h-5 w-auto object-contain" />
+            <span className="font-semibold text-slate-600">مرکز خدمات روانشناسی و مشاوره بالحق</span>
+          </div>
+          <span className="text-[10px] sm:text-[11px] text-slate-400">سامانه امن نوبت‌دهی و پرونده الکترونیک</span>
         </div>
       </footer>
     </div>
