@@ -923,6 +923,12 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                 allowReceiptUpload={field.bankCardData?.allowReceiptUpload !== false}
                                 requireReceipt={Boolean(field.bankCardData?.requireReceipt)}
                                 receiptTitle={field.bankCardData?.receiptTitle}
+                                enableAppShortcuts={field.bankCardData?.enableAppShortcuts !== false}
+                                allowedApps={field.bankCardData?.allowedApps}
+                                enableTrackingCode={field.bankCardData?.enableTrackingCode !== false}
+                                requireTrackingCode={Boolean(field.bankCardData?.requireTrackingCode)}
+                                trackingCodeTitle={field.bankCardData?.trackingCodeTitle}
+                                allowOnlineGatewaySwitch={false}
                                 isReadOnly={true}
                                 showContainerBorder={false}
                               />

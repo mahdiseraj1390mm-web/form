@@ -1,5 +1,51 @@
 [
   {
+    "id": "sms-1794684678112-z8e1c",
+    "timestamp": "2026-11-14T19:31:18.112Z",
+    "type": "recovery_otp",
+    "recipient": "09908595127",
+    "bodyId": 568830,
+    "args": [
+      "84642"
+    ],
+    "message": "با سلام\nکد تأیید شما: 84642 می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق",
+    "status": "sent",
+    "providerResponse": {
+      "status": "sent",
+      "recId": "5187803651864740993"
+    }
+  },
+  {
+    "id": "sms-1794662394880-xm98n",
+    "timestamp": "2026-11-14T13:19:54.880Z",
+    "type": "recovery_otp",
+    "recipient": "09908595127",
+    "bodyId": 568830,
+    "args": [
+      "50121"
+    ],
+    "message": "با سلام\nکد تأیید شما: 50121 می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق",
+    "status": "sent",
+    "providerResponse": {
+      "status": "sent",
+      "recId": "4755836832863880761"
+    }
+  },
+  {
+    "id": "sms-1794662394012-qvylk",
+    "timestamp": "2026-11-14T13:19:54.012Z",
+    "type": "recovery_otp",
+    "recipient": "09908595127",
+    "bodyId": 0,
+    "args": [],
+    "message": "با سلام\nکد تأیید شما: 50121 می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق",
+    "status": "failed",
+    "providerResponse": {
+      "status": "failed",
+      "code": "11"
+    }
+  },
+  {
     "id": "sms-1794626422387-b8z20",
     "timestamp": "2026-11-14T03:20:22.387Z",
     "type": "recovery_otp",

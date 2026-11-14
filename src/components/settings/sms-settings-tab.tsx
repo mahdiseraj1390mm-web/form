@@ -102,6 +102,8 @@ export const SmsSettingsTab: React.FC = () => {
           mobile: phone,
           args: patternKey === 'case_registration' 
             ? ['SP260120']
+            : patternKey === 'recovery_otp'
+            ? ['50121']
             : patternKey === 'appointment_client'
             ? ['مراجع آزمایشی', 'دکتر علیرضا برهانی', '۱۶:۰۰ عصر', '۱۴۰۵/۰۸/۱۰']
             : ['مهدی سراج', 'اصفهان', 'نجف آباد', phone, '۱۴۰۵/۰۸/۱۰', '۱۶:۰۰ عصر'],
@@ -537,6 +539,118 @@ export const SmsSettingsTab: React.FC = () => {
                 {testResults.appointment_counselor && (
                   <span className={`text-[11px] font-bold ${testResults.appointment_counselor.success ? 'text-emerald-700' : 'text-rose-600'}`}>
                     {testResults.appointment_counselor.message}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* الگوی ۴: کد یکبارمصرف بازیابی پرونده (OTP) */}
+          {settings.patterns.recovery_otp && (
+            <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 hover:border-amber-300 transition-colors">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                  <span className="font-black text-sm text-slate-900">
+                    ۴. {settings.patterns.recovery_otp.title || 'پیامک کد تأیید یکبارمصرف (OTP)'}
+                  </span>
+                  <span className="text-[11px] px-2.5 py-0.5 bg-amber-50 text-amber-800 rounded-full font-bold">
+                    بازیابی کد پرونده
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-600">کد الگو (Body ID):</span>
+                  <input
+                    type="number"
+                    value={settings.patterns.recovery_otp.bodyId}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10) || 0;
+                      const currentOtpPattern = settings.patterns.recovery_otp || {
+                        bodyId: 568830,
+                        title: 'پیامک کد تأیید یکبارمصرف (OTP)',
+                        description: 'ارسال کد تأیید ۵ رقمی به مراجع جهت بازیابی شماره پرونده',
+                        template: '',
+                        variables: ['{0}: کد تأیید'],
+                      };
+                      setSettings({
+                        ...settings,
+                        patterns: {
+                          ...settings.patterns,
+                          recovery_otp: { ...currentOtpPattern, bodyId: val },
+                        },
+                      });
+                    }}
+                    className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-center font-mono font-bold bg-slate-50 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-bold text-slate-700">متن الگو / پیش‌نمایش پیامک:</label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-400">متغیر در دسترس:</span>
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-mono text-[10px] border border-slate-200">
+                      {'{0}: کد تأیید ۵ رقمی'}
+                    </span>
+                  </div>
+                </div>
+                <textarea
+                  rows={3}
+                  value={settings.patterns.recovery_otp.template}
+                  onChange={(e) => {
+                    const text = e.target.value;
+                    const currentOtpPattern = settings.patterns.recovery_otp || {
+                      bodyId: 568830,
+                      title: 'پیامک کد تأیید یکبارمصرف (OTP)',
+                      description: 'ارسال کد تأیید ۵ رقمی به مراجع جهت بازیابی شماره پرونده',
+                      template: '',
+                      variables: ['{0}: کد تأیید'],
+                    };
+                    setSettings({
+                      ...settings,
+                      patterns: {
+                        ...settings.patterns,
+                        recovery_otp: { ...currentOtpPattern, template: text },
+                      },
+                    });
+                  }}
+                  className="w-full p-3 border border-slate-300 rounded-xl bg-white font-sans text-xs leading-relaxed focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  dir="rtl"
+                />
+              </div>
+
+              {/* راهنمای اختصاصی ثبت پترن کد تایید در پنل ملی‌پیامک */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] leading-relaxed">
+                💡 <strong>راهنمای تغییر متن پیامک:</strong> در وب‌سرویس خدماتی اشتراکی ملی‌پیامک، متن ارسالی دقیقاً از روی الگوی ثبت‌شده در پنل ملی‌پیامک (payamak-panel.com) خوانده می‌شود. الگوی پیش‌فرض فعلی (۵۶۸۸۳۰) با متن «کد مشاوره شما:...» ثبت شده است. چنانچه تمایل دارید پیامک با متنی مانند <code>«کد تأیید بازیابی پرونده شما: {'{0}'}»</code> ارسال شود، کافیست این الگو را در منوی <strong>وب‌سرویس خدماتی / درج پترن</strong> پنل ملی‌پیامک ثبت نموده و پس از تأیید، شناسه پترن جدید را در کادر بالا (کد الگو) وارد فرمایید.
+              </div>
+
+              {/* کادر تست ارسال */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-700">ارسال تست به شماره:</span>
+                  <input
+                    type="text"
+                    placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                    value={testPhones.recovery_otp || ''}
+                    onChange={(e) => setTestPhones({ ...testPhones, recovery_otp: e.target.value })}
+                    className="w-36 px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-mono text-left"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleTestSend('recovery_otp')}
+                    disabled={testingKey === 'recovery_otp'}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    {testingKey === 'recovery_otp' ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    <span>ارسال تست کد تأیید</span>
+                  </button>
+                </div>
+
+                {testResults.recovery_otp && (
+                  <span className={`text-[11px] font-bold ${testResults.recovery_otp.success ? 'text-emerald-700' : 'text-rose-600'}`}>
+                    {testResults.recovery_otp.message}
                   </span>
                 )}
               </div>

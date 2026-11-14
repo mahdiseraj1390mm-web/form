@@ -1500,8 +1500,19 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       // اعتبارسنجی بارگذاری فیش واریزی کارت بانکی
       if (f.type === 'bankCard' && f.bankCardData?.requireReceipt) {
         const receipt = formData[`${f.id}_receipt`];
-        if (!receipt || (!receipt.dataUrl && !receipt.name)) {
+        const mode = formData[`${f.id}_payment_mode`] || 'card';
+        if (mode === 'card' && (!receipt || (!receipt.dataUrl && !receipt.name))) {
           newErrors[f.id] = 'بارگذاری تصویر فیش واریزی الزامی است.';
+          return;
+        }
+      }
+
+      // اعتبارسنجی کد رهگیری بانکی کارت به کارت
+      if (f.type === 'bankCard' && f.bankCardData?.enableTrackingCode !== false && f.bankCardData?.requireTrackingCode) {
+        const tracking = formData[`${f.id}_tracking_code`];
+        const mode = formData[`${f.id}_payment_mode`] || 'card';
+        if (mode === 'card' && (!tracking || String(tracking).trim().length < 4)) {
+          newErrors[f.id] = 'ورود کد رهگیری یا شماره ارجاع بانکی (حداقل ۴ رقم) الزامی است.';
           return;
         }
       }
@@ -1889,14 +1900,39 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       };
     }
 
-    const paymentInfo = paymentRefId
+    // بررسی پرداخت آنلاین شاپرک در برابر واریز کارت به کارت
+    let paymentInfo: any = paymentRefId
       ? {
           status: 'paid',
           amount: calculatedAmount,
           refId: paymentRefId,
           date: new Date().toISOString(),
+          method: 'shaparak_online',
         }
       : undefined;
+
+    if (!paymentInfo) {
+      const bankCardField = form.fields.find((f) => f.type === 'bankCard');
+      if (bankCardField) {
+        const rawAmt = formData[bankCardField.id];
+        const numAmt = rawAmt ? Number(String(rawAmt).replace(/[^\d]/g, '')) : 0;
+        const trackingCode = formData[`${bankCardField.id}_tracking_code`];
+        const receipt = formData[`${bankCardField.id}_receipt`];
+        const payMode = formData[`${bankCardField.id}_payment_mode`] || 'card';
+
+        if (numAmt > 0 || trackingCode || receipt) {
+          paymentInfo = {
+            status: 'pending', // در انتظار بررسی کد یا فیش
+            amount: numAmt,
+            refId: trackingCode ? String(trackingCode) : (receipt?.name ? `REC-${Date.now().toString().slice(-6)}` : `C2C-${Date.now().toString().slice(-6)}`),
+            date: new Date().toISOString(),
+            method: 'card_to_card',
+            paymentMode: payMode,
+            trackingCode: trackingCode || undefined,
+          };
+        }
+      }
+    }
 
     // ایجاد یا حفظ کد پرونده اختصاصی (فرمت استاندارد SP + ۶ رقم، مثلاً SP849201)
     const isRegistrationForm = form.id === 'form-belhagh-registration' || form.slug === 'zexuz';
@@ -2797,8 +2833,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     <p className="text-xs text-slate-700 leading-relaxed">
                       کد تأیید ۵ رقمی به شماره <span className="font-mono font-bold text-blue-900" dir="ltr">{forgotMobileInput}</span> ارسال شد.
                     </p>
-                    <p className="text-[11px] text-amber-800 bg-amber-50/90 py-1.5 px-2.5 rounded-xl border border-amber-200/70 leading-relaxed font-medium">
-                      📌 کد ۵ رقمی پیامک‌شده را در کادر زیر وارد فرمایید (این کد، کد تأیید موقت جهت احراز هویت و نمایش شماره پرونده اصلی شماست).
+                    <p className="text-[11px] text-amber-900 bg-amber-50/95 py-2 px-3 rounded-xl border border-amber-300/80 leading-relaxed font-medium">
+                      📌 <strong>توجه:</strong> لطفاً کد ۵ رقمی پیامک‌شده (که با عبارت «کد مشاوره شما:...» برایتان ارسال شده) را در کادر زیر وارد نمایید. این کد، رمز موقت یک‌بارمصرف جهت تأیید هویت و نمایش شماره پرونده اصلی شماست.
                     </p>
                     <div>
                       <button
@@ -3900,6 +3936,24 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     receiptTitle={field.bankCardData?.receiptTitle}
                     receiptValue={formData[`${field.id}_receipt`]}
                     onReceiptChange={(receipt) => handleFieldChange(`${field.id}_receipt`, receipt)}
+                    enableAppShortcuts={field.bankCardData?.enableAppShortcuts !== false}
+                    allowedApps={field.bankCardData?.allowedApps}
+                    enableTrackingCode={field.bankCardData?.enableTrackingCode !== false}
+                    requireTrackingCode={Boolean(field.bankCardData?.requireTrackingCode)}
+                    trackingCodeTitle={field.bankCardData?.trackingCodeTitle}
+                    trackingCodeValue={formData[`${field.id}_tracking_code`] || ''}
+                    onTrackingCodeChange={(val) => handleFieldChange(`${field.id}_tracking_code`, val)}
+                    allowOnlineGatewaySwitch={false}
+                    paymentMode={formData[`${field.id}_payment_mode`] || 'card'}
+                    onPaymentModeChange={(mode) => handleFieldChange(`${field.id}_payment_mode`, mode)}
+                    onDirectPayClick={() => {
+                      const raw = formData[field.id];
+                      const parsed = raw ? Number(String(raw).replace(/[^\d]/g, '')) : 0;
+                      if (parsed > 0) {
+                        setCalculatedAmount(parsed);
+                        setIsPaymentOpen(true);
+                      }
+                    }}
                     isReadOnly={Boolean(field.validations?.isReadOnly)}
                   />
                 ) : (

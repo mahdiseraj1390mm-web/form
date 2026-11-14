@@ -39,14 +39,18 @@ import {
   RefreshCw,
   User,
   CreditCard,
-  UploadCloud
+  UploadCloud,
+  Smartphone,
+  Hash,
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { predefinedLists, iranProvinces } from '@/lib/iran-geo';
 import { useForm } from '@/context/form-context';
 import { COUNSELING_TOPICS, isConsultantMember } from '@/lib/consultant-helpers';
 import { ConsultantScheduleModal } from '@/components/consultants/consultant-schedule-modal';
-import { BankCardDisplay } from '@/components/ui/bank-card-display';
+import { BankCardDisplay, SUPPORTED_PAYMENT_APPS } from '@/components/ui/bank-card-display';
 import { 
   IRANIAN_BANKS, 
   getBankByKey, 
@@ -1582,6 +1586,12 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                 allowReceiptUpload={currentBankCardData.allowReceiptUpload !== false}
                 requireReceipt={Boolean(currentBankCardData.requireReceipt)}
                 receiptTitle={currentBankCardData.receiptTitle}
+                enableAppShortcuts={currentBankCardData.enableAppShortcuts !== false}
+                allowedApps={currentBankCardData.allowedApps}
+                enableTrackingCode={currentBankCardData.enableTrackingCode !== false}
+                requireTrackingCode={Boolean(currentBankCardData.requireTrackingCode)}
+                trackingCodeTitle={currentBankCardData.trackingCodeTitle}
+                allowOnlineGatewaySwitch={false}
                 isReadOnly={true}
                 showContainerBorder={true}
               />
@@ -1872,6 +1882,166 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                   </div>
                 </>
               )}
+            </div>
+
+            {/* بخش ۵: تنظیمات پرش مستقیم به اپلیکیشن‌های پرداخت (آپ، تاپ، همراه کارت و...) */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Smartphone className="w-4 h-4 text-amber-600" />
+                  <span>دکمه‌های انتقال با اپلیکیشن‌های پرداخت:</span>
+                </label>
+                <span className="text-[10px] text-amber-900 font-bold bg-amber-100/80 px-2 py-0.5 rounded-full">
+                  کپی خودکار ۱۶ رقم
+                </span>
+              </div>
+
+              <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={currentBankCardData.enableAppShortcuts !== false}
+                  onChange={(e) => handleUpdateBankCard({ enableAppShortcuts: e.target.checked })}
+                  className="rounded text-amber-600 w-3.5 h-3.5"
+                />
+                <span className="text-xs text-slate-700 font-semibold">
+                  فعال‌سازی دکمه‌های پرش مستقیم به اپلیکیشن‌ها (آپ، تاپ، همراه کارت، بلوبانک، سکه)
+                </span>
+              </label>
+
+              {currentBankCardData.enableAppShortcuts !== false && (
+                <div className="space-y-2 pt-1 border-t border-slate-200/70">
+                  <span className="text-[11px] font-bold text-slate-700 block">
+                    انتخاب اپلیکیشن‌های قابل نمایش برای مراجع:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {SUPPORTED_PAYMENT_APPS.map((app) => {
+                      const currentAllowed = currentBankCardData.allowedApps || SUPPORTED_PAYMENT_APPS.map((a) => a.id);
+                      const isChecked = currentAllowed.includes(app.id);
+                      return (
+                        <label
+                          key={app.id}
+                          className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${
+                            isChecked
+                              ? 'border-amber-400 bg-amber-50/60 text-amber-950'
+                              : 'border-slate-200 bg-white text-slate-400'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              let updated: string[];
+                              if (e.target.checked) {
+                                updated = [...currentAllowed, app.id];
+                              } else {
+                                updated = currentAllowed.filter((id) => id !== app.id);
+                                if (updated.length === 0) updated = [app.id];
+                              }
+                              handleUpdateBankCard({ allowedApps: updated });
+                            }}
+                            className="rounded text-amber-600 w-3.5 h-3.5"
+                          />
+                          <span className={`w-2 h-2 rounded-full ${app.dotColor}`} />
+                          <span>{app.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* بخش ۶: تنظیمات کد پیگیری / شماره ارجاع بانکی */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Hash className="w-4 h-4 text-amber-600" />
+                  <span>تنظیمات فیلد کد رهگیری / شماره پیگیری:</span>
+                </label>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  currentBankCardData.enableTrackingCode !== false
+                    ? 'text-emerald-700 bg-emerald-100'
+                    : 'text-slate-500 bg-slate-200'
+                }`}>
+                  {currentBankCardData.enableTrackingCode !== false ? 'فعال' : 'غیرفعال'}
+                </span>
+              </div>
+
+              {/* کلید خاموش/روشن اصلی */}
+              <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={currentBankCardData.enableTrackingCode !== false}
+                  onChange={(e) => handleUpdateBankCard({ enableTrackingCode: e.target.checked })}
+                  className="rounded text-amber-600 w-3.5 h-3.5"
+                />
+                <span className="text-xs text-slate-700 font-semibold">
+                  فعال‌سازی دریافت کد رهگیری / شماره پیگیری از مراجع
+                </span>
+              </label>
+
+              {currentBankCardData.enableTrackingCode !== false && (
+                <div className="space-y-3 pt-2 border-t border-slate-200/80">
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(currentBankCardData.requireTrackingCode)}
+                      onChange={(e) => handleUpdateBankCard({ requireTrackingCode: e.target.checked })}
+                      className="rounded text-amber-600 w-3.5 h-3.5"
+                    />
+                    <span className="text-xs text-slate-700 font-semibold">
+                      اجباری بودن ثبت کد پیگیری بانکی (ثبت فرم بدون کد ممکن نیست)
+                    </span>
+                  </label>
+
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1 text-[11px]">
+                      عنوان کادر کد رهگیری:
+                    </label>
+                    <input
+                      type="text"
+                      value={currentBankCardData.trackingCodeTitle || ''}
+                      onChange={(e) => handleUpdateBankCard({ trackingCodeTitle: e.target.value })}
+                      placeholder="مثال: کد رهگیری / شماره پیگیری بانکی (اختیاری):"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* بخش ۷: روش ترکیبی (سوییچ پرداخت مستقیم آنلاین شاپرک) */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-slate-400" />
+                  <span>امکان پرداخت آنلاین اینترنتی شاپرک (روش ترکیبی):</span>
+                </label>
+                <span className="text-[10px] text-amber-800 font-bold bg-amber-100 border border-amber-300/80 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-600" />
+                  <span>به زودی</span>
+                </span>
+              </div>
+
+              <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-slate-100/90 text-slate-500 cursor-not-allowed select-none">
+                <input
+                  type="checkbox"
+                  disabled={true}
+                  checked={false}
+                  readOnly
+                  className="rounded text-slate-400 w-3.5 h-3.5 cursor-not-allowed opacity-60"
+                />
+                <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
+                  <span>فعال‌سازی سوییچ پرداخت آنلاین اینترنتی (امکان انتخاب بین کارت‌به‌کارت و پرداخت مستقیم شاپرک)</span>
+                  <span className="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded font-bold">به زودی</span>
+                </span>
+              </label>
+              <div className="p-2 rounded-lg bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-800 flex items-start gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  این قابلیت در نسخه بعدی فعال خواهد شد. پس از اتصال درگاه آنلاین شاپرک، مراجعین می‌توانند بین پرداخت با درگاه شاپرک یا کارت‌به‌کارت انتخاب کنند.
+                </span>
+              </div>
             </div>
 
           </div>

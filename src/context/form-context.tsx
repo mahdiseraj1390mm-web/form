@@ -815,11 +815,20 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
           (bareCode && (s.id === `sub-case-${bareCode}` || s.trackingCode === bareCode || s.data?.caseCode === bareCode || sBare === bareCode));
 
         if (isMatch) {
+          const newPaymentStatus = updatedFields.paymentStatus;
+          const newPaymentAmount = updatedFields.paymentAmount;
+          const newPaymentRefId = updatedFields.paymentRefId;
+          const newPaymentDate = updatedFields.paymentDate;
+
           return {
             ...s,
             ...(newStatus && ['regressing', 'needs_followup', 'growing', 'optimal', 'approved', 'rejected', 'new'].includes(newStatus)
               ? { status: newStatus }
               : {}),
+            ...(newPaymentStatus ? { paymentStatus: newPaymentStatus } : {}),
+            ...(newPaymentAmount !== undefined ? { paymentAmount: newPaymentAmount } : {}),
+            ...(newPaymentRefId ? { paymentRefId: newPaymentRefId } : {}),
+            ...(newPaymentDate ? { paymentDate: newPaymentDate } : {}),
             data: { ...s.data, ...updatedFields },
             updatedAt: new Date().toISOString(),
           };

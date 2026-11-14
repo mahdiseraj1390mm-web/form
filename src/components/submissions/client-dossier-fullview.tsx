@@ -32,6 +32,7 @@ import {
   Send,
   ExternalLink,
   ShieldCheck,
+  Smartphone,
   Activity,
   Layers,
   ArrowUpRight,
@@ -482,6 +483,94 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     }
     return 'عضو خانواده';
   }, [combinedData, clientCase.roleInFamily]);
+
+  // استخراج کلیه تراکنش‌های مالی، واریزهای آنلاین شاپرک و کارت‌به‌کارت پرونده
+  const paymentRecords = useMemo(() => {
+    const list: Array<{
+      submissionId: string;
+      formTitle: string;
+      date: string;
+      amount: number;
+      refId: string;
+      status: 'paid' | 'pending';
+      method: string;
+      trackingCode?: string;
+      receipt?: any;
+      verifiedByAdmin?: boolean;
+    }> = [];
+
+    currentSubmissions.forEach((sub) => {
+      const fObj = forms.find((f) => f.id === sub.formId);
+      const title = fObj?.title || 'فرم ارسالی مراجع';
+
+      // ۱. اگر اطلاعات پرداخت در paymentInfo یا فیلدهای اصلی سابمیشن باشد
+      if (sub.paymentAmount && sub.paymentAmount > 0) {
+        list.push({
+          submissionId: sub.id,
+          formTitle: title,
+          date: sub.paymentDate || sub.createdAt,
+          amount: sub.paymentAmount,
+          refId: sub.paymentRefId || (sub.data?.f_optional_contribution_tracking_code ? String(sub.data?.f_optional_contribution_tracking_code) : 'شاپرک'),
+          status: sub.paymentStatus === 'paid' ? 'paid' : 'pending',
+          method: (sub.data?.f_optional_contribution_payment_mode === 'card' || sub.data?.paymentMode === 'card') ? 'card_to_card' : 'shaparak_online',
+          trackingCode: sub.data?.f_optional_contribution_tracking_code || (sub.data && Object.keys(sub.data).find((k) => k.endsWith('_tracking_code')) ? sub.data[Object.keys(sub.data).find((k) => k.endsWith('_tracking_code'))!] : undefined),
+          receipt: sub.data?.f_optional_contribution_receipt,
+          verifiedByAdmin: Boolean(sub.data?.payment_verified),
+        });
+      } else {
+        // ۲. فیلدهای کارت بانکی در داده‌های فرم
+        Object.keys(sub.data || {}).forEach((key) => {
+          if (key.endsWith('_receipt') || key.endsWith('_tracking_code') || key.endsWith('_payment_mode')) return;
+          const fieldDef = fObj?.fields?.find((f) => f.id === key && f.type === 'bankCard');
+          if (fieldDef) {
+            const raw = sub.data[key];
+            const amt = raw ? Number(String(raw).replace(/[^\d]/g, '')) : 0;
+            const tracking = sub.data[`${key}_tracking_code`];
+            const receipt = sub.data[`${key}_receipt`];
+            const isVerified = Boolean(sub.data?.payment_verified) || sub.paymentStatus === 'paid';
+
+            if (amt > 0 || tracking || receipt) {
+              list.push({
+                submissionId: sub.id,
+                formTitle: title,
+                date: sub.createdAt,
+                amount: amt,
+                refId: tracking ? String(tracking) : (receipt?.name || 'کارت به کارت'),
+                status: isVerified ? 'paid' : 'pending',
+                method: 'card_to_card',
+                trackingCode: tracking,
+                receipt,
+                verifiedByAdmin: Boolean(sub.data?.payment_verified),
+              });
+            }
+          }
+        });
+      }
+    });
+
+    return list;
+  }, [currentSubmissions, forms]);
+
+  // تأیید واریز کارت به کارت مراجع توسط مدیر با یک کلیک
+  const handleConfirmPaymentRecord = (rec: { submissionId: string; amount: number; refId: string; trackingCode?: string }) => {
+    updateSubmissionData(rec.submissionId, {
+      paymentStatus: 'paid',
+      paymentAmount: rec.amount,
+      paymentRefId: rec.trackingCode || rec.refId,
+      paymentDate: new Date().toISOString(),
+      payment_verified: true,
+      payment_verified_by: adminName,
+      payment_verified_at: new Date().toISOString(),
+    });
+
+    // افزایش مجموع پرداختی‌های پرونده
+    if (rec.amount > 0) {
+      clientCase.totalPaidAmount = (clientCase.totalPaidAmount || 0) + rec.amount;
+    }
+
+    addSubmissionComment(rec.submissionId, adminName, adminRole, `✅ تأیید واریز کارت به کارت: مبلغ ${formatCurrency(rec.amount)} با کد رهگیری ${rec.trackingCode || rec.refId || 'ثبت‌شده'} تأیید و به پرونده اضافه گردید.`);
+    alert('واریزی کارت به کارت با موفقیت تأیید شد و به مجموع مبالغ پرداختی پرونده مراجع اضافه گردید.');
+  };
 
   // تفکیک ۳ گانه فرم‌های تکمیل‌شده مراجع برای تب فرم‌ها و آزمون‌ها:
   // ۱. ستون پرسشنامه‌ها (صفا و آزمون‌های بالینی)
@@ -3425,6 +3514,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                           {stepFields.map((field: FormField) => {
                             const val = selectedSubmission.data?.[field.id];
                             const receiptVal = selectedSubmission.data?.[`${field.id}_receipt`];
+                            const trackingCodeVal = selectedSubmission.data?.[`${field.id}_tracking_code`];
                             const displayVal = getFieldDisplayValue(field, val);
 
                             return (
@@ -3447,6 +3537,18 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                     )}
                                   </div>
                                 </div>
+
+                                {trackingCodeVal && (
+                                  <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-1.5 text-slate-500 font-bold">
+                                      <Hash className="w-3.5 h-3.5 text-amber-600" />
+                                      <span className="text-[11px]">کد پیگیری بانکی:</span>
+                                    </div>
+                                    <span className="font-mono font-bold text-amber-950 bg-amber-100/90 px-2.5 py-0.5 rounded-lg border border-amber-200 text-xs">
+                                      {toPersianDigits(trackingCodeVal)}
+                                    </span>
+                                  </div>
+                                )}
 
                                 {receiptVal && receiptVal.dataUrl && (
                                   <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2">
@@ -3493,6 +3595,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       .map((field: FormField) => {
                         const val = selectedSubmission.data?.[field.id];
                         const receiptVal = selectedSubmission.data?.[`${field.id}_receipt`];
+                        const trackingCodeVal = selectedSubmission.data?.[`${field.id}_tracking_code`];
                         const displayVal = getFieldDisplayValue(field, val);
 
                         return (
@@ -3512,6 +3615,18 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                 )}
                               </span>
                             </div>
+
+                            {trackingCodeVal && (
+                              <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-1.5 text-slate-500 font-bold">
+                                  <Hash className="w-3.5 h-3.5 text-amber-600" />
+                                  <span className="text-[11px]">کد پیگیری بانکی:</span>
+                                </div>
+                                <span className="font-mono font-bold text-amber-950 bg-amber-100/90 px-2.5 py-0.5 rounded-lg border border-amber-200 text-xs">
+                                  {toPersianDigits(trackingCodeVal)}
+                                </span>
+                              </div>
+                            )}
 
                             {receiptVal && receiptVal.dataUrl && (
                               <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2">
@@ -3956,6 +4071,123 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* جدول تراکنش‌های مالی و واریزی‌های کارت به کارت پرونده */}
+            <CollapsibleCard
+              defaultOpen={true}
+              title={<h3 className="text-base font-black text-slate-900">تراکنش‌های مالی و واریزی‌های کارت به کارت پرونده</h3>}
+              subtitle="لیست پرداخت‌های آنلاین شاپرک و واریزهای کارت به کارت انجام شده از طریق آپ، تاپ یا همراه بانک"
+              icon={
+                <div className="size-10 rounded-xl bg-emerald-100 text-emerald-800 grid place-items-center">
+                  <CreditCard className="size-5" />
+                </div>
+              }
+              headerExtra={
+                <div className="text-xs text-emerald-700 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                  {paymentRecords.length > 0 ? `${toPersianDigits(paymentRecords.length)} تراکنش ثبت‌شده` : 'فاقد تراکنش'}
+                </div>
+              }
+            >
+              {paymentRecords.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 space-y-2">
+                  <CreditCard className="size-9 mx-auto text-slate-300" />
+                  <p className="text-sm font-bold text-slate-700">هنوز هیچ تراکنش مالی یا واریزی برای این پرونده ثبت نشده است.</p>
+                  <p className="text-xs text-slate-400">به محض ارسال فرم همراه با پرداخت اینترنتی یا کارت به کارت با آپ، تراکنش در اینجا نمایش می‌یابد.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-black text-slate-500">
+                          <th className="py-3 px-4 rounded-r-xl">ردیف</th>
+                          <th className="py-3 px-4">مبلغ (تومان)</th>
+                          <th className="py-3 px-4">شیوه پرداخت</th>
+                          <th className="py-3 px-4">کد رهگیری / ارجاع</th>
+                          <th className="py-3 px-4">عنوان فرم</th>
+                          <th className="py-3 px-4">وضعیت</th>
+                          <th className="py-3 px-4">فیش واریزی</th>
+                          <th className="py-3 px-4 text-center rounded-l-xl">عملیات مدیریت</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
+                        {paymentRecords.map((rec, idx) => {
+                          const isPaid = rec.status === 'paid';
+                          return (
+                            <tr key={`${rec.submissionId}_${idx}`} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-4 px-4 font-mono font-bold text-slate-400">{toPersianDigits(idx + 1)}</td>
+                              <td className="py-4 px-4 font-extrabold text-blue-900 font-mono text-sm">
+                                {formatCurrency(rec.amount, 'IRT')}
+                              </td>
+                              <td className="py-4 px-4 text-slate-700 font-bold">
+                                {rec.method === 'shaparak_online' ? (
+                                  <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
+                                    <ShieldCheck className="w-3.5 h-3.5" />
+                                    <span>درگاه مستقیم شاپرک</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-xs">
+                                    <Smartphone className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>کارت به کارت (اپلیکیشن)</span>
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-4 px-4 font-mono font-bold text-slate-900 text-xs">
+                                {rec.trackingCode ? toPersianDigits(rec.trackingCode) : rec.refId ? toPersianDigits(rec.refId) : '-'}
+                              </td>
+                              <td className="py-4 px-4 text-slate-600 text-xs">{rec.formTitle}</td>
+                              <td className="py-4 px-4">
+                                {isPaid ? (
+                                  <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>تأیید شده</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                                    <Clock className="w-3 h-3" />
+                                    <span>در انتظار بررسی فیش</span>
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-4 px-4">
+                                {rec.receipt?.dataUrl ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setReceiptModalImage({ url: rec.receipt.dataUrl, name: rec.receipt.name, size: rec.receipt.formattedSize })}
+                                    className="inline-flex items-center gap-1 text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-200 text-xs font-bold transition cursor-pointer"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    <span>مشاهده فیش</span>
+                                  </button>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">بدون تصویر فیش</span>
+                                )}
+                              </td>
+                              <td className="py-4 px-4 text-center">
+                                {!isPaid ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleConfirmPaymentRecord(rec)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-extrabold shadow-sm transition cursor-pointer"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>تأیید واریز کارت به کارت</span>
+                                  </button>
+                                ) : (
+                                  <span className="text-[11px] text-emerald-600 font-bold">
+                                    {rec.verifiedByAdmin ? 'تأیید شده توسط مدیر' : 'تأیید خودکار شاپرک'}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </CollapsibleCard>
 
             {/* لیست جلسات مشاوره با جدول استاندارد و عریض دسکتاپ */}
             <CollapsibleCard

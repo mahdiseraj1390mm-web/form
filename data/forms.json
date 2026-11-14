@@ -462,7 +462,7 @@
     "submissionCount": 89,
     "viewCount": 1420,
     "createdAt": "2026-03-01T08:30:00Z",
-    "updatedAt": "2026-11-13T22:04:08.100Z",
+    "updatedAt": "2026-11-14T13:16:33.137Z",
     "steps": [
       {
         "id": "step-1",
@@ -2428,7 +2428,6 @@
         },
         "panelId": "p_1"
       },
-
       {
         "id": "f_optional_contribution",
         "type": "bankCard",
@@ -2456,8 +2455,11 @@
           "allowCopy": true,
           "allowReceiptUpload": true,
           "requireReceipt": false,
-          "receiptTitle": "تصویر فیش واریزی (اختیاری):"
-        }
+          "receiptTitle": "تصویر فیش واریزی (اختیاری):",
+          "allowOnlineGatewaySwitch": true,
+          "enableTrackingCode": false
+        },
+        "panelId": "p_1"
       }
     ],
     "rules": [
