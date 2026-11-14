@@ -11,9 +11,9 @@ import {
   Sparkles, 
   ChevronLeft, 
   ChevronRight, 
+  ChevronDown,
   User,
   UserCheck,
-  Check,
   PhoneCall
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
@@ -497,43 +497,59 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       {hasMultiConsultantMode && (
         <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-50 via-indigo-50/30 to-slate-50 border-b border-slate-200/80 space-y-4">
           
-          {/* گام ۱: انتخاب موضوع مراجعه */}
+          {/* گام ۱: انتخاب موضوع مراجعه (لیست باز شونده) */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-extrabold text-[11px] flex items-center justify-center">
+            <label htmlFor="counseling-topic-select" className="flex items-center gap-2 cursor-pointer select-none">
+              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-extrabold text-[11px] flex items-center justify-center shrink-0">
                 ۱
               </span>
               <span className="font-extrabold text-xs text-slate-800">
                 موضوع مراجعه خود را انتخاب فرمایید:
               </span>
-            </div>
+            </label>
 
-            <div className="flex flex-wrap gap-2">
-              {availableTopicIds.map((topId) => {
-                const topicObj = allTopicsList.find(
-                  (t) => t.id === topId || t.name === topId || (Array.isArray(t.keywords) && t.keywords.includes(topId))
-                );
-                const isSelected = selectedTopicId === topId;
-                return (
-                  <button
-                    key={topId}
-                    type="button"
-                    onClick={() => {
-                      setSelectedTopicId(topId);
-                      setSelectedConsultantId('');
-                      if (value) onChange('');
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40'
-                    }`}
-                  >
-                    {isSelected && <Check className="w-3.5 h-3.5" />}
-                    <span>{topicObj ? topicObj.name : topId}</span>
-                  </button>
-                );
-              })}
+            <div className="relative w-full max-w-md">
+              <select
+                id="counseling-topic-select"
+                value={selectedTopicId}
+                onChange={(e) => {
+                  const newTopic = e.target.value;
+                  setSelectedTopicId(newTopic);
+                  setSelectedConsultantId('');
+                  if (value) onChange('');
+                }}
+                className={`w-full appearance-none bg-white border rounded-xl py-2.5 sm:py-3 pr-4 pl-10 text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+                  selectedTopicId
+                    ? 'border-indigo-500 text-indigo-950 bg-indigo-50/20 focus:border-indigo-600'
+                    : 'border-slate-300 text-slate-600 hover:border-slate-400 focus:border-indigo-500'
+                }`}
+              >
+                <option value="" disabled className="text-slate-400">
+                  -- لطفاً موضوع مشاوره را انتخاب فرمایید --
+                </option>
+                {availableTopicIds.length === 0 ? (
+                  <option value="" disabled className="text-slate-400">
+                    موضوعی برای مشاوره یافت نشد
+                  </option>
+                ) : (
+                  availableTopicIds.map((topId) => {
+                    const topicObj = allTopicsList.find(
+                      (t) => t.id === topId || t.name === topId || (Array.isArray(t.keywords) && t.keywords.includes(topId))
+                    );
+                    const name = topicObj ? topicObj.name : topId;
+                    return (
+                      <option key={topId} value={topId} className="text-slate-900 py-1 font-semibold">
+                        {name}
+                      </option>
+                    );
+                  })
+                )}
+              </select>
+
+              {/* آیکون فلش لیست باز شونده (سمت چپ در چیدمان راست‌به‌چپ) */}
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <ChevronDown className="w-4 h-4 text-slate-500" />
+              </div>
             </div>
           </div>
 
