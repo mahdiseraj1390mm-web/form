@@ -1472,10 +1472,19 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         return;
       }
 
-      // الزامی بودن
+      // الزامی بودن فیلد
       if (f.validations?.required && (!val || val === '' || (typeof val === 'string' && val.trim() === ''))) {
         newErrors[f.id] = f.validations?.customErrorMessage || 'تکمیل این فیلد الزامی است.';
         return;
+      }
+
+      // اعتبارسنجی بارگذاری فیش واریزی کارت بانکی
+      if (f.type === 'bankCard' && f.bankCardData?.requireReceipt) {
+        const receipt = formData[`${f.id}_receipt`];
+        if (!receipt || (!receipt.dataUrl && !receipt.name)) {
+          newErrors[f.id] = 'بارگذاری تصویر فیش واریزی الزامی است.';
+          return;
+        }
       }
 
       // اعتبارسنجی کد ملی ایران
@@ -3881,6 +3890,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     showCustomAmount={field.bankCardData?.showCustomAmount !== false}
                     amountValue={formData[field.id] || ''}
                     onAmountChange={(val) => handleFieldChange(field.id, val)}
+                    allowReceiptUpload={field.bankCardData?.allowReceiptUpload !== false}
+                    requireReceipt={Boolean(field.bankCardData?.requireReceipt)}
+                    receiptTitle={field.bankCardData?.receiptTitle}
+                    receiptValue={formData[`${field.id}_receipt`]}
+                    onReceiptChange={(receipt) => handleFieldChange(`${field.id}_receipt`, receipt)}
                     isReadOnly={Boolean(field.validations?.isReadOnly)}
                   />
                 ) : (
@@ -3923,7 +3937,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   </div>
                 )}
 
-                {field.helpText && field.type !== 'alertBox' && (
+                {field.helpText && field.type !== 'alertBox' && field.type !== 'bankCard' && (
                   <p className="text-[11px] text-slate-400 pt-0.5">{field.helpText}</p>
                 )}
 

@@ -147,6 +147,9 @@ export interface BankCardData {
   depositTitle?: string; // عنوان کادر واریز اختیاری
   description?: string; // توضیحات هدیه یا مشارکت اختیاری
   allowCopy?: boolean; // دکمه کپی شماره کارت
+  allowReceiptUpload?: boolean; // امکان بارگذاری تصویر فیش واریزی
+  requireReceipt?: boolean; // اجباری بودن پیوست فیش
+  receiptTitle?: string; // عنوان کادر آپلود فیش
 }
 
 export interface FormField {

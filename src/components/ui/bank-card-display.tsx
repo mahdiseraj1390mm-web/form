@@ -1,9 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
-import { CreditCard, Check, Copy, Wifi } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
+import {
+  CreditCard,
+  Check,
+  Copy,
+  Wifi,
+  UploadCloud,
+  FileImage,
+  ZoomIn,
+  Eye,
+  Trash2,
+  RefreshCw,
+  X,
+  Download,
+  AlertCircle,
+} from 'lucide-react';
 import { getBankByKey, detectBankFromCardNumber, cleanCardNumber, formatCardNumberPersian } from '@/lib/iran-banks';
 import { toPersianDigits, formatCurrency } from '@/lib/persian';
+
+export interface BankReceiptRecord {
+  name: string;
+  size: number;
+  formattedSize: string;
+  type: string;
+  dataUrl?: string;
+  uploadedAt?: string;
+}
 
 interface BankCardDisplayProps {
   cardNumber?: string;
@@ -16,6 +39,11 @@ interface BankCardDisplayProps {
   showCustomAmount?: boolean;
   amountValue?: string;
   onAmountChange?: (value: string) => void;
+  allowReceiptUpload?: boolean;
+  requireReceipt?: boolean;
+  receiptTitle?: string;
+  receiptValue?: BankReceiptRecord | any;
+  onReceiptChange?: (receipt: BankReceiptRecord | null) => void;
   isReadOnly?: boolean;
   className?: string;
   showContainerBorder?: boolean;
@@ -32,11 +60,20 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
   showCustomAmount = true,
   amountValue = '',
   onAmountChange,
+  allowReceiptUpload = true,
+  requireReceipt = false,
+  receiptTitle,
+  receiptValue,
+  onReceiptChange,
   isReadOnly = false,
   className = '',
   showContainerBorder = true,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showLightbox, setShowLightbox] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // تشخیص خودکار یا دستی بانک
   const detectedBank = detectBankFromCardNumber(cardNumber);
@@ -57,6 +94,113 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
   };
 
   const formattedPersianCard = formatCardNumberPersian(cardNumber, ' - ');
+
+  // نرمال‌سازی داده فیش واریزی
+  const receiptRecord: BankReceiptRecord | null = useMemo(() => {
+    if (!receiptValue) return null;
+    if (typeof receiptValue === 'object' && receiptValue.dataUrl) return receiptValue;
+    if (typeof receiptValue === 'object' && receiptValue.name) return receiptValue;
+    if (typeof receiptValue === 'string' && receiptValue.trim()) {
+      return {
+        name: 'فیش واریزی',
+        size: 0,
+        formattedSize: '',
+        type: 'image/jpeg',
+        dataUrl: receiptValue.startsWith('data:') || receiptValue.startsWith('http') ? receiptValue : undefined,
+      };
+    }
+    return null;
+  }, [receiptValue]);
+
+  // فرمت حجم فایل به فارسی
+  const formatFileSize = (bytes: number): string => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${toPersianDigits(bytes)} بایت`;
+    if (bytes < 1024 * 1024) return `${toPersianDigits(Math.round(bytes / 1024))} کیلوبایت`;
+    return `${toPersianDigits((bytes / (1024 * 1024)).toFixed(1))} مگابایت`;
+  };
+
+  // پردازش فایل انتخابی کاربر
+  const processReceiptFile = (file: File) => {
+    setUploadError(null);
+    if (!file.type.startsWith('image/')) {
+      setUploadError('لطفاً یک فایل تصویری معتبر (JPG، PNG، WEBP) انتخاب فرمایید.');
+      return;
+    }
+    // سقف ۱۰ مگابایت
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('حجم تصویر فیش بیشتر از سقف مجاز (۱۰ مگابایت) است.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const record: BankReceiptRecord = {
+        name: file.name,
+        size: file.size,
+        formattedSize: formatFileSize(file.size),
+        type: file.type,
+        dataUrl: e.target?.result as string,
+        uploadedAt: new Date().toISOString(),
+      };
+      if (onReceiptChange) {
+        onReceiptChange(record);
+      }
+    };
+    reader.onerror = () => {
+      setUploadError('خطا در خواندن فایل تصویر.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processReceiptFile(file);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleTriggerUpload = () => {
+    if (isReadOnly) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isReadOnly) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (isReadOnly) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processReceiptFile(file);
+    }
+  };
+
+  const handleRemoveReceipt = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setUploadError(null);
+    if (onReceiptChange) {
+      onReceiptChange(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   return (
     <div
@@ -88,8 +232,8 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
         </div>
       )}
 
-      {/* شبکه اصلی: کارت بانکی در یک سمت، ورودی مبلغ در سمت دیگر */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+      {/* شبکه اصلی: کارت بانکی در یک سمت، ورودی مبلغ و فیش در سمت دیگر */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         
         {/* ۱. کارت فیزیکی بانکی فوق‌العاده شیک با تم اختصاصی بانک */}
         <div className="lg:col-span-7 flex justify-center">
@@ -104,7 +248,7 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
             <div className="absolute inset-0 pointer-events-none opacity-15 overflow-hidden">
               <svg className="w-full h-full" viewBox="0 0 400 250" fill="none" preserveAspectRatio="none">
                 <circle cx="340" cy="40" r="140" stroke="white" strokeWidth="2" strokeDasharray="8 6" />
-                <circle cx="340" cy="40" r="180" stroke="white" strokeWidth="1.5" />
+                <circle cx="340" cy="180" stroke="white" strokeWidth="1.5" />
                 <path d="M-50 180 C 100 120, 220 220, 450 140" stroke="white" strokeWidth="2.5" fill="none" />
                 <path d="M-50 200 C 120 140, 240 240, 450 160" stroke="white" strokeWidth="1.5" fill="none" />
               </svg>
@@ -212,9 +356,10 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
           </div>
         </div>
 
-        {/* ۲. بخش مبلغ دلخواه پرداختی و چیپ‌های پیش‌فرض */}
-        {(showCustomAmount || showPresetAmounts) && (
+        {/* ۲. ستون مبالغ دلخواه پرداختی، چیپ‌های پیش‌فرض و بارگذاری تصویر فیش */}
+        {(showCustomAmount || showPresetAmounts || allowReceiptUpload) && (
           <div className="lg:col-span-5 space-y-2.5">
+            {/* الف. ورود مبلغ دلخواه */}
             {showCustomAmount && (
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
@@ -246,7 +391,7 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
               </div>
             )}
 
-            {/* چیپ‌های مبالغ پیش‌فرض */}
+            {/* ب. چیپ‌های مبالغ پیش‌فرض */}
             {showPresetAmounts && presetAmounts && presetAmounts.length > 0 && (
               <div className="space-y-1 pt-0.5">
                 <span className="text-[10px] text-slate-500 font-semibold block">
@@ -280,10 +425,199 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
                 </div>
               </div>
             )}
+
+            {/* ج. بخش بارگذاری تصویر فیش واریزی */}
+            {allowReceiptUpload && (
+              <div className="pt-2 border-t border-amber-200/80 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                    <span>{receiptTitle || (requireReceipt ? 'تصویر فیش واریزی (الزامی):' : 'تصویر فیش واریزی (اختیاری):')}</span>
+                    {requireReceipt && <span className="text-rose-500 font-bold">*</span>}
+                  </label>
+                  {receiptRecord && (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      <span>فیش پیوست شد</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* دراپ‌زون بارگذاری یا نمایش فیش انتخاب‌شده */}
+                {!receiptRecord ? (
+                  <div
+                    onClick={handleTriggerUpload}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`group relative flex items-center gap-2.5 p-2.5 rounded-xl border border-dashed transition-all cursor-pointer ${
+                      isDragging
+                        ? 'border-amber-500 bg-amber-100/80 scale-[1.01]'
+                        : 'border-amber-300 hover:border-amber-500 bg-white/80 hover:bg-amber-50/70'
+                    } ${isReadOnly ? 'opacity-60 pointer-events-none' : ''} shadow-2xs`}
+                  >
+                    <div className="size-9 rounded-lg bg-amber-100 group-hover:bg-amber-200 text-amber-800 grid place-items-center shrink-0 transition-transform group-hover:scale-105">
+                      <UploadCloud className="size-4.5" />
+                    </div>
+                    <div className="min-w-0 flex-1 text-right">
+                      <span className="text-[11px] font-bold text-slate-700 block group-hover:text-amber-950 transition-colors">
+                        بارگذاری یا کشیدن تصویر فیش واریز
+                      </span>
+                      <span className="text-[10px] text-slate-400 block truncate">
+                        فرمت‌های JPG، PNG یا WEBP (حداکثر ۱۰ مگابایت)
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  /* کارت پیش‌نمایش فیش پیوست‌شده */
+                  <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white border border-amber-300 shadow-2xs">
+                    {/* تصویر بندانگشتی با دکمه بزرگ‌نمایی */}
+                    <div
+                      onClick={() => setShowLightbox(true)}
+                      className="size-11 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 relative shrink-0 cursor-pointer group"
+                      title="کلیک برای بزرگ‌نمایی تصویر فیش"
+                    >
+                      {receiptRecord.dataUrl ? (
+                        <img
+                          src={receiptRecord.dataUrl}
+                          alt={receiptRecord.name || 'فیش واریزی'}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                        />
+                      ) : (
+                        <div className="w-full h-full grid place-items-center text-slate-400">
+                          <FileImage className="size-5" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                        <ZoomIn className="size-4" />
+                      </div>
+                    </div>
+
+                    {/* اطلاعات فایل */}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold text-slate-800 truncate" title={receiptRecord.name}>
+                        {receiptRecord.name || 'تصویر فیش واریزی'}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {receiptRecord.formattedSize || ''}
+                      </p>
+                    </div>
+
+                    {/* دکمه‌های عملیات */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowLightbox(true)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                        title="مشاهده بزرگ‌نمایی فیش"
+                      >
+                        <Eye className="size-3.5" />
+                      </button>
+                      {!isReadOnly && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleTriggerUpload}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                            title="تغییر تصویر فیش"
+                          >
+                            <RefreshCw className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveReceipt}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="حذف فیش"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ورودی پنهان فایل */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  disabled={isReadOnly}
+                />
+
+                {/* پیام خطای آپلود در صورت نامعتبر بودن فرمت یا حجم */}
+                {uploadError && (
+                  <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 pt-0.5">
+                    <AlertCircle className="size-3 shrink-0" />
+                    <span>{uploadError}</span>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
       </div>
+
+      {/* پنجره مودال بزرگ‌نمایی تصویر فیش (Lightbox) */}
+      {showLightbox && receiptRecord?.dataUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in select-text"
+          onClick={() => setShowLightbox(false)}
+        >
+          <div
+            className="relative max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl p-4 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileImage className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="text-xs font-bold text-slate-800 truncate max-w-xs sm:max-w-md">
+                  {receiptRecord.name || 'پیش‌نمایش تصویر فیش واریزی'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={receiptRecord.dataUrl}
+                  download={receiptRecord.name || 'fish-varizi.jpg'}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                  title="دانلود تصویر فیش"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowLightbox(false)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  title="بستن"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[65vh] overflow-auto flex items-center justify-center bg-slate-900/5 rounded-xl p-2">
+              <img
+                src={receiptRecord.dataUrl}
+                alt={receiptRecord.name || 'فیش واریزی'}
+                className="max-h-[60vh] w-auto max-w-full rounded-lg object-contain shadow-sm"
+              />
+            </div>
+
+            <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1">
+              <span>اندازه فایل: {receiptRecord.formattedSize || ''}</span>
+              <button
+                type="button"
+                onClick={() => setShowLightbox(false)}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+              >
+                بستن پنجره
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

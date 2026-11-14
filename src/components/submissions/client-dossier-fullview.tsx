@@ -50,6 +50,7 @@ import {
   Trash2,
   Edit3,
   ArrowLeft,
+  FileImage,
 } from 'lucide-react';
 import { EvaluationReportView } from '../analytics/evaluation-report-view';
 import { VerticalBarChart } from '../analytics/vertical-bar-chart';
@@ -346,6 +347,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   // استیت وضعیت فعلی پرونده
   const [currentStatus, setCurrentStatus] = useState<SubmissionStatus>(clientCase.overallStatus);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [receiptModalImage, setReceiptModalImage] = useState<{ url: string; name: string; size?: string } | null>(null);
 
   // استیت و متدهای ویرایش مشخصات مراجع توسط مشاور
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
@@ -3418,6 +3420,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                           {stepFields.map((field: FormField) => {
                             const val = selectedSubmission.data?.[field.id];
+                            const receiptVal = selectedSubmission.data?.[`${field.id}_receipt`];
                             const displayVal = getFieldDisplayValue(field, val);
 
                             return (
@@ -3425,19 +3428,53 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                 key={field.id}
                                 className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/70 hover:bg-slate-50 transition-colors flex flex-col justify-between"
                               >
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-xs text-slate-500 font-medium">
-                                    {field.label}:
-                                  </span>
-                                  <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/80">پاسخ ثبت‌شده</span>
+                                <div>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span className="text-xs text-slate-500 font-medium">
+                                      {field.label}:
+                                    </span>
+                                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100/80">پاسخ ثبت‌شده</span>
+                                  </div>
+                                  <div className="text-xs sm:text-sm font-bold text-slate-900 pt-1">
+                                    {val === undefined || val === null || val === '' ? (
+                                      <span className="text-slate-300 italic">ثبت‌نشده</span>
+                                    ) : (
+                                      <span className="text-slate-900 break-words">{displayVal}</span>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="text-xs sm:text-sm font-bold text-slate-900 pt-1">
-                                  {val === undefined || val === null || val === '' ? (
-                                    <span className="text-slate-300 italic">ثبت‌نشده</span>
-                                  ) : (
-                                    <span className="text-slate-900 break-words">{displayVal}</span>
-                                  )}
-                                </div>
+
+                                {receiptVal && receiptVal.dataUrl && (
+                                  <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2">
+                                    <div
+                                      className="flex items-center gap-2 min-w-0 cursor-pointer group"
+                                      onClick={() => setReceiptModalImage({ url: receiptVal.dataUrl, name: receiptVal.name, size: receiptVal.formattedSize })}
+                                    >
+                                      <img
+                                        src={receiptVal.dataUrl}
+                                        alt={receiptVal.name || 'فیش واریزی'}
+                                        className="size-8 rounded-md object-cover border border-slate-300 shrink-0 group-hover:scale-105 transition-transform"
+                                      />
+                                      <div className="min-w-0">
+                                        <span className="text-[11px] font-bold text-amber-900 block truncate group-hover:underline">
+                                          تصویر فیش واریزی
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 font-mono block">
+                                          {receiptVal.formattedSize || ''}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setReceiptModalImage({ url: receiptVal.dataUrl, name: receiptVal.name, size: receiptVal.formattedSize })}
+                                      className="px-2 py-1 rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+                                      title="مشاهده بزرگ‌نمایی فیش"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      <span>مشاهده</span>
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -3451,6 +3488,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                       .filter((f: FormField) => !['sectionDivider', 'alertBox'].includes(f.type))
                       .map((field: FormField) => {
                         const val = selectedSubmission.data?.[field.id];
+                        const receiptVal = selectedSubmission.data?.[`${field.id}_receipt`];
                         const displayVal = getFieldDisplayValue(field, val);
 
                         return (
@@ -3458,16 +3496,50 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                             key={field.id}
                             className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex flex-col justify-between"
                           >
-                            <span className="text-xs text-slate-500 font-medium mb-1">
-                              {field.label}:
-                            </span>
-                            <span className="text-xs sm:text-sm font-bold text-slate-900 break-words">
-                              {val === undefined || val === null || val === '' ? (
-                                <span className="text-slate-300 italic">ثبت‌نشده</span>
-                              ) : (
-                                displayVal
-                              )}
-                            </span>
+                            <div>
+                              <span className="text-xs text-slate-500 font-medium mb-1 block">
+                                {field.label}:
+                              </span>
+                              <span className="text-xs sm:text-sm font-bold text-slate-900 break-words block">
+                                {val === undefined || val === null || val === '' ? (
+                                  <span className="text-slate-300 italic">ثبت‌نشده</span>
+                                ) : (
+                                  displayVal
+                                )}
+                              </span>
+                            </div>
+
+                            {receiptVal && receiptVal.dataUrl && (
+                              <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2">
+                                <div
+                                  className="flex items-center gap-2 min-w-0 cursor-pointer group"
+                                  onClick={() => setReceiptModalImage({ url: receiptVal.dataUrl, name: receiptVal.name, size: receiptVal.formattedSize })}
+                                >
+                                  <img
+                                    src={receiptVal.dataUrl}
+                                    alt={receiptVal.name || 'فیش واریزی'}
+                                    className="size-8 rounded-md object-cover border border-slate-300 shrink-0 group-hover:scale-105 transition-transform"
+                                  />
+                                  <div className="min-w-0">
+                                    <span className="text-[11px] font-bold text-amber-900 block truncate group-hover:underline">
+                                      تصویر فیش واریزی
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-mono block">
+                                      {receiptVal.formattedSize || ''}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setReceiptModalImage({ url: receiptVal.dataUrl, name: receiptVal.name, size: receiptVal.formattedSize })}
+                                  className="px-2 py-1 rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors text-[10px] font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+                                  title="مشاهده بزرگ‌نمایی فیش"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  <span>مشاهده</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -4644,6 +4716,65 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         </div>
       )}
 
-</div>
+      {/* پنجره مودال بزرگ‌نمایی فیش واریزی مراجع */}
+      {receiptModalImage && (
+        <div
+          className="fixed inset-0 z-70 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setReceiptModalImage(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl p-4 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FileImage className="w-4 h-4 text-amber-600" />
+                <span className="text-xs font-bold text-slate-800 truncate max-w-xs sm:max-w-md">
+                  {receiptModalImage.name || 'تصویر فیش واریزی مراجع'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={receiptModalImage.url}
+                  download={receiptModalImage.name || 'receipt.jpg'}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                  title="دانلود تصویر"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setReceiptModalImage(null)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  title="بستن"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[65vh] overflow-auto flex items-center justify-center bg-slate-900/5 rounded-xl p-2">
+              <img
+                src={receiptModalImage.url}
+                alt={receiptModalImage.name || 'فیش واریزی'}
+                className="max-h-[60vh] w-auto max-w-full rounded-lg object-contain shadow-sm"
+              />
+            </div>
+
+            <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1">
+              <span>اندازه فایل: {receiptModalImage.size || ''}</span>
+              <button
+                type="button"
+                onClick={() => setReceiptModalImage(null)}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+              >
+                بستن پنجره
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 };

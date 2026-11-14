@@ -920,6 +920,9 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                 presetAmounts={field.bankCardData?.presetAmounts}
                                 showPresetAmounts={field.bankCardData?.showPresetAmounts !== false}
                                 showCustomAmount={field.bankCardData?.showCustomAmount !== false}
+                                allowReceiptUpload={field.bankCardData?.allowReceiptUpload !== false}
+                                requireReceipt={Boolean(field.bankCardData?.requireReceipt)}
+                                receiptTitle={field.bankCardData?.receiptTitle}
                                 isReadOnly={true}
                                 showContainerBorder={false}
                               />

@@ -2477,7 +2477,10 @@
           "showCustomAmount": true,
           "depositTitle": "شماره کارت جهت واریز اختیاری:",
           "description": "در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید",
-          "allowCopy": true
+          "allowCopy": true,
+          "allowReceiptUpload": true,
+          "requireReceipt": false,
+          "receiptTitle": "تصویر فیش واریزی (اختیاری):"
         }
       }
     ],

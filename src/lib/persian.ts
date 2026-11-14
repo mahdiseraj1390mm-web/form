@@ -185,6 +185,25 @@ export function getFieldDisplayValue(field?: any, val?: any): string {
   if (val === undefined || val === null || val === '') return '-';
   if (typeof val === 'boolean') return val ? 'بله' : 'خیر';
 
+  // اگر مقدار شیء باشد (مانند فایل یا فیش واریزی)
+  if (typeof val === 'object') {
+    if (val.name && val.formattedSize) return `${val.name} (${val.formattedSize})`;
+    if (val.name) return String(val.name);
+    if (val.amount) {
+      const amt = Number(String(val.amount).replace(/[^\d]/g, ''));
+      return amt > 0 ? `${toPersianDigits(amt.toLocaleString('fa-IR'))} تومان` : '-';
+    }
+  }
+
+  // در صورتی که فیلد کارت بانکی باشد و مقدار عددی داشته باشد
+  if (field?.type === 'bankCard') {
+    const cleanNum = Number(String(val).replace(/[^\d]/g, ''));
+    if (!isNaN(cleanNum) && cleanNum > 0) {
+      return `${toPersianDigits(cleanNum.toLocaleString('fa-IR'))} تومان`;
+    }
+    return 'مشارکت اختیاری ثبت‌نشده';
+  }
+
   const commonTranslations: Record<string, string> = {
     father: 'پدر',
     mother: 'مادر',

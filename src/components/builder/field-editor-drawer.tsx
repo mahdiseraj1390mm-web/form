@@ -38,7 +38,8 @@ import {
   Square,
   RefreshCw,
   User,
-  CreditCard
+  CreditCard,
+  UploadCloud
 } from 'lucide-react';
 import { toPersianDigits } from '@/lib/persian';
 import { predefinedLists, iranProvinces } from '@/lib/iran-geo';
@@ -285,6 +286,9 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
       depositTitle: 'شماره کارت جهت واریز اختیاری:',
       description: 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید',
       allowCopy: true,
+      allowReceiptUpload: true,
+      requireReceipt: false,
+      receiptTitle: 'تصویر فیش واریزی (اختیاری):',
     };
   }, [field.bankCardData]);
 
@@ -1571,6 +1575,9 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                 presetAmounts={currentBankCardData.presetAmounts}
                 showPresetAmounts={currentBankCardData.showPresetAmounts}
                 showCustomAmount={currentBankCardData.showCustomAmount}
+                allowReceiptUpload={currentBankCardData.allowReceiptUpload !== false}
+                requireReceipt={Boolean(currentBankCardData.requireReceipt)}
+                receiptTitle={currentBankCardData.receiptTitle}
                 isReadOnly={true}
                 showContainerBorder={true}
               />
@@ -1809,6 +1816,58 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                   فعال بودن دکمه «کپی شماره کارت» روی کارت
                 </span>
               </label>
+            </div>
+
+            {/* بخش ۴: تنظیمات پیوست و بارگذاری فیش واریزی */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <UploadCloud className="w-4 h-4 text-amber-600" />
+                <span>تنظیمات بارگذاری تصویر فیش واریزی:</span>
+              </label>
+
+              {/* امکان بارگذاری تصویر فیش */}
+              <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={currentBankCardData.allowReceiptUpload !== false}
+                  onChange={(e) => handleUpdateBankCard({ allowReceiptUpload: e.target.checked })}
+                  className="rounded text-amber-600 w-3.5 h-3.5"
+                />
+                <span className="text-xs text-slate-700 font-semibold">
+                  امکان بارگذاری تصویر فیش واریزی توسط مراجع
+                </span>
+              </label>
+
+              {currentBankCardData.allowReceiptUpload !== false && (
+                <>
+                  {/* اجباری بودن پیوست فیش */}
+                  <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(currentBankCardData.requireReceipt)}
+                      onChange={(e) => handleUpdateBankCard({ requireReceipt: e.target.checked })}
+                      className="rounded text-amber-600 w-3.5 h-3.5"
+                    />
+                    <span className="text-xs text-slate-700 font-semibold">
+                      اجباری بودن بارگذاری فیش واریزی (ثبت فرم بدون فیش ممکن نیست)
+                    </span>
+                  </label>
+
+                  {/* عنوان بخش بارگذاری فیش */}
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1 text-[11px]">
+                      عنوان کادر بارگذاری فیش:
+                    </label>
+                    <input
+                      type="text"
+                      value={currentBankCardData.receiptTitle || ''}
+                      onChange={(e) => handleUpdateBankCard({ receiptTitle: e.target.value })}
+                      placeholder="مثال: تصویر فیش واریزی (اختیاری):"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
           </div>
