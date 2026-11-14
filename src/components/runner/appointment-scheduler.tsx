@@ -638,7 +638,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                 {/* برچسب هفته و بازه تاریخ */}
                 <div className="text-center px-1.5 min-w-[110px] sm:min-w-[130px]">
                   <span className="text-xs font-black text-slate-800 block leading-tight">
-                    {weekOffset === 0 ? 'هفته جاری' : weekOffset === 1 ? 'هفته آینده' : `${toPersianDigits(weekOffset)} هفته بعد`}
+                    {weekOffset === 0 ? 'هفته جاری' : 'هفته آینده'}
                   </span>
                   <span className="text-[10px] text-slate-500 font-bold block leading-tight mt-0.5">
                     {weekRangeLabel}
@@ -648,8 +648,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                 {/* دکمه هفته بعد (فلش چپ در راست‌به‌چپ) */}
                 <button
                   type="button"
-                  onClick={() => setWeekOffset((prev) => prev + 1)}
-                  disabled={weekOffset >= 8}
+                  onClick={() => setWeekOffset((prev) => Math.min(1, prev + 1))}
+                  disabled={weekOffset >= 1}
                   className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-25 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   title="هفته بعد"
                   aria-label="هفته بعد"
