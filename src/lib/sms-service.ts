@@ -8,6 +8,7 @@ export const DEFAULT_PATTERN_IDS = {
   CASE_REGISTRATION: 568830,      // کد پرونده مراجع: {0}
   APPOINTMENT_CLIENT: 568818,     // تایید نوبت مراجع
   APPOINTMENT_COUNSELOR: 568805,  // اطلاع به مشاور
+  RECOVERY_OTP: 568830,           // تایید هویت / کد تایید بازیابی پرونده
 };
 
 export interface SmsPatternConfig {
@@ -27,6 +28,7 @@ export interface SmsSettings {
     case_registration: SmsPatternConfig;
     appointment_client: SmsPatternConfig;
     appointment_counselor: SmsPatternConfig;
+    recovery_otp?: SmsPatternConfig;
   };
 }
 
@@ -141,10 +143,10 @@ export async function sendDirectTextSms(
   const settings = await getSmsSettings();
   const username = settings.username || MELIPAYAMAK_USERNAME;
   const password = settings.password || MELIPAYAMAK_PASSWORD;
-  const from = settings.senderNumber || '50004';
+  const from = settings.senderNumber || '50004001449093';
 
   try {
-    const soapUrl = 'http://api.payamak-panel.com/post/Send.asmx/SendSMS';
+    const soapUrl = 'http://api.payamak-panel.com/post/Send.asmx/SendSimpleSMS2';
     const formParams = new URLSearchParams();
     formParams.append('username', username);
     formParams.append('password', password);
@@ -387,12 +389,24 @@ export async function sendAppointmentCounselorSms(
 
 /**
  * ۴. پیامک کد یکبارمصرف تأیید هویت و بازیابی کد پرونده
+ * ارسال از طریق وب‌سرویس پترن خدماتی اشتراکی (SendByBaseNumber2) جهت تحویل آنی و عبور قطعی از بلک‌لیست
  */
 export async function sendRecoveryOtpSms(clientMobile: string, code: string): Promise<any> {
   const cleanTo = clientMobile.replace(/[^0-9]/g, '');
   const standardTo = cleanTo.startsWith('98') ? '0' + cleanTo.slice(2) : cleanTo;
-  const exactText = `کد تأیید بازیابی پرونده شما در مرکز روانشناسی بالحق: ${code}\nاعتبار: ۲ دقیقه\nسایت روانشناسی بالحق`;
 
-  return sendDirectTextSms(standardTo, exactText, 'recovery_otp');
+  const settings = await getSmsSettings();
+  const pattern = (settings.patterns as any)?.recovery_otp;
+  const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.RECOVERY_OTP;
+
+  const fallbackText = `با سلام\nکد تأیید شما: ${code} می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق`;
+
+  return sendSharedPatternSms(
+    standardTo,
+    bodyId,
+    [code],
+    'recovery_otp',
+    fallbackText
+  );
 }
 

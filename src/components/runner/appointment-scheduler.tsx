@@ -262,12 +262,75 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     return [0, 1, 2, 3, 4];
   }, [appointmentConfig, field.options, hasMultiConsultantMode]);
 
-  // روز پیش‌فرض انتخابی
-  const initialDay = availableDays.length > 0 ? availableDays[0] : 0;
-  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(initialDay);
+  // هفته انتخابی برای رزرو نوبت (۰ = هفته جاری، ۱ = هفته آینده، و ...)
+  const [weekOffset, setWeekOffset] = useState<number>(0);
 
   // نوبت‌های رزرو شده در پایگاه داده
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+
+  // محاسبه روزهای هفته جاری و هفته‌های بعد بر مبنای تقویم شمسی
+  const today = useMemo(() => new Date(), []);
+  const todayPersianDayIndex = (today.getDay() + 1) % 7;
+
+  const currentWeekSaturday = useMemo(() => {
+    const sat = new Date(today);
+    sat.setDate(today.getDate() - todayPersianDayIndex);
+    sat.setHours(0, 0, 0, 0);
+    return sat;
+  }, [today, todayPersianDayIndex]);
+
+  const weekSaturday = useMemo(() => {
+    const sat = new Date(currentWeekSaturday);
+    sat.setDate(currentWeekSaturday.getDate() + weekOffset * 7);
+    sat.setHours(0, 0, 0, 0);
+    return sat;
+  }, [currentWeekSaturday, weekOffset]);
+
+  const weekDaysWithDates = useMemo(() => {
+    return WEEK_DAYS.map((day) => {
+      const dayDate = new Date(weekSaturday);
+      dayDate.setDate(weekSaturday.getDate() + day.index);
+      dayDate.setHours(0, 0, 0, 0);
+
+      const isAvailableInConfig = availableDays.includes(day.index);
+      const isPast = weekOffset === 0 && day.index < todayPersianDayIndex;
+      const isSelectable = isAvailableInConfig && !isPast;
+
+      const dateFormatted = new Intl.DateTimeFormat('fa-IR', {
+        day: 'numeric',
+        month: 'short',
+      }).format(dayDate);
+
+      const fullDateFormatted = new Intl.DateTimeFormat('fa-IR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(dayDate);
+
+      return {
+        ...day,
+        date: dayDate,
+        dateFormatted,
+        fullDateFormatted,
+        isAvailableInConfig,
+        isPast,
+        isSelectable,
+      };
+    });
+  }, [weekSaturday, availableDays, weekOffset, todayPersianDayIndex]);
+
+  const weekRangeLabel = useMemo(() => {
+    if (weekDaysWithDates.length < 7) return '';
+    return `${weekDaysWithDates[0].dateFormatted} تا ${weekDaysWithDates[6].dateFormatted}`;
+  }, [weekDaysWithDates]);
+
+  // روز پیش‌فرض انتخابی
+  const initialDay = useMemo(() => {
+    const firstSelectable = weekDaysWithDates.find((d) => d.isSelectable);
+    return firstSelectable ? firstSelectable.index : (availableDays[0] ?? 0);
+  }, [weekDaysWithDates, availableDays]);
+
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(initialDay);
 
   useEffect(() => {
     const counselorParam = selectedConsultantId
@@ -285,17 +348,16 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       .catch((err) => console.warn('Fetch booked slots error:', err));
   }, [field.id, selectedConsultantId]);
 
+  // بروزرسانی روز انتخابی هنگام تغییر هفته، مشاور یا موضوع
   useEffect(() => {
-    if (availableDays.length > 0) {
-      setSelectedDayIndex(availableDays[0]);
+    const currentDayInfo = weekDaysWithDates.find((d) => d.index === selectedDayIndex);
+    if (!currentDayInfo?.isSelectable) {
+      const firstSelectable = weekDaysWithDates.find((d) => d.isSelectable);
+      if (firstSelectable) {
+        setSelectedDayIndex(firstSelectable.index);
+      }
     }
-  }, [field.id, selectedConsultantId]);
-
-  useEffect(() => {
-    if (availableDays.length > 0 && !availableDays.includes(selectedDayIndex)) {
-      setSelectedDayIndex(availableDays[0]);
-    }
-  }, [availableDays, selectedDayIndex]);
+  }, [weekOffset, weekDaysWithDates, selectedDayIndex]);
 
   // محاسبه ساعات کاری روز
   const getDayHoursDisplay = (dayIndex: number): string => {
@@ -326,14 +388,12 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     return WEEK_DAYS.filter((d) => availableDays.includes(d.index));
   }, [availableDays]);
 
-  // تولید خودکار بازه‌های زمانی
+  const selectedDayObj = weekDaysWithDates[selectedDayIndex];
+
+  // تولید خودکار بازه‌های زمانی برای روز انتخابی
   const generatedSlotsForDay = useMemo(() => {
     const currentDay = WEEK_DAYS[selectedDayIndex];
-    if (!currentDay) return [];
-
-    if (!availableDays.includes(selectedDayIndex)) {
-      return [];
-    }
+    if (!currentDay || !selectedDayObj?.isSelectable) return [];
 
     // بر اساس ساعات کاری و استراحت تفکیک‌شده محاسبه کن
     const dayConfig = appointmentConfig?.daySchedules?.[selectedDayIndex];
@@ -347,6 +407,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       : [{ startHour: '09:00', endHour: '17:00' }];
 
     const slots: Array<{ id: string; label: string; time: string; shiftName?: string; available: boolean }> = [];
+    const dayDateFormatted = selectedDayObj.dateFormatted;
 
     periods.forEach((period, pIdx) => {
       const [startH, startM] = (period.startHour || '09:00').split(':').map(Number);
@@ -369,17 +430,21 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
         const timeRange = `${formatTime(slotStartH, slotStartM)} الی ${formatTime(slotEndH, slotEndM)}`;
         const shiftPart = periods.length > 1 ? ` (نوبت ${toPersianDigits(pIdx + 1)})` : '';
-        const fullLabel = `${currentDay.name}${shiftPart} - ساعت ${timeRange}`;
-        const optId = `slot_${selectedDayIndex}_${pIdx}_${currentMin}`;
+        const fullLabel = dayDateFormatted
+          ? `${currentDay.name} (${dayDateFormatted})${shiftPart} - ساعت ${timeRange}`
+          : `${currentDay.name}${shiftPart} - ساعت ${timeRange}`;
+        const optId = `slot_${selectedDayObj.fullDateFormatted}_${pIdx}_${currentMin}`;
 
         const isTaken = bookedSlots.some((b) => {
           if (!b) return false;
           if (b === fullLabel || b === optId) return true;
-          if (b.includes(currentDay.name) && (b.includes(timeRange) || matchTimeRanges(extractTimeRange(b), timeRange))) {
+          if (dayDateFormatted && b.includes(dayDateFormatted) && (b.includes(timeRange) || matchTimeRanges(extractTimeRange(b), timeRange))) {
             return true;
           }
-          if (detectDayIndex(b) === selectedDayIndex && matchTimeRanges(extractTimeRange(b), timeRange)) {
-            return true;
+          if (weekOffset === 0 && !b.includes('آبان') && !b.includes('آذر') && !b.includes('دی') && !b.includes('بهمن') && !b.includes('اسفند') && !b.includes('فروردین') && !b.includes('اردیبهشت') && !b.includes('خرداد') && !b.includes('تیر') && !b.includes('مرداد') && !b.includes('شهریور') && !b.includes('مهر')) {
+            if (detectDayIndex(b) === selectedDayIndex && matchTimeRanges(extractTimeRange(b), timeRange)) {
+              return true;
+            }
           }
           return false;
         });
@@ -397,9 +462,9 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     });
 
     return slots;
-  }, [appointmentConfig, selectedDayIndex, availableDays, slotDuration, restDuration, bookedSlots]);
+  }, [appointmentConfig, selectedDayIndex, selectedDayObj, slotDuration, restDuration, bookedSlots, weekOffset]);
 
-  const isCurrentDayHoliday = !availableDays.includes(selectedDayIndex);
+  const isCurrentDayHoliday = !selectedDayObj?.isSelectable;
 
   const handleSelectSlot = (slotLabel: string) => {
     if (hasMultiConsultantMode) {
@@ -531,57 +596,104 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
           
           {/* سربرگ مشخصات زمان‌بندی و روزهای حضور */}
           <div className="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200/80">
-            <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* عنوان و راهنمای راست */}
               <div className="flex items-center gap-2">
                 <div 
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white shrink-0"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
                   style={{ backgroundColor: themeColor }}
                 >
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-xs font-extrabold text-slate-900 block">
+                  <span className="text-xs sm:text-sm font-extrabold text-slate-900 block">
                     {hasMultiConsultantMode ? '۳. انتخاب روز و ساعت نوبت مشاوره' : 'انتخاب روز و ساعت نوبت مشاوره'}
                   </span>
-                  <span className="text-[10px] text-slate-500 block">
+                  <span className="text-[10px] sm:text-[11px] text-slate-500 block">
                     برای مشاهده ساعات آزاد، روز کاری مورد نظر را انتخاب فرمایید
                   </span>
                 </div>
               </div>
+
+              {/* ناوبری هفته‌ها (سمت چپ) */}
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-white px-2 py-1.5 rounded-xl border border-slate-200/90 shadow-2xs">
+                {/* دکمه هفته قبل (فلش راست در راست‌به‌چپ) */}
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset((prev) => Math.max(0, prev - 1))}
+                  disabled={weekOffset <= 0}
+                  className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-25 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="هفته قبل"
+                  aria-label="هفته قبل"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+
+                {/* برچسب هفته و بازه تاریخ */}
+                <div className="text-center px-1.5 min-w-[110px] sm:min-w-[130px]">
+                  <span className="text-xs font-black text-slate-800 block leading-tight">
+                    {weekOffset === 0 ? 'هفته جاری' : weekOffset === 1 ? 'هفته آینده' : `${toPersianDigits(weekOffset)} هفته بعد`}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-bold block leading-tight mt-0.5">
+                    {weekRangeLabel}
+                  </span>
+                </div>
+
+                {/* دکمه هفته بعد (فلش چپ در راست‌به‌چپ) */}
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset((prev) => prev + 1)}
+                  disabled={weekOffset >= 8}
+                  className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-25 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="هفته بعد"
+                  aria-label="هفته بعد"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* لیست دکمه‌های روزهای هفته (روزبندی) */}
+            {/* لیست دکمه‌های روزهای هفته (روزبندی با نام روز و تاریخ) */}
             <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-slate-200/70">
-              {WEEK_DAYS.map((day) => {
-                const isDayAvailable = availableDays.includes(day.index);
-                const isSelected = selectedDayIndex === day.index;
+              {weekDaysWithDates.map((day) => {
+                const isSelected = selectedDayIndex === day.index && day.isSelectable;
 
                 return (
                   <button
                     key={day.index}
                     type="button"
-                    onClick={() => setSelectedDayIndex(day.index)}
-                    className={`py-2 px-1 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-0.5 cursor-pointer touch-manipulation min-h-[44px] ${
-                      isSelected
-                        ? 'text-white font-extrabold shadow-sm scale-102 ring-2'
-                        : isDayAvailable
-                        ? 'bg-white hover:bg-slate-100 text-slate-700 font-bold border border-slate-200'
-                        : 'bg-rose-50/40 hover:bg-rose-50 text-slate-500 border border-rose-200/60'
+                    disabled={!day.isSelectable}
+                    onClick={() => {
+                      if (day.isSelectable) {
+                        setSelectedDayIndex(day.index);
+                      }
+                    }}
+                    className={`py-2 px-1 rounded-xl text-center transition-all flex flex-col items-center justify-center gap-0.5 select-none min-h-[54px] sm:min-h-[58px] ${
+                      !day.isSelectable
+                        ? 'bg-slate-100/90 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                        : isSelected
+                        ? 'text-white font-extrabold shadow-sm scale-102 ring-2 cursor-pointer'
+                        : 'bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 hover:border-slate-300 cursor-pointer'
                     }`}
                     style={{
                       backgroundColor: isSelected ? themeColor : undefined,
                       borderColor: isSelected ? themeColor : undefined,
                     }}
                   >
-                    <span className="text-xs font-bold">{day.name}</span>
+                    <span className={`text-xs ${isSelected ? 'font-black text-white' : !day.isSelectable ? 'font-semibold text-slate-400' : 'font-extrabold text-slate-800'}`}>
+                      {day.name}
+                    </span>
+                    <span className={`text-[10px] ${isSelected ? 'font-bold text-white/95' : !day.isSelectable ? 'font-medium text-slate-400' : 'font-bold text-slate-600'}`}>
+                      {day.dateFormatted}
+                    </span>
                     <span className={`text-[9px] font-bold ${
                       isSelected
-                        ? 'text-white/95'
-                        : isDayAvailable
-                        ? 'text-emerald-700'
-                        : 'text-rose-600'
+                        ? 'text-white/90'
+                        : !day.isSelectable
+                        ? 'text-slate-400'
+                        : 'text-emerald-700'
                     }`}>
-                      {isDayAvailable ? 'فعال' : 'تعطیل'}
+                      {day.isPast ? 'سپری‌شده' : day.isAvailableInConfig ? 'فعال' : 'تعطیل'}
                     </span>
                   </button>
                 );
@@ -628,7 +740,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span>نوبت‌های {WEEK_DAYS[selectedDayIndex]?.name}:</span>
+                    <span>نوبت‌های {WEEK_DAYS[selectedDayIndex]?.name}{selectedDayObj?.dateFormatted ? ` (${selectedDayObj.dateFormatted})` : ''}:</span>
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium">
                     {toPersianDigits(generatedSlotsForDay.filter((s) => s.available).length)} نوبت آزاد باقی‌مانده

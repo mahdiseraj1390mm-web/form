@@ -54,6 +54,8 @@ export async function POST(req: NextRequest) {
 
       const testArgs = Array.isArray(args) && args.length > 0 
         ? args 
+        : patternKey === 'recovery_otp'
+        ? ['54321']
         : patternKey === 'case_registration'
         ? ['SP260120']
         : patternKey === 'appointment_client'

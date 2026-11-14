@@ -2,8 +2,17 @@
   "provider": "melipayamak",
   "username": "9120449093",
   "password": "627eeb6c-8e98-4563-9160-dc2f60d293e3",
-  "senderNumber": "50004",
+  "senderNumber": "50004001449093",
   "patterns": {
+    "recovery_otp": {
+      "bodyId": 568830,
+      "title": "پیامک کد تأیید یکبارمصرف (OTP)",
+      "description": "ارسال کد تأیید ۵ رقمی به مراجع جهت بازیابی شماره پرونده",
+      "template": "با سلام\nکد تأیید شما: {0} می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق",
+      "variables": [
+        "{0}: کد تأیید"
+      ]
+    },
     "case_registration": {
       "bodyId": 568830,
       "title": "پیامک صدور کد پرونده",
