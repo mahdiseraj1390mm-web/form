@@ -59,7 +59,7 @@ function sanitizeForms(rawForms: Form[]): Form[] {
     }
 
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-      let fields = [...form.fields];
+      let fields = form.fields.filter((f) => f.id !== 'f_alert_guideline' && f.id !== 'f_terms');
       const hasBankCard = fields.some((f) => f.id === 'f_optional_contribution' || f.type === 'bankCard');
       if (!hasBankCard) {
         fields.push({
@@ -88,20 +88,23 @@ function sanitizeForms(rawForms: Form[]): Form[] {
 
       let steps = form.steps
         ? form.steps.map((st) => {
-            if (st.id === 'step-5' && !st.fieldIds.includes('f_optional_contribution')) {
-              return { ...st, fieldIds: [...st.fieldIds, 'f_optional_contribution'] };
+            if (st.id === 'step-5') {
+              const fieldIds = st.fieldIds.filter((id) => id !== 'f_alert_guideline' && id !== 'f_terms');
+              if (!fieldIds.includes('f_optional_contribution')) {
+                fieldIds.push('f_optional_contribution');
+              }
+              return {
+                ...st,
+                title: st.title === 'قوانین و راهنما' ? 'مشارکت مالی اختیاری' : st.title,
+                description: st.description === 'تایید شرایط و قوانین نوبت‌دهی' ? 'مشارکت اختیاری در هزینه‌های مرکز' : st.description,
+                fieldIds,
+              };
             }
             return st;
           })
         : form.steps;
 
       const updatedFields = fields.map((f) => {
-        if (f.id === 'f_alert_guideline' || f.id === 'f_terms') {
-          return {
-            ...f,
-            stepId: 'step-5',
-          };
-        }
         if (f.id === 'f_prev_counselor_name') {
           return {
             ...f,

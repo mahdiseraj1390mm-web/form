@@ -382,9 +382,9 @@ export const belhaghBookingForm: Form = {
     },
     {
       id: 'step-5',
-      title: 'قوانین و راهنما',
-      description: 'تایید شرایط و قوانین نوبت‌دهی',
-      fieldIds: ['f_alert_guideline', 'f_terms', 'f_optional_contribution'],
+      title: 'مشارکت مالی اختیاری',
+      description: 'مشارکت اختیاری در هزینه‌های مرکز',
+      fieldIds: ['f_optional_contribution'],
     },
   ],
   fields: [
@@ -489,24 +489,7 @@ export const belhaghBookingForm: Form = {
       },
     },
 
-    // راهنمای عمومی و تعهدنامه
-    {
-      id: 'f_alert_guideline',
-      type: 'alertBox',
-      label: 'راهنمای نوبت:',
-      helpText: 'نوبت شما پس از ثبت قطعی گردیده و پیامک تاییدیه به همراه شماره تماس مشاور برای شما ارسال خواهد شد.',
-      stepId: 'step-5',
-      gridCols: 12,
-      validations: { required: false },
-    },
-    {
-      id: 'f_terms',
-      type: 'termsCheckbox',
-      label: 'شرایط و ضوابط سامانه نوبت‌دهی مشاوره تلفنی بالحق را مطالعه کرده و می‌پذیرم.',
-      stepId: 'step-5',
-      gridCols: 12,
-      validations: { required: true },
-    },
+
     {
       id: 'f_optional_contribution',
       type: 'bankCard',

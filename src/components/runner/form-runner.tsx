@@ -3165,45 +3165,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       )}
       <div className={`${formWidthClass} ${fontClass} w-full transition-all duration-200 relative z-10`}>
         
-        {/* نوار وضعیت پرونده متصل‌شده */}
-        {formData.f_case_code && (isBelhaghFamily || form.id.includes('belhagh') || form.slug === '3uu4z') && (
-          <div className="mb-3.5 p-3 px-4 bg-emerald-50/90 border border-emerald-200/90 rounded-2xl text-xs flex items-center justify-between text-emerald-950 font-bold shadow-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse shrink-0" />
-              <span>
-                نوبت‌دهی برای پرونده: <strong className="font-mono text-emerald-950 font-black text-sm px-1.5 py-0.5 bg-white rounded-lg border border-emerald-200">{formData.f_case_code}</strong>
-              </span>
-              {Boolean(formData.f_name || formData.f_family) && (
-                <span className="text-emerald-800">
-                  ({formData.f_name} {formData.f_family})
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <a
-                href="/portal"
-                className="text-[11px] text-emerald-800 hover:text-emerald-950 font-bold bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs transition-colors inline-flex items-center gap-1"
-              >
-                <span>لیست فرم‌ها</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    localStorage.removeItem('belhagh_active_case_data');
-                    localStorage.removeItem('belhagh_current_case_code');
-                  }
-                  setFormData((prev) => ({ ...prev, f_case_code: '' }));
-                  setAuthGateMode('portal');
-                  setIsLoginBoxOpen(true);
-                }}
-                className="text-[11px] text-emerald-700 hover:text-emerald-900 underline cursor-pointer"
-              >
-                تغییر پرونده / خروج
-              </button>
-            </div>
-          </div>
-        )}
+
 
         {/* سربرگ فرم */}
         <div 
