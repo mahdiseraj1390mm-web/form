@@ -150,6 +150,11 @@ export interface BankCardData {
   allowReceiptUpload?: boolean; // امکان بارگذاری تصویر فیش واریزی
   requireReceipt?: boolean; // اجباری بودن پیوست فیش
   receiptTitle?: string; // عنوان کادر آپلود فیش
+  enableAppShortcuts?: boolean; // فعال‌سازی دکمه‌های پرش به اپلیکیشن‌های پرداخت (آپ، تاپ و...)
+  allowedApps?: string[]; // لیست شناسه‌های اپلیکیشن‌های فعال ('up' | 'top' | 'hamrahcard' | 'blubank' | 'sekkeh')
+  requireTrackingCode?: boolean; // الزامی بودن ثبت کد رهگیری / شماره پیگیری
+  trackingCodeTitle?: string; // عنوان فیلد کد رهگیری بانکی
+  allowOnlineGatewaySwitch?: boolean; // امکان انتخاب پرداخت اینترنتی آنلاین شاپرک در کنار کارت به کارت
 }
 
 export interface FormField {
