@@ -838,15 +838,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         ...prefilledData,
       }));
 
-      // انتقال مستقیم به مرحله رزرو نوبت / ادامه فرم
-      if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
-        setAuthGateMode('filling');
-        setCurrentStepIndex(0);
-        setInternalPageIndex(0);
-      } else if (onNavigateToForm) {
-        onNavigateToForm('3uu4z');
-      } else if (typeof window !== 'undefined') {
-        window.location.href = '/form/3uu4z';
+      // انتقال مستقیم به صفحه اول مراجعان (/portal)
+      if (typeof window !== 'undefined') {
+        window.location.href = '/portal';
       }
     } else {
       setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید.');
@@ -958,7 +952,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   };
 
-  // ۳. اتمام فرآیند و ورود مستقیم به فرم رزرو نوبت (بدون خروج یا ریدایرکت واسط)
+  // ۳. اتمام فرآیند و ورود مستقیم به صفحه اول مراجعان (/portal)
   const handleFinishRecovery = () => {
     if (!forgotSuccessData) return;
     const { caseCode, caseRecord } = forgotSuccessData;
@@ -970,6 +964,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       f_province_city: (caseRecord?.province && caseRecord?.city) ? `${caseRecord.province} - ${caseRecord.city}` : (caseRecord?.data?.f_province_city || ''),
       f_case_code: caseCode,
     };
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('belhagh_current_case_code', caseCode);
+        localStorage.setItem('belhagh_active_case_data', JSON.stringify(prefilledData));
+      } catch (err) {}
+    }
 
     setFormData((prev) => ({
       ...prev,
@@ -991,10 +992,10 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
     setShowForgotModal(false);
 
-    // ورود مستقیم به مرحله تکمیل فرم
-    setAuthGateMode('filling');
-    setCurrentStepIndex(0);
-    setInternalPageIndex(0);
+    // هدایت مستقیم به صفحه اول مراجعان (/portal)
+    if (typeof window !== 'undefined') {
+      window.location.href = '/portal';
+    }
   };
 
 
@@ -2364,10 +2365,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                 } catch (e) {}
               }
               setSubmittedResult(null);
-              if (onNavigateToForm) {
-                onNavigateToForm('3uu4z');
-              } else if (typeof window !== 'undefined') {
-                window.location.href = '/form/3uu4z';
+              if (typeof window !== 'undefined') {
+                window.location.href = '/portal';
               }
             }}
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all cursor-pointer"
@@ -2913,7 +2912,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     className="w-full py-3.5 px-5 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <LogIn className="w-4 h-4" />
-                    <span>ورود به پرونده و ادامه نوبت‌دهی</span>
+                    <span>ورود به صفحه اول پرونده</span>
                   </button>
                 </div>
               )}
@@ -4184,16 +4183,14 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     } catch (e) {}
                   }
                   setDuplicateCaseInfo(null);
-                  if (onNavigateToForm) {
-                    onNavigateToForm('3uu4z');
-                  } else if (typeof window !== 'undefined') {
-                    window.location.href = '/form/3uu4z';
+                  if (typeof window !== 'undefined') {
+                    window.location.href = '/portal';
                   }
                 }}
                 className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <LogIn className="w-4 h-4" />
-                <span>ورود به سامانه نوبت‌دهی با این پرونده</span>
+                <span>ورود به صفحه اول پرونده</span>
               </button>
 
               <button
