@@ -57,9 +57,9 @@ export const SUPPORTED_PAYMENT_APPS: PaymentAppInfo[] = [
     name: 'آپ (آسان پرداخت)',
     shortName: 'آپ',
     scheme: 'upapp://',
-    androidIntent: 'intent://#Intent;scheme=upapp;package=com.asanpardakht.up;end',
-    bazaarUrl: 'https://cafebazaar.ir/app/com.asanpardakht.up',
-    myketUrl: 'https://myket.ir/app/com.asanpardakht.up',
+    androidIntent: 'intent://#Intent;scheme=upapp;package=com.sibche.aspardproject.app;S.browser_fallback_url=https%3A%2F%2Fcafebazaar.ir%2Fapp%2Fcom.sibche.aspardproject.app;end',
+    bazaarUrl: 'https://cafebazaar.ir/app/com.sibche.aspardproject.app',
+    myketUrl: 'https://myket.ir/app/com.sibche.aspardproject.app',
     webUrl: 'https://asanpardakht.ir/',
     badgeColor: 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200',
     gradient: 'from-rose-500 to-red-600',
@@ -71,9 +71,9 @@ export const SUPPORTED_PAYMENT_APPS: PaymentAppInfo[] = [
     name: 'تاپ (پرداخت نوین)',
     shortName: 'تاپ',
     scheme: 'top://',
-    androidIntent: 'intent://#Intent;scheme=top;package=ir.torob.top;end',
-    bazaarUrl: 'https://cafebazaar.ir/app/ir.torob.top',
-    myketUrl: 'https://myket.ir/app/ir.torob.top',
+    androidIntent: 'intent://#Intent;scheme=top;package=ir.tgbs.peccharge;S.browser_fallback_url=https%3A%2F%2Fcafebazaar.ir%2Fapp%2Fir.tgbs.peccharge;end',
+    bazaarUrl: 'https://cafebazaar.ir/app/ir.tgbs.peccharge',
+    myketUrl: 'https://myket.ir/app/ir.tgbs.peccharge',
     webUrl: 'https://top.ir/',
     badgeColor: 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200',
     gradient: 'from-amber-500 to-orange-600',
@@ -85,9 +85,9 @@ export const SUPPORTED_PAYMENT_APPS: PaymentAppInfo[] = [
     name: 'همراه کارت',
     shortName: 'همراه کارت',
     scheme: 'hamrahcard://',
-    androidIntent: 'intent://#Intent;scheme=hamrahcard;package=ir.melli.hamrahcard;end',
-    bazaarUrl: 'https://cafebazaar.ir/app/ir.melli.hamrahcard',
-    myketUrl: 'https://myket.ir/app/ir.melli.hamrahcard',
+    androidIntent: 'intent://#Intent;scheme=hamrahcard;package=com.adpdigital.mbs.ayande;S.browser_fallback_url=https%3A%2F%2Fcafebazaar.ir%2Fapp%2Fcom.adpdigital.mbs.ayande;end',
+    bazaarUrl: 'https://cafebazaar.ir/app/com.adpdigital.mbs.ayande',
+    myketUrl: 'https://myket.ir/app/com.adpdigital.mbs.ayande',
     webUrl: 'https://hamrahcard.ir/',
     badgeColor: 'bg-sky-50 hover:bg-sky-100 text-sky-800 border-sky-200',
     gradient: 'from-sky-500 to-blue-600',
@@ -99,9 +99,9 @@ export const SUPPORTED_PAYMENT_APPS: PaymentAppInfo[] = [
     name: 'بلو بانک (سامان)',
     shortName: 'بلوبانک',
     scheme: 'blubank://',
-    androidIntent: 'intent://#Intent;scheme=blubank;package=com.samanpr.blubank;end',
-    bazaarUrl: 'https://cafebazaar.ir/app/com.samanpr.blubank',
-    myketUrl: 'https://myket.ir/app/com.samanpr.blubank',
+    androidIntent: 'intent://#Intent;scheme=blubank;package=com.samanpr.blu;S.browser_fallback_url=https%3A%2F%2Fcafebazaar.ir%2Fapp%2Fcom.samanpr.blu;end',
+    bazaarUrl: 'https://cafebazaar.ir/app/com.samanpr.blu',
+    myketUrl: 'https://myket.ir/app/com.samanpr.blu',
     webUrl: 'https://blubank.sb24.com/',
     badgeColor: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200',
     gradient: 'from-blue-600 to-indigo-700',
@@ -113,9 +113,9 @@ export const SUPPORTED_PAYMENT_APPS: PaymentAppInfo[] = [
     name: 'سکه (به‌پرداخت ملت)',
     shortName: 'سکه',
     scheme: 'sekkeh://',
-    androidIntent: 'intent://#Intent;scheme=sekkeh;package=com.behpardakht.sekkeh;end',
-    bazaarUrl: 'https://cafebazaar.ir/app/com.behpardakht.sekkeh',
-    myketUrl: 'https://myket.ir/app/com.behpardakht.sekkeh',
+    androidIntent: 'intent://#Intent;scheme=sekkeh;package=com.bpm.sekeh;S.browser_fallback_url=https%3A%2F%2Fcafebazaar.ir%2Fapp%2Fcom.bpm.sekeh;end',
+    bazaarUrl: 'https://cafebazaar.ir/app/com.bpm.sekeh',
+    myketUrl: 'https://myket.ir/app/com.bpm.sekeh',
     webUrl: 'https://sekkeh.behpardakht.com/',
     badgeColor: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200',
     gradient: 'from-emerald-600 to-teal-700',
@@ -127,9 +127,9 @@ export const SUPPORTED_PAYMENT_APPS: PaymentAppInfo[] = [
     name: 'بام (همراه بانک ملی)',
     shortName: 'بام ملی',
     scheme: 'baam://',
-    androidIntent: 'intent://#Intent;scheme=baam;package=ir.bmi.bam;end',
-    bazaarUrl: 'https://cafebazaar.ir/app/ir.bmi.bam',
-    myketUrl: 'https://myket.ir/app/ir.bmi.bam',
+    androidIntent: 'intent://#Intent;scheme=baam;package=ir.bmi.bam.nativeweb;S.browser_fallback_url=https%3A%2F%2Fcafebazaar.ir%2Fapp%2Fir.bmi.bam.nativeweb;end',
+    bazaarUrl: 'https://cafebazaar.ir/app/ir.bmi.bam.nativeweb',
+    myketUrl: 'https://myket.ir/app/ir.bmi.bam.nativeweb',
     webUrl: 'https://my.bmi.ir/',
     badgeColor: 'bg-teal-50 hover:bg-teal-100 text-teal-800 border-teal-200',
     gradient: 'from-teal-600 to-emerald-700',
@@ -173,45 +173,45 @@ export function buildPaymentAppLinks(
 
   switch (app.id) {
     case 'up': {
-      // آپ (آسان پرداخت)
+      // آپ (آسان پرداخت) - شناسه رسمی بسته در اندروید com.sibche.aspardproject.app
       return {
         deepLinkScheme: `upapp://?${q}`,
-        androidIntent: `intent://#Intent;scheme=upapp;package=com.asanpardakht.up;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
+        androidIntent: `intent://#Intent;scheme=upapp;package=com.sibche.aspardproject.app;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'hamrahcard': {
-      // همراه کارت
+      // همراه کارت - شناسه رسمی بسته در اندروید com.adpdigital.mbs.ayande
       return {
         deepLinkScheme: `hamrahcard://?${q}`,
-        androidIntent: `intent://#Intent;scheme=hamrahcard;package=ir.melli.hamrahcard;S.destination=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
+        androidIntent: `intent://#Intent;scheme=hamrahcard;package=com.adpdigital.mbs.ayande;S.destination=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'blubank': {
-      // بلوبانک سامان
+      // بلوبانک سامان - شناسه رسمی بسته در اندروید com.samanpr.blu
       return {
         deepLinkScheme: `blubank://?${q}`,
-        androidIntent: `intent://#Intent;scheme=blubank;package=com.samanpr.blubank;S.dest=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
+        androidIntent: `intent://#Intent;scheme=blubank;package=com.samanpr.blu;S.dest=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'top': {
-      // تاپ پرداخت نوین
+      // تاپ پرداخت نوین - شناسه رسمی بسته در اندروید ir.tgbs.peccharge
       return {
         deepLinkScheme: `top://?${q}`,
-        androidIntent: `intent://#Intent;scheme=top;package=ir.torob.top;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
+        androidIntent: `intent://#Intent;scheme=top;package=ir.tgbs.peccharge;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'sekkeh': {
-      // سکه به‌پرداخت ملت
+      // سکه به‌پرداخت ملت - شناسه رسمی بسته در اندروید com.bpm.sekeh
       return {
         deepLinkScheme: `sekkeh://?${q}`,
-        androidIntent: `intent://#Intent;scheme=sekkeh;package=com.behpardakht.sekkeh;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
+        androidIntent: `intent://#Intent;scheme=sekkeh;package=com.bpm.sekeh;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'bam': {
-      // همراه بانک ملی (سامانه بام)
+      // همراه بانک ملی (سامانه بام) - شناسه رسمی بسته در اندروید ir.bmi.bam.nativeweb
       return {
         deepLinkScheme: `baam://?${q}`,
-        androidIntent: `intent://#Intent;scheme=baam;package=ir.bmi.bam;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
+        androidIntent: `intent://#Intent;scheme=baam;package=ir.bmi.bam.nativeweb;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     default: {
