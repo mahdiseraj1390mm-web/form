@@ -215,6 +215,18 @@ export const COUNSELING_TOPICS: CounselingTopicOption[] = [
   { id: 'family', name: 'مشاوره ازدواج و خانواده', keywords: ['خانواده', 'ازدواج', 'زوجین', 'زوج'], description: 'مشاوره پیش از ازدواج، زوج‌درمانی و خانواده', isDefault: true },
 ];
 
+let dynamicTopicsList: CounselingTopicOption[] = [...COUNSELING_TOPICS];
+
+export function setGlobalCounselingTopics(topics: CounselingTopicOption[]) {
+  if (Array.isArray(topics) && topics.length > 0) {
+    dynamicTopicsList = topics;
+  }
+}
+
+export function getGlobalCounselingTopics(): CounselingTopicOption[] {
+  return dynamicTopicsList;
+}
+
 /**
  * تطبیق هوشمند عنوان یا شناسه موضوع با گزینه‌های مشاوره رسمی
  */
@@ -230,14 +242,15 @@ export function matchCounselingTopic(
   if (!topicKey) return undefined;
   const cleanKey = topicKey.trim();
   const aliased = TOPIC_ID_ALIASES[cleanKey] || cleanKey;
-  const list = customList && customList.length > 0 ? customList : COUNSELING_TOPICS;
+  const list = customList && customList.length > 0 ? customList : dynamicTopicsList;
   return list.find(
     (t) =>
       t.id === aliased ||
+      t.id.toLowerCase() === aliased.toLowerCase() ||
       t.name === cleanKey ||
       t.name.includes(cleanKey) ||
       cleanKey.includes(t.name) ||
-      t.keywords.some((kw) => cleanKey.includes(kw) || kw.includes(cleanKey))
+      (Array.isArray(t.keywords) && t.keywords.some((kw) => cleanKey.includes(kw) || kw.includes(cleanKey)))
   );
 }
 
@@ -830,7 +843,7 @@ export function isBookingAssignedToConsultant(
     const topicText = (booking.topic || '').toLowerCase();
     const isTopicAllowed = allowedTopics.some((tId) => {
       if (topicText.includes(tId.toLowerCase())) return true;
-      const topicObj = COUNSELING_TOPICS.find((ct) => ct.id === tId || ct.name.includes(tId) || ct.keywords.includes(tId));
+      const topicObj = matchCounselingTopic(tId);
       if (!topicObj) return false;
       return topicObj.keywords.some((kw) => topicText.includes(kw));
     });

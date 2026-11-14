@@ -15,6 +15,7 @@ import {
   Info
 } from 'lucide-react';
 import { AppointmentData, WorkDayPeriod, DayScheduleConfig } from '@/types/form';
+import { useForm } from '@/context/form-context';
 import {
   matchCounselingTopic,
   normalizeCounselingTopicId,
@@ -53,6 +54,7 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
   topics = [],
   onSave,
 }) => {
+  const { counselingTopics } = useForm();
   // ساعت کاری عمومی
   const [slotDurationMinutes, setSlotDurationMinutes] = useState<number>(45);
   const [restTimeMinutes, setRestTimeMinutes] = useState<number>(15);
@@ -304,9 +306,9 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
   const cur = currentSchedule();
   const activeTopicDisplay = useMemo(() => {
     if (activeTopic === 'all') return 'ساعت کاری عمومی';
-    const topObj = matchCounselingTopic(activeTopic);
+    const topObj = matchCounselingTopic(activeTopic, counselingTopics);
     return topObj ? topObj.name : activeTopic;
-  }, [activeTopic]);
+  }, [activeTopic, counselingTopics]);
 
   if (!isOpen) return null;
 
@@ -389,7 +391,7 @@ export const ConsultantScheduleModal: React.FC<ConsultantScheduleModalProps> = (
                 </button>
 
                 {availableTopics.map((topKey) => {
-                  const topObj = matchCounselingTopic(topKey);
+                  const topObj = matchCounselingTopic(topKey, counselingTopics);
                   const canonicalKey = topObj ? topObj.id : topKey;
                   const topLabel = topObj ? topObj.name : topKey;
                   const hasCustom = !!topicSchedules[canonicalKey] || !!topicSchedules[topKey];

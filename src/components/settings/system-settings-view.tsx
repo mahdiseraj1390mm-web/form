@@ -71,7 +71,7 @@ const TAB_NAME_MAP: Record<string, string> = {
 };
 
 export const SystemSettingsView: React.FC = () => {
-  const { forms, teamMembers, inviteTeamMember, updateTeamMember, deleteTeamMember, toggleTeamMemberStatus } = useForm();
+  const { forms, teamMembers, counselingTopics, inviteTeamMember, updateTeamMember, deleteTeamMember, toggleTeamMemberStatus } = useForm();
   const [activeTab, setActiveTab] = useState<'general' | 'portal' | 'sms' | 'payment' | 'api' | 'team' | 'topics'>('general');
   const [copiedKey, setCopiedKey] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -174,7 +174,11 @@ export const SystemSettingsView: React.FC = () => {
       m.mobile.includes(q) ||
       (m.username && m.username.includes(q)) ||
       (m.jobTitle && m.jobTitle.toLowerCase().includes(q)) ||
-      (m.allowedTopics && m.allowedTopics.some((t) => t.toLowerCase().includes(q)));
+      (m.allowedTopics && m.allowedTopics.some((t) => {
+        const topicObj = matchCounselingTopic(t, counselingTopics);
+        const topicName = topicObj ? topicObj.name : t;
+        return t.toLowerCase().includes(q) || topicName.toLowerCase().includes(q);
+      }));
     return matchesSearch;
   });
 
@@ -608,7 +612,7 @@ export const SystemSettingsView: React.FC = () => {
                               <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                                 <span className="text-[10px] text-slate-400 font-medium">موضوعات:</span>
                                 {member.allowedTopics.map((topId) => {
-                                  const topicObj = matchCounselingTopic(topId);
+                                  const topicObj = matchCounselingTopic(topId, counselingTopics);
                                   return (
                                     <span
                                       key={topId}

@@ -65,7 +65,7 @@ interface ClientCaseGroup {
 }
 
 export const SubmissionsHub: React.FC = () => {
-  const { forms, activeForm, submissions, teamMembers, updateSubmissionStatus, addSubmissionComment, refreshSubmissionsFromDb } = useForm();
+  const { forms, activeForm, submissions, teamMembers, counselingTopics, updateSubmissionStatus, addSubmissionComment, refreshSubmissionsFromDb } = useForm();
   const { currentUser } = useAdminAuth();
 
   const isSuperAdmin = isSuperAdminUser(currentUser);
@@ -346,7 +346,7 @@ export const SubmissionsHub: React.FC = () => {
           if (consultantAllowedTopics.length > 0) {
             const subTopic = String(sub.data?.f_topic || sub.data?.f_counseling_subject || sub.data?.topic || '').toLowerCase();
             const matchesTopic = consultantAllowedTopics.some((tId) => {
-              const topicObj = matchCounselingTopic(tId);
+              const topicObj = matchCounselingTopic(tId, counselingTopics);
               return topicObj && topicObj.keywords.some((kw) => subTopic.includes(kw));
             });
             if (matchesTopic) {
@@ -360,7 +360,7 @@ export const SubmissionsHub: React.FC = () => {
     }
 
     return allCases;
-  }, [submissions, forms, isConsultantUser, currentConsultantProfile, consultantAllowedTopics]);
+  }, [submissions, forms, isConsultantUser, currentConsultantProfile, consultantAllowedTopics, counselingTopics]);
 
 function normalizeSearchText(str: string): string {
   if (!str) return '';

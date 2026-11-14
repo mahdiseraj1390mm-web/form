@@ -178,8 +178,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     return selectedConsultants.filter((c) => {
       const topics = c.enabledTopics || [];
       const coversTopic = topics.some((t) => {
-        if (t === selectedTopicId || normalizeCounselingTopicId(t) === selNorm) return true;
-        const topicObj = matchCounselingTopic(selectedTopicId);
+        if (t === selectedTopicId || normalizeCounselingTopicId(t, counselingTopics) === selNorm) return true;
+        const topicObj = matchCounselingTopic(selectedTopicId, counselingTopics);
         if (topicObj) {
           if (topicObj.id === t || topicObj.name === t || topicObj.keywords.includes(t)) return true;
         }
@@ -472,7 +472,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const handleSelectSlot = (slotLabel: string) => {
     if (hasMultiConsultantMode) {
-      const topicObj = matchCounselingTopic(selectedTopicId);
+      const topicObj = matchCounselingTopic(selectedTopicId, counselingTopics);
       const topicName = topicObj ? topicObj.name : (selectedTopicId || 'مشاوره تخصصی');
       const consultantFullName = activeConsultantConfig
         ? formatConsultantDisplayName(activeConsultantConfig.consultantName, activeConsultantConfig.genderPrefix)

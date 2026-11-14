@@ -15,7 +15,7 @@ export const allInitialSubmissions: FormSubmission[] = belhaghInitialSubmissions
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 import { DEFAULT_INITIAL_TEAM_MEMBERS } from '@/lib/team-constants';
-import { CounselingTopicOption, COUNSELING_TOPICS } from '@/lib/consultant-helpers';
+import { CounselingTopicOption, COUNSELING_TOPICS, setGlobalCounselingTopics } from '@/lib/consultant-helpers';
 
 export const initialTeamMembers: TeamMember[] = DEFAULT_INITIAL_TEAM_MEMBERS;
 
@@ -157,6 +157,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
           const parsedTopics = JSON.parse(storedTopics);
           if (Array.isArray(parsedTopics) && parsedTopics.length > 0) {
             setCounselingTopics(parsedTopics);
+            setGlobalCounselingTopics(parsedTopics);
           }
         } catch {}
       }
@@ -305,6 +306,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       .then((data) => {
         if (data?.success && Array.isArray(data.topics) && data.topics.length > 0) {
           setCounselingTopics(data.topics);
+          setGlobalCounselingTopics(data.topics);
           try {
             localStorage.setItem('belhagh_counseling_topics', JSON.stringify(data.topics));
           } catch {}
@@ -323,6 +325,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('formafzar_team_members', JSON.stringify(teamMembers));
       localStorage.setItem('belhagh_counseling_topics', JSON.stringify(counselingTopics));
       localStorage.setItem('formafzar_sim_notifs', JSON.stringify(similarityNotifications));
+      setGlobalCounselingTopics(counselingTopics);
     } catch {
       // ignore
     }
