@@ -849,11 +849,11 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                     </div>
                                     <div>
                                       <span className="font-extrabold text-emerald-950 block text-xs">فیلد جامع نوبت‌دهی چندمشاوره‌ای</span>
-                                      <span className="text-[10px] text-emerald-700 font-medium">شامل مراحل داخلی: موضوع مراجعه ← انتخاب مشاور ← اطلاعات تماس مشاور ← تقویم اسلات‌ها</span>
+                                      <span className="text-[10px] text-emerald-700 font-medium">شامل مراحل داخلی: موضوع مراجعه ← انتخاب مشاور ← تقویم اسلات‌ها</span>
                                     </div>
                                   </div>
                                   <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-                                    هوشمند ۴ در ۱
+                                    هوشمند ۳ در ۱
                                   </span>
                                 </div>
 
@@ -884,8 +884,8 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                   </div>
                                 </div>
 
-                                {/* مراحل فرعی ۴ گانه داخلی */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[10px]">
+                                {/* مراحل فرعی داخلی */}
+                                <div className="grid grid-cols-3 gap-1.5 text-[10px]">
                                   <div className="p-1.5 rounded-lg bg-white/70 border border-slate-200 text-center">
                                     <span className="font-bold text-slate-700 block">۱. موضوع مراجعه</span>
                                     <span className="text-[9px] text-slate-400">فیلتر خودکار</span>
@@ -895,11 +895,7 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                     <span className="text-[9px] text-slate-400">کارت با آقا/خانم</span>
                                   </div>
                                   <div className="p-1.5 rounded-lg bg-white/70 border border-slate-200 text-center">
-                                    <span className="font-bold text-slate-700 block">۳. تماس و راهنما</span>
-                                    <span className="text-[9px] text-slate-400">باکس تلفن مستقیم</span>
-                                  </div>
-                                  <div className="p-1.5 rounded-lg bg-white/70 border border-slate-200 text-center">
-                                    <span className="font-bold text-slate-700 block">۴. تقویم اسلات‌ها</span>
+                                    <span className="font-bold text-slate-700 block">۳. تقویم اسلات‌ها</span>
                                     <span className="text-[9px] text-slate-400">بر اساس ساعت کاری</span>
                                   </div>
                                 </div>

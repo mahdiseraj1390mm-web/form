@@ -384,3 +384,15 @@ export async function sendAppointmentCounselorSms(
     exactText
   );
 }
+
+/**
+ * ۴. پیامک کد یکبارمصرف تأیید هویت و بازیابی کد پرونده
+ */
+export async function sendRecoveryOtpSms(clientMobile: string, code: string): Promise<any> {
+  const cleanTo = clientMobile.replace(/[^0-9]/g, '');
+  const standardTo = cleanTo.startsWith('98') ? '0' + cleanTo.slice(2) : cleanTo;
+  const exactText = `کد تأیید بازیابی پرونده شما در مرکز روانشناسی بالحق: ${code}\nاعتبار: ۲ دقیقه\nسایت روانشناسی بالحق`;
+
+  return sendDirectTextSms(standardTo, exactText, 'recovery_otp');
+}
+

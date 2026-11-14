@@ -1,5 +1,19 @@
 [
   {
+    "id": "sms-1794625788582-6wg9l",
+    "timestamp": "2026-11-14T03:09:48.583Z",
+    "type": "recovery_otp",
+    "recipient": "09908595127",
+    "bodyId": 0,
+    "args": [],
+    "message": "کد تأیید بازیابی پرونده شما در مرکز روانشناسی بالحق: 62994\nاعتبار: ۲ دقیقه\nسایت روانشناسی بالحق",
+    "status": "failed",
+    "providerResponse": {
+      "status": "failed",
+      "code": "SendSMS Web Service method name is not valid.\r\n"
+    }
+  },
+  {
     "id": "sms-1794606098325-at8b7",
     "timestamp": "2026-11-13T21:41:38.325Z",
     "type": "appointment_client",

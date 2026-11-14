@@ -11,6 +11,21 @@ import {
   deleteSubmissionCommentInDb,
 } from '@/lib/db';
 import { matchAndMergeSafaForNewRegistration } from '@/lib/user-similarity';
+import { sendRecoveryOtpSms } from '@/lib/sms-service';
+
+interface OtpEntry {
+  code: string;
+  mobile: string;
+  expiresAt: number;
+  attempts: number;
+  lastSentAt: number;
+  caseRecord: any;
+}
+
+// ذخیره‌سازی موقت کدهای اعتبارسنجی در حافظه سرور
+const recoveryOtpStore: Map<string, OtpEntry> = (globalThis as any).__belhaghRecoveryOtpStore || new Map();
+(globalThis as any).__belhaghRecoveryOtpStore = recoveryOtpStore;
+
 
 
 // شناسه‌های جامع مشاوران و کلیه نقش‌ها و فیلدهای متناظر آن‌ها جهت جلوگیری قطعی از تداخل نوبت در یک زمان
@@ -249,6 +264,163 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action } = body;
+
+    // ۰.۱. ارسال کد یکبارمصرف (OTP) جهت بازیابی امن شماره پرونده
+    if (action === 'send_recovery_otp') {
+      const { mobile } = body;
+      const clean = normalizeMobile(mobile);
+      if (!clean || clean.length < 10) {
+        return NextResponse.json({ success: false, error: 'شماره همراه معتبر وارد فرمایید.' }, { status: 400 });
+      }
+
+      // بررسی وجود پرونده برای این شماره در دیتابیس یا سابمیشن‌ها
+      let caseRecord: any = await getCaseByMobile(clean);
+      if (!caseRecord) {
+        try {
+          const allSubs = await getFormSubmissionsFromDb('all');
+          const foundSub = allSubs.find((s) => {
+            const subMobile = normalizeMobile(String(s.data?.f_mobile || s.data?.mobile || s.mobile || ''));
+            return subMobile === clean || (subMobile.length >= 10 && clean.endsWith(subMobile));
+          });
+          if (foundSub) {
+            caseRecord = {
+              id: foundSub.id,
+              case_code: foundSub.trackingCode || foundSub.data?.caseCode || foundSub.data?.f_case_code,
+              first_name: foundSub.data?.f_name || foundSub.data?.f_applicant_name || '',
+              last_name: foundSub.data?.f_family || '',
+              mobile: clean,
+              province: foundSub.data?.f_province_city_province || '',
+              city: foundSub.data?.f_province_city_city || '',
+              data: foundSub.data || {},
+            };
+          }
+        } catch (e) {
+          console.warn('Fallback submissions lookup error:', e);
+        }
+      }
+
+      if (!caseRecord || !caseRecord.case_code) {
+        return NextResponse.json({
+          success: false,
+          found: false,
+          message: 'پرونده‌ای با این شماره همراه در سامانه یافت نشد.',
+        });
+      }
+
+      // محدودیت نرخ ارسال: حداقل ۶۰ ثانیه فاصله بین ارسال‌ها
+      const existingOtp = recoveryOtpStore.get(clean);
+      const now = Date.now();
+      if (existingOtp && (now - existingOtp.lastSentAt) < 60000) {
+        const remainingSeconds = Math.ceil((60000 - (now - existingOtp.lastSentAt)) / 1000);
+        return NextResponse.json({
+          success: false,
+          error: `لطفاً ${remainingSeconds} ثانیه دیگر جهت درخواست مجدد کد شکیبا باشید.`,
+          retryAfter: remainingSeconds,
+        }, { status: 429 });
+      }
+
+      // تولید کد تصادفی ۵ رقمی
+      const code = Math.floor(10000 + Math.random() * 90000).toString();
+      const expiresAt = now + 120000; // ۲ دقیقه
+
+      recoveryOtpStore.set(clean, {
+        code,
+        mobile: clean,
+        expiresAt,
+        attempts: 0,
+        lastSentAt: now,
+        caseRecord,
+      });
+
+      try {
+        await sendRecoveryOtpSms(clean, code);
+      } catch (smsErr) {
+        console.error('Failed to send OTP SMS in API:', smsErr);
+      }
+
+      return NextResponse.json({
+        success: true,
+        found: true,
+        expiresIn: 120,
+        message: 'کد تأیید ۵ رقمی به شماره همراه شما پیامک شد.',
+      });
+    }
+
+    // ۰.۲. اعتبارسنجی کد یکبارمصرف و بازگرداندن امن کد پرونده
+    if (action === 'verify_recovery_otp') {
+      const { mobile, code } = body;
+      const clean = normalizeMobile(mobile);
+      const cleanCode = String(code || '').replace(/[^0-9]/g, '');
+
+      if (!clean || !cleanCode) {
+        return NextResponse.json({ success: false, error: 'شماره همراه و کد تأیید الزامی است.' }, { status: 400 });
+      }
+
+      const otpEntry = recoveryOtpStore.get(clean);
+      if (!otpEntry) {
+        return NextResponse.json({
+          success: false,
+          error: 'کد تأییدی برای این شماره ثبت نشده یا منقضی شده است. لطفاً مجدداً درخواست دهید.',
+        }, { status: 400 });
+      }
+
+      const now = Date.now();
+      if (now > otpEntry.expiresAt) {
+        recoveryOtpStore.delete(clean);
+        return NextResponse.json({
+          success: false,
+          error: 'کد تأیید منقضی شده است. لطفاً مجدداً درخواست کد فرمایید.',
+        }, { status: 400 });
+      }
+
+      if (otpEntry.attempts >= 5) {
+        recoveryOtpStore.delete(clean);
+        return NextResponse.json({
+          success: false,
+          error: 'تعداد دفعات تلاش اشتباه بیش از حد مجاز بود. لطفاً کد جدید درخواست نمایید.',
+        }, { status: 400 });
+      }
+
+      if (otpEntry.code !== cleanCode) {
+        otpEntry.attempts += 1;
+        const remainingAttempts = 5 - otpEntry.attempts;
+        return NextResponse.json({
+          success: false,
+          error: `کد وارد شده صحیح نمی‌باشد. (${remainingAttempts} تلاش باقی‌مانده)`,
+        }, { status: 400 });
+      }
+
+      // تطابق موفق: پاک‌سازی کد مصرف‌شده
+      const caseRecord = otpEntry.caseRecord;
+      recoveryOtpStore.delete(clean);
+
+      const fullName = `${caseRecord.first_name || ''} ${caseRecord.last_name || ''}`.trim() || caseRecord.data?.fullName || 'مراجع محترم';
+
+      return NextResponse.json({
+        success: true,
+        verified: true,
+        caseCode: caseRecord.case_code,
+        fullName,
+        caseRecord: {
+          id: caseRecord.id,
+          case_code: caseRecord.case_code,
+          first_name: caseRecord.first_name,
+          last_name: caseRecord.last_name,
+          mobile: clean,
+          province: caseRecord.province,
+          city: caseRecord.city,
+          data: {
+            ...(caseRecord.data || {}),
+            f_name: caseRecord.first_name || caseRecord.data?.f_name || '',
+            f_family: caseRecord.last_name || caseRecord.data?.f_family || '',
+            f_mobile: clean,
+            f_case_code: caseRecord.case_code,
+            fullName,
+          },
+        },
+        message: 'هویت شما با موفقیت تأیید شد.',
+      });
+    }
 
     // ۱. بررسی ثبت‌نام تکراری قبل از ثبت فرم
     if (action === 'check_registration') {

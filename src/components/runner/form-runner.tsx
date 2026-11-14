@@ -626,15 +626,21 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   const [activeCaseSubmission, setActiveCaseSubmission] = useState<FormSubmission | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  // استیت بازیابی کد پرونده با شماره تلفن همراه
+  // استیت‌های مودال ۳ مرحله‌ای بازیابی کد پرونده با پیامک تأیید (OTP)
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'mobile' | 'otp' | 'success'>('mobile');
   const [forgotMobileInput, setForgotMobileInput] = useState('');
-  const [forgotResult, setForgotResult] = useState<{
-    found: boolean;
-    caseCode?: string;
-    message: string;
-    sub?: FormSubmission;
+  const [forgotOtpInput, setForgotOtpInput] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotCountdown, setForgotCountdown] = useState<number>(0);
+  const [forgotSuccessData, setForgotSuccessData] = useState<{
+    caseCode: string;
+    fullName: string;
+    caseRecord: any;
   } | null>(null);
+  const [copiedForgotCode, setCopiedForgotCode] = useState(false);
+
 
   // ثبت‌نام قبلی شناسایی‌شده در سامانه
   const [duplicateCaseInfo, setDuplicateCaseInfo] = useState<{
@@ -832,97 +838,165 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         ...prefilledData,
       }));
 
-      // انتقال مستقیم به صفحه لیست فرم‌های مراجع
-      if (typeof window !== 'undefined') {
-        window.location.href = '/portal';
+      // انتقال مستقیم به مرحله رزرو نوبت / ادامه فرم
+      if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
+        setAuthGateMode('filling');
+        setCurrentStepIndex(0);
+        setInternalPageIndex(0);
+      } else if (onNavigateToForm) {
+        onNavigateToForm('3uu4z');
+      } else if (typeof window !== 'undefined') {
+        window.location.href = '/form/3uu4z';
       }
     } else {
       setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید.');
     }
   };
 
-  // بازیابی کد پرونده با شماره تلفن همراه
-  const handleForgotLookup = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanPhone = toEnglishDigits(forgotMobileInput.trim().replace(/\s+/g, ''));
+  // شمارش معکوس تایمر کد یکبارمصرف بازیابی
+  useEffect(() => {
+    if (forgotCountdown <= 0) return;
+    const interval = setInterval(() => {
+      setForgotCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [forgotCountdown]);
+
+  // ۱. ارسال پیامک کد یکبارمصرف به شماره مراجع جهت بازیابی
+  const handleSendRecoveryOtp = async (targetMobile?: string) => {
+    const rawMobile = targetMobile || forgotMobileInput;
+    const cleanPhone = toEnglishDigits(rawMobile.trim().replace(/\s+/g, ''));
     if (!cleanPhone || !isValidIranianMobile(cleanPhone)) {
-      setForgotResult({
-        found: false,
-        message: 'لطفاً یک شماره همراه معتبر ۱۱ رقمی (شروع با ۰۹) وارد فرمایید.',
-      });
+      setForgotError('لطفاً یک شماره همراه معتبر ۱۱ رقمی (شروع با ۰۹) وارد فرمایید.');
       return;
     }
 
-    let found: any = null;
+    setForgotLoading(true);
+    setForgotError(null);
 
-    // ۱. استعلام اول و قطعی از دیتابیس ابری Neon (مرجع اصلی)
     try {
-      const res = await fetch(`/api/cases?mobile=${encodeURIComponent(cleanPhone)}`);
-      const json = await res.json();
-      if (json.success && json.found && json.caseRecord) {
-        const rec = json.caseRecord;
-        found = {
-          id: `case-${rec.id}`,
-          formId: 'form-belhagh-registration',
-          trackingCode: rec.case_code,
-          status: 'approved',
-          createdAt: rec.created_at,
-          comments: [],
-          data: {
-            ...rec.data,
-            f_name: rec.first_name || rec.data?.f_name || '',
-            f_family: rec.last_name || rec.data?.f_family || '',
-            f_mobile: rec.mobile || rec.data?.f_mobile || cleanPhone,
-            f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || ''),
-            f_role_in_family: rec.data?.f_role_in_family || '',
-            f_case_code: rec.case_code,
-          },
-        };
-      }
-    } catch (err) {
-      console.warn('API forgot lookup error:', err);
-    }
-
-    // ۲. در صورت قطع شبکه، بررسی به عنوان پشتیبان در حافظه محلی
-    if (!found) {
-      let allSubs = [...submissions];
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = localStorage.getItem('formafzar_submissions');
-          if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
-          const storedCases = localStorage.getItem('belhagh_all_cases');
-          if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
-        } catch (err) {}
-      }
-
-      found = allSubs.find((s) => {
-        const subPhone = toEnglishDigits(String(s.data?.f_mobile || s.data?.mobile || s.data?.f_phone || '')).trim();
-        return subPhone === cleanPhone || (subPhone.length >= 10 && cleanPhone.endsWith(subPhone));
+      const res = await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_recovery_otp', mobile: cleanPhone }),
       });
-    }
+      const data = await res.json();
 
-    if (found && found.trackingCode) {
-      // بروزرسانی حافظه محلی با کد معتبر دیتابیس
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('belhagh_current_case_code', found.trackingCode);
-          localStorage.setItem('belhagh_active_case_data', JSON.stringify(found.data));
-        } catch (err) {}
+      if (data.success && data.found) {
+        setForgotStep('otp');
+        setForgotCountdown(120);
+        setForgotOtpInput('');
+      } else {
+        setForgotError(data.error || data.message || 'پرونده‌ای با این شماره همراه در سامانه یافت نشد.');
       }
-
-      setForgotResult({
-        found: true,
-        caseCode: found.trackingCode,
-        message: 'پرونده شما با موفقیت شناسایی شد! کد پرونده قبلی شما بازیابی گردید.',
-        sub: found,
-      });
-    } else {
-      setForgotResult({
-        found: false,
-        message: 'با این شماره همراه هیچ پرونده‌ای در سامانه یافت نشد.',
-      });
+    } catch (err: any) {
+      console.warn('send recovery OTP error:', err);
+      setForgotError('خطا در ارتباط با سرور. لطفاً اتصال اینترنت را بررسی فرمایید.');
+    } finally {
+      setForgotLoading(false);
     }
   };
+
+  // ۲. اعتبارسنجی کد یکبارمصرف وارد شده توسط کاربر
+  const handleVerifyRecoveryOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanPhone = toEnglishDigits(forgotMobileInput.trim().replace(/\s+/g, ''));
+    const cleanCode = toEnglishDigits(forgotOtpInput.trim().replace(/\s+/g, ''));
+
+    if (!cleanCode || cleanCode.length < 5) {
+      setForgotError('لطفاً کد تأیید ۵ رقمی دریافتی را وارد فرمایید.');
+      return;
+    }
+
+    setForgotLoading(true);
+    setForgotError(null);
+
+    try {
+      const res = await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify_recovery_otp',
+          mobile: cleanPhone,
+          code: cleanCode,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success && data.verified && data.caseCode) {
+        setForgotSuccessData({
+          caseCode: data.caseCode,
+          fullName: data.fullName || 'مراجع محترم',
+          caseRecord: data.caseRecord,
+        });
+        setForgotStep('success');
+
+        // ذخیره سشن و فعال‌سازی اطلاعات مراجع در حافظه محلی
+        const prefilledData = {
+          ...(data.caseRecord?.data || {}),
+          f_name: data.caseRecord?.first_name || data.caseRecord?.data?.f_name || '',
+          f_family: data.caseRecord?.last_name || data.caseRecord?.data?.f_family || '',
+          f_mobile: cleanPhone,
+          f_province_city: (data.caseRecord?.province && data.caseRecord?.city) ? `${data.caseRecord.province} - ${data.caseRecord.city}` : (data.caseRecord?.data?.f_province_city || ''),
+          f_case_code: data.caseCode,
+        };
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('belhagh_current_case_code', data.caseCode);
+            localStorage.setItem('belhagh_active_case_data', JSON.stringify(prefilledData));
+          } catch (err) {}
+        }
+      } else {
+        setForgotError(data.error || 'کد وارد شده معتبر نمی‌باشد.');
+      }
+    } catch (err) {
+      console.warn('verify recovery OTP error:', err);
+      setForgotError('خطا در اعتبارسنجی کد. لطفاً مجدداً تلاش نمایید.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // ۳. اتمام فرآیند و ورود مستقیم به فرم رزرو نوبت (بدون خروج یا ریدایرکت واسط)
+  const handleFinishRecovery = () => {
+    if (!forgotSuccessData) return;
+    const { caseCode, caseRecord } = forgotSuccessData;
+    const prefilledData = {
+      ...(caseRecord?.data || {}),
+      f_name: caseRecord?.first_name || caseRecord?.data?.f_name || '',
+      f_family: caseRecord?.last_name || caseRecord?.data?.f_family || '',
+      f_mobile: caseRecord?.mobile || forgotMobileInput,
+      f_province_city: (caseRecord?.province && caseRecord?.city) ? `${caseRecord.province} - ${caseRecord.city}` : (caseRecord?.data?.f_province_city || ''),
+      f_case_code: caseCode,
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      ...prefilledData,
+      f_case_code: caseCode,
+    }));
+
+    if (caseRecord) {
+      setActiveCaseSubmission({
+        id: `case-${caseRecord.id || caseCode}`,
+        formId: form.id,
+        trackingCode: caseCode,
+        status: 'approved',
+        createdAt: caseRecord.created_at || new Date().toISOString(),
+        comments: [],
+        data: prefilledData,
+      });
+    }
+
+    setShowForgotModal(false);
+
+    // ورود مستقیم به مرحله تکمیل فرم
+    setAuthGateMode('filling');
+    setCurrentStepIndex(0);
+    setInternalPageIndex(0);
+  };
+
 
   // لود مقادیر پیش‌فرض و مقادیر از پیش‌پر شده (از فرم ثبت نام قبلی)
   useEffect(() => {
@@ -2479,8 +2553,13 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                             type="button"
                             onClick={() => {
                               setShowForgotModal(true);
-                              setForgotResult(null);
-                              setForgotMobileInput('');
+                              setForgotStep('mobile');
+                              setForgotError(null);
+                              setForgotOtpInput('');
+                              setForgotSuccessData(null);
+                              setForgotMobileInput(formData.f_mobile || '');
+                              setForgotCountdown(0);
+                              setCopiedForgotCode(false);
                             }}
                             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#084d3e] hover:text-[#05372c] hover:underline transition-colors cursor-pointer"
                           >
@@ -2590,156 +2669,255 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           </div>
         )}
 
-        {/* مودال بازیابی کد پرونده در صورت فراموشی */}
+        {/* مودال امن ۳ مرحله‌ای بازیابی کد پرونده با پیامک تأیید (OTP) */}
         {showForgotModal && (
           <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-in fade-in select-none">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 shadow-2xl text-right max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 border border-slate-200 shadow-2xl text-right max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100vh-6.5rem)] overflow-y-auto">
+              
+              {/* سربرگ مودال */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2 text-slate-900 font-extrabold text-xs sm:text-sm">
-                  <KeyRound className="w-4 h-4 text-blue-600" />
-                  <span>بازیابی کد پرونده</span>
+                  <KeyRound className="w-4 h-4 text-[#084d8c]" />
+                  <span>
+                    {forgotStep === 'mobile' && 'بازیابی کد پرونده'}
+                    {forgotStep === 'otp' && 'تأیید شماره همراه مراجع'}
+                    {forgotStep === 'success' && 'اطلاعات پرونده شناسایی‌شده'}
+                  </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowForgotModal(false)}
-                  className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+                  className="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
-              <p className="text-xs text-slate-600 leading-relaxed">
-                شماره همراهی که هنگام ثبت‌نام در سامانه ثبت نموده‌اید را وارد فرمایید تا کد پرونده شما بازیابی گردد:
-              </p>
+              {/* مرحله ۱: دریافت شماره همراه */}
+              {forgotStep === 'mobile' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    شماره همراهی که هنگام ثبت‌نام در سامانه ثبت نموده‌اید را وارد فرمایید تا کد تأیید یکبارمصرف پیامک گردد:
+                  </p>
 
-              <form onSubmit={handleForgotLookup} className="space-y-3">
-                <input
-                  type="text"
-                  value={forgotMobileInput}
-                  onChange={(e) => setForgotMobileInput(e.target.value)}
-                  placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl text-center font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  dir="ltr"
-                />
-
-                {forgotResult && (
-                  <div
-                    className={`p-3 rounded-xl border text-xs leading-relaxed space-y-2 ${
-                      forgotResult.found
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                        : 'bg-rose-50 border-rose-300 text-rose-900'
-                    }`}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendRecoveryOtp();
+                    }}
+                    className="space-y-3"
                   >
-                    <div className="flex items-center gap-1.5 font-bold">
-                      {forgotResult.found ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                      )}
-                      <span>{forgotResult.message}</span>
+                    <div>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={forgotMobileInput}
+                        onChange={(e) => {
+                          setForgotMobileInput(e.target.value);
+                          setForgotError(null);
+                        }}
+                        placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                        className="w-full py-3 px-4 text-center text-sm font-mono font-bold tracking-wider border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#084d8c] focus:border-transparent bg-slate-50 focus:bg-white transition-all placeholder:font-sans placeholder:text-slate-400"
+                        dir="ltr"
+                      />
                     </div>
 
-                    {forgotResult.found && forgotResult.caseCode && (
-                      <div className="space-y-2 pt-1 border-t border-emerald-200/60">
-                        <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-emerald-200">
-                          <span className="text-[11px] text-slate-600 font-medium">کد پرونده شما:</span>
-                          <span className="font-mono font-black text-emerald-700 text-sm tracking-wider">
-                            {forgotResult.caseCode}
+                    {forgotError && (
+                      <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 font-medium">
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>{forgotError}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        type="submit"
+                        disabled={forgotLoading}
+                        className="flex-1 py-3 px-4 bg-[#084d8c] hover:bg-[#063d70] disabled:opacity-60 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        {forgotLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Smartphone className="w-4 h-4" />
+                        )}
+                        <span>ارسال کد تأیید</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotModal(false)}
+                        className="py-3 px-4 border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs rounded-2xl transition-colors cursor-pointer"
+                      >
+                        انصراف
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* مرحله ۲: وارد کردن کد یکبارمصرف (OTP) */}
+              {forgotStep === 'otp' && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3 text-center space-y-1">
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      کد تأیید ۵ رقمی به شماره <span className="font-mono font-bold text-blue-900" dir="ltr">{forgotMobileInput}</span> ارسال شد.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotStep('mobile');
+                        setForgotError(null);
+                        setForgotOtpInput('');
+                      }}
+                      className="text-[11px] text-[#084d8c] hover:underline font-bold cursor-pointer"
+                    >
+                      ویرایش شماره همراه
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleVerifyRecoveryOtp} className="space-y-3.5">
+                    <div>
+                      <input
+                        type="text"
+                        autoFocus
+                        maxLength={5}
+                        value={forgotOtpInput}
+                        onChange={(e) => {
+                          const val = toEnglishDigits(e.target.value.replace(/[^0-9۰-۹]/g, ''));
+                          setForgotOtpInput(val);
+                          setForgotError(null);
+                        }}
+                        placeholder="• • • • •"
+                        className="w-full py-3.5 px-4 text-center text-xl font-mono font-black tracking-[0.4em] border-2 border-blue-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#084d8c] bg-white text-slate-900 placeholder:text-slate-300 shadow-inner"
+                        dir="ltr"
+                      />
+                    </div>
+
+                    {/* تایمر معکوس و ارسال مجدد */}
+                    <div className="flex items-center justify-between text-xs px-1">
+                      {forgotCountdown > 0 ? (
+                        <div className="flex items-center gap-1.5 text-slate-500 font-medium">
+                          <Clock className="w-3.5 h-3.5 text-blue-600" />
+                          <span>ارسال مجدد تا</span>
+                          <span className="font-mono font-bold text-blue-700">
+                            {toPersianDigits(String(Math.floor(forgotCountdown / 60)).padStart(2, '0'))}:
+                            {toPersianDigits(String(forgotCountdown % 60).padStart(2, '0'))}
                           </span>
                         </div>
-                        <p className="text-[11px] text-emerald-800 font-semibold">
-                          📌 این کد پرونده را ذخیره فرمایید تا برای مراجعات بعدی و ورود به پرونده به همراه داشته باشید.
-                        </p>
+                      ) : (
                         <button
                           type="button"
-                          onClick={() => {
-                            if (forgotResult.sub) {
-                              const sub = forgotResult.sub;
-                              setActiveCaseSubmission(sub);
-                              const caseCode = forgotResult.caseCode || sub.trackingCode;
-                              const prefilledData = {
-                                ...sub.data,
-                                f_name: sub.data?.f_name || sub.data?.f_applicant_name || '',
-                                f_family: sub.data?.f_family || '',
-                                f_mobile: sub.data?.f_mobile || sub.data?.mobile || '',
-                                f_province_city: sub.data?.f_province_city || '',
-                                f_role_in_family: sub.data?.f_role_in_family || '',
-                                f_case_code: caseCode,
-                              };
-                              if (typeof window !== 'undefined') {
-                                try {
-                                  localStorage.setItem('belhagh_current_case_code', caseCode);
-                                  localStorage.setItem('belhagh_active_case_data', JSON.stringify(prefilledData));
-                                } catch (err) {}
-                              }
-                              setFormData((prev) => ({ ...prev, ...prefilledData }));
-                              setShowForgotModal(false);
-
-                              if (typeof window !== 'undefined') {
-                                window.location.href = '/portal';
-                              }
-                            }
-                          }}
-                          className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          onClick={() => handleSendRecoveryOtp()}
+                          disabled={forgotLoading}
+                          className="text-xs text-blue-700 hover:text-blue-900 font-extrabold flex items-center gap-1 hover:underline cursor-pointer disabled:opacity-50"
                         >
-                          <LogIn className="w-4 h-4" />
-                          <span>ورود به پرونده و ادامه نوبت‌دهی</span>
+                          <RotateCcw className="w-3 h-3" />
+                          <span>ارسال مجدد کد تأیید</span>
                         </button>
+                      )}
+
+                      <span className="text-[11px] text-slate-400">کد ۵ رقمی</span>
+                    </div>
+
+                    {forgotError && (
+                      <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2 font-medium">
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>{forgotError}</span>
                       </div>
                     )}
 
-                    {!forgotResult.found && (
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowForgotModal(false);
-                            const isReg = form.id === 'form-belhagh-registration' || form.slug === 'zexuz';
-                            if (isReg) {
-                              setAuthGateMode('filling');
-                              setCurrentStepIndex(0);
-                              if (forgotMobileInput) {
-                                handleFieldChange('f_mobile', forgotMobileInput);
-                              }
-                            } else {
-                              if (typeof window !== 'undefined') {
-                                try {
-                                  sessionStorage.setItem('prefill_zexuz', JSON.stringify({ f_mobile: forgotMobileInput }));
-                                  sessionStorage.setItem('prefill_form-belhagh-registration', JSON.stringify({ f_mobile: forgotMobileInput }));
-                                } catch (e) {}
-                              }
-                              if (onNavigateToForm) {
-                                onNavigateToForm('zexuz', { f_mobile: forgotMobileInput });
-                              } else if (typeof window !== 'undefined') {
-                                window.location.href = '/form/zexuz';
-                              }
-                            }
-                          }}
-                          className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
-                        >
-                          انتقال به فرم ثبت‌نام و تشکیل پرونده با این شماره
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        type="submit"
+                        disabled={forgotLoading || forgotOtpInput.length < 5}
+                        className="flex-1 py-3 px-4 bg-[#084d8c] hover:bg-[#063d70] disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        {forgotLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4" />
+                        )}
+                        <span>تأیید و دریافت شماره پرونده</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotStep('mobile');
+                          setForgotError(null);
+                        }}
+                        className="py-3 px-3.5 border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs rounded-2xl transition-colors cursor-pointer"
+                      >
+                        بازگشت
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* مرحله ۳: احراز موفقیت‌آمیز و نمایش شماره پرونده */}
+              {forgotStep === 'success' && forgotSuccessData && (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2 font-bold">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <span>هویت شما با موفقیت تأیید شد و شماره پرونده بازیابی گردید!</span>
                   </div>
-                )}
 
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                  >
-                    استعلام و بازیابی
-                  </button>
+                  <div className="p-4 bg-gradient-to-br from-slate-50 to-emerald-50/40 border border-slate-200 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between text-xs text-slate-600 pb-2 border-b border-slate-200/80">
+                      <span>نام و نام خانوادگی:</span>
+                      <span className="font-extrabold text-slate-900">{forgotSuccessData.fullName}</span>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-600 font-medium">شماره پرونده اختصاصی شما:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(forgotSuccessData.caseCode);
+                              setCopiedForgotCode(true);
+                              setTimeout(() => setCopiedForgotCode(false), 2000);
+                            }
+                          }}
+                          className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedForgotCode ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>کپی شد</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>کپی کد</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="py-2.5 px-4 bg-white rounded-xl border border-emerald-300 shadow-inner text-center font-mono font-black text-xl text-emerald-800 tracking-wider">
+                        {forgotSuccessData.caseCode}
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-emerald-800 font-semibold leading-relaxed">
+                      📌 لطفاً این شماره پرونده را ذخیره فرمایید تا در مراجعات بعدی و رزرو نوبت به همراه داشته باشید.
+                    </p>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => setShowForgotModal(false)}
-                    className="px-3 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                    onClick={handleFinishRecovery}
+                    className="w-full py-3.5 px-5 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    انصراف
+                    <LogIn className="w-4 h-4" />
+                    <span>ورود به پرونده و ادامه نوبت‌دهی</span>
                   </button>
                 </div>
-              </form>
+              )}
+
             </div>
           </div>
         )}
@@ -3730,7 +3908,12 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                         onClick={() => {
                           setForgotMobileInput(formData[field.id] || '');
                           setShowForgotModal(true);
-                          setForgotResult(null);
+                          setForgotStep('mobile');
+                          setForgotError(null);
+                          setForgotOtpInput('');
+                          setForgotCountdown(0);
+                          setForgotSuccessData(null);
+                          setCopiedForgotCode(false);
                         }}
                         className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
                       >
@@ -4001,14 +4184,16 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     } catch (e) {}
                   }
                   setDuplicateCaseInfo(null);
-                  if (typeof window !== 'undefined') {
-                    window.location.href = '/portal';
+                  if (onNavigateToForm) {
+                    onNavigateToForm('3uu4z');
+                  } else if (typeof window !== 'undefined') {
+                    window.location.href = '/form/3uu4z';
                   }
                 }}
                 className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <LogIn className="w-4 h-4" />
-                <span>ورود به لیست فرم‌ها با این پرونده</span>
+                <span>ورود به سامانه نوبت‌دهی با این پرونده</span>
               </button>
 
               <button

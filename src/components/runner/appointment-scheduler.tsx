@@ -11,9 +11,6 @@ import {
   Sparkles, 
   ChevronLeft, 
   ChevronRight, 
-  Info, 
-  CalendarCheck, 
-  CalendarOff,
   User,
   UserCheck,
   Check,
@@ -245,7 +242,6 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const slotDuration = appointmentConfig?.slotDurationMinutes ?? 30;
   const restDuration = appointmentConfig?.restTimeMinutes ?? 5;
-  const holidays = appointmentConfig?.holidays || [];
 
   // بررسی روزهای فعال هفته
   const availableDays = useMemo(() => {
@@ -328,10 +324,6 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
   const workingDaysList = useMemo(() => {
     return WEEK_DAYS.filter((d) => availableDays.includes(d.index));
-  }, [availableDays]);
-
-  const offDaysList = useMemo(() => {
-    return WEEK_DAYS.filter((d) => !availableDays.includes(d.index));
   }, [availableDays]);
 
   // تولید خودکار بازه‌های زمانی
@@ -530,40 +522,6 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
             </div>
           )}
 
-          {/* زیرفیلد ۳: اطلاعات تماس و راهنمای ارتباط با مشاور */}
-          {activeConsultantConfig && (
-            <div className="pt-2 border-t border-indigo-100/70">
-              <div className="p-3.5 bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-indigo-50/90 border border-blue-200/90 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
-                <div className="flex items-center gap-3">
-                  <ConsultantAvatar
-                    avatarUrl={activeConsultantConfig.avatarUrl || matchingMember?.avatarUrl}
-                    genderPrefix={activeConsultantConfig.genderPrefix || matchingMember?.genderPrefix}
-                    name={activeConsultantConfig.consultantName}
-                    size="md"
-                  />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-blue-950 text-xs">
-                        مشاور انتخاب‌شده: {activeConsultantConfig.genderPrefix ? `${activeConsultantConfig.genderPrefix} ` : ''}{activeConsultantConfig.consultantName}
-                      </span>
-                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200">
-                        مشاوره تلفنی
-                      </span>
-                    </div>
-                    {consultantMobile ? (
-                      <span className="text-[11px] text-blue-800 font-mono mt-1 block">
-                        📞 شماره تماس مستقیم: <strong className="font-bold text-blue-950">{toPersianDigits(consultantMobile)}</strong>
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="text-[11px] text-slate-600 font-medium bg-white/80 px-3 py-1.5 rounded-xl border border-blue-100">
-                  جلسه مشاوره به صورت تماس تلفنی در ساعت مقرر رزرو شده با این شماره انجام می‌شود.
-                </div>
-              </div>
-            </div>
-          )}
-
         </div>
       )}
 
@@ -586,71 +544,14 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                     {hasMultiConsultantMode ? '۳. انتخاب روز و ساعت نوبت مشاوره' : 'انتخاب روز و ساعت نوبت مشاوره'}
                   </span>
                   <span className="text-[10px] text-slate-500 block">
-                    {hasMultiConsultantMode && selectedTopicId
-                      ? `ساعات کاری بر اساس موضوع «${matchCounselingTopic(selectedTopicId)?.name || selectedTopicId}» بارگذاری شده است`
-                      : 'برای مشاهده ساعات آزاد، روز کاری مورد نظر را انتخاب فرمایید'}
+                    برای مشاهده ساعات آزاد، روز کاری مورد نظر را انتخاب فرمایید
                   </span>
                 </div>
               </div>
-
-              {/* نشانگر مدت زمان جلسه مشاوره */}
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 text-blue-800 font-extrabold border border-blue-200/80 shadow-xs">
-                  <Clock className="w-3.5 h-3.5 text-blue-600" />
-                  <span>مدت هر جلسه مشاوره: {toPersianDigits(slotDuration)} دقیقه</span>
-                </span>
-              </div>
-            </div>
-
-            {/* روزهای کاری مشاور */}
-            <div className="mt-3 p-2.5 sm:p-3 rounded-xl bg-white border border-slate-200/90 text-xs space-y-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="font-extrabold text-emerald-800 flex items-center gap-1 shrink-0 text-[11px]">
-                  <CalendarCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>روزهای کاری مشاور:</span>
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {workingDaysList.map((day) => {
-                    const hoursLabel = getDayHoursDisplay(day.index);
-                    return (
-                      <span 
-                        key={day.index} 
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/90 font-bold text-[11px] shadow-xs"
-                      >
-                        <span className="font-extrabold">{day.name}</span>
-                        {hoursLabel && (
-                          <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-100/80 px-1.5 py-0.5 rounded">
-                            ({hoursLabel})
-                          </span>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {offDaysList.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-100">
-                  <span className="font-extrabold text-rose-700 flex items-center gap-1 shrink-0 text-[11px]">
-                    <CalendarOff className="w-3.5 h-3.5 text-rose-500" />
-                    <span>روزهای تعطیل مشاور:</span>
-                  </span>
-                  <div className="flex flex-wrap items-center gap-1">
-                    {offDaysList.map((day) => (
-                      <span 
-                        key={day.index} 
-                        className="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 font-medium text-[11px]"
-                      >
-                        {day.name} (تعطیل)
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* لیست دکمه‌های روزهای هفته (روزبندی) */}
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-slate-200/70">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-slate-200/70">
               {WEEK_DAYS.map((day) => {
                 const isDayAvailable = availableDays.includes(day.index);
                 const isSelected = selectedDayIndex === day.index;
@@ -788,14 +689,6 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
                     );
                   })}
                 </div>
-              </div>
-            )}
-
-            {/* تعطیلات مناسبتی */}
-            {holidays.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
-                <Info className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                <span>تعطیلات مناسبتی ثبت‌شده مشاور: {holidays.join('، ')}</span>
               </div>
             )}
 

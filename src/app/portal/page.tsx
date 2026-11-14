@@ -67,6 +67,7 @@ function PortalContent() {
 
       if (!candidateCode) {
         setIsLoadingSession(false);
+        router.replace('/form/3uu4z');
         return;
       }
 
@@ -273,64 +274,16 @@ function PortalContent() {
     );
   }
 
-  // در صورتی که مراجع وارد نشده باشد، کادر ورود مینیمال نمایش داده می‌شود
+  // در صورتی که مراجع وارد نشده باشد، به صفحه فرم نوبت‌دهی هدایت می‌شود
   if (!session) {
+    if (typeof window !== 'undefined') {
+      router.replace('/form/3uu4z');
+    }
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-4" dir="rtl">
-        <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-200/90 shadow-xl p-6 sm:p-7 space-y-5 animate-in fade-in duration-200">
-          <div className="text-center space-y-1">
-            <h1 className="text-base font-extrabold text-slate-900">
-              مرکز خدمات روانشناسی بالحق
-            </h1>
-            <p className="text-xs text-slate-500">
-              ورود با کد پرونده
-            </p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <input
-                type="text"
-                autoFocus
-                value={caseCodeInput}
-                onChange={(e) => {
-                  setCaseCodeInput(e.target.value);
-                  setLoginError(null);
-                }}
-                placeholder="مثال: SP123456"
-                className="w-full py-3 px-4 text-center text-sm font-mono font-bold tracking-wider border-2 border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#084d8c] focus:border-transparent bg-slate-50 focus:bg-white transition-all placeholder:font-sans placeholder:text-slate-400"
-                dir="ltr"
-              />
-            </div>
-
-            {loginError && (
-              <p className="text-xs text-rose-600 font-bold text-center animate-in fade-in">
-                {loginError}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoggingIn}
-              className="w-full py-3 px-5 bg-[#084d8c] hover:bg-[#063d70] active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-            >
-              {isLoggingIn ? (
-                <Layers className="w-4 h-4 animate-spin" />
-              ) : (
-                <LogIn className="w-4 h-4" />
-              )}
-              <span>تایید و ورود</span>
-            </button>
-          </form>
-
-          <div className="pt-2 text-center border-t border-slate-100">
-            <Link
-              href="/"
-              className="text-xs text-slate-500 hover:text-slate-800 transition-colors"
-            >
-              بازگشت به صفحه اصلی
-            </Link>
-          </div>
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center" dir="rtl">
+        <div className="flex items-center gap-2.5 text-slate-500 font-bold text-xs sm:text-sm">
+          <Layers className="w-5 h-5 animate-spin text-[#084d8c]" />
+          <span>در حال هدایت به سامانه...</span>
         </div>
       </div>
     );
