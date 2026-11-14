@@ -1,5 +1,21 @@
 [
   {
+    "id": "sms-1794626422387-b8z20",
+    "timestamp": "2026-11-14T03:20:22.387Z",
+    "type": "recovery_otp",
+    "recipient": "09908595127",
+    "bodyId": 568830,
+    "args": [
+      "34260"
+    ],
+    "message": "با سلام\nکد تأیید شما: 34260 می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق",
+    "status": "sent",
+    "providerResponse": {
+      "status": "sent",
+      "recId": "4945444950771419862"
+    }
+  },
+  {
     "id": "sms-1794625788582-6wg9l",
     "timestamp": "2026-11-14T03:09:48.583Z",
     "type": "recovery_otp",
