@@ -25,8 +25,6 @@ import {
   Phone,
   Layers,
   ArrowRight,
-  ShieldCheck,
-  Radio,
   FileText
 } from 'lucide-react';
 import { toPersianDigits, formatCurrency, formatPersianDateTime, getTopItemSummary, getJalaliMonthName } from '@/lib/persian';
@@ -850,41 +848,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             showValues={true}
           />
         </CollapsibleCard>
-
-      </div>
-
-      {/* وضعیت سلامت زیرساخت و ارتباطات مرکز */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <Radio className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <span className="text-xs font-bold text-slate-900 block">سامانه پیامک کاوه‌نگار</span>
-            <span className="text-[11px] text-emerald-600 font-medium">سرویس فعال و خط خدماتی ۳۰۰۰ متصل</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-xs font-bold text-slate-900 block">پایگاه داده امن بالحق</span>
-            <span className="text-[11px] text-blue-600 font-medium">همگام‌سازی بلادرنگ داده‌ها</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-            <CreditCard className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-xs font-bold text-slate-900 block">درگاه پرداخت الکترونیک</span>
-            <span className="text-[11px] text-purple-600 font-medium">شاپرک و سداد فعال</span>
-          </div>
-        </div>
 
       </div>
 

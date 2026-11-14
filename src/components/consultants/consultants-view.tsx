@@ -1006,10 +1006,6 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                     })}
                   </div>
                 )}
-
-                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200/80 shrink-0">
-                  {toPersianDigits(displayedConsultantBookings.length)} مراجع در این بخش
-                </span>
               </div>
             </div>
 

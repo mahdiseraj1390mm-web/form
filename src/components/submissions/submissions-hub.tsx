@@ -39,7 +39,14 @@ import {
   RefreshCw,
   X
 } from 'lucide-react';
-import { formatPersianDateTime, formatCurrency, toPersianDigits, getFieldDisplayValue } from '@/lib/persian';
+import { 
+  formatPersianDateTime, 
+  formatCurrency, 
+  toPersianDigits, 
+  getFieldDisplayValue,
+  formatClientAge,
+  extractBirthYear
+} from '@/lib/persian';
 import { isSuperAdminUser } from '@/lib/team-constants';
 import { isUnassignedSafaSubmission } from '@/lib/safa-utils';
 import type { ConsultantProfile } from '@/lib/consultant-helpers';
@@ -47,7 +54,8 @@ import {
   matchMemberToConsultant, 
   extractBookingItemFromSubmission, 
   isBookingAssignedToConsultant, 
-  matchCounselingTopic 
+  matchCounselingTopic,
+  isConsultantMember
 } from '@/lib/consultant-helpers';
 
 interface ClientCaseGroup {
@@ -62,6 +70,7 @@ interface ClientCaseGroup {
   overallStatus: SubmissionStatus;
   totalPaidAmount: number;
   roleInFamily?: string;
+  clientAge?: string;
 }
 
 export const SubmissionsHub: React.FC = () => {
@@ -146,14 +155,26 @@ export const SubmissionsHub: React.FC = () => {
 
   // بررسی انتساب کاربر جاری به عنوان مشاور
   const isConsultantUser = !isSuperAdmin && Boolean(
+    (currentMember && isConsultantMember(currentMember)) ||
     currentMember?.consultantId ||
     (currentMember?.allowedTopics && currentMember.allowedTopics.length > 0) ||
     (currentUser?.allowedTopics && currentUser.allowedTopics.length > 0) ||
     currentMember?.jobTitle?.includes('مشاور') ||
     currentMember?.jobTitle?.includes('روانشناس') ||
+    currentMember?.jobTitle?.includes('درمانگر') ||
     currentUser?.jobTitle?.includes('مشاور') ||
-    currentUser?.jobTitle?.includes('روانشناس')
+    currentUser?.jobTitle?.includes('روانشناس') ||
+    currentUser?.jobTitle?.includes('درمانگر') ||
+    (currentUser?.role as string) === 'consultant' ||
+    (currentMember?.role as string) === 'consultant' ||
+    (currentUser as any)?.isConsultant
   );
+
+  useEffect(() => {
+    if (isConsultantUser && hubTab !== 'cases') {
+      setHubTab('cases');
+    }
+  }, [isConsultantUser, hubTab]);
 
   const consultantAllowedTopics = useMemo<string[]>(() => {
     if (isSuperAdmin) return [];
@@ -324,6 +345,36 @@ export const SubmissionsHub: React.FC = () => {
         const hasRejected = c.submissions.some((s) => s.status === 'rejected');
         c.overallStatus = hasApproved ? 'optimal' : hasRejected ? 'regressing' : 'new';
       }
+
+      // محاسبه سن دقیق مراجع از تاریخ یا سال تولد شمسی یا فیلد سن
+      let computedAge = 'ثبت‌نشده';
+      for (const s of c.submissions) {
+        const d = s.data;
+        if (!d) continue;
+        const bCand = d.f_birth_date || d.birth_date || d.birthDate || d.f_birth_year || d.birth_year || d.birthYear;
+        if (bCand) {
+          const bYear = extractBirthYear(bCand);
+          if (bYear) {
+            computedAge = formatClientAge(bYear);
+            break;
+          }
+        }
+      }
+      if (computedAge === 'ثبت‌نشده') {
+        for (const s of c.submissions) {
+          const d = s.data;
+          if (!d) continue;
+          const ageCand = d.f_age || d.age || d.q_age || d.client_age;
+          if (ageCand !== undefined && ageCand !== null && ageCand !== '') {
+            const formatted = formatClientAge(null, ageCand);
+            if (formatted !== 'ثبت‌نشده') {
+              computedAge = formatted;
+              break;
+            }
+          }
+        }
+      }
+      c.clientAge = computedAge;
     });
 
     const allCases = Array.from(caseMap.values()).sort(
@@ -400,6 +451,7 @@ function normalizeSearchText(str: string): string {
         cName.includes(q) ||
         cMob.includes(q) ||
         cProv.includes(q) ||
+        (c.clientAge ? normalizeSearchText(c.clientAge).includes(q) : false) ||
         c.submissions.some((s) => {
           const sName = normalizeSearchText(`${s.data?.f_name || ''} ${s.data?.f_family || ''} ${s.data?.fullName || ''}`);
           const sCode = normalizeSearchText(String(s.data?.caseCode || s.trackingCode || s.data?.user_code || s.detectedSafaCode || ''));
@@ -552,7 +604,7 @@ function normalizeSearchText(str: string): string {
     <div className="relative flex-1 flex flex-col h-full overflow-hidden bg-slate-50 overscroll-contain">
       
       {/* سربرگ مدرن کارتابل و نوار سوییچ زبانه */}
-      <div className="bg-white border-b border-slate-200/90 px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3.5 shrink-0 shadow-xs">
+      <div className={`bg-white border-b border-slate-200/90 px-4 sm:px-6 ${isConsultantUser ? 'py-3 sm:py-3.5' : 'py-3.5 sm:py-4'} flex flex-col md:flex-row md:items-center justify-between gap-3.5 shrink-0 shadow-xs`}>
         
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-200/80 shrink-0 shadow-xs">
@@ -567,80 +619,84 @@ function normalizeSearchText(str: string): string {
                 {toPersianDigits(clientCases.length)} پرونده
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
-              مدیریت یکپارچه پرونده‌های روانشناسی، نوبت‌ها و استعلام تعداد فرم‌های تکمیل‌شده
-            </p>
+            {!isConsultantUser && (
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
+                مدیریت یکپارچه پرونده‌های روانشناسی، نوبت‌ها و استعلام تعداد فرم‌های تکمیل‌شده
+              </p>
+            )}
           </div>
         </div>
 
-        {/* سوییچر بین پرونده‌های مراجعین و کل پاسخ‌های فرم‌ها + دکمه‌های عملیات */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          <div className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex rounded-xl border border-slate-200 p-1 bg-slate-100/80 text-xs">
-            <button
-              onClick={() => setHubTab('cases')}
-              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                hubTab === 'cases'
-                  ? 'bg-white text-sky-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <User className="w-3.5 h-3.5 text-sky-600" />
-              <span>پرونده‌ها ({toPersianDigits(clientCases.length)})</span>
-            </button>
-            <button
-              onClick={() => setHubTab('submissions')}
-              className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                hubTab === 'submissions'
-                  ? 'bg-white text-sky-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Inbox className="w-3.5 h-3.5 text-slate-500" />
-              <span>پاسخ‌ها ({toPersianDigits(activeSubmissions.length)})</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
-            {unassignedSafaCount > 0 && (
-              <div className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 rounded-xl text-xs font-medium shrink-0">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                <span>{toPersianDigits(unassignedSafaCount)} کارنامه صَفًّا در انتظار انتساب</span>
-              </div>
-            )}
-
-            <button
-              onClick={() => refreshSubmissionsFromDb('all')}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl shadow-2xs transition-colors cursor-pointer shrink-0"
-              title="به‌روزرسانی و دریافت آخرین اطلاعات از سرور"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-sky-600" />
-              <span>تازه‌سازی</span>
-            </button>
-
-            <button
-              onClick={handleRunReconcile}
-              disabled={isReconciling}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-              title="اجرای تطبیق شبانه و پیوند کارنامه‌های صَفًّا به پرونده‌های مراجعین"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">{isReconciling ? 'در حال تطبیق...' : 'تطبیق کارنامه‌ها'}</span>
-              <span className="sm:hidden">تطبیق</span>
-            </button>
-
-            {isSuperAdmin && (
+        {/* سوییچر بین پرونده‌های مراجعین و کل پاسخ‌های فرم‌ها + دکمه‌های عملیات (برای مشاور جهت خلوت‌تر شدن صفحه پنهان می‌شود) */}
+        {!isConsultantUser && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex rounded-xl border border-slate-200 p-1 bg-slate-100/80 text-xs">
               <button
-                onClick={handleExportExcel}
-                disabled={isExporting}
-                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-                title="خروجی فایل اکسل XLSX" 
+                onClick={() => setHubTab('cases')}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  hubTab === 'cases'
+                    ? 'bg-white text-sky-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                <span>اکسل</span>
+                <User className="w-3.5 h-3.5 text-sky-600" />
+                <span>پرونده‌ها ({toPersianDigits(clientCases.length)})</span>
               </button>
-            )}
+              <button
+                onClick={() => setHubTab('submissions')}
+                className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  hubTab === 'submissions'
+                    ? 'bg-white text-sky-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Inbox className="w-3.5 h-3.5 text-slate-500" />
+                <span>پاسخ‌ها ({toPersianDigits(activeSubmissions.length)})</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+              {unassignedSafaCount > 0 && (
+                <div className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 rounded-xl text-xs font-medium shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span>{toPersianDigits(unassignedSafaCount)} کارنامه صَفًّا در انتظار انتساب</span>
+                </div>
+              )}
+
+              <button
+                onClick={() => refreshSubmissionsFromDb('all')}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl shadow-2xs transition-colors cursor-pointer shrink-0"
+                title="به‌روزرسانی و دریافت آخرین اطلاعات از سرور"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-sky-600" />
+                <span>تازه‌سازی</span>
+              </button>
+
+              <button
+                onClick={handleRunReconcile}
+                disabled={isReconciling}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                title="اجرای تطبیق شبانه و پیوند کارنامه‌های صَفًّا به پرونده‌های مراجعین"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">{isReconciling ? 'در حال تطبیق...' : 'تطبیق کارنامه‌ها'}</span>
+                <span className="sm:hidden">تطبیق</span>
+              </button>
+
+              {isSuperAdmin && (
+                <button
+                  onClick={handleExportExcel}
+                  disabled={isExporting}
+                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300/80 rounded-xl shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                  title="خروجی فایل اکسل XLSX" 
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>اکسل</span>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
@@ -660,7 +716,7 @@ function normalizeSearchText(str: string): string {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-          {hubTab === 'submissions' && (
+          {!isConsultantUser && hubTab === 'submissions' && (
             <select
               value={selectedFormId}
               onChange={(e) => setSelectedFormId(e.target.value)}
@@ -790,11 +846,21 @@ function normalizeSearchText(str: string): string {
                               </div>
                               <div>
                                 <span className="font-mono font-black text-slate-900 block text-xs">{c.caseCode.replace(/^sub-case-/, '')}</span>
-                                {c.roleInFamily && (
-                                  <span className="text-[11px] text-slate-400 block -mt-0.5">
-                                    نقش: {c.roleInFamily} خانواده
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 -mt-0.5">
+                                  {c.roleInFamily && (
+                                    <span>
+                                      نقش: {c.roleInFamily} خانواده
+                                    </span>
+                                  )}
+                                  {c.roleInFamily && c.clientAge && c.clientAge !== 'ثبت‌نشده' && (
+                                    <span>•</span>
+                                  )}
+                                  {c.clientAge && c.clientAge !== 'ثبت‌نشده' && (
+                                    <span className="text-slate-600 font-medium">
+                                      سن: {c.clientAge}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -926,9 +992,9 @@ function normalizeSearchText(str: string): string {
                     {/* اطلاعات مراجع و شماره تماس */}
                     <div className="grid grid-cols-2 gap-2.5 text-xs bg-slate-50/90 p-3.5 rounded-2xl border border-slate-100">
                       <div>
-                        <span className="text-[10px] text-slate-400 block mb-1">شناسه مراجع:</span>
-                        <span className="font-mono font-bold text-sky-800 bg-sky-50/90 px-2 py-0.5 rounded-lg border border-sky-200/70 inline-block text-[11px]">
-                          {c.caseCode.replace(/^sub-case-/, '')}
+                        <span className="text-[10px] text-slate-400 block mb-1">سن فرد:</span>
+                        <span className="font-bold text-sky-800 bg-sky-50/90 px-2.5 py-0.5 rounded-lg border border-sky-200/70 inline-block text-[11px]">
+                          {c.clientAge || 'ثبت‌نشده'}
                         </span>
                       </div>
 
@@ -1013,7 +1079,7 @@ function normalizeSearchText(str: string): string {
       )}
 
       {/* محتوای کارتابل: ۲. بانک کلیه ارسالی‌های تفکیکی فرم‌ها */}
-      {hubTab === 'submissions' && (
+      {!isConsultantUser && hubTab === 'submissions' && (
         <div className="flex-1 overflow-auto p-3 sm:p-6 overscroll-contain">
           {/* نمایش جدولی دسکتاپ */}
           <div className="hidden md:block bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
