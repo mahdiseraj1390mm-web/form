@@ -757,9 +757,24 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   const handleCaseLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setCaseCodeError(null);
-    const cleanCode = toEnglishDigits(caseCodeInput.trim().toUpperCase());
-    if (!cleanCode) {
+    const cleanRaw = toEnglishDigits(caseCodeInput.trim());
+    if (!cleanRaw) {
       setCaseCodeError('لطفاً کد پرونده خود را وارد فرمایید.');
+      return;
+    }
+
+    const cleanCode = cleanRaw.toUpperCase();
+    const isMobileFormat =
+      cleanRaw.startsWith('09') ||
+      (cleanRaw.length === 10 && cleanRaw.startsWith('9')) ||
+      cleanRaw.startsWith('989') ||
+      cleanRaw.startsWith('+98');
+
+    // جلوگیری قطعی از ورود مستقیم با شماره موبایل بدون احراز هویت
+    if (isMobileFormat) {
+      setCaseCodeError(
+        'شما شماره همراه وارد نموده‌اید. ورود به پرونده تنها با «کد پرونده اختصاصی» (مثال: SP123456) امکان‌پذیر است. در صورت فراموشی کد، لطفاً از دکمه «بازیابی کد پرونده» در زیر کادر استفاده فرمایید.'
+      );
       return;
     }
 
@@ -805,11 +820,15 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         } catch (err) {}
       }
 
-      found = allSubs.find(
-        (s) =>
-          s.trackingCode?.toUpperCase() === cleanCode ||
-          s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
-      );
+      found = allSubs.find((s) => {
+        const tr = s.trackingCode?.toUpperCase() || '';
+        const cc = s.data?.caseCode?.toUpperCase() || '';
+        return (
+          tr === cleanCode ||
+          cc === cleanCode ||
+          tr.replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
+        );
+      });
     }
 
     if (found) {
@@ -843,7 +862,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         window.location.href = '/portal';
       }
     } else {
-      setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید.');
+      setCaseCodeError('پرونده‌ای با این کد یافت نشد. لطفاً کد را بررسی کنید یا در صورت فراموشی، از گزینه «بازیابی کد پرونده» استفاده نمایید.');
     }
   };
 
@@ -2766,21 +2785,26 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
               {/* مرحله ۲: وارد کردن کد یکبارمصرف (OTP) */}
               {forgotStep === 'otp' && (
                 <div className="space-y-4">
-                  <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3 text-center space-y-1">
+                  <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3 text-center space-y-1.5">
                     <p className="text-xs text-slate-700 leading-relaxed">
                       کد تأیید ۵ رقمی به شماره <span className="font-mono font-bold text-blue-900" dir="ltr">{forgotMobileInput}</span> ارسال شد.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setForgotStep('mobile');
-                        setForgotError(null);
-                        setForgotOtpInput('');
-                      }}
-                      className="text-[11px] text-[#084d8c] hover:underline font-bold cursor-pointer"
-                    >
-                      ویرایش شماره همراه
-                    </button>
+                    <p className="text-[11px] text-amber-800 bg-amber-50/90 py-1.5 px-2.5 rounded-xl border border-amber-200/70 leading-relaxed font-medium">
+                      📌 کد ۵ رقمی پیامک‌شده را در کادر زیر وارد فرمایید (این کد، کد تأیید موقت جهت احراز هویت و نمایش شماره پرونده اصلی شماست).
+                    </p>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotStep('mobile');
+                          setForgotError(null);
+                          setForgotOtpInput('');
+                        }}
+                        className="text-[11px] text-[#084d8c] hover:underline font-bold cursor-pointer"
+                      >
+                        ویرایش شماره همراه
+                      </button>
+                    </div>
                   </div>
 
                   <form onSubmit={handleVerifyRecoveryOtp} className="space-y-3.5">

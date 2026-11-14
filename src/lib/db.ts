@@ -113,13 +113,21 @@ export interface CaseRecord {
 
 /**
  * استانداردسازی شماره موبایل به فرمت ۱۱ رقمی ایرانی (۰۹۱۲۳۴۵۶۷۸۹)
+ * با پشتیبانی کامل از ارقام فارسی (۰-۹) و ارقام عربی (٠-٩) و پیشوندهای بین‌المللی (+98, 0098, 98)
  */
 export function normalizeMobile(phone: string): string {
   if (!phone) return '';
-  const digits = String(phone).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[^0-9]/g, '');
-  if (digits.startsWith('98') && digits.length === 12) {
-    return '0' + digits.slice(2);
+  let digits = String(phone)
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .replace(/[^0-9]/g, '');
+
+  if (digits.startsWith('0098') && digits.length === 14) {
+    digits = digits.slice(4);
+  } else if (digits.startsWith('98') && digits.length === 12) {
+    digits = digits.slice(2);
   }
+
   if (!digits.startsWith('0') && digits.length === 10) {
     return '0' + digits;
   }
@@ -164,27 +172,74 @@ function writeLocalSubmissions(subs: FormSubmission[]): void {
 }
 
 /**
- * جستجوی پرونده بر اساس شماره موبایل در دیتابیس (با فال‌بک فایل محلی)
+ * جستجوی پرونده بر اساس شماره موبایل در دیتابیس (با فال‌بک فایل محلی و جدول form_submissions)
  */
 export async function getCaseByMobile(mobile: string): Promise<CaseRecord | null> {
   const clean = normalizeMobile(mobile);
   if (!clean || clean.length < 10) return null;
+  const bare10 = clean.slice(-10);
 
+  // ۱. جستجو در جدول اصلی belhagh_cases با تمام حالت‌های شماره
   try {
     const rows = await executeNeonQueryWithTimeout(
-      `SELECT * FROM belhagh_cases WHERE mobile = $1 LIMIT 1`,
-      [clean]
+      `SELECT * FROM belhagh_cases 
+       WHERE mobile = $1 
+          OR mobile = $2 
+          OR mobile = $3 
+          OR mobile = $4 
+          OR RIGHT(REGEXP_REPLACE(COALESCE(mobile, ''), '[^0-9]', '', 'g'), 10) = $2
+       ORDER BY id DESC
+       LIMIT 1`,
+      [clean, bare10, `98${bare10}`, `+98${bare10}`]
     );
     if (rows && rows[0]) return rows[0] as CaseRecord;
   } catch (err) {
-    // نادیده گرفتن خطا و استفاده از مخزن محلی
+    // نادیده گرفتن خطا و ادامه جستجو
   }
 
-  // بررسی در فایل محلی
+  // ۲. در صورتی که در belhagh_cases نبود، جستجو در سابمیشن‌های ثبت‌نام جدول form_submissions دیتابیس PostgreSQL
+  try {
+    const subRows = await executeNeonQueryWithTimeout(
+      `SELECT * FROM form_submissions 
+       WHERE mobile = $1 
+          OR mobile = $2 
+          OR data->>'f_mobile' = $1 
+          OR data->>'f_mobile' = $2
+          OR data->>'mobile' = $1
+          OR data->>'mobile' = $2
+          OR RIGHT(REGEXP_REPLACE(COALESCE(mobile, data->>'f_mobile', data->>'mobile', ''), '[^0-9]', '', 'g'), 10) = $2
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [clean, bare10]
+    );
+    if (subRows && subRows[0]) {
+      const s = subRows[0];
+      const dataObj = typeof s.data === 'string' ? JSON.parse(s.data) : (s.data || {});
+      const cCode = s.tracking_code || dataObj.caseCode || dataObj.f_case_code;
+      if (cCode) {
+        return {
+          id: s.id,
+          case_code: cCode,
+          mobile: clean,
+          first_name: dataObj.f_name || dataObj.fullName || dataObj.f_applicant_name || '',
+          last_name: dataObj.f_family || '',
+          province: dataObj.f_province_city_province || dataObj.f_province_city || '',
+          city: dataObj.f_province_city_city || '',
+          data: dataObj,
+          created_at: s.created_at,
+        };
+      }
+    }
+  } catch (err) {
+    // نادیده گرفتن خطا و ادامه جستجو
+  }
+
+  // ۳. بررسی در فایل محلی به عنوان آخرین سنگر
   const localSubs = readLocalSubmissions();
-  const found = localSubs.find(
-    (s) => normalizeMobile(s.mobile || s.data?.f_mobile || s.data?.mobile || '') === clean
-  );
+  const found = localSubs.find((s) => {
+    const m = normalizeMobile(s.mobile || s.data?.f_mobile || s.data?.mobile || '');
+    return m === clean || (m.length >= 10 && m.slice(-10) === bare10);
+  });
   if (found) {
     const cCode = found.data?.caseCode || found.trackingCode;
     return {
@@ -208,7 +263,10 @@ export async function getCaseByMobile(mobile: string): Promise<CaseRecord | null
  */
 export async function getCaseByCode(caseCode: string): Promise<CaseRecord | null> {
   if (!caseCode) return null;
-  const digits = caseCode.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).trim();
+  const digits = caseCode
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+    .trim();
   const cleanCode = digits.toUpperCase();
   const strippedCode = cleanCode.replace(/^(SF|CASE|SP)-/i, '');
 

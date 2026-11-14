@@ -152,10 +152,24 @@ function PortalContent() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
-    const cleanCode = toEnglishDigits(caseCodeInput.trim().toUpperCase());
+    const cleanRaw = toEnglishDigits(caseCodeInput.trim());
 
-    if (!cleanCode) {
+    if (!cleanRaw) {
       setLoginError('لطفاً کد پرونده خود را وارد فرمایید.');
+      return;
+    }
+
+    const cleanCode = cleanRaw.toUpperCase();
+    const isMobileFormat =
+      cleanRaw.startsWith('09') ||
+      (cleanRaw.length === 10 && cleanRaw.startsWith('9')) ||
+      cleanRaw.startsWith('989') ||
+      cleanRaw.startsWith('+98');
+
+    if (isMobileFormat) {
+      setLoginError(
+        'شما شماره همراه وارد نموده‌اید. ورود به سامانه تنها با «کد پرونده اختصاصی» (مثال: SP123456) امکان‌پذیر است. در صورت فراموشی کد، لطفاً از بخش «بازیابی کد پرونده» در فرم نوبت‌دهی استفاده فرمایید.'
+      );
       return;
     }
 
