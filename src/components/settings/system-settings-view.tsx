@@ -33,11 +33,13 @@ import {
   Layers,
   KeyRound,
   Clock,
-  UserCheck
+  UserCheck,
+  Sparkles
 } from 'lucide-react';
 import { WebhookTester } from './webhook-tester';
 import { PortalSettingsTab } from './portal-settings-tab';
 import { SmsSettingsTab } from './sms-settings-tab';
+import { CounselingTopicsTab } from './counseling-topics-tab';
 import { ScrollableTabCarousel } from '@/components/ui/scrollable-tab-carousel';
 import { useForm } from '@/context/form-context';
 import { TeamMember, TeamRole } from '@/types/advanced';
@@ -70,7 +72,7 @@ const TAB_NAME_MAP: Record<string, string> = {
 
 export const SystemSettingsView: React.FC = () => {
   const { forms, teamMembers, inviteTeamMember, updateTeamMember, deleteTeamMember, toggleTeamMemberStatus } = useForm();
-  const [activeTab, setActiveTab] = useState<'general' | 'portal' | 'sms' | 'payment' | 'api' | 'team'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'portal' | 'sms' | 'payment' | 'api' | 'team' | 'topics'>('general');
   const [copiedKey, setCopiedKey] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -185,7 +187,7 @@ export const SystemSettingsView: React.FC = () => {
           تنظیمات سازمانی و وب‌سرویس‌ها
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          پیکربندی کلیدهای امنیتی، پنل پیامک، درگاه‌های شاپرک و اعضای تیم و دسترسی‌ها
+          پیکربندی کلیدهای امنیتی، پنل پیامک، درگاه‌های شاپرک، حوزه‌های تخصصی مشاوره و اعضای تیم
         </p>
 
         {/* منوی تب‌های تنظیمات */}
@@ -197,10 +199,11 @@ export const SystemSettingsView: React.FC = () => {
           items={[
             { id: 'general', label: 'اطلاعات سازمان', icon: Building2 },
             { id: 'portal', label: 'صفحه ورود (پورتال پرونده)', icon: LogIn },
+            { id: 'topics', label: 'موضوعات مشاوره', icon: Sparkles },
+            { id: 'team', label: 'مشاوران', icon: Users },
             { id: 'sms', label: 'سامانه پیامک', icon: Smartphone },
             { id: 'payment', label: 'درگاه‌های شاپرک', icon: CreditCard },
             { id: 'api', label: 'وب‌هوک و API', icon: Webhook },
-            { id: 'team', label: 'مشاوران', icon: Users },
           ]}
         />
       </div>
@@ -414,6 +417,10 @@ export const SystemSettingsView: React.FC = () => {
 
             <WebhookTester />
           </div>
+        )}
+
+        {activeTab === 'topics' && (
+          <CounselingTopicsTab />
         )}
 
         {activeTab === 'team' && (

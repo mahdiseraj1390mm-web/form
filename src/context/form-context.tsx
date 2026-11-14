@@ -15,6 +15,7 @@ export const allInitialSubmissions: FormSubmission[] = belhaghInitialSubmissions
 import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
 import { generateTrackingCode } from '@/lib/persian';
 import { DEFAULT_INITIAL_TEAM_MEMBERS } from '@/lib/team-constants';
+import { CounselingTopicOption, COUNSELING_TOPICS } from '@/lib/consultant-helpers';
 
 export const initialTeamMembers: TeamMember[] = DEFAULT_INITIAL_TEAM_MEMBERS;
 
@@ -26,6 +27,11 @@ interface FormContextType {
   chatMessages: ChatMessage[];
   webhookLogs: WebhookLog[];
   teamMembers: TeamMember[];
+  counselingTopics: CounselingTopicOption[];
+  addCounselingTopic: (topic: Omit<CounselingTopicOption, 'id'> & { id?: string }) => Promise<void>;
+  updateCounselingTopic: (id: string, updated: Partial<CounselingTopicOption>) => Promise<void>;
+  deleteCounselingTopic: (id: string) => Promise<void>;
+  resetCounselingTopics: () => Promise<void>;
   activeForm: Form | null;
   setActiveForm: (form: Form | null) => void;
   getFormById: (id: string) => Form | undefined;
@@ -118,6 +124,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChatMessages);
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>(initialWebhookLogs);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const [counselingTopics, setCounselingTopics] = useState<CounselingTopicOption[]>(COUNSELING_TOPICS);
   const [activeForm, setActiveForm] = useState<Form | null>(initialForms[0]);
   const [isInitialized, setIsInitialized] = useState(false);
   const isRefreshingSubmissionsRef = useRef(false);
@@ -144,6 +151,15 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       const storedChat = localStorage.getItem('formafzar_chat');
       const storedLogs = localStorage.getItem('formafzar_webhooks');
       const storedTeam = localStorage.getItem('formafzar_team_members');
+      const storedTopics = localStorage.getItem('belhagh_counseling_topics');
+      if (storedTopics) {
+        try {
+          const parsedTopics = JSON.parse(storedTopics);
+          if (Array.isArray(parsedTopics) && parsedTopics.length > 0) {
+            setCounselingTopics(parsedTopics);
+          }
+        } catch {}
+      }
       const storedNotifs = localStorage.getItem('formafzar_sim_notifs');
       if (storedNotifs) {
         try { setSimilarityNotifications(JSON.parse(storedNotifs)); } catch {}
@@ -283,6 +299,18 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch((err) => console.warn('Could not sync team from /api/team:', err));
+
+    fetch(`/api/settings/topics?_nocache=${Date.now()}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.topics) && data.topics.length > 0) {
+          setCounselingTopics(data.topics);
+          try {
+            localStorage.setItem('belhagh_counseling_topics', JSON.stringify(data.topics));
+          } catch {}
+        }
+      })
+      .catch((err) => console.warn('Could not sync topics from /api/settings/topics:', err));
   }, []);
 
   useEffect(() => {
@@ -293,11 +321,12 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('formafzar_chat', JSON.stringify(chatMessages));
       localStorage.setItem('formafzar_webhooks', JSON.stringify(webhookLogs));
       localStorage.setItem('formafzar_team_members', JSON.stringify(teamMembers));
+      localStorage.setItem('belhagh_counseling_topics', JSON.stringify(counselingTopics));
       localStorage.setItem('formafzar_sim_notifs', JSON.stringify(similarityNotifications));
     } catch {
       // ignore
     }
-  }, [forms, submissions, chatMessages, webhookLogs, teamMembers, isInitialized]);
+  }, [forms, submissions, chatMessages, webhookLogs, teamMembers, counselingTopics, isInitialized]);
 
   const getFormById = (id: string) => {
     const found = forms.find((f) => f.id === id || f.slug === id);
@@ -1124,6 +1153,75 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const syncTopicsToServer = async (topics: CounselingTopicOption[]) => {
+    try {
+      await fetch('/api/settings/topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics }),
+      });
+    } catch (e) {
+      console.warn('Error saving topics to server:', e);
+    }
+  };
+
+  const addCounselingTopic = useCallback(async (newTopic: Omit<CounselingTopicOption, 'id'> & { id?: string }) => {
+    const rawId = (newTopic.id || '').trim();
+    const cleanId = rawId 
+      ? rawId.toLowerCase().replace(/\s+/g, '_')
+      : `top_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const topic: CounselingTopicOption = {
+      id: cleanId,
+      name: newTopic.name.trim(),
+      keywords: Array.isArray(newTopic.keywords) ? newTopic.keywords : [],
+      description: (newTopic.description || '').trim(),
+      color: newTopic.color,
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    setCounselingTopics((prev) => {
+      const exists = prev.some((t) => t.id === topic.id);
+      const updated = exists ? prev.map((t) => (t.id === topic.id ? topic : t)) : [...prev, topic];
+      try {
+        localStorage.setItem('belhagh_counseling_topics', JSON.stringify(updated));
+      } catch {}
+      syncTopicsToServer(updated);
+      return updated;
+    });
+  }, []);
+
+  const updateCounselingTopic = useCallback(async (id: string, updated: Partial<CounselingTopicOption>) => {
+    setCounselingTopics((prev) => {
+      const newList = prev.map((t) => (t.id === id ? { ...t, ...updated } : t));
+      try {
+        localStorage.setItem('belhagh_counseling_topics', JSON.stringify(newList));
+      } catch {}
+      syncTopicsToServer(newList);
+      return newList;
+    });
+  }, []);
+
+  const deleteCounselingTopic = useCallback(async (id: string) => {
+    setCounselingTopics((prev) => {
+      const newList = prev.filter((t) => t.id !== id);
+      try {
+        localStorage.setItem('belhagh_counseling_topics', JSON.stringify(newList));
+      } catch {}
+      syncTopicsToServer(newList);
+      return newList;
+    });
+  }, []);
+
+  const resetCounselingTopics = useCallback(async () => {
+    setCounselingTopics(COUNSELING_TOPICS);
+    try {
+      localStorage.setItem('belhagh_counseling_topics', JSON.stringify(COUNSELING_TOPICS));
+    } catch {}
+    syncTopicsToServer(COUNSELING_TOPICS);
+  }, []);
+
   return (
     <FormContext.Provider
       value={{
@@ -1134,6 +1232,11 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         chatMessages,
         webhookLogs,
         teamMembers,
+        counselingTopics,
+        addCounselingTopic,
+        updateCounselingTopic,
+        deleteCounselingTopic,
+        resetCounselingTopics,
         activeForm,
         setActiveForm,
         getFormById,

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "child",
+    "name": "مشاوره کودک",
+    "keywords": ["کودک"],
+    "description": "پرونده‌ها و نوبت‌های تخصصی کودک",
+    "isDefault": true
+  },
+  {
+    "id": "teen",
+    "name": "مشاوره نوجوان",
+    "keywords": ["نوجوان"],
+    "description": "پرونده‌ها و نوبت‌های تخصصی نوجوان",
+    "isDefault": true
+  },
+  {
+    "id": "education",
+    "name": "مشاوره تحصیلی",
+    "keywords": ["تحصیلی"],
+    "description": "برنامه‌ریزی و هدایت تحصیلی",
+    "isDefault": true
+  },
+  {
+    "id": "clinical",
+    "name": "مشاوره بالینی و روان‌درمانی",
+    "keywords": ["بالینی", "روان‌درمانی", "فردی"],
+    "description": "اضطراب، افسردگی و درمان‌های بالینی",
+    "isDefault": true
+  },
+  {
+    "id": "family",
+    "name": "مشاوره ازدواج و خانواده",
+    "keywords": ["خانواده", "ازدواج", "زوجین", "زوج"],
+    "description": "مشاوره پیش از ازدواج، زوج‌درمانی و خانواده",
+    "isDefault": true
+  }
+]

@@ -72,7 +72,12 @@ interface ConsultantsViewProps {
 
 export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab }) => {
   const { currentUser } = useAdminAuth();
-  const { teamMembers, submissions, forms, updateTeamMember } = useForm();
+  const { teamMembers, submissions, forms, updateTeamMember, counselingTopics } = useForm();
+
+  const allTopicsList = useMemo(
+    () => (counselingTopics && counselingTopics.length > 0 ? counselingTopics : COUNSELING_TOPICS),
+    [counselingTopics]
+  );
 
   const isSuperAdmin = !!(
     currentUser?.isSuperAdmin ||
@@ -265,20 +270,20 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
   // فیلتر کردن نوبت‌های مشاور بر اساس موضوع انتخابی
   const displayedConsultantBookings = useMemo(() => {
     if (selectedTopicTab === 'all') return activeConsultantBookings;
-    const topObj = COUNSELING_TOPICS.find((t) => t.id === selectedTopicTab || t.name === selectedTopicTab);
+    const topObj = allTopicsList.find((t) => t.id === selectedTopicTab || t.name === selectedTopicTab);
     const keywords = topObj ? [topObj.id, topObj.name, ...topObj.keywords] : [selectedTopicTab];
     return activeConsultantBookings.filter((b) => {
       const t = (b.topic || '').toLowerCase();
       return keywords.some((kw) => t.includes(kw.toLowerCase()));
     });
-  }, [activeConsultantBookings, selectedTopicTab]);
+  }, [activeConsultantBookings, selectedTopicTab, allTopicsList]);
 
   const rawDaySchedule = weeklySchedule[activeDayIndex] || weeklySchedule[0];
   const currentDaySchedule = useMemo(() => {
     if (!rawDaySchedule) return rawDaySchedule;
     if (selectedTopicTab === 'all') return rawDaySchedule;
 
-    const topObj = COUNSELING_TOPICS.find((t) => t.id === selectedTopicTab || t.name === selectedTopicTab);
+    const topObj = allTopicsList.find((t) => t.id === selectedTopicTab || t.name === selectedTopicTab);
     const keywords = topObj ? [topObj.id, topObj.name, ...topObj.keywords] : [selectedTopicTab];
 
     const filteredSlots = rawDaySchedule.slots.filter((slot) => {
@@ -511,7 +516,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
             </button>
 
             {activeConsultantTopics.map((topKey) => {
-              const topObj = COUNSELING_TOPICS.find((t) => t.id === topKey || t.name === topKey);
+              const topObj = allTopicsList.find((t) => t.id === topKey || t.name === topKey);
               const topName = topObj ? topObj.name : `مشاوره ${topKey}`;
               const count = activeConsultantBookings.filter((b) => {
                 const t = (b.topic || '').toLowerCase();
@@ -974,7 +979,7 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
                       <span className="font-mono text-[10px] text-slate-500">({toPersianDigits(activeConsultantBookings.length)})</span>
                     </button>
                     {activeConsultantTopics.map((topKey) => {
-                      const topObj = COUNSELING_TOPICS.find((t) => t.id === topKey || t.name === topKey);
+                      const topObj = allTopicsList.find((t) => t.id === topKey || t.name === topKey);
                       const topName = topObj ? topObj.name : topKey;
                       const count = activeConsultantBookings.filter((b) => {
                         const t = (b.topic || '').toLowerCase();

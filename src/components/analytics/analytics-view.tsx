@@ -9,7 +9,7 @@ import {
   BarChart3, 
   TrendingUp, 
   Calculator, 
-  PieChart, 
+  PieChart as PieChartIcon, 
   Layers, 
   ExternalLink, 
   Filter, 
@@ -55,6 +55,7 @@ import { isAssignedSafaSubmission, filterActiveSubmissions } from '@/lib/safa-ut
 import { getSemanticColorByPercentage, getFourColorByIndex } from '@/lib/chart-colors';
 import { VerticalBarChart, BarChartItem } from '@/components/analytics/vertical-bar-chart';
 import { PointLineChart, PointLineChartItem } from '@/components/analytics/point-line-chart';
+import { PieChart, PieChartItem } from '@/components/analytics/pie-chart';
 import { CollapsibleCard } from '@/components/ui/collapsible-card';
 
 // بررسی این‌که آیا سابمیشن یک نوبت مشاوره واقعی با مشاور مشخص یا زمان مشخص است
@@ -745,9 +746,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
     });
     const total = married + single + divorced;
     return [
-      { label: 'متأهل', count: married, pct: total > 0 ? Math.round((married / total) * 100) : 0, color: '#059669', desc: 'خانواده‌های تحت پوشش' },
-      { label: 'مجرد', count: single, pct: total > 0 ? Math.round((single / total) * 100) : 0, color: '#0284c7', desc: 'نوجوانان و جوانان در شرف ازدواج' },
-      { label: 'مطلقه / فوت همسر', count: divorced, pct: total > 0 ? Math.round((divorced / total) * 100) : 0, color: '#dc2626', desc: 'نیازمند همراهی و پایش مداوم' },
+      { label: 'متأهل', count: married, pct: total > 0 ? Math.round((married / total) * 100) : 0, color: '#0284c7', desc: 'خانواده‌های تحت پوشش' },
+      { label: 'مجرد', count: single, pct: total > 0 ? Math.round((single / total) * 100) : 0, color: '#10b981', desc: 'نوجوانان و جوانان در شرف ازدواج' },
+      { label: 'مطلقه / فوت همسر', count: divorced, pct: total > 0 ? Math.round((divorced / total) * 100) : 0, color: '#f43f5e', desc: 'نیازمند همراهی و پایش مداوم' },
     ];
   }, [filteredSubmissions]);
 
@@ -1615,31 +1616,30 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigateToRunner
               title="وضعیت تأهل مراجعین (درصد مجرد، متأهل، مطلقه)"
               icon={<HeartHandshake className="w-4 h-4 text-rose-600" />}
               headerExtra={
-                <span className="text-[11px] text-slate-400 font-medium">سهم ازدواج و خانواده</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                    نمودار پیتزایی
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">سهم ازدواج و خانواده</span>
+                </div>
               }
             >
               <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
-                  {maritalDistribution.map((m) => {
-                    const sc = getSemanticColorByPercentage(m.pct);
-                    return (
-                      <div 
-                        key={m.label} 
-                        className={`p-4 rounded-xl border ${sc.badgeBorder} ${sc.badgeBg} text-center space-y-1.5`}
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className={`w-2.5 h-2.5 rounded-full ${sc.dotBg} shrink-0 ring-1 ${sc.ringColor}`} />
-                          <span className="text-xs font-extrabold text-slate-800">{m.label}</span>
-                        </div>
-                        <div className="text-2xl font-black font-mono" style={{ color: sc.hex }}>
-                          {toPersianDigits(m.pct)}٪
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-mono text-center">
-                          ({toPersianDigits(m.count)} نفر)
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="pt-1">
+                  <PieChart
+                    data={maritalDistribution.map((m) => ({
+                      id: m.label,
+                      label: m.label,
+                      value: m.count,
+                      percentage: m.pct,
+                      color: m.color,
+                      desc: m.desc,
+                    }))}
+                    unit="نفر"
+                    size={200}
+                    badgeText="نمودار قطاعی دایره‌ای (پیتزایی)"
+                    showLegend={true}
+                  />
                 </div>
 
                 {/* ترکیب اعضای ثبت‌نامی در خانواده */}

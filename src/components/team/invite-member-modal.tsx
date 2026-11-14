@@ -38,6 +38,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { ConsultantAvatar } from '@/components/consultants/consultant-avatar';
+import { useForm } from '@/context/form-context';
 import { TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
 import { Form, AppointmentData, WorkDayPeriod, DayScheduleConfig } from '@/types/form';
 import { AVAILABLE_SIDEBAR_TABS } from '@/lib/team-constants';
@@ -122,13 +123,30 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
   const [status, setStatus] = useState<'active' | 'suspended'>('active');
+  const { counselingTopics } = useForm();
   const [allowedTabs, setAllowedTabs] = useState<string[]>(['submissions', 'consultants']);
   const [requireCaseCode, setRequireCaseCode] = useState(true);
   const [canEditWorkingHours, setCanEditWorkingHours] = useState(false);
   const [consultantId, setConsultantId] = useState('');
   const [allowedTopics, setAllowedTopics] = useState<string[]>([]);
-  const [customTopicInput, setCustomTopicInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // فهرست موضوعات در دسترس (پویا از تنظیمات + حفظ موضوعات قبلی مشاور)
+  const availableTopics = useMemo(() => {
+    const baseList = counselingTopics && counselingTopics.length > 0 ? counselingTopics : COUNSELING_TOPICS;
+    const missing = (allowedTopics || []).filter(
+      (topId) => !baseList.some((t) => t.id === topId || t.name === topId)
+    );
+    if (missing.length === 0) return baseList;
+    const extra = missing.map((topId) => ({
+      id: topId,
+      name: topId,
+      keywords: [],
+      description: 'موضوع ثبت‌شده قبلی',
+      isDefault: false,
+    }));
+    return [...baseList, ...extra];
+  }, [counselingTopics, allowedTopics]);
 
   // ساعت کاری عمومی مشاور
   const [slotDurationMinutes, setSlotDurationMinutes] = useState<number>(45);
@@ -233,7 +251,6 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
       setTopicSchedules({});
     }
     setActiveScheduleTopic('all');
-    setCustomTopicInput('');
     setErrors({});
   }, [editingMember, isOpen]);
 
@@ -307,14 +324,6 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
         return [...prev, topicId];
       }
     });
-  };
-
-  const handleAddCustomTopic = () => {
-    const val = customTopicInput.trim();
-    if (val && !allowedTopics.includes(val)) {
-      setAllowedTopics((prev) => [...prev, val]);
-      setCustomTopicInput('');
-    }
   };
 
   // دریافت ساعات کاری جاری بر اساس تب انتخابی
@@ -583,9 +592,9 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   // عنوان موضوع فعال جهت نمایش در پیام‌ها
   const activeTopicDisplay = useMemo(() => {
     if (activeScheduleTopic === 'all') return 'ساعت کاری عمومی';
-    const topObj = COUNSELING_TOPICS.find((t) => t.id === activeScheduleTopic || t.name === activeScheduleTopic);
+    const topObj = availableTopics.find((t) => t.id === activeScheduleTopic || t.name === activeScheduleTopic);
     return topObj ? topObj.name : activeScheduleTopic;
-  }, [activeScheduleTopic]);
+  }, [activeScheduleTopic, availableTopics]);
 
   if (!isOpen) return null;
 
@@ -1089,22 +1098,22 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {COUNSELING_TOPICS.map((topic) => {
+                  {availableTopics.map((topic) => {
                     const isSelected = allowedTopics.includes(topic.id);
                     return (
                       <button
                         key={topic.id}
                         type="button"
                         onClick={() => toggleTopic(topic.id)}
-                        className={`flex items-center justify-between p-2 rounded-xl border text-right transition-all cursor-pointer ${
+                        className={`flex items-center justify-between p-2.5 rounded-xl border text-right transition-all cursor-pointer ${
                           isSelected
                             ? 'border-indigo-500 bg-white text-indigo-900 shadow-2xs ring-1 ring-indigo-400/20'
                             : 'border-slate-200 bg-white/70 text-slate-600 hover:bg-white'
                         }`}
                       >
-                        <div className="min-w-0">
+                        <div className="min-w-0 pr-1">
                           <span className="font-bold text-xs block truncate">{topic.name}</span>
-                          <span className="text-[10px] text-slate-400 block truncate">{topic.description}</span>
+                          <span className="text-[10px] text-slate-400 block truncate">{topic.description || topic.id}</span>
                         </div>
                         <div>
                           {isSelected ? (
@@ -1118,52 +1127,13 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                   })}
                 </div>
 
-                {/* افزودن موضوع دلخواه */}
-                <div className="pt-1 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={customTopicInput}
-                    onChange={(e) => setCustomTopicInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomTopic();
-                      }
-                    }}
-                    placeholder="افزودن موضوع تخصصی دیگر..."
-                    className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl bg-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomTopic}
-                    className="px-3 py-1.5 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 transition cursor-pointer shrink-0"
-                  >
-                    + افزودن
-                  </button>
+                {/* راهنمای مرجع: افزودن، ویرایش و حذف در تنظیمات */}
+                <div className="pt-1 flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-slate-600 text-[11px] leading-relaxed">
+                  <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>
+                    افزودن، ویرایش و حذف موضوعات مشاوره در تب <strong>«موضوعات مشاوره» در بخش تنظیمات</strong> انجام می‌شود و در اکانت مشاور صرفاً حوزه‌های مجاز انتخاب می‌گردند.
+                  </span>
                 </div>
-
-                {/* نمایش موضوعات سفارشی اضافه‌شده */}
-                {allowedTopics.filter((t) => !COUNSELING_TOPICS.some((c) => c.id === t)).length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {allowedTopics
-                      .filter((t) => !COUNSELING_TOPICS.some((c) => c.id === t))
-                      .map((custTopic) => (
-                        <span
-                          key={custTopic}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-indigo-200 text-indigo-900 rounded-lg text-xs font-semibold"
-                        >
-                          <span>{custTopic}</span>
-                          <button
-                            type="button"
-                            onClick={() => toggleTopic(custTopic)}
-                            className="text-slate-400 hover:text-rose-500 cursor-pointer"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      ))}
-                  </div>
-                )}
               </div>
 
               {/* ۲. ساعت کاری هر موضوع (تنظیم روزها، شیفت‌ها و مدت جلسات) */}
@@ -1220,7 +1190,7 @@ export const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
                   </button>
 
                   {allowedTopics.map((top) => {
-                    const topicObj = matchCounselingTopic(top);
+                    const topicObj = matchCounselingTopic(top, availableTopics);
                     const canonicalKey = topicObj ? topicObj.id : top;
                     const topLabel = topicObj ? topicObj.name : top;
                     const hasCustom = !!topicSchedules[canonicalKey] || !!topicSchedules[top];

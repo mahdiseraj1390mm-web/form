@@ -202,14 +202,17 @@ export interface CounselingTopicOption {
   name: string;
   keywords: string[];
   description: string;
+  isDefault?: boolean;
+  color?: string;
+  createdAt?: string;
 }
 
 export const COUNSELING_TOPICS: CounselingTopicOption[] = [
-  { id: 'child', name: 'مشاوره کودک', keywords: ['کودک'], description: 'پرونده‌ها و نوبت‌های تخصصی کودک' },
-  { id: 'teen', name: 'مشاوره نوجوان', keywords: ['نوجوان'], description: 'پرونده‌ها و نوبت‌های تخصصی نوجوان' },
-  { id: 'education', name: 'مشاوره تحصیلی', keywords: ['تحصیلی'], description: 'برنامه‌ریزی و هدایت تحصیلی' },
-  { id: 'clinical', name: 'مشاوره بالینی و روان‌درمانی', keywords: ['بالینی', 'روان‌درمانی', 'فردی'], description: 'اضطراب، افسردگی و درمان‌های بالینی' },
-  { id: 'family', name: 'مشاوره ازدواج و خانواده', keywords: ['خانواده', 'ازدواج', 'زوجین', 'زوج'], description: 'مشاوره پیش از ازدواج، زوج‌درمانی و خانواده' },
+  { id: 'child', name: 'مشاوره کودک', keywords: ['کودک'], description: 'پرونده‌ها و نوبت‌های تخصصی کودک', isDefault: true },
+  { id: 'teen', name: 'مشاوره نوجوان', keywords: ['نوجوان'], description: 'پرونده‌ها و نوبت‌های تخصصی نوجوان', isDefault: true },
+  { id: 'education', name: 'مشاوره تحصیلی', keywords: ['تحصیلی'], description: 'برنامه‌ریزی و هدایت تحصیلی', isDefault: true },
+  { id: 'clinical', name: 'مشاوره بالینی و روان‌درمانی', keywords: ['بالینی', 'روان‌درمانی', 'فردی'], description: 'اضطراب، افسردگی و درمان‌های بالینی', isDefault: true },
+  { id: 'family', name: 'مشاوره ازدواج و خانواده', keywords: ['خانواده', 'ازدواج', 'زوجین', 'زوج'], description: 'مشاوره پیش از ازدواج، زوج‌درمانی و خانواده', isDefault: true },
 ];
 
 /**
@@ -220,11 +223,15 @@ const TOPIC_ID_ALIASES: Record<string, string> = {
   individual: 'clinical',
 };
 
-export function matchCounselingTopic(topicKey: string): CounselingTopicOption | undefined {
+export function matchCounselingTopic(
+  topicKey: string,
+  customList?: CounselingTopicOption[]
+): CounselingTopicOption | undefined {
   if (!topicKey) return undefined;
   const cleanKey = topicKey.trim();
   const aliased = TOPIC_ID_ALIASES[cleanKey] || cleanKey;
-  return COUNSELING_TOPICS.find(
+  const list = customList && customList.length > 0 ? customList : COUNSELING_TOPICS;
+  return list.find(
     (t) =>
       t.id === aliased ||
       t.name === cleanKey ||
@@ -237,11 +244,14 @@ export function matchCounselingTopic(topicKey: string): CounselingTopicOption | 
 /**
  * تبدیل کلید یا عنوان موضوع مشاوره به شناسه رسمی یکتا (یا بازگشت همان متن در صورت سفارشی بودن)
  */
-export function normalizeCounselingTopicId(topicKey: string): string {
+export function normalizeCounselingTopicId(
+  topicKey: string,
+  customList?: CounselingTopicOption[]
+): string {
   const cleanKey = (topicKey || '').trim();
   if (!cleanKey) return '';
   if (TOPIC_ID_ALIASES[cleanKey]) return TOPIC_ID_ALIASES[cleanKey];
-  const matched = matchCounselingTopic(cleanKey);
+  const matched = matchCounselingTopic(cleanKey, customList);
   return matched ? matched.id : cleanKey;
 }
 

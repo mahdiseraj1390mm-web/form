@@ -103,7 +103,11 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   themeColor = '#00897b',
   error,
 }) => {
-  const { teamMembers } = useForm();
+  const { teamMembers, counselingTopics } = useForm();
+  const allTopicsList = useMemo(
+    () => (counselingTopics && counselingTopics.length > 0 ? counselingTopics : COUNSELING_TOPICS),
+    [counselingTopics]
+  );
 
   // بررسی حالت چندمشاوره‌ای (رزرو نوبت منحصراً از میان مشاوران تعریف‌شده در سامانه امکان‌پذیر است)
   const selectedConsultants = useMemo(() => {
@@ -506,7 +510,9 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
             <div className="flex flex-wrap gap-2">
               {availableTopicIds.map((topId) => {
-                const topicObj = COUNSELING_TOPICS.find((t) => t.id === topId || t.name === topId || t.keywords.includes(topId));
+                const topicObj = allTopicsList.find(
+                  (t) => t.id === topId || t.name === topId || (Array.isArray(t.keywords) && t.keywords.includes(topId))
+                );
                 const isSelected = selectedTopicId === topId;
                 return (
                   <button

@@ -76,7 +76,11 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
 }) => {
   if (!field) return null;
 
-  const { teamMembers } = useForm();
+  const { teamMembers, counselingTopics } = useForm();
+  const allTopics = useMemo(
+    () => (counselingTopics && counselingTopics.length > 0 ? counselingTopics : COUNSELING_TOPICS),
+    [counselingTopics]
+  );
   const [editingScheduleConsultant, setEditingScheduleConsultant] = useState<{
     id: string;
     name: string;
@@ -487,7 +491,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
       const cleanName = c.name.replace(/^(خانم|آقای?)\s+/, '');
       const consultantTopics = (c as any).allowedTopics?.length > 0
         ? (c as any).allowedTopics
-        : COUNSELING_TOPICS.map((t) => t.id);
+        : allTopics.map((t) => t.id);
 
       return {
         consultantId: c.id,
@@ -1445,7 +1449,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                   // تمام موضوعات مرتبط با این مشاور
                   const consultantTopics = (consultant as any).allowedTopics?.length > 0
                     ? (consultant as any).allowedTopics
-                    : COUNSELING_TOPICS.map((t) => t.id);
+                    : allTopics.map((t) => t.id);
 
                   return (
                     <div
@@ -1490,7 +1494,7 @@ export const FieldEditorDrawer: React.FC<FieldEditorDrawerProps> = ({
                             </span>
                             <div className="flex flex-wrap gap-1">
                               {consultantTopics.map((topId: string) => {
-                                const topObj = COUNSELING_TOPICS.find((t) => t.id === topId);
+                                const topObj = allTopics.find((t) => t.id === topId || t.name === topId);
                                 const isTopSelected = enabledTopics.includes(topId);
                                 return (
                                   <button
