@@ -168,55 +168,57 @@ export function buildPaymentAppLinks(
   params.set('desc', encodedDesc);
 
   const q = params.toString();
+  // آدرس فال‌بک رسمی در کافه بازار برای جلوگیری ۱۰۰٪ از خطای «مورد یافت نشد» در گوگل‌پلی
+  const fallbackUrl = encodeURIComponent(app.bazaarUrl || app.webUrl);
 
   switch (app.id) {
     case 'up': {
-      // آپ (آسان پرداخت): روت کارت به کارت با پارامترهای کارت مقصد و مبلغ
+      // آپ (آسان پرداخت)
       return {
-        deepLinkScheme: `upapp://cardtocard?${q}`,
-        androidIntent: `intent://cardtocard?${q}#Intent;scheme=upapp;package=com.asanpardakht.up;S.card=${cleanCard};S.dest=${cleanCard};S.amount=${amountRials};S.amountTomans=${amountInTomans};end`,
+        deepLinkScheme: `upapp://?${q}`,
+        androidIntent: `intent://#Intent;scheme=upapp;package=com.asanpardakht.up;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'hamrahcard': {
-      // همراه کارت: روت transfer با کارت و مبلغ
+      // همراه کارت
       return {
-        deepLinkScheme: `hamrahcard://transfer?${q}`,
-        androidIntent: `intent://transfer?${q}#Intent;scheme=hamrahcard;package=ir.melli.hamrahcard;S.destination=${cleanCard};S.card=${cleanCard};S.amount=${amountRials};end`,
+        deepLinkScheme: `hamrahcard://?${q}`,
+        androidIntent: `intent://#Intent;scheme=hamrahcard;package=ir.melli.hamrahcard;S.destination=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'blubank': {
-      // بلوبانک سامان: روت transfer
+      // بلوبانک سامان
       return {
-        deepLinkScheme: `blubank://transfer?${q}`,
-        androidIntent: `intent://transfer?${q}#Intent;scheme=blubank;package=com.samanpr.blubank;S.dest=${cleanCard};S.amount=${amountRials};end`,
+        deepLinkScheme: `blubank://?${q}`,
+        androidIntent: `intent://#Intent;scheme=blubank;package=com.samanpr.blubank;S.dest=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'top': {
-      // تاپ پرداخت نوین: روت c2c
+      // تاپ پرداخت نوین
       return {
-        deepLinkScheme: `top://c2c?${q}`,
-        androidIntent: `intent://c2c?${q}#Intent;scheme=top;package=ir.torob.top;S.card=${cleanCard};S.dest=${cleanCard};S.amount=${amountRials};end`,
+        deepLinkScheme: `top://?${q}`,
+        androidIntent: `intent://#Intent;scheme=top;package=ir.torob.top;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'sekkeh': {
-      // سکه به‌پرداخت ملت: روت cardtocard
+      // سکه به‌پرداخت ملت
       return {
-        deepLinkScheme: `sekkeh://cardtocard?${q}`,
-        androidIntent: `intent://cardtocard?${q}#Intent;scheme=sekkeh;package=com.behpardakht.sekkeh;S.card=${cleanCard};S.amount=${amountRials};end`,
+        deepLinkScheme: `sekkeh://?${q}`,
+        androidIntent: `intent://#Intent;scheme=sekkeh;package=com.behpardakht.sekkeh;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     case 'bam': {
       // همراه بانک ملی (سامانه بام)
       return {
-        deepLinkScheme: `baam://transfer?${q}`,
-        androidIntent: `intent://transfer?${q}#Intent;scheme=baam;package=ir.bmi.bam;S.card=${cleanCard};S.amount=${amountRials};end`,
+        deepLinkScheme: `baam://?${q}`,
+        androidIntent: `intent://#Intent;scheme=baam;package=ir.bmi.bam;S.card=${cleanCard};S.amount=${amountRials};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
     default: {
-      const sep = app.scheme.includes('?') ? '&' : '?';
+      const cleanScheme = app.scheme.replace('://', '');
       return {
-        deepLinkScheme: `${app.scheme}${sep}${q}`,
-        androidIntent: app.androidIntent,
+        deepLinkScheme: `${app.scheme}?${q}`,
+        androidIntent: `intent://#Intent;scheme=${cleanScheme};S.browser_fallback_url=${fallbackUrl};end`,
       };
     }
   }
