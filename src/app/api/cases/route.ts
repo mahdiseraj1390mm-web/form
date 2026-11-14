@@ -9,23 +9,10 @@ import {
   updateSubmissionDataInDb,
   editSubmissionCommentInDb,
   deleteSubmissionCommentInDb,
-  sql,
 } from '@/lib/db';
 import { matchAndMergeSafaForNewRegistration } from '@/lib/user-similarity';
 import { sendRecoveryOtpSms } from '@/lib/sms-service';
-
-interface OtpEntry {
-  code: string;
-  mobile: string;
-  expiresAt: number;
-  attempts: number;
-  lastSentAt: number;
-  caseRecord: any;
-}
-
-// ذخیره‌سازی موقت کدهای اعتبارسنجی در حافظه سرور
-const recoveryOtpStore: Map<string, OtpEntry> = (globalThis as any).__belhaghRecoveryOtpStore || new Map();
-(globalThis as any).__belhaghRecoveryOtpStore = recoveryOtpStore;
+import { canRequestOtp, generateAndSaveOtp, verifyOtp } from '@/lib/otp-service';
 
 
 
@@ -255,9 +242,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ error: 'پارامترهای جستجو ارسال نشده است' }, { status: 400 });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : 'Server error';
     console.error('Error in /api/cases GET:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -265,116 +253,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action } = body;
-
-// عملیات پایدار و چندپردازنده‌ای کد یکبارمصرف بازیابی پرونده
-async function saveRecoveryOtp(cleanMobile: string, code: string, caseCode: string, caseRecord: any) {
-  const now = Date.now();
-  recoveryOtpStore.set(cleanMobile, {
-    code,
-    mobile: cleanMobile,
-    expiresAt: now + 300000, // ۵ دقیقه
-    attempts: 0,
-    lastSentAt: now,
-    caseRecord,
-  });
-
-  try {
-    // پاک‌سازی خودکار کدهای منقضی‌شده قدیمی جهت حفظ کارایی
-    await sql`DELETE FROM public.recovery_otps WHERE expires_at < NOW() - INTERVAL '1 hour'`.catch(() => {});
-
-    await sql`
-      INSERT INTO public.recovery_otps (mobile, code, case_code, expires_at)
-      VALUES (${cleanMobile}, ${code}, ${caseCode}, NOW() + INTERVAL '5 minutes')
-    `;
-  } catch (err) {
-    console.warn('saveRecoveryOtp DB warning:', err);
-  }
-}
-
-async function verifyRecoveryOtp(cleanMobile: string, cleanCode: string): Promise<{ success: boolean; caseCode?: string; error?: string }> {
-  // ۱. بررسی در جدول پایدار public.recovery_otps
-  try {
-    const rows = await sql`
-      SELECT * FROM public.recovery_otps 
-      WHERE mobile = ${cleanMobile} AND expires_at > NOW() 
-      ORDER BY created_at DESC 
-      LIMIT 10
-    `;
-
-    if (rows && rows.length > 0) {
-      // بررسی تطابق با هر کدام از کدهای معتبر ارسالی در ۵ دقیقه اخیر
-      const match = rows.find((r: any) => String(r.code).trim() === cleanCode);
-      if (match) {
-        await sql`DELETE FROM public.recovery_otps WHERE mobile = ${cleanMobile}`.catch(() => {});
-        recoveryOtpStore.delete(cleanMobile);
-        return { success: true, caseCode: match.case_code };
-      }
-
-      // اعمال شمارش خطای تلاش روی تمام رکوردهای فعال این شماره
-      const maxAttempts = Math.max(...rows.map((r: any) => r.attempts || 0));
-      const newAttempts = maxAttempts + 1;
-      if (newAttempts >= 5) {
-        await sql`DELETE FROM public.recovery_otps WHERE mobile = ${cleanMobile}`.catch(() => {});
-        recoveryOtpStore.delete(cleanMobile);
-        return { success: false, error: 'تعداد دفعات تلاش اشتباه بیش از حد مجاز بود. لطفاً مجدداً کد درخواست نمایید.' };
-      }
-
-      await sql`UPDATE public.recovery_otps SET attempts = ${newAttempts} WHERE mobile = ${cleanMobile}`.catch(() => {});
-      return { success: false, error: `کد وارد شده صحیح نمی‌باشد. (${5 - newAttempts} تلاش باقی‌مانده)` };
-    }
-  } catch (err) {
-    console.warn('verifyRecoveryOtp DB error, fallback to memory:', err);
-  }
-
-  // ۲. فال‌بک در حافظه سرور
-  const otpEntry = recoveryOtpStore.get(cleanMobile);
-  if (!otpEntry) {
-    return { success: false, error: 'کد تأییدی برای این شماره ثبت نشده یا منقضی شده است. لطفاً مجدداً درخواست دهید.' };
-  }
-  if (Date.now() > otpEntry.expiresAt) {
-    recoveryOtpStore.delete(cleanMobile);
-    return { success: false, error: 'کد تأیید منقضی شده است. لطفاً مجدداً درخواست کد فرمایید.' };
-  }
-  if (otpEntry.attempts >= 5) {
-    recoveryOtpStore.delete(cleanMobile);
-    return { success: false, error: 'تعداد دفعات تلاش اشتباه بیش از حد مجاز بود. لطفاً مجدداً کد جدید درخواست نمایید.' };
-  }
-  if (otpEntry.code !== cleanCode) {
-    otpEntry.attempts += 1;
-    return { success: false, error: `کد وارد شده صحیح نمی‌باشد. (${5 - otpEntry.attempts} تلاش باقی‌مانده)` };
-  }
-
-  const cCode = otpEntry.caseRecord?.case_code;
-  recoveryOtpStore.delete(cleanMobile);
-  return { success: true, caseCode: cCode };
-}
-
-async function canSendOtp(cleanMobile: string): Promise<{ allowed: boolean; retryAfter?: number }> {
-  const now = Date.now();
-  try {
-    const rows = await sql`
-      SELECT created_at FROM public.recovery_otps 
-      WHERE mobile = ${cleanMobile} 
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `;
-    if (rows && rows[0]) {
-      const lastTime = new Date(rows[0].created_at).getTime();
-      if (now - lastTime < 60000) {
-        const remaining = Math.ceil((60000 - (now - lastTime)) / 1000);
-        return { allowed: false, retryAfter: remaining };
-      }
-    }
-  } catch {}
-
-  const existingOtp = recoveryOtpStore.get(cleanMobile);
-  if (existingOtp && (now - existingOtp.lastSentAt) < 60000) {
-    const remaining = Math.ceil((60000 - (now - existingOtp.lastSentAt)) / 1000);
-    return { allowed: false, retryAfter: remaining };
-  }
-
-  return { allowed: true };
-}
 
     // ۰.۱. ارسال کد یکبارمصرف (OTP) جهت بازیابی امن شماره پرونده
     if (action === 'send_recovery_otp') {
@@ -395,7 +273,7 @@ async function canSendOtp(cleanMobile: string): Promise<{ allowed: boolean; retr
       }
 
       // محدودیت نرخ ارسال: حداقل ۶۰ ثانیه فاصله بین ارسال‌ها
-      const rateCheck = await canSendOtp(clean);
+      const rateCheck = await canRequestOtp(clean, 'recovery');
       if (!rateCheck.allowed) {
         return NextResponse.json({
           success: false,
@@ -404,10 +282,13 @@ async function canSendOtp(cleanMobile: string): Promise<{ allowed: boolean; retr
         }, { status: 429 });
       }
 
-      // تولید کد تصادفی ۵ رقمی
-      const code = Math.floor(10000 + Math.random() * 90000).toString();
-
-      await saveRecoveryOtp(clean, code, caseRecord.case_code, caseRecord);
+      // تولید امن و ذخیره هش کد با انقضای ۱۲۰ ثانیه (۲ دقیقه) و CSPRNG
+      const { code, expiresIn } = await generateAndSaveOtp({
+        mobile: clean,
+        purpose: 'recovery',
+        metadata: { caseCode: caseRecord.case_code },
+        digits: 5,
+      });
 
       try {
         await sendRecoveryOtpSms(clean, code);
@@ -418,7 +299,7 @@ async function canSendOtp(cleanMobile: string): Promise<{ allowed: boolean; retr
       return NextResponse.json({
         success: true,
         found: true,
-        expiresIn: 300,
+        expiresIn,
         message: 'کد تأیید ۵ رقمی به شماره همراه شما پیامک شد.',
       });
     }
@@ -427,19 +308,23 @@ async function canSendOtp(cleanMobile: string): Promise<{ allowed: boolean; retr
     if (action === 'verify_recovery_otp') {
       const { mobile, code } = body;
       const clean = normalizeMobile(mobile);
-      const cleanCode = String(code || '').replace(/[^0-9]/g, '');
 
-      if (!clean || !cleanCode) {
+      if (!clean || !code) {
         return NextResponse.json({ success: false, error: 'شماره همراه و کد تأیید الزامی است.' }, { status: 400 });
       }
 
-      const verifyRes = await verifyRecoveryOtp(clean, cleanCode);
+      const verifyRes = await verifyOtp({
+        mobile: clean,
+        code: String(code),
+        purpose: 'recovery',
+      });
+
       if (!verifyRes.success) {
         return NextResponse.json({ success: false, error: verifyRes.error }, { status: 400 });
       }
 
-      const caseCode = verifyRes.caseCode!;
-      const caseRecord = (await getCaseByCode(caseCode)) || (await getCaseByMobile(clean));
+      const caseCode = typeof verifyRes.metadata?.caseCode === 'string' ? verifyRes.metadata.caseCode : undefined;
+      const caseRecord = (caseCode ? await getCaseByCode(caseCode) : null) || (await getCaseByMobile(clean));
       if (!caseRecord) {
         return NextResponse.json({ success: false, error: 'پرونده با این کد یافت نشد.' }, { status: 404 });
       }
@@ -627,8 +512,9 @@ async function canSendOtp(cleanMobile: string): Promise<{ allowed: boolean; retr
     }
 
     return NextResponse.json({ error: 'عملیات نامعتبر است' }, { status: 400 });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : 'Server error';
     console.error('Error in /api/cases POST:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
