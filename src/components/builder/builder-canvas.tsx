@@ -26,7 +26,8 @@ import {
   Calendar,
   CalendarCheck,
   CalendarOff,
-  Clock
+  Clock,
+  Pencil
 } from 'lucide-react';
 import { widgetDefinitions } from './widget-palette';
 import { toPersianDigits } from '@/lib/persian';
@@ -38,8 +39,10 @@ interface BuilderCanvasProps {
   onUpdateForm: (updated: Partial<Form>) => void;
   onSelectFieldForEdit: (field: FormField) => void;
   onOpenWidgetPalette: (targetIndex?: number, targetPanelId?: string) => void;
-  onQuickAddField: (type: FieldType, targetIndex?: number, targetPanelId?: string) => void;
+  onQuickAddField: (type: FieldType, targetIndex?: number, targetPanelId?: string, targetStepId?: string) => void;
   onPreview: () => void;
+  activeStepIndex?: number;
+  onActiveStepChange?: (index: number) => void;
 }
 
 export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
@@ -50,8 +53,33 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
   onOpenWidgetPalette,
   onQuickAddField,
   onPreview,
+  activeStepIndex: controlledActiveStepIndex,
+  onActiveStepChange,
 }) => {
-  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [internalActiveStepIndex, setInternalActiveStepIndex] = useState(0);
+  const activeStepIndex = controlledActiveStepIndex !== undefined ? controlledActiveStepIndex : internalActiveStepIndex;
+  const setActiveStepIndex = (idx: number) => {
+    setInternalActiveStepIndex(idx);
+    if (onActiveStepChange) onActiveStepChange(idx);
+  };
+
+  const activeStep = form.mode === 'wizard' && form.steps && form.steps.length > 0 
+    ? form.steps[activeStepIndex] 
+    : null;
+
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const [editingStepTitle, setEditingStepTitle] = useState('');
+
+  const handleSaveStepTitle = (idx: number) => {
+    const trimmed = editingStepTitle.trim();
+    if (trimmed && form.steps && form.steps[idx]) {
+      const updatedSteps = form.steps.map((s, i) =>
+        i === idx ? { ...s, title: trimmed } : s
+      );
+      onUpdateForm({ steps: updatedSteps });
+    }
+    setEditingStepIndex(null);
+  };
   const [viewportMode, setViewportMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
@@ -209,7 +237,7 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
 
       // اگر از پالت ابزارک درگ شده باشد
       if (parsed.type === 'new-widget' && parsed.widgetType) {
-        onQuickAddField(parsed.widgetType, dropIndex, targetPanelId);
+        onQuickAddField(parsed.widgetType, dropIndex, targetPanelId, activeStep?.id);
         return;
       }
 
@@ -312,7 +340,15 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
       const newFields = form.fields.map((f) =>
         f.stepId === stepToDelete.id ? { ...f, stepId: newSteps[0].id } : f
       );
-      onUpdateForm({ steps: newSteps, fields: newFields });
+      const deletedFieldIds = stepToDelete.fieldIds || [];
+      const updatedSteps = newSteps.map((s, idx) => {
+        if (idx === 0) {
+          const currentIds = s.fieldIds || [];
+          return { ...s, fieldIds: [...currentIds, ...deletedFieldIds] };
+        }
+        return s;
+      });
+      onUpdateForm({ steps: updatedSteps, fields: newFields });
       setActiveStepIndex(Math.max(0, stepIdx - 1));
     }
   };
@@ -325,20 +361,46 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
     };
   };
 
-  const activeStep = form.mode === 'wizard' && form.steps && form.steps.length > 0 
-    ? form.steps[activeStepIndex] 
-    : null;
-
   const displayedFields = useMemo(() => {
     if (form.mode !== 'wizard' || !activeStep) return form.fields;
-    if (activeStep.fieldIds && activeStep.fieldIds.length > 0) {
-      const mapped = activeStep.fieldIds
-        .map((fId) => form.fields.find((f) => f.id === fId))
-        .filter(Boolean) as FormField[];
-      if (mapped.length > 0) return mapped;
+    
+    // ۱. فیلدهایی که دقیقاً به این مرحله تعلق دارند (از طریق stepId یا قرار داشتن در fieldIds مرحله)
+    const matchingFields = form.fields.filter((f) => {
+      if (f.stepId && f.stepId === activeStep.id) return true;
+      if (activeStep.fieldIds && activeStep.fieldIds.includes(f.id)) return true;
+      return false;
+    });
+
+    // ۲. فیلدهای بدون مرحله (جهت سازگاری و جلوگیری از مفقود شدن فیلدهای قبلی در فرم)
+    const unassignedFields = form.fields.filter((f) => {
+      const hasStepId = !!f.stepId;
+      const inAnyStep = form.steps?.some((s) => s.fieldIds && s.fieldIds.includes(f.id));
+      return !hasStepId && !inAnyStep;
+    });
+
+    let combined = [...matchingFields];
+    if (unassignedFields.length > 0) {
+      if (matchingFields.length === 0 || activeStepIndex === (form.steps?.length || 1) - 1) {
+        combined = [...combined, ...unassignedFields];
+      }
     }
-    return form.fields.filter((f) => !f.stepId || f.stepId === activeStep.id);
-  }, [form.mode, activeStep, form.fields]);
+
+    if (combined.length > 0) {
+      if (activeStep.fieldIds && activeStep.fieldIds.length > 0) {
+        return combined.sort((a, b) => {
+          const idxA = activeStep.fieldIds!.indexOf(a.id);
+          const idxB = activeStep.fieldIds!.indexOf(b.id);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1;
+          if (idxB !== -1) return 1;
+          return 0;
+        });
+      }
+      return combined;
+    }
+
+    return [];
+  }, [form.mode, activeStep, activeStepIndex, form.fields, form.steps]);
 
   const viewportWidthClass = {
     desktop: 'max-w-4xl',
@@ -469,40 +531,111 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
             {(form.steps || []).map((step, idx) => (
               <div
                 key={step.id}
-                draggable
-                onDragStart={(e) => handleStepDragStart(e, idx)}
+                draggable={editingStepIndex !== idx}
+                onDragStart={(e) => {
+                  if (editingStepIndex === idx) return;
+                  handleStepDragStart(e, idx);
+                }}
                 onDragOver={(e) => handleStepDragOver(e, idx)}
                 onDrop={(e) => handleStepDrop(e, idx)}
                 onDragEnd={handleStepDragEnd}
-                className={`flex items-center rounded-lg border text-xs font-medium transition-all shrink-0 cursor-grab active:cursor-grabbing select-none ${
+                className={`flex items-center rounded-lg border text-xs font-medium transition-all shrink-0 select-none ${
+                  editingStepIndex === idx
+                    ? 'border-blue-500 ring-2 ring-blue-300 shadow-md bg-white'
+                    : 'cursor-grab active:cursor-grabbing'
+                } ${
                   dragOverStepIndex === idx ? 'border-dashed border-blue-500 ring-2 ring-blue-300 scale-105 shadow-md' : ''
                 } ${
                   draggingStepIndex === idx ? 'opacity-40' : ''
                 } ${
-                  activeStepIndex === idx
+                  editingStepIndex !== idx && activeStepIndex === idx
                     ? 'bg-slate-900 text-white border-slate-900 shadow-xs font-bold'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    : editingStepIndex !== idx
+                    ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    : ''
                 }`}
-                title="برای جابجایی این مرحله، آن را بگیرید و بکشید (Drag & Drop)"
+                title="برای جابجایی بکشید | برای تغییر عنوان دوبار کلیک یا آیکون مداد را بزنید"
               >
                 <div className="pr-2 pl-0.5 text-slate-400 hover:text-slate-600 flex items-center">
                   <GripVertical className="w-3.5 h-3.5" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveStepIndex(idx)}
-                  className="pr-1 pl-3.5 py-2"
-                >
-                  {step.title}
-                </button>
-                {form.steps.length > 1 && (
+
+                {editingStepIndex === idx ? (
+                  <div className="flex items-center gap-1 px-1 py-1" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      value={editingStepTitle}
+                      onChange={(e) => setEditingStepTitle(e.target.value)}
+                      onBlur={() => handleSaveStepTitle(idx)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSaveStepTitle(idx);
+                        } else if (e.key === 'Escape') {
+                          setEditingStepIndex(null);
+                        }
+                      }}
+                      autoFocus
+                      className="px-2 py-0.5 text-xs font-bold rounded border border-blue-500 bg-white text-slate-900 focus:outline-none ring-1 ring-blue-400 min-w-[120px] max-w-[200px]"
+                      placeholder="عنوان مرحله..."
+                    />
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSaveStepTitle(idx);
+                      }}
+                      className="p-1 text-emerald-600 hover:text-emerald-700 rounded cursor-pointer"
+                      title="ذخیره عنوان (Enter)"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => setActiveStepIndex(idx)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setEditingStepIndex(idx);
+                        setEditingStepTitle(step.title);
+                      }}
+                      className="pr-1 pl-1.5 py-2 cursor-pointer text-right"
+                      title="کلیک برای انتخاب | دوبار کلیک برای ویرایش عنوان"
+                    >
+                      {step.title}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveStepIndex(idx);
+                        setEditingStepIndex(idx);
+                        setEditingStepTitle(step.title);
+                      }}
+                      className={`p-1 pl-1.5 rounded transition-colors cursor-pointer ${
+                        activeStepIndex === idx
+                          ? 'text-slate-400 hover:text-white'
+                          : 'text-slate-400 hover:text-slate-700'
+                      }`}
+                      title="ویرایش عنوان این مرحله"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                {form.steps.length > 1 && editingStepIndex !== idx && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteStep(idx);
                     }}
-                    className="p-1.5 hover:text-rose-400 border-r border-slate-200/50"
+                    className={`p-1.5 hover:text-rose-400 border-r ${
+                      activeStepIndex === idx ? 'border-slate-700' : 'border-slate-200/50'
+                    }`}
                     title="حذف مرحله"
                   >
                     ✕
@@ -925,6 +1058,7 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
                                 receiptTitle={field.bankCardData?.receiptTitle}
                                 enableAppShortcuts={field.bankCardData?.enableAppShortcuts !== false}
                                 allowedApps={field.bankCardData?.allowedApps}
+                                customLinks={field.bankCardData?.customLinks}
                                 enableTrackingCode={field.bankCardData?.enableTrackingCode !== false}
                                 requireTrackingCode={Boolean(field.bankCardData?.requireTrackingCode)}
                                 trackingCodeTitle={field.bankCardData?.trackingCodeTitle}

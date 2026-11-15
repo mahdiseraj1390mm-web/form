@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { getBankByKey, detectBankFromCardNumber, cleanCardNumber, formatCardNumberPersian } from '@/lib/iran-banks';
 import { toPersianDigits, formatCurrency } from '@/lib/persian';
+import { CustomPaymentLink } from '@/types/form';
 
 export interface BankReceiptRecord {
   name: string;
@@ -246,6 +247,7 @@ interface BankCardDisplayProps {
   // افزوده شده: تنظیمات اپلیکیشن‌های پرداخت و کد رهگیری
   enableAppShortcuts?: boolean;
   allowedApps?: string[];
+  customLinks?: CustomPaymentLink[];
   enableTrackingCode?: boolean;
   requireTrackingCode?: boolean;
   trackingCodeTitle?: string;
@@ -278,6 +280,7 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
   showContainerBorder = true,
   enableAppShortcuts = true,
   allowedApps,
+  customLinks = [],
   enableTrackingCode = true,
   requireTrackingCode = false,
   trackingCodeTitle,
@@ -298,9 +301,10 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
   // محاسبه عددی مبلغ
   const parsedAmount = amountValue ? Number(amountValue.replace(/[^\d]/g, '')) : 0;
 
-  // وضعیت دستیار هوشمند انتقال وجه به اپلیکیشن
+  // وضعیت دستیار هوشمند انتقال وجه به اپلیکیشن یا لینک وب
   const [activeAssistant, setActiveAssistant] = useState<{
-    app: PaymentAppInfo;
+    app?: PaymentAppInfo;
+    customLink?: CustomPaymentLink;
     deepLinkScheme: string;
     androidIntent: string;
     cleanCard: string;
@@ -381,6 +385,60 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
     }
   };
 
+  // کپی خودکار شماره کارت، جایگزینی متغیرها در لینک و باز کردن درگاه یا سامانه کارت‌به‌کارت وب
+  const handleLaunchCustomLink = (link: CustomPaymentLink) => {
+    if (isReadOnly) return;
+    const clean = cleanCardNumber(cardNumber);
+    if (!clean) return;
+
+    const amountTomans = parsedAmount || 0;
+    const amountRials = amountTomans * 10;
+
+    // ۱. کپی خودکار شماره ۱۶ رقمی کارت مقصد در کلیپ‌بورد
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+
+    // ۲. جایگزینی متغیرهای احتمالی در URL (مبلغ، کارت و...)
+    let finalUrl = (link.url || '').trim();
+    if (!/^https?:\/\//i.test(finalUrl) && !/^[a-z0-9+.-]+:\/\//i.test(finalUrl)) {
+      finalUrl = 'https://' + finalUrl;
+    }
+    finalUrl = finalUrl
+      .replace(/\{card\}/gi, clean)
+      .replace(/\{cardNumber\}/gi, clean)
+      .replace(/\{destCard\}/gi, clean)
+      .replace(/\{amount\}/gi, String(amountTomans || ''))
+      .replace(/\{amountTomans\}/gi, String(amountTomans || ''))
+      .replace(/\{amountRials\}/gi, String(amountRials || ''));
+
+    // ۳. نمایش اعلان کپی شماره کارت
+    setLaunchedToast({
+      appName: link.title,
+      message: 'شماره کارت ۱۶ رقمی در حافظه کپی شد و سامانه پرداخت در برگه جدید باز گردید.',
+    });
+
+    // ۴. باز کردن لینک در تب جدید
+    if (typeof window !== 'undefined') {
+      window.open(finalUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    // ۵. فعال‌سازی پنجره دستیار با قابلیت کپی مجدد و ثبت کد پیگیری
+    setActiveAssistant({
+      customLink: link,
+      deepLinkScheme: finalUrl,
+      androidIntent: '',
+      cleanCard: clean,
+      amountTomans,
+      amountRials,
+      copiedCard: true,
+      copiedAmountTomans: false,
+      copiedAmountRials: false,
+    });
+  };
+
   // متد کپی مبلغ به تومان
   const copyAmountTomans = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -407,9 +465,17 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
     }
   };
 
-  // فراخوانی دستی یا مجدد اپلیکیشن از درون پنجره راهنما
+  // فراخوانی دستی یا مجدد اپلیکیشن یا لینک از درون پنجره راهنما
   const handleLaunchDirectly = () => {
     if (!activeAssistant) return;
+    if (activeAssistant.customLink) {
+      if (typeof window !== 'undefined' && activeAssistant.deepLinkScheme) {
+        window.open(activeAssistant.deepLinkScheme, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
+    const targetApp = activeAssistant.app;
+    if (!targetApp) return;
     if (typeof window !== 'undefined') {
       const ua = navigator.userAgent || '';
       const isAndroid = /Android/i.test(ua);
@@ -420,7 +486,7 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
       } else if (isMobile && activeAssistant.deepLinkScheme) {
         window.location.href = activeAssistant.deepLinkScheme;
       } else {
-        window.open(activeAssistant.app.webUrl || activeAssistant.app.bazaarUrl, '_blank', 'noopener,noreferrer');
+        window.open(targetApp.webUrl || targetApp.bazaarUrl, '_blank', 'noopener,noreferrer');
       }
     }
   };
@@ -813,45 +879,73 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
               </div>
             </div>
 
-            {/* نوار پرش مستقیم به اپلیکیشن‌های پرداخت و همراه بانک */}
-            {enableAppShortcuts && (
-              <div className="w-full max-w-sm mt-3 pt-3 border-t border-amber-200/80 space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <Smartphone className="w-3.5 h-3.5 text-amber-600" />
-                    <span>انتقال مستقیم با اپلیکیشن‌ها:</span>
-                  </span>
-                  <span className="text-[10px] text-amber-800 bg-amber-100 font-bold px-2 py-0.5 rounded-full border border-amber-200">
-                    تزریق خودکار کارت و مبلغ
-                  </span>
-                </div>
+            {/* نوار پرش مستقیم به اپلیکیشن‌های پرداخت و همراه بانک یا لینک‌های اختصاصی */}
+            {((enableAppShortcuts && activePaymentApps.length > 0) || (customLinks && customLinks.some(l => l.enabled !== false && l.title && l.url))) && (
+              <div className="w-full max-w-sm mt-3 pt-3 border-t border-amber-200/80 space-y-2.5">
+                {enableAppShortcuts && activePaymentApps.length > 0 && (
+                  <>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
+                        <Smartphone className="w-3.5 h-3.5 text-amber-600" />
+                        <span>انتقال مستقیم با اپلیکیشن‌ها:</span>
+                      </span>
+                      <span className="text-[10px] text-amber-800 bg-amber-100 font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                        تزریق خودکار کارت و مبلغ
+                      </span>
+                    </div>
 
-                {/* دکمه‌های شکیل اپلیکیشن‌ها */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                  {activePaymentApps.map((app) => (
-                    <button
-                      key={app.id}
-                      type="button"
-                      disabled={isReadOnly}
-                      onClick={() => handleLaunchApp(app)}
-                      className={`px-2 py-2 rounded-xl border text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${app.badgeColor}`}
-                      title={`انتقال کارت به کارت در ${app.name} با مبلغ و شماره کارت`}
-                    >
-                      <span className={`w-2 h-2 rounded-full ${app.dotColor} shrink-0`} />
-                      <span className="truncate">{app.shortName}</span>
-                      <ArrowUpRight className="w-3 h-3 opacity-60 shrink-0" />
-                    </button>
-                  ))}
-                </div>
+                    {/* دکمه‌های شکیل اپلیکیشن‌ها */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      {activePaymentApps.map((app) => (
+                        <button
+                          key={app.id}
+                          type="button"
+                          disabled={isReadOnly}
+                          onClick={() => handleLaunchApp(app)}
+                          className={`px-2 py-2 rounded-xl border text-[11px] font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${app.badgeColor}`}
+                          title={`انتقال کارت به کارت در ${app.name} با مبلغ و شماره کارت`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${app.dotColor} shrink-0`} />
+                          <span className="truncate">{app.shortName}</span>
+                          <ArrowUpRight className="w-3 h-3 opacity-60 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
 
-                {/* بنر راهنمای بازخورد هنگام کلیک روی اپلیکیشن */}
+                {/* لینک‌های پرداخت و کارت‌به‌کارت سفارشی (مانند قبضینو، زیبال و...) */}
+                {customLinks && customLinks.some(l => l.enabled !== false && l.title && l.url) && (
+                  <div className="space-y-1.5 pt-0.5">
+                    {customLinks
+                      .filter((l) => l.enabled !== false && l.title && l.url)
+                      .map((link) => (
+                        <button
+                          key={link.id}
+                          type="button"
+                          disabled={isReadOnly}
+                          onClick={() => handleLaunchCustomLink(link)}
+                          className="w-full px-3 py-2.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 via-white to-amber-50/70 hover:from-amber-100/90 hover:to-orange-100 text-amber-950 font-bold text-xs flex items-center justify-between transition-all cursor-pointer active:scale-98 shadow-2xs group"
+                          title={`انتقال وجه از طریق ${link.title}`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 group-hover:scale-125 transition-transform" />
+                            <span className="truncate">{link.title}</span>
+                          </div>
+                          <ArrowUpRight className="w-3.5 h-3.5 text-amber-700 shrink-0 opacity-70 group-hover:opacity-100 group-hover:-translate-x-0.5 transition-all" />
+                        </button>
+                      ))}
+                  </div>
+                )}
+
+                {/* بنر راهنمای بازخورد هنگام کلیک روی اپلیکیشن یا لینک */}
                 {launchedToast && (
                   <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-[11px] flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div className="leading-relaxed flex-1">
                       <span className="font-bold block text-slate-800">شماره کارت در حافظه کپی شد</span>
                       <span className="text-[10px] text-slate-600 block mt-0.5 leading-relaxed">
-                        در حال فراخوانی {launchedToast.appName}... لطفاً پس از کارت‌به‌کارت در اپلیکیشن، کد رهگیری را در کادر زیر وارد فرمایید.
+                        {launchedToast.message || `در حال باز کردن ${launchedToast.appName}... پس از انتقال، کد رهگیری را در کادر زیر وارد فرمایید.`}
                       </span>
                     </div>
                     <button
@@ -1191,16 +1285,18 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
                 <div
-                  className={`w-9 h-9 rounded-xl bg-gradient-to-br ${activeAssistant.app.gradient} text-white grid place-items-center font-bold text-xs shadow-xs`}
+                  className={`w-9 h-9 rounded-xl ${activeAssistant.app ? `bg-gradient-to-br ${activeAssistant.app.gradient}` : 'bg-gradient-to-br from-amber-500 to-orange-600'} text-white grid place-items-center font-bold text-xs shadow-xs`}
                 >
-                  <Smartphone className="w-4 h-4" />
+                  {activeAssistant.customLink ? <ExternalLink className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />}
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 leading-tight">
-                    انتقال مستقیم با {activeAssistant.app.name}
+                    {activeAssistant.customLink ? activeAssistant.customLink.title : (activeAssistant.app?.name || 'انتقال وجه')}
                   </h3>
                   <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">
-                    تزریق خودکار کارت مقصد و مبلغ به اپلیکیشن
+                    {activeAssistant.customLink
+                      ? 'کپی خودکار شماره کارت و هدایت به سامانه پرداخت'
+                      : 'تزریق خودکار کارت مقصد و مبلغ به اپلیکیشن'}
                   </span>
                 </div>
               </div>
@@ -1354,32 +1450,45 @@ export const BankCardDisplay: React.FC<BankCardDisplayProps> = ({
                 onClick={handleLaunchDirectly}
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-black text-xs shadow-md shadow-amber-900/10 flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
               >
-                <ArrowUpRight className="w-4 h-4" />
-                <span>ورود مستقیم به {activeAssistant.app.name}</span>
+                {activeAssistant.customLink ? (
+                  <>
+                    <ExternalLink className="w-4 h-4" />
+                    <span>ورود به {activeAssistant.customLink.title}</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpRight className="w-4 h-4" />
+                    <span>ورود مستقیم به {activeAssistant.app?.name || 'اپلیکیشن'}</span>
+                  </>
+                )}
               </button>
 
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                {activeAssistant.app.webUrl && (
-                  <a
-                    href={activeAssistant.app.webUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold flex items-center justify-center gap-1 transition-colors"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                    <span>نسخه تحت وب</span>
-                  </a>
-                )}
-                <a
-                  href={activeAssistant.app.bazaarUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold flex items-center justify-center gap-1 transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5 text-slate-500" />
-                  <span>دانلود از کافه بازار</span>
-                </a>
-              </div>
+              {activeAssistant.app && (
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  {activeAssistant.app.webUrl && (
+                    <a
+                      href={activeAssistant.app.webUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                      <span>نسخه تحت وب</span>
+                    </a>
+                  )}
+                  {activeAssistant.app.bazaarUrl && (
+                    <a
+                      href={activeAssistant.app.bazaarUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5 text-slate-500" />
+                      <span>دانلود از کافه بازار</span>
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* دکمه بستن و ادامه فرم */}

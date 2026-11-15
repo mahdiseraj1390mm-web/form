@@ -1072,6 +1072,18 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           prefilled = JSON.parse(stored);
         }
       } catch (e) {}
+
+      // بررسی پارامترهای بازگشتی از درگاه پرداخت یا لینک سفارشی
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refId = urlParams.get('refId') || urlParams.get('trackingCode') || urlParams.get('track_id') || urlParams.get('authority') || urlParams.get('ReferenceId') || urlParams.get('saleOrderId');
+        if (refId) {
+          const bankCardField = form.fields.find((f) => f.type === 'bankCard');
+          if (bankCardField) {
+            prefilled[`${bankCardField.id}_tracking_code`] = refId;
+          }
+        }
+      } catch (e) {}
     }
     if (initialFormData) {
       prefilled = { ...prefilled, ...initialFormData };
@@ -1582,16 +1594,45 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
   const currentStepFields = useMemo(() => {
     if (!currentStep) return form.fields;
 
-    // اگر مرحله لیست مشخصی از فیلدها دارد
-    if (currentStep.fieldIds && currentStep.fieldIds.length > 0) {
-      return currentStep.fieldIds
-        .map((fid) => form.fields.find((f) => f.id === fid))
-        .filter((f): f is FormField => !!f);
+    // ۱. فیلدهایی که دقیقاً به این مرحله تعلق دارند (از طریق stepId یا قرار داشتن در fieldIds مرحله)
+    const matchingFields = form.fields.filter((f) => {
+      if (f.stepId && f.stepId === currentStep.id) return true;
+      if (currentStep.fieldIds && currentStep.fieldIds.includes(f.id)) return true;
+      return false;
+    });
+
+    // ۲. فیلدهای بدون مرحله (جهت سازگاری با فیلدهایی که کاربر قبلاً ایجاد کرده و شناسه مرحله نگرفته بودند)
+    const unassignedFields = form.fields.filter((f) => {
+      const hasStepId = !!f.stepId;
+      const inAnyStep = form.steps?.some((s) => s.fieldIds && s.fieldIds.includes(f.id));
+      return !hasStepId && !inAnyStep;
+    });
+
+    let combined = [...matchingFields];
+
+    // اگر فیلد بدون مرحله‌ای در فرم وجود دارد، در صورتی که این مرحله خالی باشد یا آخرین مرحله باشد به آن الحاق شود
+    if (unassignedFields.length > 0) {
+      if (matchingFields.length === 0 || currentStepIndex === (form.steps?.length || 1) - 1) {
+        combined = [...combined, ...unassignedFields];
+      }
     }
 
-    // فیلتر فیلدهایی که متعلق به این مرحله هستند
-    return form.fields.filter((f) => f.stepId === currentStep.id);
-  }, [currentStep, form.fields]);
+    if (combined.length > 0) {
+      if (currentStep.fieldIds && currentStep.fieldIds.length > 0) {
+        return combined.sort((a, b) => {
+          const idxA = currentStep.fieldIds!.indexOf(a.id);
+          const idxB = currentStep.fieldIds!.indexOf(b.id);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1;
+          if (idxB !== -1) return 1;
+          return 0;
+        });
+      }
+      return combined;
+    }
+
+    return [];
+  }, [currentStep, currentStepIndex, form.fields, form.steps]);
 
   // تقسیم فیلدها به صفحات بر اساس حالت تک‌سوالی یا دکمه‌های شکست صفحه (pageBreakAfter)
   const isSingleQuestionMode = form.mode === 'singleQuestion';
@@ -3938,6 +3979,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     onReceiptChange={(receipt) => handleFieldChange(`${field.id}_receipt`, receipt)}
                     enableAppShortcuts={field.bankCardData?.enableAppShortcuts !== false}
                     allowedApps={field.bankCardData?.allowedApps}
+                    customLinks={field.bankCardData?.customLinks}
                     enableTrackingCode={field.bankCardData?.enableTrackingCode !== false}
                     requireTrackingCode={Boolean(field.bankCardData?.requireTrackingCode)}
                     trackingCodeTitle={field.bankCardData?.trackingCodeTitle}

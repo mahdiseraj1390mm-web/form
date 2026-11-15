@@ -40,6 +40,7 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
   const [targetInsertIndex, setTargetInsertIndex] = useState<number | undefined>(undefined);
   const [targetPanelId, setTargetPanelId] = useState<string | undefined>(undefined);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
 
   if (!activeForm) {
     return (
@@ -59,9 +60,16 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
     setMobileTab('palette');
   };
 
-  const handleQuickAddField = (type: FieldType, targetIndex?: number, panelId?: string) => {
+  const handleQuickAddField = (type: FieldType, targetIndex?: number, panelId?: string, targetStepId?: string) => {
     const finalIndex = targetIndex !== undefined ? targetIndex : targetInsertIndex;
     const finalPanelId = panelId || targetPanelId || activeForm.panels?.[0]?.id || 'p_1';
+    
+    // شناسایی مرحله فعال فرم چند مرحله‌ای
+    const activeStep = activeForm.mode === 'wizard' && activeForm.steps && activeForm.steps.length > 0
+      ? (targetStepId ? activeForm.steps.find((s) => s.id === targetStepId) : activeForm.steps[activeStepIndex])
+      : null;
+    const finalStepId = targetStepId || activeStep?.id;
+
     const widgetDef = widgetDefinitions.find((w) => w.type === type);
     const newField: FormField = {
       id: `f_${Date.now()}`,
@@ -70,6 +78,7 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
       placeholder: type === 'bankCard' ? 'مثال: ۵۰,۰۰۰' : '',
       helpText: type === 'bankCard' ? 'در صورت تمایل، می‌توانید مبلغی را به عنوان هدیه یا مشارکت اختیاری واریز فرمایید' : '',
       panelId: finalPanelId,
+      stepId: finalStepId,
       gridCols: 12,
       validations: {},
       bankCardData: type === 'bankCard' ? {
@@ -100,7 +109,25 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
       newFields.push(newField);
     }
 
-    updateForm(activeForm.id, { fields: newFields });
+    // به‌روزرسانی fieldIds در مرحله مربوطه
+    let updatedSteps = activeForm.steps;
+    if (finalStepId && updatedSteps) {
+      updatedSteps = updatedSteps.map((s) => {
+        if (s.id === finalStepId) {
+          const currentFieldIds = s.fieldIds || [];
+          return {
+            ...s,
+            fieldIds: currentFieldIds.includes(newField.id) ? currentFieldIds : [...currentFieldIds, newField.id],
+          };
+        }
+        return s;
+      });
+    }
+
+    updateForm(activeForm.id, { 
+      fields: newFields,
+      ...(updatedSteps ? { steps: updatedSteps } : {}),
+    });
     setEditingField(newField);
     setTargetInsertIndex(undefined);
     setTargetPanelId(undefined);
@@ -118,7 +145,17 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
 
   const handleDeleteField = (fieldId: string) => {
     const newFields = activeForm.fields.filter((f) => f.id !== fieldId);
-    updateForm(activeForm.id, { fields: newFields });
+    let updatedSteps = activeForm.steps;
+    if (updatedSteps) {
+      updatedSteps = updatedSteps.map((s) => ({
+        ...s,
+        fieldIds: (s.fieldIds || []).filter((id) => id !== fieldId),
+      }));
+    }
+    updateForm(activeForm.id, { 
+      fields: newFields,
+      ...(updatedSteps ? { steps: updatedSteps } : {}),
+    });
     setEditingField(null);
   };
 
@@ -135,7 +172,22 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
     const idx = activeForm.fields.findIndex((f) => f.id === field.id);
     const newFields = [...activeForm.fields];
     newFields.splice(idx >= 0 ? idx + 1 : newFields.length, 0, duplicate);
-    updateForm(activeForm.id, { fields: newFields });
+    
+    let updatedSteps = activeForm.steps;
+    if (field.stepId && updatedSteps) {
+      updatedSteps = updatedSteps.map((s) => {
+        if (s.id === field.stepId) {
+          const cIds = s.fieldIds || [];
+          return { ...s, fieldIds: [...cIds, duplicate.id] };
+        }
+        return s;
+      });
+    }
+
+    updateForm(activeForm.id, { 
+      fields: newFields,
+      ...(updatedSteps ? { steps: updatedSteps } : {}),
+    });
     setEditingField(duplicate);
   };
 
@@ -312,6 +364,8 @@ export const Studio: React.FC<StudioProps> = ({ onPreview }) => {
                 onOpenWidgetPalette={handleOpenPaletteWithTarget}
                 onQuickAddField={handleQuickAddField}
                 onPreview={onPreview}
+                activeStepIndex={activeStepIndex}
+                onActiveStepChange={setActiveStepIndex}
               />
             </div>
           </>

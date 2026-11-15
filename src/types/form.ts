@@ -136,6 +136,13 @@ export interface AppointmentData {
   topicSchedules?: Record<string, AppointmentData>; // ساعات کاری تفکیک‌شده به ازای هر موضوع مشاوره (مثلاً کودک، نوجوان و...)
 }
 
+export interface CustomPaymentLink {
+  id: string;
+  title: string; // عنوان لینک (مثلاً: انتقال وجه با قبضینو یا لینک درگاه زیبال)
+  url: string; // آدرس اینترنتی لینک (URL)
+  enabled?: boolean; // فعال یا غیرفعال بودن دکمه
+}
+
 export interface BankCardData {
   cardNumber?: string; // شماره ۱۶ رقمی کارت
   cardHolder?: string; // نام صاحب کارت / نام فرد
@@ -152,6 +159,7 @@ export interface BankCardData {
   receiptTitle?: string; // عنوان کادر آپلود فیش
   enableAppShortcuts?: boolean; // فعال‌سازی دکمه‌های پرش به اپلیکیشن‌های پرداخت (آپ، تاپ و...)
   allowedApps?: string[]; // لیست شناسه‌های اپلیکیشن‌های فعال ('up' | 'top' | 'hamrahcard' | 'blubank' | 'sekkeh')
+  customLinks?: CustomPaymentLink[]; // لیست لینک‌های سفارشی پرداخت یا کارت به کارت (قبضینو، زرین‌پال، زیبال و...)
   enableTrackingCode?: boolean; // فعال/غیرفعال کردن فیلد کد رهگیری
   requireTrackingCode?: boolean; // الزامی بودن ثبت کد رهگیری / شماره پیگیری
   trackingCodeTitle?: string; // عنوان فیلد کد رهگیری بانکی
