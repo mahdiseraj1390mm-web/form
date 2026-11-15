@@ -875,6 +875,32 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     return () => clearInterval(interval);
   }, [forgotCountdown]);
 
+  // دریافت و پر کردن خودکار کد یکبارمصرف از طریق WebOTP API در مرورگرهای موبایل
+  useEffect(() => {
+    if (forgotStep !== 'otp') return;
+    if (typeof window === 'undefined' || !('OTPCredential' in window)) return;
+
+    const ac = new AbortController();
+    navigator.credentials
+      ?.get({
+        otp: { transport: ['sms'] },
+        signal: ac.signal,
+      } as any)
+      .then((otp: any) => {
+        if (otp?.code) {
+          const cleanCode = toEnglishDigits(String(otp.code).replace(/[^0-9]/g, ''));
+          if (cleanCode) {
+            setForgotOtpInput(cleanCode);
+          }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      ac.abort();
+    };
+  }, [forgotStep]);
+
   // ۱. ارسال پیامک کد یکبارمصرف به شماره مراجع جهت بازیابی
   const handleSendRecoveryOtp = async (targetMobile?: string) => {
     const rawMobile = targetMobile || forgotMobileInput;
@@ -2875,7 +2901,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                       کد تأیید ۵ رقمی به شماره <span className="font-mono font-bold text-blue-900" dir="ltr">{forgotMobileInput}</span> ارسال شد.
                     </p>
                     <p className="text-[11px] text-amber-900 bg-amber-50/95 py-2 px-3 rounded-xl border border-amber-300/80 leading-relaxed font-medium">
-                      📌 <strong>توجه:</strong> لطفاً کد ۵ رقمی پیامک‌شده (که با عبارت «کد مشاوره شما:...» برایتان ارسال شده) را در کادر زیر وارد نمایید. این کد، رمز موقت یک‌بارمصرف جهت تأیید هویت و نمایش شماره پرونده اصلی شماست.
+                      📌 <strong>توجه:</strong> لطفاً کد تأیید ۵ رقمی پیامک‌شده را در کادر زیر وارد نمایید (این کد جهت تأیید هویت و نمایش شماره پرونده شماست).
                     </p>
                     <div>
                       <button
@@ -2897,6 +2923,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                       <input
                         type="text"
                         autoFocus
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        pattern="[0-9]*"
                         maxLength={5}
                         value={forgotOtpInput}
                         onChange={(e) => {

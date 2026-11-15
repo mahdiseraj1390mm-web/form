@@ -399,7 +399,7 @@ export async function sendRecoveryOtpSms(clientMobile: string, code: string): Pr
   const pattern = (settings.patterns as any)?.recovery_otp;
   const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.RECOVERY_OTP;
 
-  const fallbackText = `با سلام\nکد تأیید شما: ${code} می باشد\nاعتبار: ۲ دقیقه\n\nسایت روانشناسی بالحق`;
+  const fallbackText = `کد تأیید شما در بالحق: ${code}\nاعتبار: ۲ دقیقه\n\n@psy-belhagh.com #${code}`;
 
   return sendSharedPatternSms(
     standardTo,
