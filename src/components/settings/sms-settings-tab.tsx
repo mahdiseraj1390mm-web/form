@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Smartphone, 
   Key, 
   Send, 
   CheckCircle2, 
@@ -11,11 +10,9 @@ import {
   RefreshCw, 
   MessageSquare, 
   Clock, 
-  Check, 
   ShieldCheck, 
-  FileText,
-  Copy,
-  Info
+  Info, 
+  PlusCircle
 } from 'lucide-react';
 import { SmsSettings, SmsLogEntry } from '@/lib/sms-service';
 
@@ -37,12 +34,22 @@ export const SmsSettingsTab: React.FC = () => {
 
   // بارگذاری تنظیمات و لاگ‌ها
   const loadData = async () => {
-    setIsLoading(true);
     try {
       const res = await fetch('/api/settings/sms');
       const data = await res.json();
-      if (data.success) {
-        setSettings(data.settings);
+      if (data.success && data.settings) {
+        // تضمین وجود الگوی ۴ در سرور
+        const currentPatterns = data.settings.patterns || {};
+        if (!currentPatterns.recovery_otp) {
+          currentPatterns.recovery_otp = {
+            bodyId: 568830,
+            title: 'پیامک کد تأیید یکبارمصرف (OTP)',
+            description: 'ارسال کد تأیید ۵ رقمی به مراجع جهت بازیابی شماره پرونده',
+            template: 'کد تأیید شما در بالحق: {0}\nاعتبار: ۲ دقیقه\n\n@psy-belhagh.com #{0}',
+            variables: ['{0}: کد تأیید'],
+          };
+        }
+        setSettings({ ...data.settings, patterns: currentPatterns });
         setLogs(data.logs || []);
       }
     } catch (err) {
@@ -53,8 +60,59 @@ export const SmsSettingsTab: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    let ignore = false;
+    fetch('/api/settings/sms')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!ignore && data.success && data.settings) {
+          const currentPatterns = data.settings.patterns || {};
+          if (!currentPatterns.recovery_otp) {
+            currentPatterns.recovery_otp = {
+              bodyId: 568830,
+              title: 'پیامک کد تأیید یکبارمصرف (OTP)',
+              description: 'ارسال کد تأیید ۵ رقمی به مراجع جهت بازیابی شماره پرونده',
+              template: 'کد تأیید شما در بالحق: {0}\nاعتبار: ۲ دقیقه\n\n@psy-belhagh.com #{0}',
+              variables: ['{0}: کد تأیید'],
+            };
+          }
+          setSettings({ ...data.settings, patterns: currentPatterns });
+          setLogs(data.logs || []);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) console.error('Failed to load SMS settings:', err);
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
+
+  // افزودن یا فعال‌سازی باکس الگوی ۴ (OTP)
+  const handleAddRecoveryOtpBox = () => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      patterns: {
+        ...settings.patterns,
+        recovery_otp: {
+          bodyId: settings.patterns.recovery_otp?.bodyId || 568830,
+          title: 'پیامک کد تأیید یکبارمصرف (OTP)',
+          description: 'ارسال کد تأیید ۵ رقمی به مراجع جهت بازیابی شماره پرونده',
+          template: settings.patterns.recovery_otp?.template || 'کد تأیید شما در بالحق: {0}\nاعتبار: ۲ دقیقه\n\n@psy-belhagh.com #{0}',
+          variables: ['{0}: کد تأیید'],
+        },
+      },
+    });
+    setSaveStatus({
+      type: 'success',
+      message: 'باکس الگوی ۴ (کد یکبارمصرف OTP) با موفقیت فعال شد. لطفاً کد الگوی جدید را وارد کرده و دکمه سبز «ذخیره تغییرات الگوها» را بزنید.',
+    });
+    setTimeout(() => setSaveStatus(null), 5000);
+  };
 
   // ذخیره تنظیمات در دیتابیس
   const handleSave = async () => {
@@ -74,8 +132,9 @@ export const SmsSettingsTab: React.FC = () => {
       } else {
         setSaveStatus({ type: 'error', message: data.error || 'خطا در ذخیره تنظیمات' });
       }
-    } catch (err: any) {
-      setSaveStatus({ type: 'error', message: err.message || 'خطا در ارتباط با سرور' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'خطا در ارتباط با سرور';
+      setSaveStatus({ type: 'error', message: msg });
     } finally {
       setIsSaving(false);
     }
@@ -122,10 +181,11 @@ export const SmsSettingsTab: React.FC = () => {
           [patternKey]: { success: false, message: data.result?.providerResponse?.code ? `کد خطای پنل: ${data.result.providerResponse.code}` : 'ارسال ناموفق بود. اعتبار یا تنظیمات وب‌سرویس را چک کنید.' },
         }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'خطا در برقراری ارتباط';
       setTestResults((prev) => ({
         ...prev,
-        [patternKey]: { success: false, message: err.message || 'خطا در برقراری ارتباط' },
+        [patternKey]: { success: false, message: msg },
       }));
     } finally {
       setTestingKey(null);
@@ -231,7 +291,7 @@ export const SmsSettingsTab: React.FC = () => {
 
       {/* ۲. ویرایشگر قالب‌ها و الگوهای پیامک */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-emerald-600" />
@@ -242,15 +302,28 @@ export const SmsSettingsTab: React.FC = () => {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition-all active:scale-95 disabled:opacity-50 cursor-pointer text-xs"
-          >
-            {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>ذخیره تغییرات الگوها</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {!settings.patterns.recovery_otp && (
+              <button
+                type="button"
+                onClick={handleAddRecoveryOtpBox}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer text-xs"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>➕ ایجاد باکس ۴ (کد OTP)</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition-all active:scale-95 disabled:opacity-50 cursor-pointer text-xs"
+            >
+              {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>ذخیره تغییرات الگوها</span>
+            </button>
+          </div>
         </div>
 
         {/* لیست الگوها */}
@@ -667,6 +740,27 @@ export const SmsSettingsTab: React.FC = () => {
                   </span>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* کارت ایجاد باکس ۴ در صورت عدم وجود در سرور */}
+          {!settings.patterns.recovery_otp && (
+            <div className="bg-amber-50/90 border-2 border-dashed border-amber-300 rounded-2xl p-6 text-center space-y-3">
+              <div className="flex items-center justify-center gap-2 text-amber-900 font-extrabold text-sm">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <span>باکس الگوی ۴ (کد تأیید یکبارمصرف OTP) در تنظیمات سرور شما موجود نیست</span>
+              </div>
+              <p className="text-xs text-amber-800 max-w-md mx-auto leading-relaxed">
+                جهت تنظیم شناسه الگوی جدید ملی‌پیامک (Body ID) و متن پیامک بازیابی پرونده، روی دکمه زیر کلیک فرمایید تا باکس ۴ بلافاصله در این پنل فعال شود.
+              </p>
+              <button
+                type="button"
+                onClick={handleAddRecoveryOtpBox}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl shadow transition-all cursor-pointer active:scale-95"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>➕ ایجاد و اضافه کردن باکس ۴ (کد OTP)</span>
+              </button>
             </div>
           )}
         </div>

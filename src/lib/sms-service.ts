@@ -11,6 +11,37 @@ export const DEFAULT_PATTERN_IDS = {
   RECOVERY_OTP: 568830,           // تایید هویت / کد تایید بازیابی پرونده
 };
 
+export const DEFAULT_PATTERNS: SmsSettings['patterns'] = {
+  case_registration: {
+    bodyId: DEFAULT_PATTERN_IDS.CASE_REGISTRATION,
+    title: 'پیامک صدور کد پرونده',
+    description: 'ارسال کد پرونده اختصاصی به مراجع',
+    template: 'با سلام\nکد مشاوره شما: {0} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق',
+    variables: ['{0}: کد مشاوره'],
+  },
+  appointment_client: {
+    bodyId: DEFAULT_PATTERN_IDS.APPOINTMENT_CLIENT,
+    title: 'پیامک تأیید نوبت مراجع',
+    description: 'ارسال مشخصات نوبت رزرو شده به شماره همراه مراجع',
+    template: 'سلام {0} عزیز نوبت مشاوره شما با موفقیت ثبت شد. نام مشاور: {1} ساعت نوبت: {2} تاریخ نوبت: {3} لطفاً در زمان تعیین‌شده با مشاور تماس بگیرید. سایت روانشناسی بالحق psy-belhagh',
+    variables: ['{0}: نام مراجع', '{1}: نام مشاور', '{2}: ساعت نوبت', '{3}: تاریخ نوبت'],
+  },
+  appointment_counselor: {
+    bodyId: DEFAULT_PATTERN_IDS.APPOINTMENT_COUNSELOR,
+    title: 'پیامک اطلاع‌رسانی نوبت مشاور',
+    description: 'ارسال مشخصات نوبت جدید مراجع به تلفن مشاور',
+    template: 'مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد. نام مراجعه کننده: {0} استان: {1} شهر: {2} شماره تماس: {3} تاریخ نوبت: {4} ساعت نوبت: {5} psy-belhagh',
+    variables: ['{0}: نام مراجعه‌کننده', '{1}: استان', '{2}: شهر', '{3}: شماره تماس', '{4}: تاریخ نوبت', '{5}: ساعت نوبت'],
+  },
+  recovery_otp: {
+    bodyId: DEFAULT_PATTERN_IDS.RECOVERY_OTP,
+    title: 'پیامک کد تأیید یکبارمصرف (OTP)',
+    description: 'ارسال کد تأیید ۵ رقمی به مراجع جهت بازیابی شماره پرونده',
+    template: 'کد تأیید شما در بالحق: {0}\nاعتبار: ۲ دقیقه\n\n@psy-belhagh.com #{0}',
+    variables: ['{0}: کد تأیید'],
+  },
+};
+
 export interface SmsPatternConfig {
   bodyId: number;
   title: string;
@@ -35,13 +66,13 @@ export interface SmsSettings {
 export interface SmsLogEntry {
   id: string;
   timestamp: string;
-  type: 'case_registration' | 'appointment_client' | 'appointment_counselor' | string;
+  type: 'case_registration' | 'appointment_client' | 'appointment_counselor' | 'recovery_otp' | string;
   recipient: string;
   bodyId: number;
   args: string[];
   message: string;
   status: 'sent' | 'failed' | 'simulated';
-  providerResponse?: any;
+  providerResponse?: unknown;
 }
 
 const SMS_SETTINGS_PATH = path.join(process.cwd(), 'data', 'sms_settings.json');
@@ -51,45 +82,42 @@ const SMS_LOG_PATH = path.join(process.cwd(), 'data', 'sms_logs.json');
  * دریافت تنظیمات زنده پیامک از فایل دیتابیس یا مقادیر پیش‌فرض
  */
 export async function getSmsSettings(): Promise<SmsSettings> {
+  let loadedSettings: SmsSettings | null = null;
   try {
     const fileData = await fs.readFile(SMS_SETTINGS_PATH, 'utf8');
     const parsed = JSON.parse(fileData);
     if (parsed && parsed.patterns) {
-      return parsed;
+      loadedSettings = parsed;
     }
   } catch {
     // بازگشت مقدار پیش‌فرض
   }
 
-  return {
-    provider: 'melipayamak',
-    username: MELIPAYAMAK_USERNAME,
-    password: MELIPAYAMAK_PASSWORD,
-    senderNumber: '50004',
-    patterns: {
-      case_registration: {
-        bodyId: DEFAULT_PATTERN_IDS.CASE_REGISTRATION,
-        title: 'پیامک صدور کد پرونده',
-        description: 'ارسال کد پرونده اختصاصی به مراجع',
-        template: 'با سلام\nکد مشاوره شما: {0} می باشد\nلطفا این کد را ذخیره بفرمایید\nنوبت دهی ها و تست های روانشناسی بالحق با این کد انجام خواهد شد\n\nسایت روانشناسی بالحق',
-        variables: ['{0}: کد مشاوره'],
-      },
-      appointment_client: {
-        bodyId: DEFAULT_PATTERN_IDS.APPOINTMENT_CLIENT,
-        title: 'پیامک تأیید نوبت مراجع',
-        description: 'ارسال مشخصات نوبت رزرو شده به شماره همراه مراجع',
-        template: 'سلام {0} عزیز نوبت مشاوره شما با موفقیت ثبت شد. نام مشاور: {1} ساعت نوبت: {2} تاریخ نوبت: {3} لطفاً در زمان تعیین‌شده با مشاور تماس بگیرید. سایت روانشناسی بالحق psy-belhagh',
-        variables: ['{0}: نام مراجع', '{1}: نام مشاور', '{2}: ساعت نوبت', '{3}: تاریخ نوبت'],
-      },
-      appointment_counselor: {
-        bodyId: DEFAULT_PATTERN_IDS.APPOINTMENT_COUNSELOR,
-        title: 'پیامک اطلاع‌رسانی نوبت مشاور',
-        description: 'ارسال مشخصات نوبت جدید مراجع به تلفن مشاور',
-        template: 'مشاور محترم، یک نوبت مشاوره جدید برای شما ثبت شد. نام مراجعه کننده: {0} استان: {1} شهر: {2} شماره تماس: {3} تاریخ نوبت: {4} ساعت نوبت: {5} psy-belhagh',
-        variables: ['{0}: نام مراجعه‌کننده', '{1}: استان', '{2}: شهر', '{3}: شماره تماس', '{4}: تاریخ نوبت', '{5}: ساعت نوبت'],
-      },
-    },
+  // ادغام هوشمند الگوها تا در صورت استقرار روی سرور با فایل‌های قدیمی، هیچ الگویی به خصوص recovery_otp گم نشود
+  const mergedPatterns: SmsSettings['patterns'] = {
+    ...DEFAULT_PATTERNS,
+    ...(loadedSettings?.patterns || {}),
   };
+
+  // تضمین وجود قطعی recovery_otp حتی اگر در فایل سرور قبلاً ذخیره نشده بود
+  if (!mergedPatterns.recovery_otp) {
+    mergedPatterns.recovery_otp = { ...DEFAULT_PATTERNS.recovery_otp! };
+  }
+
+  const finalSettings: SmsSettings = {
+    provider: loadedSettings?.provider || 'melipayamak',
+    username: loadedSettings?.username || MELIPAYAMAK_USERNAME,
+    password: loadedSettings?.password || MELIPAYAMAK_PASSWORD,
+    senderNumber: loadedSettings?.senderNumber || '50004001449093',
+    patterns: mergedPatterns,
+  };
+
+  // اگر فایل ذخیره‌شده قدیمی بود و recovery_otp نداشت، فایل را خودکار به‌روزرسانی و ترمیم می‌کنیم
+  if (!loadedSettings || !loadedSettings.patterns?.recovery_otp) {
+    saveSmsSettings(finalSettings).catch(() => {});
+  }
+
+  return finalSettings;
 }
 
 /**
@@ -133,11 +161,11 @@ export async function sendDirectTextSms(
   to: string,
   text: string,
   type: SmsLogEntry['type']
-): Promise<{ success: boolean; response?: any }> {
+): Promise<{ success: boolean; response?: unknown }> {
   const cleanTo = to.replace(/[^0-9]/g, '');
   const standardTo = cleanTo.startsWith('98') ? '0' + cleanTo.slice(2) : cleanTo;
 
-  let providerResponse: any = null;
+  let providerResponse: unknown = null;
   let isSuccess = false;
 
   const settings = await getSmsSettings();
@@ -175,8 +203,8 @@ export async function sendDirectTextSms(
       const code = errMatch ? errMatch[1] : resText;
       providerResponse = { status: 'failed', code };
     }
-  } catch (err: any) {
-    providerResponse = { error: err.message };
+  } catch (err: unknown) {
+    providerResponse = { error: err instanceof Error ? err.message : String(err) };
   }
 
   await logSms({
@@ -204,12 +232,12 @@ export async function sendSharedPatternSms(
   args: string[],
   type: SmsLogEntry['type'],
   fallbackMessage: string
-): Promise<{ success: boolean; response?: any }> {
+): Promise<{ success: boolean; response?: unknown }> {
   // پاک‌سازی شماره تماس به استاندارد ۱۱ رقمی (شروع با ۰۹)
   const cleanTo = to.replace(/[^0-9]/g, '');
   const standardTo = cleanTo.startsWith('98') ? '0' + cleanTo.slice(2) : cleanTo;
 
-  let providerResponse: any = null;
+  let providerResponse: unknown = null;
   let isSuccess = false;
 
   // بارگذاری اعتبار پنل از تنظیمات زنده سیستم
@@ -249,8 +277,8 @@ export async function sendSharedPatternSms(
       const code = errMatch ? errMatch[1] : resText;
       providerResponse = { status: 'failed', code };
     }
-  } catch (err: any) {
-    providerResponse = { error: err.message };
+  } catch (err: unknown) {
+    providerResponse = { error: err instanceof Error ? err.message : String(err) };
   }
 
   // ثبت در فایل لاگ سیستم
@@ -278,7 +306,7 @@ export async function sendSmartSms(
   args: string[],
   type: SmsLogEntry['type'],
   exactMessage: string
-): Promise<{ success: boolean; response?: any }> {
+): Promise<{ success: boolean; response?: unknown }> {
   // ۱. تلاش با ارسال مستقیم متن دقیق
   const directRes = await sendDirectTextSms(to, exactMessage, type);
   if (directRes.success) {
@@ -292,7 +320,7 @@ export async function sendSmartSms(
 /**
  * ۱. پیامک کد پرونده پس از ثبت نام مراجع (الگوی تایید شده ۵۶۸۸۳۰ یا تنظیم‌شده در پنل)
  */
-export async function sendCaseRegistrationSms(clientMobile: string, caseCode: string): Promise<any> {
+export async function sendCaseRegistrationSms(clientMobile: string, caseCode: string): Promise<{ success: boolean; response?: unknown }> {
   const settings = await getSmsSettings();
   const pattern = settings.patterns.case_registration;
   const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.CASE_REGISTRATION;
@@ -321,7 +349,7 @@ export async function sendAppointmentClientSms(
     date: string;
     time: string;
   }
-): Promise<any> {
+): Promise<{ success: boolean; response?: unknown }> {
   const clientName = details.clientName || 'مُراجع';
   const counselorName = details.counselorName || 'مشاور مرکز';
   const date = details.date || 'تعیین‌شده';
@@ -360,7 +388,7 @@ export async function sendAppointmentCounselorSms(
     date: string;
     time: string;
   }
-): Promise<any> {
+): Promise<{ success: boolean; response?: unknown }> {
   const clientName = details.clientName || 'مُراجع محترم';
   const province = details.province || 'مشخص‌نشده';
   const city = details.city || 'مشخص‌نشده';
@@ -391,12 +419,12 @@ export async function sendAppointmentCounselorSms(
  * ۴. پیامک کد یکبارمصرف تأیید هویت و بازیابی کد پرونده
  * ارسال از طریق وب‌سرویس پترن خدماتی اشتراکی (SendByBaseNumber2) جهت تحویل آنی و عبور قطعی از بلک‌لیست
  */
-export async function sendRecoveryOtpSms(clientMobile: string, code: string): Promise<any> {
+export async function sendRecoveryOtpSms(clientMobile: string, code: string): Promise<{ success: boolean; response?: unknown }> {
   const cleanTo = clientMobile.replace(/[^0-9]/g, '');
   const standardTo = cleanTo.startsWith('98') ? '0' + cleanTo.slice(2) : cleanTo;
 
   const settings = await getSmsSettings();
-  const pattern = (settings.patterns as any)?.recovery_otp;
+  const pattern = settings.patterns.recovery_otp;
   const bodyId = pattern?.bodyId || DEFAULT_PATTERN_IDS.RECOVERY_OTP;
 
   const fallbackText = `کد تأیید شما در بالحق: ${code}\nاعتبار: ۲ دقیقه\n\n@psy-belhagh.com #${code}`;
