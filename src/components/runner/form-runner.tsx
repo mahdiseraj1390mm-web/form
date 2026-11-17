@@ -3788,6 +3788,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                     key={field.id}
                     field={field}
                     value={formData[field.id]}
+                    formData={formData}
                     onChange={(val, meta) => {
                       handleFieldChange(field.id, val);
                       if (meta) {

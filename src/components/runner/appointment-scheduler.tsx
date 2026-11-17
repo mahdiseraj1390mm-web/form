@@ -49,7 +49,38 @@ interface AppointmentSchedulerProps {
   ) => void;
   themeColor?: string;
   error?: string;
+  formData?: Record<string, any>;
 }
+
+/**
+ * استخراج امن اجزای نوبت رزرو شده از رشته ترکیبی نوبت
+ */
+export const parseBookingValue = (
+  value: any
+): { topic?: string; counselor?: string; slot?: string } | null => {
+  if (!value || typeof value !== 'string') return null;
+
+  const parts = value.split('|').map((p) => p.trim());
+  let topic: string | undefined;
+  let counselor: string | undefined;
+  let slot: string | undefined;
+
+  for (const part of parts) {
+    if (part.startsWith('موضوع:')) {
+      topic = part.replace(/^موضوع:\s*/, '').trim();
+    } else if (part.startsWith('مشاور:')) {
+      counselor = part.replace(/^مشاور:\s*/, '').trim();
+    } else if (part.startsWith('نوبت:')) {
+      slot = part.replace(/^نوبت:\s*/, '').trim();
+    }
+  }
+
+  if (!slot && !topic && !counselor) {
+    slot = value.trim();
+  }
+
+  return { topic, counselor, slot };
+};
 
 const WEEK_DAYS = [
   { index: 0, name: 'شنبه' },
@@ -99,6 +130,7 @@ export const isOptionForDay = (optionLabel: string, dayIndex: number): boolean =
 export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   field,
   value,
+  formData,
   onChange,
   themeColor = '#00897b',
   error,
@@ -108,6 +140,17 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     () => (counselingTopics && counselingTopics.length > 0 ? counselingTopics : COUNSELING_TOPICS),
     [counselingTopics]
   );
+
+  // محاسبه روزهای هفته جاری بر مبنای تقویم شمسی
+  const today = useMemo(() => new Date(), []);
+  const todayPersianDayIndex = (today.getDay() + 1) % 7;
+
+  const currentWeekSaturday = useMemo(() => {
+    const sat = new Date(today);
+    sat.setDate(today.getDate() - todayPersianDayIndex);
+    sat.setHours(0, 0, 0, 0);
+    return sat;
+  }, [today, todayPersianDayIndex]);
 
   // بررسی حالت چندمشاوره‌ای (رزرو نوبت منحصراً از میان مشاوران تعریف‌شده در سامانه امکان‌پذیر است)
   const selectedConsultants = useMemo(() => {
@@ -158,9 +201,101 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     return Array.from(set);
   }, [selectedConsultants]);
 
-  // وضعیت‌های انتخاب مراجع در حالت چندمشاوره‌ای
-  const [selectedTopicId, setSelectedTopicId] = useState<string>('');
-  const [selectedConsultantId, setSelectedConsultantId] = useState<string>('');
+  // استخراج و بازیابی وضعیت‌های قبلی (موضوع، مشاور، روز و نوبت) از روی مقدار ذخیره‌شده
+  const restoredBooking = useMemo(() => {
+    const parsed = parseBookingValue(value);
+    const rawTopic = formData?.topic || formData?.f_topic || parsed?.topic;
+    const rawCounselor =
+      formData?.counselorId ||
+      formData?.counselorField ||
+      parsed?.counselor ||
+      formData?.counselorName ||
+      formData?.f_counselor;
+    const rawSlot =
+      parsed?.slot ||
+      formData?.f_booking_slot ||
+      (!parsed?.topic && !parsed?.counselor && typeof value === 'string' ? value : '');
+
+    let foundTopicId = '';
+    if (rawTopic) {
+      if (availableTopicIds.includes(rawTopic)) {
+        foundTopicId = rawTopic;
+      } else {
+        const norm = normalizeCounselingTopicId(rawTopic, counselingTopics);
+        const match = availableTopicIds.find((topId) => {
+          if (topId === rawTopic || normalizeCounselingTopicId(topId, counselingTopics) === norm) return true;
+          const tObj = allTopicsList.find(
+            (t) => t.id === topId || t.name === topId || (Array.isArray(t.keywords) && t.keywords.includes(topId))
+          );
+          return tObj?.name === rawTopic || tObj?.id === rawTopic;
+        });
+        if (match) {
+          foundTopicId = match;
+        } else {
+          const topicObj = matchCounselingTopic(rawTopic, counselingTopics);
+          if (topicObj && availableTopicIds.includes(topicObj.id)) {
+            foundTopicId = topicObj.id;
+          }
+        }
+      }
+    }
+
+    let foundConsultantId = '';
+    if (rawCounselor && selectedConsultants.length > 0) {
+      const match = selectedConsultants.find((c) => {
+        if (c.consultantId === rawCounselor) return true;
+        if (c.consultantName === rawCounselor) return true;
+        if (cleanConsultantName(c.consultantName) === cleanConsultantName(rawCounselor)) return true;
+        const dispName = formatConsultantDisplayName(c.consultantName, c.genderPrefix);
+        if (dispName === rawCounselor) return true;
+        if (
+          rawCounselor.includes(cleanConsultantName(c.consultantName)) ||
+          cleanConsultantName(c.consultantName).includes(cleanConsultantName(rawCounselor))
+        ) {
+          return true;
+        }
+        return false;
+      });
+      if (match) {
+        foundConsultantId = match.consultantId;
+      }
+    }
+
+    let detectedDay: number | null = null;
+    let detectedWeek = 0;
+    if (rawSlot) {
+      const dIdx = detectDayIndex(rawSlot);
+      if (dIdx >= 0 && dIdx <= 6) {
+        detectedDay = dIdx;
+      }
+
+      if (detectedDay !== null) {
+        const nextWeekSat = new Date(currentWeekSaturday);
+        nextWeekSat.setDate(currentWeekSaturday.getDate() + 7);
+        const nextWeekDayDate = new Date(nextWeekSat);
+        nextWeekDayDate.setDate(nextWeekSat.getDate() + detectedDay);
+        const nextWeekFormatted = new Intl.DateTimeFormat('fa-IR', {
+          day: 'numeric',
+          month: 'short',
+        }).format(nextWeekDayDate);
+
+        if (rawSlot.includes(nextWeekFormatted)) {
+          detectedWeek = 1;
+        }
+      }
+    }
+
+    return {
+      topicId: foundTopicId,
+      consultantId: foundConsultantId,
+      dayIndex: detectedDay,
+      weekOffset: detectedWeek,
+    };
+  }, [value, formData, availableTopicIds, selectedConsultants, allTopicsList, counselingTopics, currentWeekSaturday]);
+
+  // وضعیت‌های انتخاب مراجع در حالت چندمشاوره‌ای با بازیابی خودکار
+  const [selectedTopicId, setSelectedTopicId] = useState<string>(() => restoredBooking.topicId || '');
+  const [selectedConsultantId, setSelectedConsultantId] = useState<string>(() => restoredBooking.consultantId || '');
 
   // انتخاب خودکار در صورت تک‌موضوع یا تک‌مشاور
   useEffect(() => {
@@ -189,17 +324,29 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       const topicSched = getScheduleForTopic(c.customWorkingHours, selectedTopicId);
       return Array.isArray(topicSched?.availableDays) && topicSched.availableDays.length > 0;
     });
-  }, [selectedConsultants, selectedTopicId]);
+  }, [selectedConsultants, selectedTopicId, counselingTopics]);
 
   useEffect(() => {
     if (hasMultiConsultantMode) {
       if (consultantsForTopic.length === 1 && !selectedConsultantId) {
         setSelectedConsultantId(consultantsForTopic[0].consultantId);
       } else if (selectedConsultantId && !consultantsForTopic.some((c) => c.consultantId === selectedConsultantId)) {
-        setSelectedConsultantId(consultantsForTopic[0]?.consultantId || '');
+        if (!restoredBooking.consultantId || restoredBooking.consultantId !== selectedConsultantId) {
+          setSelectedConsultantId(consultantsForTopic[0]?.consultantId || '');
+        }
       }
     }
-  }, [hasMultiConsultantMode, consultantsForTopic, selectedConsultantId]);
+  }, [hasMultiConsultantMode, consultantsForTopic, selectedConsultantId, restoredBooking.consultantId]);
+
+  // بازیابی وضعیت در صورت لود دیرهنگام اعضا یا موضوعات
+  useEffect(() => {
+    if (restoredBooking.topicId && !selectedTopicId) {
+      setSelectedTopicId(restoredBooking.topicId);
+    }
+    if (restoredBooking.consultantId && !selectedConsultantId) {
+      setSelectedConsultantId(restoredBooking.consultantId);
+    }
+  }, [restoredBooking.topicId, restoredBooking.consultantId, selectedTopicId, selectedConsultantId]);
 
   // مشاور فعال انتخابی
   const activeConsultantConfig = useMemo(() => {
@@ -267,21 +414,10 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
   }, [appointmentConfig, field.options, hasMultiConsultantMode]);
 
   // هفته انتخابی برای رزرو نوبت (۰ = هفته جاری، ۱ = هفته آینده، و ...)
-  const [weekOffset, setWeekOffset] = useState<number>(0);
+  const [weekOffset, setWeekOffset] = useState<number>(() => restoredBooking.weekOffset || 0);
 
   // نوبت‌های رزرو شده در پایگاه داده
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
-
-  // محاسبه روزهای هفته جاری و هفته‌های بعد بر مبنای تقویم شمسی
-  const today = useMemo(() => new Date(), []);
-  const todayPersianDayIndex = (today.getDay() + 1) % 7;
-
-  const currentWeekSaturday = useMemo(() => {
-    const sat = new Date(today);
-    sat.setDate(today.getDate() - todayPersianDayIndex);
-    sat.setHours(0, 0, 0, 0);
-    return sat;
-  }, [today, todayPersianDayIndex]);
 
   const weekSaturday = useMemo(() => {
     const sat = new Date(currentWeekSaturday);
@@ -328,13 +464,32 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
     return `${weekDaysWithDates[0].dateFormatted} تا ${weekDaysWithDates[6].dateFormatted}`;
   }, [weekDaysWithDates]);
 
-  // روز پیش‌فرض انتخابی
+  // روز پیش‌فرض انتخابی با در نظر گرفتن نوبت بازیابی‌شده
   const initialDay = useMemo(() => {
+    if (restoredBooking.dayIndex !== null && restoredBooking.dayIndex !== undefined) {
+      const restoredInfo = weekDaysWithDates.find((d) => d.index === restoredBooking.dayIndex);
+      if (restoredInfo?.isSelectable) {
+        return restoredBooking.dayIndex;
+      }
+    }
     const firstSelectable = weekDaysWithDates.find((d) => d.isSelectable);
     return firstSelectable ? firstSelectable.index : (availableDays[0] ?? 0);
-  }, [weekDaysWithDates, availableDays]);
+  }, [weekDaysWithDates, availableDays, restoredBooking.dayIndex]);
 
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(initialDay);
+
+  // بازیابی روز و هفته نوبت در صورت تغییر یا بارگذاری اولیه
+  useEffect(() => {
+    if (restoredBooking.dayIndex !== null && restoredBooking.dayIndex !== undefined && value) {
+      const restoredInfo = weekDaysWithDates.find((d) => d.index === restoredBooking.dayIndex);
+      if (restoredInfo?.isSelectable && selectedDayIndex !== restoredBooking.dayIndex) {
+        setSelectedDayIndex(restoredBooking.dayIndex);
+      }
+    }
+    if (restoredBooking.weekOffset !== undefined && restoredBooking.weekOffset !== weekOffset && value) {
+      setWeekOffset(restoredBooking.weekOffset);
+    }
+  }, [restoredBooking.dayIndex, restoredBooking.weekOffset, value, weekDaysWithDates, selectedDayIndex, weekOffset]);
 
   useEffect(() => {
     const counselorParam = selectedConsultantId
