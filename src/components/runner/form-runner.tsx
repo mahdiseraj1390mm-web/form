@@ -63,7 +63,7 @@ import {
   getFieldDisplayValue
 } from '@/lib/persian';
 import { extractBookingDetails } from '@/lib/belhagh-sms-helper';
-import { matchTimeRanges, extractTimeRange, detectDayIndex } from '@/lib/consultant-helpers';
+import { matchTimeRanges, extractTimeRange, detectDayIndex, isSlotConflict } from '@/lib/consultant-helpers';
 import { iranProvinces } from '@/lib/iran-geo';
 import { PaymentModal } from './payment-modal';
 import { AppointmentScheduler } from './appointment-scheduler';
@@ -1502,6 +1502,43 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   };
 
+  // هدایت خودکار کاربر به مرحله و فیلد دارای خطا و اسکرول نرم به آن
+  const navigateToFieldError = (fieldId: string) => {
+    if (!fieldId) return;
+
+    // ۱. در صورت فعال بودن حالت ویزارد، تعیین مرحله مربوط به این فیلد و هدایت خودکار کاربر به آن مرحله
+    if (form.mode === 'wizard' && form.steps && form.steps.length > 0) {
+      const targetStepIdx = form.steps.findIndex(
+        (s) =>
+          (s.fieldIds && s.fieldIds.includes(fieldId)) ||
+          s.id === form.fields.find((f) => f.id === fieldId)?.stepId
+      );
+      if (targetStepIdx !== -1 && targetStepIdx !== currentStepIndex) {
+        setCurrentStepIndex(targetStepIdx);
+        setInternalPageIndex(0);
+      }
+    }
+
+    // ۲. اسکرول خودکار و روان به محل المان خطا و ایجاد انیمیشن فوکوس واضح
+    setTimeout(() => {
+      const el =
+        document.getElementById(`field-${fieldId}`) ||
+        document.getElementById('field-f_booking') ||
+        document.getElementById('field-f_booking_slot') ||
+        document.getElementById(`field-${fieldId.replace(/^f_/, '')}`);
+
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-rose-500', 'transition-all');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-rose-500');
+        }, 2500);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 120);
+  };
+
   // اعتبارسنجی فیلدهای مرحله فعلی یا کل فرم
   const validateFields = (fieldsToValidate: FormField[]): boolean => {
     const newErrors: Record<string, string> = {};
@@ -1601,12 +1638,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     setErrors(newErrors);
     const errKeys = Object.keys(newErrors);
     if (errKeys.length > 0) {
-      setTimeout(() => {
-        const el = document.getElementById(`field-${errKeys[0]}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 60);
+      navigateToFieldError(errKeys[0]);
       return false;
     }
     return true;
@@ -1723,6 +1755,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           ...prev,
           f_mobile: 'شما قبلاً ثبت نام کرده اید و باید شماره پرونده را بازیابی کنید',
         }));
+        navigateToFieldError('f_mobile');
         return true;
       }
     } catch (err) {
@@ -1741,9 +1774,59 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       if (mobileVal) {
         const isDuplicate = await checkDuplicateMobile(mobileVal);
         if (isDuplicate) {
-          const el = document.getElementById('field-f_mobile');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          navigateToFieldError('f_mobile');
           return;
+        }
+      }
+    }
+
+    // بررسی انتخاب نوبت و عدم تداخل آن در مرحله نوبت‌دهی قبل از عبور به مرحله بعد
+    const bookingFieldInStep = currentStepFields.find((f) => f.type === 'appointmentBooking');
+    if (bookingFieldInStep && (form.id === 'form-belhagh-booking' || form.slug === '3uu4z')) {
+      let selectedSlotVal = '';
+      let bookingCounselorId = '';
+
+      if (formData.f_booking_slot) {
+        selectedSlotVal = String(formData.f_booking_slot).trim();
+      } else if (formData.f_booking) {
+        const raw = String(formData.f_booking);
+        selectedSlotVal = raw.includes('نوبت:') ? raw.split('نوبت:')[1]?.trim() : raw.trim();
+      }
+
+      if (formData.counselorId) {
+        bookingCounselorId = String(formData.counselorId).trim();
+      } else if (formData.counselorField) {
+        bookingCounselorId = String(formData.counselorField).trim();
+      }
+
+      if (!selectedSlotVal) {
+        setErrors((prev) => ({
+          ...prev,
+          [bookingFieldInStep.id]: '⚠️ انتخاب روز و ساعت جلسه مشاوره الزامی است. لطفاً حتماً یکی از زمان‌های آزاد مشاور را انتخاب فرمایید.',
+        }));
+        navigateToFieldError(bookingFieldInStep.id);
+        return;
+      }
+
+      if (bookingCounselorId && selectedSlotVal) {
+        try {
+          const checkRes = await fetch(`/api/cases?action=booked_slots&formId=form-belhagh-booking&counselorField=${encodeURIComponent(bookingCounselorId)}`);
+          const checkData = await checkRes.json();
+          if (checkData.success && Array.isArray(checkData.bookedSlots)) {
+            const conflict = checkData.bookedSlots.some((b: string) =>
+              isSlotConflict(b, selectedSlotVal)
+            );
+            if (conflict) {
+              setErrors((prev) => ({
+                ...prev,
+                [bookingFieldInStep.id]: '⚠️ این نوبت هم‌اکنون توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
+              }));
+              navigateToFieldError(bookingFieldInStep.id);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('Check booked slots on next step error:', e);
         }
       }
     }
@@ -1798,10 +1881,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           step4Errors[fid] = 'تکمیل تمام بخش‌های مرحله چهارم الزامی است (در صورت عدم سابقه بنویسید «ندارم»).';
         });
         setErrors((prev) => ({ ...prev, ...step4Errors }));
-        setTimeout(() => {
-          const el = document.getElementById(`field-${emptyStep4[0]}`);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 60);
+        navigateToFieldError(emptyStep4[0]);
         return;
       }
     }
@@ -1819,8 +1899,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           const isDuplicate = await checkDuplicateMobile(mobileVal);
           if (isDuplicate) {
             setIsSubmitting(false);
-            const el = document.getElementById('field-f_mobile');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            navigateToFieldError('f_mobile');
             return;
           }
         }
@@ -1851,10 +1930,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             ...prev,
             [errKey]: '⚠️ انتخاب روز و ساعت جلسه مشاوره الزامی است. لطفاً حتماً یکی از زمان‌های آزاد مشاور را انتخاب فرمایید.',
           }));
-          setTimeout(() => {
-            const el = document.getElementById(`field-${errKey}`);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 60);
+          navigateToFieldError(errKey);
           return;
         }
       }
@@ -1896,13 +1972,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             const checkData = await checkRes.json();
             if (checkData.success && Array.isArray(checkData.bookedSlots)) {
               const conflict = checkData.bookedSlots.some((b: string) => {
-                if (!b) return false;
-                if (b === selectedSlotVal || selectedSlotVal.includes(b) || b.includes(selectedSlotVal)) return true;
-                const bTime = extractTimeRange(b);
-                const sTime = extractTimeRange(selectedSlotVal);
-                const bDay = detectDayIndex(b);
-                const sDay = detectDayIndex(selectedSlotVal);
-                return bDay === sDay && matchTimeRanges(bTime, sTime);
+                return isSlotConflict(b, selectedSlotVal);
               });
 
               if (conflict) {
@@ -1911,8 +1981,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   ...prev,
                   [errorFieldKey]: '⚠️ این نوبت هم‌اکنون توسط مراجع دیگری رزرو شده است. لطفاً نوبت آزاد دیگری را انتخاب فرمایید.',
                 }));
-                const el = document.getElementById(`field-${errorFieldKey}`) || document.getElementById('field-f_booking');
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                navigateToFieldError(errorFieldKey);
                 return;
               }
             }
@@ -4040,7 +4109,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
                   />
                 )}
 
-                {hasError && (
+                {hasError && field.type !== 'appointmentBooking' && (
                   <div className="pt-1">
                     <div className="text-xs text-rose-600 font-bold flex items-center gap-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200">
                       <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />

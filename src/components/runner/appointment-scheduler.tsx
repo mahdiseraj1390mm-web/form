@@ -25,13 +25,14 @@ import {
   isConsultantMember, 
   cleanConsultantName, 
   getScheduleForTopic, 
-  matchCounselingTopic,
+  matchCounselingTopic, 
   normalizeCounselingTopicId,
   hasConsultantActiveSchedule,
   formatConsultantDisplayName,
   matchTimeRanges,
   extractTimeRange,
-  detectDayIndex
+  detectDayIndex,
+  isSlotConflict
 } from '@/lib/consultant-helpers';
 
 interface AppointmentSchedulerProps {
@@ -597,15 +598,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         const isTaken = bookedSlots.some((b) => {
           if (!b) return false;
           if (b === fullLabel || b === optId) return true;
-          if (dayDateFormatted && b.includes(dayDateFormatted) && (b.includes(timeRange) || matchTimeRanges(extractTimeRange(b), timeRange))) {
-            return true;
-          }
-          if (weekOffset === 0 && !b.includes('آبان') && !b.includes('آذر') && !b.includes('دی') && !b.includes('بهمن') && !b.includes('اسفند') && !b.includes('فروردین') && !b.includes('اردیبهشت') && !b.includes('خرداد') && !b.includes('تیر') && !b.includes('مرداد') && !b.includes('شهریور') && !b.includes('مهر')) {
-            if (detectDayIndex(b) === selectedDayIndex && matchTimeRanges(extractTimeRange(b), timeRange)) {
-              return true;
-            }
-          }
-          return false;
+          return isSlotConflict(b, fullLabel, selectedDayIndex, timeRange, dayDateFormatted);
         });
 
         slots.push({
@@ -622,6 +615,18 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
     return slots;
   }, [appointmentConfig, selectedDayIndex, selectedDayObj, slotDuration, restDuration, bookedSlots, weekOffset]);
+
+  // لغو خودکار انتخاب در صورتی که نوبت انتخابی قبلاً توسط دیگری رزرو شده یا ناموجود است
+  useEffect(() => {
+    if (value && generatedSlotsForDay.length > 0) {
+      const currentSelectedSlot = generatedSlotsForDay.find(
+        (s) => value === s.label || value === s.id || (typeof value === 'string' && (value.includes(s.label) || (s.time && value.includes(s.time))))
+      );
+      if (currentSelectedSlot && !currentSelectedSlot.available) {
+        onChange('', { slot: '' });
+      }
+    }
+  }, [bookedSlots, generatedSlotsForDay, value, onChange]);
 
   const isCurrentDayHoliday = !selectedDayObj?.isSelectable;
 
@@ -926,8 +931,14 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                   {generatedSlotsForDay.map((slot) => {
-                    const isSelected = value && (value === slot.label || value === slot.id || (typeof value === 'string' && value.includes(slot.label)));
                     const isBooked = !slot.available;
+                    const isSelected = !isBooked && Boolean(
+                      value && (
+                        value === slot.label ||
+                        value === slot.id ||
+                        (typeof value === 'string' && (value.includes(slot.label) || (slot.time && value.includes(slot.time))))
+                      )
+                    );
 
                     return (
                       <button

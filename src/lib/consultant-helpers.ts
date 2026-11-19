@@ -554,6 +554,94 @@ export function matchTimeRanges(t1: string, t2: string): boolean {
 }
 
 /**
+ * استخراج بخش تاریخ تقویمی از رشته نوبت (مانند «۳۰ آبان» یا «۱۴۰۵/۰۲/۲۰»)
+ */
+export function extractDatePart(str: string): string | null {
+  if (!str) return null;
+  // ۱. بررسی وجود پرانتز شامل تاریخ: (۳۰ آبان)
+  const parenMatch = str.match(/\(([^)]*[\u0600-\u06FF\d]+[^)]*)\)/);
+  if (parenMatch) {
+    const content = parenMatch[1].trim();
+    if (!content.includes('نوبت')) {
+      return content;
+    }
+  }
+
+  // ۲. بررسی ماه‌های شمسی در متن
+  const PERSIAN_MONTHS = [
+    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+  ];
+  for (const m of PERSIAN_MONTHS) {
+    if (str.includes(m)) {
+      const reg = new RegExp(`([۰-۹\\d]{1,2})\\s*${m}`);
+      const mMatch = str.match(reg);
+      if (mMatch) {
+        return `${mMatch[1]} ${m}`;
+      }
+      return m;
+    }
+  }
+
+  // ۳. بررسی تاریخ‌های عددی مانند ۱۴۰۵/۰۲/۲۰
+  const numDateMatch = str.match(/(?:13|14)?[۰-۹\d]{2}[\/\-][۰-۹\d]{1,2}[\/\-][۰-۹\d]{1,2}/);
+  if (numDateMatch) {
+    return numDateMatch[0];
+  }
+
+  return null;
+}
+
+export function normalizeDateStr(d: string): string {
+  if (!d) return '';
+  return d
+    .replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * بررسی تداخل نوبت رزرو شده با نوبت کاندید
+ */
+export function isSlotConflict(
+  b: string,
+  candidateSlot: string,
+  candidateDayIndex?: number,
+  candidateTimeRange?: string,
+  candidateDayDateFormatted?: string
+): boolean {
+  if (!b || !candidateSlot) return false;
+  const cleanB = b.trim();
+  const cleanLabel = candidateSlot.trim();
+
+  // ۱. تطبیق مستقیم یا زیررشته
+  if (cleanB === cleanLabel || cleanLabel.includes(cleanB) || cleanB.includes(cleanLabel)) {
+    return true;
+  }
+
+  // ۲. بررسی بازه زمانی و روز هفته
+  const bTime = extractTimeRange(cleanB);
+  const sTime = candidateTimeRange || extractTimeRange(cleanLabel);
+  if (!matchTimeRanges(bTime, sTime)) return false;
+
+  const bDay = detectDayIndex(cleanB);
+  const sDay = candidateDayIndex !== undefined && candidateDayIndex !== null ? candidateDayIndex : detectDayIndex(cleanLabel);
+  if (bDay !== sDay) return false;
+
+  // ۳. بررسی تاریخ دقیق
+  const bDate = extractDatePart(cleanB);
+  const cDate = candidateDayDateFormatted || extractDatePart(cleanLabel);
+
+  if (bDate && cDate) {
+    return normalizeDateStr(bDate) === normalizeDateStr(cDate);
+  }
+
+  // اگر حداقل یکی از نوبت‌ها تاریخ تقویمی معین نداشته باشد (مثلا نوبت هفتگی مشاور یا ثبت‌شده بدون تاریخ)،
+  // در صورتی که روز هفته و ساعت تطبیق داشته باشد، برای همان مشاور تداخل قطعی محسوب می‌شود
+  return true;
+}
+
+/**
  * تطبیق نام مشاور با پاکسازی پیشوندها
  */
 export function cleanConsultantName(name: string): string {
