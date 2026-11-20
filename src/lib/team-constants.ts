@@ -4,6 +4,7 @@ export const AVAILABLE_SIDEBAR_TABS = [
   { id: 'dashboard', label: 'داشبورد مدیریت' },
   { id: 'forms', label: 'فرم‌ها و پرسشنامه‌ها' },
   { id: 'submissions', label: 'پرونده مراجعان' },
+  { id: 'family_dossiers', label: 'پرونده‌های خانوادگی' },
   { id: 'builder', label: 'طراحی فرم' },
   { id: 'runner', label: 'پیش‌نمایش' },
   { id: 'consultants', label: 'مشاوران' },

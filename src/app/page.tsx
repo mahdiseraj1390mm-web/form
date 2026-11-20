@@ -65,6 +65,10 @@ const ConsultantsView = dynamic(
   () => import('@/components/consultants/consultants-view').then((m) => m.ConsultantsView),
   { loading: () => <ViewSkeleton /> }
 );
+const FamilyDossiersView = dynamic(
+  () => import('@/components/family/family-dossiers-view').then((m) => m.FamilyDossiersView),
+  { loading: () => <ViewSkeleton /> }
+);
 const NewFormModal = dynamic(
   () => import('@/components/modals/new-form-modal').then((m) => m.NewFormModal),
   { ssr: false }
@@ -77,6 +81,7 @@ export default function AppHome() {
   const [isNewFormModalOpen, setIsNewFormModalOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [runnerPrefillData, setRunnerPrefillData] = useState<Record<string, any> | undefined>(undefined);
+  const [targetClientCaseCode, setTargetClientCaseCode] = useState<string | undefined>(undefined);
 
   const isSuperAdmin = !!(
     currentUser?.isSuperAdmin ||
@@ -125,6 +130,11 @@ export default function AppHome() {
     }
   };
 
+  const handleNavigateToClient = (caseCode: string) => {
+    setTargetClientCaseCode(caseCode);
+    handleTabChange('submissions');
+  };
+
   // وضعیت بارگذاری اولیه احراز هویت
   if (isLoading) {
     return (
@@ -147,7 +157,7 @@ export default function AppHome() {
     if (Array.isArray(userAllowedTabs) && userAllowedTabs.length > 0) {
       return userAllowedTabs.includes(tabId);
     }
-    return tabId === 'submissions';
+    return tabId === 'submissions' || tabId === 'family_dossiers';
   };
 
   return (
@@ -205,7 +215,16 @@ export default function AppHome() {
             </div>
           )}
 
-          {currentTab === 'submissions' && isTabAllowed('submissions') && <SubmissionsHub />}
+          {currentTab === 'submissions' && isTabAllowed('submissions') && (
+            <SubmissionsHub
+              initialCaseCode={targetClientCaseCode}
+              onClearInitialCaseCode={() => setTargetClientCaseCode(undefined)}
+            />
+          )}
+
+          {currentTab === 'family_dossiers' && isTabAllowed('family_dossiers') && (
+            <FamilyDossiersView onNavigateToClient={handleNavigateToClient} />
+          )}
 
           {currentTab === 'consultants' && isTabAllowed('consultants') && (
             <ConsultantsView onNavigateTab={handleTabChange} />

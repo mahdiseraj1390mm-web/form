@@ -41,6 +41,7 @@ import {
   KeyRound,
   User,
   UserPlus,
+  Users,
   FolderLock,
   Copy,
   ExternalLink,
@@ -1067,6 +1068,33 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
             f_case_code: caseData.f_case_code || caseData.caseCode,
           }));
           setAuthGateMode('filling');
+        }
+      } catch (err) {}
+    }
+
+    // در فرم‌های خانوادگی: بررسی پرونده فعال و انتساب هوشمند کد پرونده و نقش در صورت عدم وجود در فرم
+    if (typeof window !== 'undefined' && form.formType === 'family') {
+      try {
+        const storedCaseJson = localStorage.getItem('belhagh_active_case_data');
+        const storedCode = localStorage.getItem('belhagh_current_case_code');
+        let activeData: Record<string, any> = {};
+        if (storedCaseJson) {
+          activeData = JSON.parse(storedCaseJson);
+        }
+
+        const candidateCode = storedCode || activeData.f_case_code || activeData.caseCode;
+        const candidateRole = activeData.f_role_in_family || activeData.familyRole || '';
+        const candidateFamilyCode = activeData.familyCaseCode || activeData.f_family_code;
+
+        if (candidateCode || candidateRole) {
+          setFormData((prev) => ({
+            ...prev,
+            f_case_code: prev.f_case_code || candidateCode || '',
+            caseCode: prev.caseCode || candidateCode || '',
+            f_role_in_family: prev.f_role_in_family || candidateRole || '',
+            familyRole: prev.familyRole || candidateRole || '',
+            f_family_code: prev.f_family_code || candidateFamilyCode || '',
+          }));
         }
       } catch (err) {}
     }
@@ -2249,6 +2277,30 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       }
     }
 
+    const isFamilyForm = form.formType === 'family';
+    let resolvedFamilyRole: string | undefined = undefined;
+    let resolvedFamilyCaseCode: string | undefined = undefined;
+
+    if (isFamilyForm) {
+      resolvedFamilyRole =
+        cleanFormData.f_role_in_family ||
+        cleanFormData.familyRole ||
+        formData.f_role_in_family ||
+        formData.familyRole ||
+        activeCase?.f_role_in_family ||
+        activeCase?.familyRole ||
+        'عضو خانواده';
+
+      resolvedFamilyCaseCode =
+        cleanFormData.f_family_code ||
+        cleanFormData.familyCaseCode ||
+        formData.f_family_code ||
+        formData.familyCaseCode ||
+        activeCase?.familyCaseCode ||
+        activeCase?.f_family_code ||
+        (newCaseCode ? `FAM-${newCaseCode}` : undefined);
+    }
+
     const enrichedFormData = {
       ...cleanFormData,
       ...bookingDateData,
@@ -2256,6 +2308,11 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       ...(masterFName ? { f_name: masterFName } : {}),
       ...(masterFFamily ? { f_family: masterFFamily } : {}),
       ...(masterFullName ? { fullName: masterFullName } : {}),
+      ...(isFamilyForm ? {
+        isFamilySubmission: true,
+        familyRole: resolvedFamilyRole,
+        familyCaseCode: resolvedFamilyCaseCode,
+      } : {}),
     };
 
     const sub = submitFormResponse(
@@ -2271,6 +2328,9 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       ...sub,
       id: isRegistrationForm && newCaseCode ? (`sub-case-${newCaseCode}`) : sub.id,
       trackingCode: newCaseCode,
+      isFamilySubmission: isFamilyForm || undefined,
+      familyRole: isFamilyForm ? resolvedFamilyRole : undefined,
+      familyCaseCode: isFamilyForm ? resolvedFamilyCaseCode : undefined,
       data: {
         ...sub.data,
         ...enrichedFormData,
@@ -2538,9 +2598,15 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         <div>
           <h2 className="text-xl font-extrabold text-slate-900">
-            {form.behavior?.customSuccessMessage || 'فرم با موفقیت ثبت گردید'}
+            {form.formType === 'family' || submittedResult.isFamilySubmission
+              ? `پاسخ شما به عنوان «${submittedResult.familyRole || 'عضو خانواده'}» با موفقیت در پرونده خانوادگی ثبت گردید`
+              : (form.behavior?.customSuccessMessage || 'فرم با موفقیت ثبت گردید')}
           </h2>
-          <p className="text-xs text-slate-500 mt-1">اطلاعات شما در پایگاه امن سامانه فرم‌افزار ذخیره شد.</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {form.formType === 'family' || submittedResult.isFamilySubmission
+              ? 'اطلاعات شما به صورت مستقل و کاملاً محرمانه در پایگاه امن پرونده‌های خانوادگی بالحق ذخیره شد.'
+              : 'اطلاعات شما در پایگاه امن سامانه فرم‌افزار ذخیره شد.'}
+          </p>
         </div>
 
         {/* کادر کد پرونده اختصاصی به همراه کپی و پیام ذخیره‌سازی */}
@@ -2632,6 +2698,26 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
 
         {/* دکمه‌های بازگشت و عملیات نهایی */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3 print:hidden">
+          {(form.formType === 'family' || submittedResult.isFamilySubmission) &&
+            form.familyConfig?.allowClientViewFamilyDossier !== false && (
+              <button
+                type="button"
+                onClick={() => {
+                  const code = submittedResult?.trackingCode || '';
+                  if (typeof window !== 'undefined' && code) {
+                    try {
+                      localStorage.setItem('belhagh_current_case_code', code);
+                    } catch (e) {}
+                    window.location.href = `/dossier?code=${encodeURIComponent(code)}&tab=family`;
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white text-xs sm:text-sm font-black rounded-xl shadow-md transition-all cursor-pointer"
+              >
+                <Users className="w-4 h-4" />
+                <span>ورود به صفحه پرونده خانوادگی</span>
+              </button>
+            )}
+
           <button
             type="button"
             onClick={() => {

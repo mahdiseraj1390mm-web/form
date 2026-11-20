@@ -75,7 +75,15 @@ interface ClientCaseGroup {
   clientAge?: string;
 }
 
-export const SubmissionsHub: React.FC = () => {
+export interface SubmissionsHubProps {
+  initialCaseCode?: string;
+  onClearInitialCaseCode?: () => void;
+}
+
+export const SubmissionsHub: React.FC<SubmissionsHubProps> = ({
+  initialCaseCode,
+  onClearInitialCaseCode,
+}) => {
   const {
     forms,
     activeForm,
@@ -534,6 +542,24 @@ function normalizeSearchText(str: string): string {
       return matchesSearch && matchesStatus;
     });
   }, [clientCases, searchQuery, statusFilter]);
+
+  // باز شدن خودکار پرونده مراجع در صورت ارسال initialCaseCode از پرونده خانوادگی یا بخش‌های دیگر
+  useEffect(() => {
+    if (initialCaseCode && clientCases.length > 0) {
+      const trimmed = initialCaseCode.trim();
+      const match = clientCases.find(
+        (c) =>
+          c.caseCode.toLowerCase() === trimmed.toLowerCase() ||
+          c.caseCode.toLowerCase().includes(trimmed.toLowerCase())
+      );
+      if (match) {
+        setActiveCaseModal(match);
+      } else {
+        setSearchQuery(trimmed);
+      }
+      onClearInitialCaseCode?.();
+    }
+  }, [initialCaseCode, clientCases, onClearInitialCaseCode]);
 
   // فیلتر ارسالی‌های تکی فرم‌ها
   const filteredSubmissions = useMemo(() => {

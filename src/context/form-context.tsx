@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Form, FormSubmission, FormField, ConditionalRule, SubmissionStatus, EvaluationResult, SimilarityNotification } from '@/types/form';
-import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions } from '@/types/advanced';
+import { ChatMessage, WebhookLog, TeamMember, TeamRole, DetailedPermissions, FamilyDossierGroup, FamilyMemberSummary, FamilyQuestionComparisonItem } from '@/types/advanced';
 import { initialForms, initialSubmissions } from '@/lib/mock-data';
 import { quizSubmissions, recruitmentSubmissions, orderSubmissions } from '@/lib/additional-mock-submissions';
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
@@ -12,8 +12,8 @@ export const allInitialSubmissions: FormSubmission[] = belhaghInitialSubmissions
   ...s,
   comments: Array.isArray(s.comments) ? s.comments : [],
 }));
-import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm } from '@/lib/belhagh-forms';
-import { generateTrackingCode } from '@/lib/persian';
+import { belhaghRegistrationForm, belhaghBookingForm, safaanAssessmentForm, belhaghFamilyAssessmentForm } from '@/lib/belhagh-forms';
+import { generateTrackingCode, formatClientAge, extractBirthYear, getFieldDisplayValue } from '@/lib/persian';
 import { DEFAULT_INITIAL_TEAM_MEMBERS } from '@/lib/team-constants';
 import { CounselingTopicOption, COUNSELING_TOPICS, setGlobalCounselingTopics } from '@/lib/consultant-helpers';
 
@@ -55,6 +55,17 @@ interface FormContextType {
   deleteCase: (caseCode: string, mobile?: string) => Promise<{ success: boolean; error?: string }>;
   getSubmissionsByFormId: (formId: string) => FormSubmission[];
   refreshSubmissionsFromDb: (formId?: string) => Promise<void>;
+  getFamilyDossiers: () => FamilyDossierGroup[];
+  getFamilyDossierByCode: (familyCode: string) => FamilyDossierGroup | undefined;
+  getFamilyDossierByMemberCode: (caseCode: string) => FamilyDossierGroup | undefined;
+  getFamilyFormComparison: (familyCode: string, formId: string) => {
+    form: Form | undefined;
+    members: FamilyMemberSummary[];
+    questions: FamilyQuestionComparisonItem[];
+    consensusCount: number;
+    divergenceCount: number;
+    agreementRate: number;
+  };
   sendChatMessage: (formId: string, sender: 'respondent' | 'admin', senderName: string, text: string) => void;
   getChatMessagesByFormId: (formId: string) => ChatMessage[];
   addWebhookLog: (log: Omit<WebhookLog, 'id' | 'createdAt'>) => void;
@@ -133,7 +144,7 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const CACHE_VERSION = 'v-2026-11-14-bank-card-step5-v3';
+      const CACHE_VERSION = 'v-2026-11-21-family-forms-v1';
       const storedVersion = localStorage.getItem('formafzar_cache_ver');
       if (storedVersion !== CACHE_VERSION) {
         localStorage.removeItem('formafzar_forms');
@@ -1336,6 +1347,251 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     syncTopicsToServer(COUNSELING_TOPICS);
   }, []);
 
+  // ۱. دریافت جامع کلیه پرونده‌های خانوادگی تجمیع‌شده از سابمیشن‌ها و فرم‌های خانوادگی
+  const getFamilyDossiers = useCallback((): FamilyDossierGroup[] => {
+    const familyMap = new Map<string, FamilyDossierGroup>();
+    const memberToFamilyMap = new Map<string, string>();
+
+    // گام اول: نگاشت کدهای پرونده اعضا به کدهای خانوادگی صریح
+    submissions.forEach((sub) => {
+      const famCode = sub.familyCaseCode || sub.data?.familyCaseCode || sub.data?.f_family_code;
+      const memberCode = (sub.data?.caseCode || sub.trackingCode || '').trim().replace(/^sub-case-/, '').replace(/^sub-/, '');
+      if (famCode && memberCode) {
+        memberToFamilyMap.set(memberCode, famCode.trim());
+      }
+    });
+
+    // گام دوم: تجمیع سابمیشن‌ها و فرم‌های فردی و خانوادگی
+    submissions.forEach((sub) => {
+      const rawMemberCode = (sub.data?.caseCode || sub.trackingCode || '').trim();
+      const memberCode = rawMemberCode.replace(/^sub-case-/, '').replace(/^sub-/, '');
+      
+      let famCode = sub.familyCaseCode || sub.data?.familyCaseCode || sub.data?.f_family_code || memberToFamilyMap.get(memberCode);
+
+      // در صورتی که سابمیشن خانوادگی است ولی کد خانواده صریح ندارد
+      if (!famCode && (sub.isFamilySubmission || sub.formId === 'form-belhagh-family-assessment')) {
+        famCode = memberCode ? `FAM-${memberCode}` : `FAM-${sub.id.slice(-6)}`;
+        if (memberCode) memberToFamilyMap.set(memberCode, famCode);
+      }
+
+      // همچنین اگر ثبت‌نام خانواده حسینی یا نمونه‌های خانوادگی است
+      if (!famCode && memberCode && ['SP642819', 'SP642820', 'SP642821'].includes(memberCode)) {
+        famCode = 'FAM-SP642819';
+        memberToFamilyMap.set(memberCode, famCode);
+      }
+
+      if (!famCode) return; // این سابمیشن فعلاً متصل به خانواده‌ای نیست
+
+      const cleanFamCode = famCode.trim();
+      const candidateName =
+        sub.data?.fullName ||
+        (sub.data?.f_name || sub.data?.f_family ? `${sub.data?.f_name || ''} ${sub.data?.f_family || ''}`.trim() : '') ||
+        'مراجع';
+
+      const familyLastName = sub.data?.f_family || (candidateName.includes(' ') ? candidateName.split(' ').slice(1).join(' ') : 'خانواده');
+      const familyTitle = `خانواده ${familyLastName}`;
+      const mobile = sub.data?.f_mobile || sub.data?.bk_mobile || sub.mobile || '';
+      const provinceCity = sub.data?.f_province_city || 'ثبت‌نشده';
+      const role = sub.familyRole || sub.data?.f_role_in_family || sub.data?.familyRole || 'عضو خانواده';
+
+      if (!familyMap.has(cleanFamCode)) {
+        familyMap.set(cleanFamCode, {
+          familyCode: cleanFamCode,
+          familyName: familyTitle,
+          headCaseCode: memberCode || undefined,
+          provinceCity,
+          contactMobile: mobile,
+          members: [],
+          familySubmissions: [],
+          individualSubmissions: [],
+          createdAt: sub.createdAt,
+          updatedAt: sub.createdAt,
+        });
+      }
+
+      const famGroup = familyMap.get(cleanFamCode)!;
+      if (new Date(sub.createdAt) > new Date(famGroup.updatedAt)) {
+        famGroup.updatedAt = sub.createdAt;
+      }
+
+      const isFamilyForm = Boolean(
+        sub.isFamilySubmission ||
+        sub.formId === 'form-belhagh-family-assessment' ||
+        sub.familyRole ||
+        sub.data?.q_family_dialogue
+      );
+
+      if (isFamilyForm) {
+        if (!famGroup.familySubmissions.some((s) => s.id === sub.id)) {
+          famGroup.familySubmissions.push(sub);
+        }
+      } else {
+        if (!famGroup.individualSubmissions.some((s) => s.id === sub.id)) {
+          famGroup.individualSubmissions.push(sub);
+        }
+      }
+
+      // درج یا به‌روزرسانی خلاصه عضو خانواده
+      if (memberCode) {
+        let existingMember = famGroup.members.find((m) => m.caseCode === memberCode);
+        if (!existingMember) {
+          existingMember = {
+            caseCode: memberCode,
+            fullName: candidateName,
+            role,
+            mobile,
+            age: sub.data?.f_birth_date ? formatClientAge(extractBirthYear(sub.data.f_birth_date)) : 'ثبت‌نشده',
+            individualSubmissionsCount: 0,
+            familySubmissionsCount: 0,
+            lastActiveDate: sub.createdAt,
+          };
+          famGroup.members.push(existingMember);
+        }
+
+        if (isFamilyForm) {
+          existingMember.familySubmissionsCount++;
+        } else {
+          existingMember.individualSubmissionsCount++;
+        }
+
+        if (role && (!existingMember.role || existingMember.role === 'عضو خانواده')) {
+          existingMember.role = role;
+        }
+        if (candidateName && candidateName !== 'مراجع') {
+          existingMember.fullName = candidateName;
+        }
+        if (new Date(sub.createdAt) > new Date(existingMember.lastActiveDate)) {
+          existingMember.lastActiveDate = sub.createdAt;
+        }
+      }
+    });
+
+    return Array.from(familyMap.values()).sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }, [submissions]);
+
+  // ۲. دریافت مشخصات یک پرونده خانوادگی با کد خانواده
+  const getFamilyDossierByCode = useCallback(
+    (familyCode: string): FamilyDossierGroup | undefined => {
+      const all = getFamilyDossiers();
+      const clean = familyCode.trim().toLowerCase();
+      return all.find((f) => f.familyCode.toLowerCase() === clean);
+    },
+    [getFamilyDossiers]
+  );
+
+  // ۳. دریافت پرونده خانوادگی مرتبط با کد پرونده فردی یک مراجع
+  const getFamilyDossierByMemberCode = useCallback(
+    (caseCode: string): FamilyDossierGroup | undefined => {
+      const all = getFamilyDossiers();
+      const clean = caseCode.trim().toLowerCase().replace(/^sub-case-/, '').replace(/^sub-/, '');
+      return all.find((f) =>
+        f.members.some((m) => m.caseCode.toLowerCase() === clean) ||
+        f.familySubmissions.some((s) => (s.data?.caseCode || s.trackingCode || '').toLowerCase().includes(clean)) ||
+        f.individualSubmissions.some((s) => (s.data?.caseCode || s.trackingCode || '').toLowerCase().includes(clean))
+      );
+    },
+    [getFamilyDossiers]
+  );
+
+  // ۴. مقایسه تطبیقی هوشمند و سوال‌به‌سوال پاسخ‌های اعضای خانواده در یک فرم خانوادگی
+  const getFamilyFormComparison = useCallback(
+    (familyCode: string, formId: string) => {
+      const fam = getFamilyDossierByCode(familyCode);
+      const form = forms.find((f) => f.id === formId || f.slug === formId) || forms.find((f) => f.id === 'form-belhagh-family-assessment');
+      if (!fam || !form) {
+        return {
+          form,
+          members: [],
+          questions: [],
+          consensusCount: 0,
+          divergenceCount: 0,
+          agreementRate: 100,
+        };
+      }
+
+      const formSubs = fam.familySubmissions.filter((s) => s.formId === form.id || s.formId === formId);
+      const members = fam.members;
+
+      const questions: FamilyQuestionComparisonItem[] = [];
+      let consensusCount = 0;
+      let divergenceCount = 0;
+
+      form.fields.forEach((field) => {
+        if (['sectionDivider', 'alertBox'].includes(field.type)) return;
+        // فیلدهای صرفاً هویتی اولیه را از تحلیل توافق رفتاری تفکیک می‌کنیم
+        const isIdentityField = ['f_case_code', 'f_role_in_family', 'f_family_code'].includes(field.id);
+
+        const memberAnswers: Record<string, { role: string; memberName: string; answer: any; displayValue: string }> = {};
+        const answerValues: string[] = [];
+
+        formSubs.forEach((sub) => {
+          const rawMemberCode = (sub.data?.caseCode || sub.trackingCode || '').trim();
+          const memberCode = rawMemberCode.replace(/^sub-case-/, '').replace(/^sub-/, '');
+          const member = members.find((m) => m.caseCode === memberCode);
+          const role = sub.familyRole || member?.role || sub.data?.f_role_in_family || 'عضو';
+          const name = member?.fullName || sub.data?.fullName || 'عضو خانواده';
+          const rawAns = sub.data?.[field.id];
+          const displayVal = rawAns !== undefined && rawAns !== null && String(rawAns).trim() !== ''
+            ? getFieldDisplayValue(rawAns, field)
+            : 'ثبت‌نشده';
+
+          if (rawAns !== undefined && rawAns !== null && String(rawAns).trim() !== '') {
+            answerValues.push(String(rawAns).trim());
+          }
+
+          const key = memberCode || sub.id;
+          memberAnswers[key] = {
+            role,
+            memberName: name,
+            answer: rawAns,
+            displayValue: displayVal,
+          };
+        });
+
+        // محاسبه توافق در برابر اختلاف دیدگاه
+        const distinctAnswers = new Set(answerValues);
+        let isConsensus = true;
+        let divergenceLevel: 'none' | 'moderate' | 'high' = 'none';
+
+        if (!isIdentityField && answerValues.length > 1) {
+          if (distinctAnswers.size > 1) {
+            isConsensus = false;
+            divergenceLevel = distinctAnswers.size >= 3 ? 'high' : 'moderate';
+            divergenceCount++;
+          } else {
+            isConsensus = true;
+            divergenceLevel = 'none';
+            consensusCount++;
+          }
+        }
+
+        questions.push({
+          fieldId: field.id,
+          questionLabel: field.label,
+          stepTitle: form.steps?.find((s) => s.fieldIds?.includes(field.id) || s.id === field.stepId)?.title,
+          memberAnswers,
+          isConsensus,
+          divergenceLevel,
+        });
+      });
+
+      const totalEvaluated = consensusCount + divergenceCount;
+      const agreementRate = totalEvaluated > 0 ? Math.round((consensusCount / totalEvaluated) * 100) : 100;
+
+      return {
+        form,
+        members,
+        questions,
+        consensusCount,
+        divergenceCount,
+        agreementRate,
+      };
+    },
+    [forms, getFamilyDossierByCode]
+  );
+
   return (
     <FormContext.Provider
       value={{
@@ -1374,6 +1630,10 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         deleteCase,
         getSubmissionsByFormId,
         refreshSubmissionsFromDb,
+        getFamilyDossiers,
+        getFamilyDossierByCode,
+        getFamilyDossierByMemberCode,
+        getFamilyFormComparison,
         sendChatMessage,
         getChatMessagesByFormId,
         addWebhookLog,

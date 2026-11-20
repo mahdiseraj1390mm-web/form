@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useForm } from '@/context/form-context';
-import { PlusCircle, Layers, X, Sparkles, FileText } from 'lucide-react';
+import { PlusCircle, Layers, X, Sparkles, FileText, Users, User } from 'lucide-react';
+import { FormType } from '@/types/form';
 
 interface NewFormModalProps {
   isOpen: boolean;
@@ -10,14 +11,25 @@ interface NewFormModalProps {
   onCreated: (newFormId: string) => void;
 }
 
+const DEFAULT_FAMILY_ROLES = ['پدر', 'مادر', 'فرزند', 'دختر', 'پسر', 'همسر'];
+
 export const NewFormModal: React.FC<NewFormModalProps> = ({ isOpen, onClose, onCreated }) => {
   const { createForm } = useForm();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('عمومی و سازمانی');
   const [mode, setMode] = useState<'classic' | 'wizard'>('classic');
+  const [formType, setFormType] = useState<FormType>('individual');
+  const [allowedRoles, setAllowedRoles] = useState<string[]>(['پدر', 'مادر', 'فرزند']);
+  const [allowClientViewFamilyDossier, setAllowClientViewFamilyDossier] = useState(true);
 
   if (!isOpen) return null;
+
+  const toggleRole = (role: string) => {
+    setAllowedRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,9 +38,49 @@ export const NewFormModal: React.FC<NewFormModalProps> = ({ isOpen, onClose, onC
     const created = createForm({
       title: title.trim(),
       description: description.trim(),
-      category,
-      mode,
-      fields: [
+      category: formType === 'family' ? 'خانواده و ازدواج' : category,
+      mode: formType === 'family' ? 'wizard' : mode,
+      formType,
+      familyConfig: formType === 'family' ? {
+        allowedRoles: allowedRoles.length > 0 ? allowedRoles : ['پدر', 'مادر', 'فرزند'],
+        allowClientViewFamilyDossier,
+        autoDetectRoleFromAccount: true,
+        identityStepIndex: 0,
+      } : undefined,
+      fields: formType === 'family' ? [
+        {
+          id: `f_case_code_${Date.now()}`,
+          type: 'text',
+          label: 'کد پرونده فردی مراجع',
+          placeholder: 'مثال: SP729745',
+          helpText: 'در صورت لاگین بودن در سامانه به صورت خودکار درج می‌شود',
+          stepId: `step_1_${Date.now()}`,
+          gridCols: 6,
+          validations: { required: true },
+        },
+        {
+          id: `f_role_in_family_${Date.now()}`,
+          type: 'select',
+          label: 'نقش در خانواده',
+          stepId: `step_1_${Date.now()}`,
+          gridCols: 6,
+          validations: { required: true },
+          options: allowedRoles.map((r) => ({ id: r, label: r, value: r })),
+        },
+        {
+          id: `q_family_item_${Date.now()}`,
+          type: 'radio',
+          label: 'میزان رضایت و صمیمیت شما از ارتباطات جاری در محیط خانه چقدر است؟',
+          stepId: `step_2_${Date.now()}`,
+          gridCols: 12,
+          validations: { required: true },
+          options: [
+            { id: 'opt_high', label: 'بسیار زیاد و دلگرم‌کننده', value: 'بسیار زیاد' },
+            { id: 'opt_med', label: 'متوسط و نیازمند بهبود', value: 'متوسط' },
+            { id: 'opt_low', label: 'کم یا همراه با تنش', value: 'کم' },
+          ],
+        },
+      ] : [
         {
           id: `f_name_${Date.now()}`,
           type: 'text',
@@ -38,18 +90,32 @@ export const NewFormModal: React.FC<NewFormModalProps> = ({ isOpen, onClose, onC
           validations: { required: true },
         },
       ],
-      steps: mode === 'wizard' ? [
+      steps: formType === 'family' ? [
+        {
+          id: `step_1_${Date.now()}`,
+          title: 'مشخصات هویتی و ارتباطی',
+          description: 'تعیین نقش فرد و اتصال به پرونده خانوادگی',
+          fieldIds: [],
+        },
+        {
+          id: `step_2_${Date.now()}`,
+          title: 'ارزیابی روابط و تعاملات خانوادگی',
+          description: 'پاسخ‌گویی مستقل و محرمانه اعضا به سوالات یکسان',
+          fieldIds: [],
+        },
+      ] : (mode === 'wizard' ? [
         {
           id: `step_1_${Date.now()}`,
           title: 'مرحله اول',
           description: 'اطلاعات اولیه فرم',
           fieldIds: [],
         }
-      ] : [],
+      ] : []),
     });
 
     setTitle('');
     setDescription('');
+    setFormType('individual');
     onClose();
     onCreated(created.id);
   };
@@ -80,6 +146,98 @@ export const NewFormModal: React.FC<NewFormModalProps> = ({ isOpen, onClose, onC
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
             />
           </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">نوع فرم (فردی یا خانوادگی)</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFormType('individual')}
+                className={`p-3 rounded-xl border text-right transition-all flex items-start gap-2.5 cursor-pointer ${
+                  formType === 'individual'
+                    ? 'border-blue-600 bg-blue-50/50 text-blue-900 font-bold shadow-2xs'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                  formType === 'individual' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs">فرم عادی / فردی</div>
+                  <div className="text-[10px] text-slate-500 font-normal mt-0.5">تکمیل مستقل توسط هر مراجع</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormType('family')}
+                className={`p-3 rounded-xl border text-right transition-all flex items-start gap-2.5 cursor-pointer ${
+                  formType === 'family'
+                    ? 'border-purple-600 bg-purple-50/60 text-purple-900 font-bold shadow-2xs'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                  formType === 'family' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs">فرم خانوادگی</div>
+                  <div className="text-[10px] text-purple-700 font-normal mt-0.5">تکمیل توسط اعضای خانه و تطبیق</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* تنظیمات نقش‌های مجاز و دسترسی در صورت انتخاب فرم خانوادگی */}
+          {formType === 'family' && (
+            <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-xl space-y-3">
+              <div>
+                <label className="block font-bold text-purple-900 text-[11px] mb-1.5">
+                  کدام یک از اعضای خانواده مجاز به پر کردن این فرم هستند؟
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DEFAULT_FAMILY_ROLES.map((role) => {
+                    const isSelected = allowedRoles.includes(role);
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => toggleRole(role)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'bg-white border border-purple-200 text-purple-800 hover:bg-purple-100/50'
+                        }`}
+                      >
+                        {role} {isSelected ? '✓' : '+'}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-purple-200/60 flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-purple-900 block">
+                    امکان مشاهده نتایج و پرونده خانوادگی توسط مراجع
+                  </span>
+                  <span className="text-[10px] text-purple-700/80 block">
+                    در صورت غیرفعال بودن، دکمه ورود به پرونده خانوادگی برای مراجع نمایش داده نمی‌شود.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={allowClientViewFamilyDossier}
+                  onChange={(e) => setAllowClientViewFamilyDossier(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 rounded cursor-pointer"
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block font-semibold text-slate-700 mb-1">دسته‌بندی موضوعی</label>

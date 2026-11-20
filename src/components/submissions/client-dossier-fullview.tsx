@@ -20,6 +20,7 @@ import {
   FileText,
   BadgeCheck,
   Sparkles,
+  HeartHandshake,
   TrendingUp,
   BarChart3,
   Clock,
@@ -284,6 +285,8 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
     deleteSubmissionComment,
     deleteSubmission,
     deleteCase,
+    getFamilyDossierByMemberCode,
+    getFamilyFormComparison,
   } = useForm();
   const { currentUser } = useAdminAuth();
   const isSuperAdmin = isSuperAdminUser(currentUser);
@@ -395,8 +398,13 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [formCommentText, setFormCommentText] = useState('');
 
+  // پرونده خانوادگی متناظر با این مراجع در صورت انتساب
+  const familyDossier = useMemo(() => {
+    return getFamilyDossierByMemberCode(clientCase.caseCode);
+  }, [clientCase.caseCode, getFamilyDossierByMemberCode]);
+
   // تب‌های داخل پرونده مراجع
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'profile' | 'forms' | 'followups' | 'finances'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'profile' | 'forms' | 'followups' | 'finances' | 'family'>('overview');
 
   // ثبت نظر بر روی فرم فعال در گزارش تفکیکی
   const handleAddFormComment = () => {
@@ -1878,6 +1886,24 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5">
+            {familyDossier && (
+              <button
+                onClick={() => {
+                  setCurrentView('dossier');
+                  setActiveTab('family');
+                }}
+                className="flex items-center gap-2 rounded-xl border border-purple-300 bg-purple-50 hover:bg-purple-100 px-4 py-2.5 text-xs font-black text-purple-900 shadow-2xs transition cursor-pointer"
+                title="مشاهده پرونده خانوادگی این مراجع"
+              >
+                <Users className="size-4 text-purple-700" />
+                <span>پرونده خانوادگی</span>
+                {clientCase.roleInFamily && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-200/80 text-purple-900 font-extrabold">
+                    نقش: {clientCase.roleInFamily}
+                  </span>
+                )}
+              </button>
+            )}
             <button
               onClick={handlePrintDossier}
               className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition cursor-pointer"
@@ -1913,7 +1939,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
         {/* نوار تب‌های ناوبری ۶ گانه: تب فعال در مرکز، تب‌های قبلی و بعدی فید در دو طرف + فلش‌ها و اسکرول */}
         <ScrollableTabCarousel
           variant="dossier"
-          desktopGridClassName="lg:grid lg:grid-cols-6 lg:gap-3"
+          desktopGridClassName={familyDossier ? "lg:grid lg:grid-cols-7 lg:gap-2.5" : "lg:grid lg:grid-cols-6 lg:gap-3"}
           activeId={currentView === 'formReport' ? 'forms' : activeTab}
           onChange={(key) => {
             setCurrentView('dossier');
@@ -1926,6 +1952,7 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
             { id: 'forms', label: 'فرم‌ها و آزمون‌ها' },
             { id: 'followups', label: 'پیگیری‌ها و درج لاگ' },
             { id: 'finances', label: 'مالی و نوبت‌ها' },
+            ...(familyDossier ? [{ id: 'family', label: 'پرونده خانوادگی' }] : []),
           ]}
         />
 
@@ -4520,6 +4547,193 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 </>
               )}
             </CollapsibleCard>
+          </div>
+        )}
+
+        {/* ۷. تب پرونده خانوادگی و مقایسه تطبیقی پاسخ‌های اعضا (Family Dossier Tab) */}
+        {currentView === 'dossier' && activeTab === 'family' && familyDossier && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* کارت سربرگ پرونده خانوادگی مراجع */}
+            <div className="bg-white rounded-3xl border border-purple-200/90 p-6 sm:p-8 shadow-2xs space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-purple-100">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black text-lg shadow-sm">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                      <span>{familyDossier.familyName}</span>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-900 border border-purple-200 font-extrabold">
+                        واحد خانوادگی
+                      </span>
+                    </h3>
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                      <span>کد پرونده خانوادگی: <strong className="font-mono text-purple-900">{familyDossier.familyCode}</strong></span>
+                      <span>•</span>
+                      <span>موقعیت: {familyDossier.provinceCity}</span>
+                      <span>•</span>
+                      <span>شماره تماس: <span dir="ltr">{familyDossier.contactMobile}</span></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-purple-100 text-purple-900 border border-purple-300">
+                    نقش مراجع جاری: <strong>{clientCase.roleInFamily || 'عضو خانواده'}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* اعضای ثبت‌شده در این خانواده */}
+              <div>
+                <span className="text-xs font-extrabold text-slate-700 block mb-3">
+                  اعضای ثبت‌شده در این خانواده ({toPersianDigits(familyDossier.members.length)} نفر):
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {familyDossier.members.map((m) => {
+                    const isCurrent = m.caseCode === clientCase.caseCode;
+                    return (
+                      <div
+                        key={m.caseCode}
+                        className={`p-4 rounded-2xl border transition-all text-right space-y-2 ${
+                          isCurrent
+                            ? 'bg-purple-50/70 border-purple-300 ring-2 ring-purple-600/20'
+                            : 'bg-slate-50/80 border-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-slate-900">
+                            {m.fullName} {isCurrent && <span className="text-[10px] text-purple-700 font-normal">(همین پرونده)</span>}
+                          </span>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                            m.role.includes('پدر') ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                            m.role.includes('مادر') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                            'bg-amber-50 text-amber-800 border-amber-200'
+                          }`}>
+                            {m.role}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                          <span className="font-mono">کد: {m.caseCode}</span>
+                          <span>سن: {m.age || 'ثبت‌نشده'}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* بخش ماتریس مقایسه تطبیقی پاسخ‌های اعضای خانواده */}
+            {(() => {
+              const comp = getFamilyFormComparison(familyDossier.familyCode, 'form-belhagh-family-assessment');
+              return (
+                <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-2xs space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div>
+                      <h4 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <HeartHandshake className="w-5 h-5 text-purple-700" />
+                        <span>مقایسه تطبیقی پاسخ‌های اعضای خانواده در پرسشنامه روابط خانوادگی</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        تحلیل سوال‌به‌سوال نقاط توافق و اختلاف دیدگاه اعضای خانواده جهت هدایت جلسه مشاوره
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-extrabold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>هم‌نظری: {toPersianDigits(comp.consensusCount)} سوال</span>
+                      </span>
+
+                      <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 font-extrabold flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                        <span>اختلاف دیدگاه: {toPersianDigits(comp.divergenceCount)} سوال</span>
+                      </span>
+
+                      <span className="px-3 py-1 rounded-xl bg-purple-50 text-purple-900 border border-purple-200 font-black font-mono">
+                        نرخ توافق: {toPersianDigits(comp.agreementRate)}٪
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* کارت‌های مقایسه‌ای سوالات */}
+                  <div className="space-y-3">
+                    {comp.questions.map((q, idx) => {
+                      const isDivergent = !q.isConsensus;
+                      return (
+                        <div
+                          key={q.fieldId}
+                          className={`p-4 sm:p-5 rounded-2xl border transition-all text-right space-y-3 ${
+                            isDivergent ? 'bg-amber-50/15 border-amber-300' : 'bg-slate-50/50 border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2">
+                              <span className="w-6 h-6 rounded-lg bg-white border border-slate-200 font-bold text-xs flex items-center justify-center shrink-0 font-mono text-slate-700">
+                                {toPersianDigits(idx + 1)}
+                              </span>
+                              <div>
+                                <span className="text-xs sm:text-sm font-black text-slate-900 block leading-relaxed">
+                                  {q.questionLabel}
+                                </span>
+                                {q.stepTitle && (
+                                  <span className="text-[10px] text-slate-400 font-medium">مرحله: {q.stepTitle}</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {isDivergent ? (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 shrink-0">
+                                <AlertCircle className="w-3 h-3 text-amber-700" />
+                                <span>اختلاف دیدگاه</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>هم‌نظری</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* پاسخ‌های اعضای خانواده در کنار هم */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                            {familyDossier.members.map((member) => {
+                              const ansObj = q.memberAnswers[member.caseCode] || Object.values(q.memberAnswers).find(
+                                (a) => a.role === member.role || a.memberName === member.fullName
+                              );
+                              const hasAnswer = ansObj && ansObj.displayValue !== 'ثبت‌نشده';
+
+                              return (
+                                <div
+                                  key={member.caseCode}
+                                  className={`p-3 rounded-xl border text-right space-y-1 ${
+                                    hasAnswer ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-100/50 border-dashed border-slate-200 opacity-60'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="font-bold text-slate-700">{member.fullName}</span>
+                                    <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                      {member.role}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs font-black text-slate-900 pt-0.5">
+                                    {hasAnswer ? ansObj.displayValue : 'پاسخی ثبت نکرده است'}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
           </div>
         )}
       </div>

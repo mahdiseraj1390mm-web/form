@@ -69,6 +69,40 @@ export interface DetailedPermissions {
   canManageSms: boolean;
   canManageIntegrations: boolean;
   canManageTeam: boolean;
+  canViewFamilyDossiers?: boolean;
+}
+
+export interface FamilyMemberSummary {
+  caseCode: string;
+  fullName: string;
+  role: string; // پدر، مادر، دختر، پسر ...
+  mobile: string;
+  age?: string;
+  individualSubmissionsCount: number;
+  familySubmissionsCount: number;
+  lastActiveDate: string;
+}
+
+export interface FamilyDossierGroup {
+  familyCode: string; // کد پرونده خانوادگی یکتا: FAM-SP123456
+  familyName: string; // نام خانواده: خانواده حسینی
+  headCaseCode?: string; // کد پرونده سرپرست یا اولین عضو ثبت‌شده
+  provinceCity: string;
+  contactMobile: string;
+  members: FamilyMemberSummary[];
+  familySubmissions: import('./form').FormSubmission[]; // ارسالی‌های خانوادگی پر شده توسط اعضا
+  individualSubmissions: import('./form').FormSubmission[]; // ارسالی‌های فردی تک‌تک اعضا
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FamilyQuestionComparisonItem {
+  fieldId: string;
+  questionLabel: string;
+  stepTitle?: string;
+  memberAnswers: Record<string, { role: string; memberName: string; answer: any; displayValue: string }>;
+  isConsensus: boolean; // آیا پاسخ‌ها یکسان/هم‌نظر هستند؟
+  divergenceLevel: 'none' | 'moderate' | 'high'; // سطح اختلاف نظر
 }
 
 export interface TeamMember {

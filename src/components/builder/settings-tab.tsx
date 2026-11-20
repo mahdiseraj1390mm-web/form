@@ -43,7 +43,7 @@ interface SettingsTabProps {
 export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, initialSubTab }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     | 'general'
-
+    | 'family'
     | 'redirect'
     | 'email'
     | 'sms'
@@ -176,7 +176,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
 
   const subNavItems = [
     { id: 'general', label: 'تنظیمات عمومی فرم', icon: Settings },
-
+    { id: 'family', label: 'تنظیمات فرم خانوادگی', icon: Users },
     { id: 'redirect', label: 'پیغام ثبت و تغییر مسیر', icon: MessageSquare },
     { id: 'limits', label: 'محدودیت ثبت و ظرفیت', icon: Lock },
     { id: 'auth', label: 'احراز هویت و دسترسی', icon: ShieldCheck },
@@ -423,6 +423,201 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ form, onUpdateForm, in
                 </div>
               </div>
 
+            </div>
+          )}
+
+          {/* تب تنظیمات فرم خانوادگی */}
+          {activeSubTab === 'family' && (
+            <div className="space-y-6">
+              <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-800">تنظیمات فرم‌های خانوادگی</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    پیکربندی تکمیل چندعضوی، نقش‌های مجاز خانه و مقایسه تطبیقی پاسخ‌ها در پرونده خانوادگی
+                  </p>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                  form.formType === 'family'
+                    ? 'bg-purple-50 text-purple-800 border-purple-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                }`}>
+                  {form.formType === 'family' ? 'فرم خانوادگی فعال است' : 'فرم عادی / فردی'}
+                </span>
+              </div>
+
+              {/* کارت انتخاب نوع فرم */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
+                <span className="text-sm font-extrabold text-slate-800 block">تعیین نوع فرم در سامانه</span>
+                <span className="text-xs text-slate-500 block">
+                  فرم عادی مستقلاً توسط مراجع پر شده و در پرونده خودش می‌نشیند، اما فرم خانوادگی توسط اعضای خانه تکمیل شده و در پرونده خانوادگی با یکدیگر مچ و مقایسه می‌شوند.
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateForm({ formType: 'individual' })}
+                    className={`p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-3 ${
+                      form.formType !== 'family'
+                        ? 'border-sky-600 bg-sky-50/60 text-sky-950 font-bold shadow-xs ring-1 ring-sky-600/30'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center shrink-0">
+                      <Settings className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black">فرم عادی / فردی</div>
+                      <div className="text-[11px] text-slate-500 font-normal mt-0.5">ثبت در پرونده شخصی فرد مراجع</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onUpdateForm({
+                        formType: 'family',
+                        familyConfig: form.familyConfig || {
+                          allowedRoles: ['پدر', 'مادر', 'فرزند', 'دختر', 'پسر', 'همسر'],
+                          allowClientViewFamilyDossier: true,
+                          autoDetectRoleFromAccount: true,
+                          identityStepIndex: 0,
+                        },
+                      });
+                    }}
+                    className={`p-3.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-3 ${
+                      form.formType === 'family'
+                        ? 'border-purple-600 bg-purple-50/70 text-purple-950 font-bold shadow-xs ring-1 ring-purple-600/30'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center shrink-0">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black">فرم خانوادگی (چندعضوی)</div>
+                      <div className="text-[11px] text-purple-700 font-normal mt-0.5">تطبیق و مقایسه پاسخ‌های اعضای خانواده</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* تنظیمات تکمیلی در صورت انتخاب فرم خانوادگی */}
+              {form.formType === 'family' && (
+                <div className="space-y-4 animate-in fade-in">
+                  
+                  {/* بخش نقش‌های مجاز خانه */}
+                  <div className="p-4 sm:p-5 rounded-2xl border border-purple-200 bg-purple-50/40 space-y-3">
+                    <div>
+                      <span className="text-sm font-extrabold text-purple-950 block">نقش‌های مجاز اعضای خانواده</span>
+                      <span className="text-xs text-purple-800/80 block mt-0.5">
+                        مشخص کنید این فرم توسط کدام یک از اعضای خانواده می‌تواند پر شود:
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {['پدر', 'مادر', 'فرزند', 'دختر', 'پسر', 'همسر'].map((role) => {
+                        const currentRoles = form.familyConfig?.allowedRoles || ['پدر', 'مادر', 'فرزند'];
+                        const isChecked = currentRoles.includes(role);
+                        return (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => {
+                              const updated = isChecked
+                                ? currentRoles.filter((r) => r !== role)
+                                : [...currentRoles, role];
+                              onUpdateForm({
+                                familyConfig: {
+                                  allowedRoles: updated.length > 0 ? updated : [role],
+                                  allowClientViewFamilyDossier: form.familyConfig?.allowClientViewFamilyDossier !== false,
+                                  autoDetectRoleFromAccount: form.familyConfig?.autoDetectRoleFromAccount !== false,
+                                  identityStepIndex: form.familyConfig?.identityStepIndex ?? 0,
+                                },
+                              });
+                            }}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                              isChecked
+                                ? 'bg-purple-600 text-white shadow-xs'
+                                : 'bg-white border border-purple-200 text-purple-900 hover:bg-purple-100/50'
+                            }`}
+                          >
+                            <span>{role}</span>
+                            <span>{isChecked ? '✓' : '+'}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* سوییچ مهم: اجازه به مراجع برای مشاهده پرونده خانوادگی */}
+                  <label className="flex items-center justify-between p-4 rounded-2xl border border-purple-200 bg-white hover:bg-purple-50/30 transition-all cursor-pointer shadow-2xs">
+                    <div className="space-y-1">
+                      <span className="text-sm font-bold text-slate-900 block">
+                        امکان مشاهده نتایج و ورود به پرونده خانوادگی توسط مراجع
+                      </span>
+                      <span className="text-xs text-slate-500 block">
+                        اگر فعال باشد، پس از ثبت فرم دکمه ورود به پرونده خانوادگی برای مراجع ظاهر می‌شود. در صورت غیرفعال بودن، نتایج صرفاً برای مشاور و مدیر در دسترس است.
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={form.familyConfig?.allowClientViewFamilyDossier !== false}
+                      onChange={(e) => {
+                        onUpdateForm({
+                          familyConfig: {
+                            allowedRoles: form.familyConfig?.allowedRoles || ['پدر', 'مادر', 'فرزند'],
+                            allowClientViewFamilyDossier: e.target.checked,
+                            autoDetectRoleFromAccount: form.familyConfig?.autoDetectRoleFromAccount !== false,
+                            identityStepIndex: form.familyConfig?.identityStepIndex ?? 0,
+                          },
+                        });
+                      }}
+                      className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer shrink-0"
+                    />
+                  </label>
+
+                  {/* سوییچ: استخراج خودکار نقش و کد پرونده از حساب کاربری */}
+                  <label className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition-all cursor-pointer shadow-2xs">
+                    <div className="space-y-1">
+                      <span className="text-sm font-bold text-slate-900 block">
+                        تشخیص هوشمند نقش و کد پرونده از ثبت‌نام اولیه
+                      </span>
+                      <span className="text-xs text-slate-500 block">
+                        در صورتی که فرم فاقد فیلد صریح کد پرونده یا نقش باشد، مشخصات مراجع به طور خودکار از سشن و فرم ثبت‌نام اولیه فراخوانی می‌شود.
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={form.familyConfig?.autoDetectRoleFromAccount !== false}
+                      onChange={(e) => {
+                        onUpdateForm({
+                          familyConfig: {
+                            allowedRoles: form.familyConfig?.allowedRoles || ['پدر', 'مادر', 'فرزند'],
+                            allowClientViewFamilyDossier: form.familyConfig?.allowClientViewFamilyDossier !== false,
+                            autoDetectRoleFromAccount: e.target.checked,
+                            identityStepIndex: form.familyConfig?.identityStepIndex ?? 0,
+                          },
+                        });
+                      }}
+                      className="w-5 h-5 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer shrink-0"
+                    />
+                  </label>
+
+                  {/* یادداشت راهنما درباره یکسانی سوالات و محرمانگی پاسخ‌ها */}
+                  <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 space-y-1.5 leading-relaxed">
+                    <div className="font-bold flex items-center gap-2 text-amber-950">
+                      <HelpCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>قواعد بنیادین فرم‌های خانوادگی در سامانه بالحق:</span>
+                    </div>
+                    <ul className="list-disc list-inside space-y-1 text-amber-900/90 pr-2">
+                      <li>سوالات و مراحل فرم برای تمام اعضای مجاز خانواده دقیقاً یکسان است.</li>
+                      <li>هر عضو خانواده به صورت کاملاً مستقل و محرمانه پاسخ می‌دهد و جواب اعضا برای همدیگر مخفی می‌ماند.</li>
+                      <li>در کارتابل «پرونده‌های خانوادگی»، پاسخ‌های اعضا در یک ماتریس مقایسه‌ای در کنار هم قرار گرفته و نقاط توافق و تعارض برای مشاور استخراج می‌شود.</li>
+                    </ul>
+                  </div>
+
+                </div>
+              )}
             </div>
           )}
 

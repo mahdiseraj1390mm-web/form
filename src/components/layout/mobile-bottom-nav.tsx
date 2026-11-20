@@ -11,6 +11,7 @@ import {
   PenTool,
   Settings,
   Sparkles,
+  Users,
 } from 'lucide-react';
 
 interface MobileBottomNavProps {
@@ -41,6 +42,11 @@ const SIDEBAR_BOTTOM_NAV_ITEMS: BottomNavItem[] = [
     id: 'submissions',
     label: 'پرونده مراجعان',
     icon: Inbox,
+  },
+  {
+    id: 'family_dossiers',
+    label: 'پرونده‌های خانوادگی',
+    icon: Users,
   },
   {
     id: 'builder',

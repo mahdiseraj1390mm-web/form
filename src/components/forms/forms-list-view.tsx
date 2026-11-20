@@ -25,6 +25,7 @@ import {
   FileSpreadsheet,
   ChevronDown,
   Search,
+  Users,
 } from 'lucide-react';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
 import { isAssignedSafaSubmission } from '@/lib/safa-utils';
@@ -330,9 +331,16 @@ export const FormsListView: React.FC<FormsListViewProps> = ({
                       <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                         {form.category}
                       </span>
-                      <span className="text-[10px] text-slate-500 font-medium px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">
-                        {form.mode === 'wizard' ? 'مرحله‌ای' : 'کلاسیک'}
-                      </span>
+                      {form.formType === 'family' ? (
+                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                          <Users className="w-3 h-3 text-purple-600" />
+                          <span>فرم خانوادگی</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 font-medium px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">
+                          {form.mode === 'wizard' ? 'مرحله‌ای' : 'کلاسیک'}
+                        </span>
+                      )}
                     </div>
 
                     {/* بج وضعیت فرم با امکان کلیک برای تغییر سریع */}

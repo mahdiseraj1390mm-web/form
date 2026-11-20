@@ -354,6 +354,15 @@ export interface FormThemeSettings {
   backgroundStyle?: 'clean' | 'subtle_grid' | 'slate_soft';
 }
 
+export type FormType = 'individual' | 'family';
+
+export interface FamilyFormConfig {
+  allowedRoles: string[]; // نقش‌های مجاز: ['پدر', 'مادر', 'فرزند', 'دختر', 'پسر', 'همسر']
+  allowClientViewFamilyDossier?: boolean; // آیا مراجع اجازه مشاهده نتایج و ورود به پرونده خانوادگی را دارد؟
+  autoDetectRoleFromAccount?: boolean; // استخراج خودکار نقش و کد پرونده از سشن لاگین و ثبت‌نام اولیه
+  identityStepIndex?: number; // شماره ایندکس مرحله حاوی فیلدهای هویتی (پیش‌فرض: 0)
+}
+
 export interface Form {
   id: string;
   title: string;
@@ -361,6 +370,8 @@ export interface Form {
   description: string;
   category: string;
   mode: 'classic' | 'wizard' | 'singleQuestion'; // کلاسیک (یک صفحه)، چندمرحله‌ای، یا تک‌سوالی (اسلایدی با دکمه بعدی)
+  formType?: FormType; // 'individual' (پیش‌فرض) یا 'family' (فرم خانوادگی)
+  familyConfig?: FamilyFormConfig; // تنظیمات اختصاصی فرم خانوادگی
   status: 'published' | 'draft' | 'archived';
   clientAvailability?: ClientFormAvailability; // وضعیت فرم: در حال اجرا، متوقف، یا غیرفعال
   fields: FormField[];
@@ -400,6 +411,9 @@ export interface FormSubmission {
   mobile?: string;
   data: Record<string, any>;
   status: SubmissionStatus;
+  isFamilySubmission?: boolean; // آیا متعلق به یک فرم خانوادگی است؟
+  familyCaseCode?: string; // کد پرونده خانوادگی یکپارچه (مثلاً FAM-SP729745)
+  familyRole?: string; // نقش فرد در خانواده (پدر، مادر، فرزند، دختر، پسر، همسر)
   paymentStatus?: 'none' | 'pending' | 'paid' | 'failed';
   paymentAmount?: number;
   paymentRefId?: string;

@@ -12,7 +12,8 @@ import {
   Eye, 
   CalendarClock,
   X,
-  LogOut
+  LogOut,
+  Users
 } from 'lucide-react';
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
@@ -32,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile = false,
   onCloseMobile
 }) => {
-  const { forms, submissions, activeForm } = useForm();
+  const { forms, submissions, activeForm, getFamilyDossiers } = useForm();
   const { currentUser, logout } = useAdminAuth();
 
   const isSuperAdmin = !!(
@@ -48,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       .map((s) => s.data?.caseCode || s.trackingCode)
       .filter((c) => c && typeof c === 'string' && !c.startsWith('SF-'))
   ).size;
+  const familyDossiersCount = getFamilyDossiers().length;
 
   const allNavItems = [
     {
@@ -67,6 +69,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'پرونده مراجعان',
       icon: Inbox,
       badge: toPersianDigits(totalCasesCount),
+    },
+    {
+      id: 'family_dossiers',
+      label: 'پرونده‌های خانوادگی',
+      icon: Users,
+      badge: toPersianDigits(familyDossiersCount),
     },
     {
       id: 'builder',
