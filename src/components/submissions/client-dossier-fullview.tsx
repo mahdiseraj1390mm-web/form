@@ -49,6 +49,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  RefreshCw,
   Edit3,
   ArrowLeft,
   FileImage,
@@ -273,9 +274,74 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
   onClose,
   onStatusChange,
 }) => {
-  const { forms, submissions, updateSubmissionStatus, updateSubmissionData, addSubmissionComment, editSubmissionComment, deleteSubmissionComment } = useForm();
+  const {
+    forms,
+    submissions,
+    updateSubmissionStatus,
+    updateSubmissionData,
+    addSubmissionComment,
+    editSubmissionComment,
+    deleteSubmissionComment,
+    deleteSubmission,
+    deleteCase,
+  } = useForm();
   const { currentUser } = useAdminAuth();
   const isSuperAdmin = isSuperAdminUser(currentUser);
+
+  // استیت‌های اختصاصی حذف پرونده و فرم‌ها توسط مدیر کل
+  const [isConfirmingCaseDelete, setIsConfirmingCaseDelete] = useState(false);
+  const [isDeletingCase, setIsDeletingCase] = useState(false);
+  const [caseDeleteError, setCaseDeleteError] = useState<string | null>(null);
+
+  const [deletingSubTarget, setDeletingSubTarget] = useState<FormSubmission | null>(null);
+  const [isDeletingSub, setIsDeletingSub] = useState(false);
+  const [subDeleteError, setSubDeleteError] = useState<string | null>(null);
+
+  const handleExecuteCaseDelete = async () => {
+    if (isDeletingCase) return;
+    setIsDeletingCase(true);
+    setCaseDeleteError(null);
+    try {
+      const res = await deleteCase(clientCase.caseCode, clientCase.mobile);
+      if (!res.success) {
+        setCaseDeleteError(res.error || 'خطا در حذف پرونده مراجع');
+        setIsDeletingCase(false);
+        return;
+      }
+      setIsConfirmingCaseDelete(false);
+      onClose();
+    } catch (err: any) {
+      setCaseDeleteError(err?.message || 'خطای غیرمنتظره در حذف پرونده');
+      setIsDeletingCase(false);
+    }
+  };
+
+  const handleExecuteSubDelete = async () => {
+    if (!deletingSubTarget || isDeletingSub) return;
+    setIsDeletingSub(true);
+    setSubDeleteError(null);
+    try {
+      const targetId = deletingSubTarget.id;
+      const res = await deleteSubmission(targetId);
+      if (!res.success) {
+        setSubDeleteError(res.error || 'خطا در حذف فرم تکمیل‌شده');
+        setIsDeletingSub(false);
+        return;
+      }
+      setDeletingSubTarget(null);
+      if (selectedSubmissionId === targetId) {
+        setCurrentView('dossier');
+      }
+      // اگر آخرین فرم مراجع حذف شد، پرونده بسته می‌شود
+      if (currentSubmissions.length <= 1) {
+        onClose();
+      }
+    } catch (err: any) {
+      setSubDeleteError(err?.message || 'خطای غیرمنتظره در حذف فرم');
+    } finally {
+      setIsDeletingSub(false);
+    }
+  };
 
   // دریافت پیوسته و بلادرنگ سابمیشن‌های پرونده از کانتکست عمومی (جهت نمایش بلادرنگ پیام‌ها، یادداشت‌ها و پیگیری‌ها بدون نیاز به رفرش)
   const currentSubmissions = useMemo(() => {
@@ -1829,6 +1895,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 خروجی اکسل
               </button>
             )}
+            {isSuperAdmin && (
+              <button
+                onClick={() => setIsConfirmingCaseDelete(true)}
+                disabled={isDeletingCase}
+                className="flex items-center gap-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 px-4 py-2.5 text-xs font-bold text-rose-700 shadow-sm transition cursor-pointer disabled:opacity-50"
+                title="حذف کامل پرونده مراجع"
+              >
+                <Trash2 className="size-4" />
+                <span>حذف پرونده</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -2972,9 +3049,24 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                 {formTitle}
                               </h5>
                             </div>
-                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
-                              {st.label}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                                {st.label}
+                              </span>
+                              {isSuperAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingSubTarget(sub);
+                                  }}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                  title="حذف این فرم تکمیل‌شده"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs border border-slate-100 text-slate-600">
@@ -3056,9 +3148,24 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                 {formTitle}
                               </h5>
                             </div>
-                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
-                              {st.label}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                                {st.label}
+                              </span>
+                              {isSuperAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingSubTarget(sub);
+                                  }}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                  title="حذف این فرم تکمیل‌شده"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs border border-slate-100 text-slate-600">
@@ -3140,9 +3247,24 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                                 {formTitle}
                               </h5>
                             </div>
-                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
-                              {st.label}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border shrink-0 ${st.bg} ${st.color} ${st.border}`}>
+                                {st.label}
+                              </span>
+                              {isSuperAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingSubTarget(sub);
+                                  }}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                  title="حذف این فرم تکمیل‌شده"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div className="bg-slate-50 p-3 rounded-xl space-y-2 text-xs border border-slate-100 text-slate-600">
@@ -3308,6 +3430,17 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                     ? `پرداخت: ${formatCurrency(selectedSubmission.paymentAmount || 0, 'IRT')}`
                     : 'بدون هزینه'}
                 </span>
+                {isSuperAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setDeletingSubTarget(selectedSubmission)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition cursor-pointer"
+                    title="حذف این فرم تکمیل‌شده از پرونده"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span>حذف این فرم</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -5004,6 +5137,142 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
                 className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition-colors cursor-pointer"
               >
                 بستن پنجره
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال تأیید حذف کامل پرونده مراجع (مخصوص مدیر کل) */}
+      {isConfirmingCaseDelete && (
+        <div className="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in" dir="rtl">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-rose-100 overflow-hidden space-y-4 p-6">
+            <div className="flex items-center gap-3">
+              <div className="size-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="size-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">حذف کامل پرونده مراجع</h3>
+                <p className="text-xs text-slate-400 mt-0.5">عملیات غیرقابل بازگشت</p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50/70 border border-rose-100 rounded-2xl p-4 text-xs text-rose-900 leading-relaxed space-y-2">
+              <p>
+                آیا از حذف کامل پرونده مراجع <strong className="font-black text-rose-950">«{clientCase.fullName}»</strong> با کد پرونده <span className="font-mono font-bold text-rose-950">{toPersianDigits(clientCase.caseCode)}</span> اطمینان دارید؟
+              </p>
+              <p className="text-[11px] text-rose-700">
+                با حذف این پرونده، تمامی {toPersianDigits(currentSubmissions.length)} فرم تکمیل‌شده، سوابق بالینی، نوبت‌های ثبت‌شده و یادداشت‌های مراجع به صورت کامل از پایگاه‌داده حذف خواهند شد.
+              </p>
+            </div>
+
+            {caseDeleteError && (
+              <div className="p-3 rounded-xl bg-red-100 border border-red-200 text-xs text-red-800 font-bold flex items-center gap-2">
+                <AlertCircle className="size-4 shrink-0" />
+                <span>{caseDeleteError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingCase}
+                onClick={() => {
+                  setIsConfirmingCaseDelete(false);
+                  setCaseDeleteError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer disabled:opacity-50"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingCase}
+                onClick={handleExecuteCaseDelete}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-black text-white shadow-md shadow-rose-600/20 transition cursor-pointer flex items-center gap-2 disabled:opacity-50"
+              >
+                {isDeletingCase ? (
+                  <>
+                    <RefreshCw className="size-4 animate-spin" />
+                    <span>در حال حذف...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4" />
+                    <span>تأیید و حذف پرونده</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال تأیید حذف فرم تکمیل‌شده (مخصوص مدیر کل) */}
+      {deletingSubTarget && (
+        <div className="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in" dir="rtl">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-rose-100 overflow-hidden space-y-4 p-6">
+            <div className="flex items-center gap-3">
+              <div className="size-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="size-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">حذف فرم تکمیل‌شده مراجع</h3>
+                <p className="text-xs text-slate-400 mt-0.5">عملیات غیرقابل بازگشت</p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50/70 border border-rose-100 rounded-2xl p-4 text-xs text-rose-900 leading-relaxed space-y-2">
+              <p>
+                آیا از حذف این فرم تکمیل‌شده با کد پیگیری <span className="font-mono font-bold text-rose-950">{toPersianDigits(deletingSubTarget.trackingCode)}</span> اطمینان دارید؟
+              </p>
+              {currentSubmissions.length <= 1 ? (
+                <p className="text-[11px] font-bold text-rose-700">
+                  توجه: این تنها فرم موجود در این پرونده است؛ با حذف آن پرونده مراجع نیز خالی و بسته خواهد شد.
+                </p>
+              ) : (
+                <p className="text-[11px] text-rose-700">
+                  این فرم و تمامی پاسخ‌ها و گزارش‌های متناظر با آن برای همیشه از پرونده پاکسازی می‌شود. سایر فرم‌های مراجع بدون تغییر باقی می‌مانند.
+                </p>
+              )}
+            </div>
+
+            {subDeleteError && (
+              <div className="p-3 rounded-xl bg-red-100 border border-red-200 text-xs text-red-800 font-bold flex items-center gap-2">
+                <AlertCircle className="size-4 shrink-0" />
+                <span>{subDeleteError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingSub}
+                onClick={() => {
+                  setDeletingSubTarget(null);
+                  setSubDeleteError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer disabled:opacity-50"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingSub}
+                onClick={handleExecuteSubDelete}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-black text-white shadow-md shadow-rose-600/20 transition cursor-pointer flex items-center gap-2 disabled:opacity-50"
+              >
+                {isDeletingSub ? (
+                  <>
+                    <RefreshCw className="size-4 animate-spin" />
+                    <span>در حال حذف...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4" />
+                    <span>تأیید و حذف فرم</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

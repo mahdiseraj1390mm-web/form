@@ -9,10 +9,54 @@ import {
   updateSubmissionDataInDb,
   editSubmissionCommentInDb,
   deleteSubmissionCommentInDb,
+  deleteSubmissionFromDb,
+  deleteCaseFromDb,
 } from '@/lib/db';
 import { matchAndMergeSafaForNewRegistration } from '@/lib/user-similarity';
 import { sendRecoveryOtpSms } from '@/lib/sms-service';
 import { canRequestOtp, generateAndSaveOtp, verifyOtp } from '@/lib/otp-service';
+import { resolveSessionActor } from '@/lib/team-store';
+
+const AUTH_COOKIE_NAME = 'belhagh_admin_session';
+
+/**
+ * بررسی دسترسی اختصاصی مدیر کل سامانه (Super Admin) جهت انجام عملیات‌های حساس مانند حذف پرونده یا فرم‌ها
+ */
+async function verifySuperAdminPermission(req: NextRequest): Promise<boolean> {
+  // ۱. بررسی مقدار کوکی نشست مدیر در درخواست
+  const cookieVal = req.cookies.get(AUTH_COOKIE_NAME)?.value;
+  if (cookieVal) {
+    const actor = await resolveSessionActor(cookieVal);
+    if (actor?.type === 'admin') return true;
+    if (actor?.type === 'member' && (actor.member.role === 'super_admin' || (actor.member as any).isSuperAdmin)) {
+      return true;
+    }
+  }
+
+  // ۲. بررسی هدر Authorization
+  const authHeader = req.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    const actor = await resolveSessionActor(token);
+    if (actor?.type === 'admin') return true;
+    if (actor?.type === 'member' && (actor.member.role === 'super_admin' || (actor.member as any).isSuperAdmin)) {
+      return true;
+    }
+  }
+
+  // ۳. بررسی در هدر خام کوکی
+  const rawCookieHeader = req.headers.get('cookie') || '';
+  const match = rawCookieHeader.match(new RegExp('(^|;\\s*)' + AUTH_COOKIE_NAME + '=([^;]+)'));
+  if (match && match[2]) {
+    const actor = await resolveSessionActor(match[2]);
+    if (actor?.type === 'admin') return true;
+    if (actor?.type === 'member' && (actor.member.role === 'super_admin' || (actor.member as any).isSuperAdmin)) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 
 
@@ -551,10 +595,93 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // ۷. حذف یک فرم پر شده توسط مراجع (منحصراً برای ادمین)
+    if (action === 'delete_submission') {
+      const isAllowed = await verifySuperAdminPermission(req);
+      if (!isAllowed) {
+        return NextResponse.json(
+          { success: false, error: 'تنها مدیر ارشد سامانه مجاز به حذف فرم‌های تکمیل‌شده مراجعان می‌باشد.' },
+          { status: 403 }
+        );
+      }
+
+      const { submissionId } = body;
+      if (!submissionId) {
+        return NextResponse.json({ success: false, error: 'شناسه فرم مشخص نشده است.' }, { status: 400 });
+      }
+
+      const ok = await deleteSubmissionFromDb(submissionId);
+      return NextResponse.json({ success: ok, message: 'فرم تکمیل‌شده با موفقیت حذف گردید.' });
+    }
+
+    // ۸. حذف کامل پرونده مراجع شامل کلیه فرم‌ها و سوابق (منحصراً برای ادمین)
+    if (action === 'delete_case') {
+      const isAllowed = await verifySuperAdminPermission(req);
+      if (!isAllowed) {
+        return NextResponse.json(
+          { success: false, error: 'تنها مدیر ارشد سامانه مجاز به حذف پرونده مراجعان می‌باشد.' },
+          { status: 403 }
+        );
+      }
+
+      const { caseCode, mobile } = body;
+      if (!caseCode && !mobile) {
+        return NextResponse.json(
+          { success: false, error: 'کد پرونده یا شماره همراه مراجع مشخص نشده است.' },
+          { status: 400 }
+        );
+      }
+
+      const ok = await deleteCaseFromDb(caseCode, mobile);
+      return NextResponse.json({
+        success: ok,
+        message: 'پرونده مراجع و کلیه فرم‌ها و سوابق متناظر با آن با موفقیت حذف گردید.',
+      });
+    }
+
     return NextResponse.json({ error: 'عملیات نامعتبر است' }, { status: 400 });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Server error';
     console.error('Error in /api/cases POST:', err);
     return NextResponse.json({ error: errorMsg }, { status: 500 });
+  }
+}
+
+/**
+ * مدیریت درخواست‌های مستقیم متد DELETE برای حذف فرم یا پرونده
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const isAllowed = await verifySuperAdminPermission(req);
+    if (!isAllowed) {
+      return NextResponse.json(
+        { success: false, error: 'تنها مدیر ارشد سامانه مجاز به حذف پرونده یا فرم‌های تکمیل‌شده می‌باشد.' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const submissionId = searchParams.get('submissionId') || searchParams.get('subId');
+    const caseCode = searchParams.get('caseCode') || searchParams.get('code');
+    const mobile = searchParams.get('mobile');
+
+    if (submissionId) {
+      const ok = await deleteSubmissionFromDb(submissionId);
+      return NextResponse.json({ success: ok, message: 'فرم تکمیل‌شده با موفقیت حذف گردید.' });
+    }
+
+    if (caseCode || mobile) {
+      const ok = await deleteCaseFromDb(caseCode || '', mobile || undefined);
+      return NextResponse.json({
+        success: ok,
+        message: 'پرونده مراجع و کلیه فرم‌های آن با موفقیت حذف گردید.',
+      });
+    }
+
+    return NextResponse.json({ success: false, error: 'پارامتر حذف ارسال نشده است.' }, { status: 400 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : 'Server error';
+    console.error('Error in /api/cases DELETE:', err);
+    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
   }
 }

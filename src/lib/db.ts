@@ -776,6 +776,204 @@ export async function deleteSubmissionCommentInDb(
   return true;
 }
 
+/**
+ * حذف یک فرم پر شده (submission) بر اساس شناسه از پایگاه‌داده و فایل محلی
+ */
+export async function deleteSubmissionFromDb(submissionId: string): Promise<boolean> {
+  if (!submissionId || !submissionId.trim()) return false;
+  const cleanId = submissionId.trim();
+
+  // ۱. حذف از مخزن فایل محلی data/submissions.json
+  try {
+    const local = readLocalSubmissions();
+    const filtered = local.filter((s) => s.id !== cleanId);
+    writeLocalSubmissions(filtered);
+  } catch (err) {
+    console.warn('Local deleteSubmission warning:', err);
+  }
+
+  // ۲. حذف از جدول form_submissions در پایگاه‌داده PostgreSQL
+  try {
+    await executeNeonQueryWithTimeout(
+      `DELETE FROM form_submissions WHERE id = $1`,
+      [cleanId]
+    );
+  } catch (err) {
+    console.warn('DB deleteSubmission warning:', err);
+  }
+
+  return true;
+}
+
+/**
+ * حذف کامل پرونده مراجع شامل رکورد پرونده و کلیه فرم‌های تکمیل‌شده مرتبط با آن
+ */
+export async function deleteCaseFromDb(caseCode: string, mobile?: string): Promise<boolean> {
+  const cleanCode = (caseCode || '').replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+  const cleanMobile = mobile ? normalizeMobile(mobile) : '';
+
+  if (!cleanCode && !cleanMobile) return false;
+
+  const upperCode = cleanCode ? cleanCode.toUpperCase() : '';
+  const strippedCode = upperCode ? upperCode.replace(/^(SF|CASE|SP|BH)-/i, '') : '';
+  const bare10 = cleanMobile.length >= 10 ? cleanMobile.slice(-10) : '';
+
+  // ۱. حذف از مخزن فایل محلی data/submissions.json
+  try {
+    const local = readLocalSubmissions();
+    const filtered = local.filter((s) => {
+      const sCode = (s.data?.caseCode || s.trackingCode || '').replace(/^sub-case-/, '').replace(/^sub-/, '').trim().toUpperCase();
+      const sTrack = (s.trackingCode || '').toUpperCase();
+      const sMob = normalizeMobile(s.mobile || s.data?.f_mobile || s.data?.bk_mobile || s.data?.mobile || '');
+      const sBare10 = sMob.length >= 10 ? sMob.slice(-10) : '';
+
+      const codeMatch = Boolean(
+        upperCode && (
+          sCode === upperCode ||
+          sTrack === upperCode ||
+          s.id === cleanCode ||
+          s.id === `sub-case-${cleanCode}` ||
+          (strippedCode && strippedCode.length >= 3 && (sCode.includes(strippedCode) || sTrack.includes(strippedCode)))
+        )
+      );
+
+      const mobMatch = Boolean(
+        bare10 && bare10.length === 10 && (sMob === cleanMobile || sBare10 === bare10)
+      );
+
+      return !(codeMatch || mobMatch);
+    });
+
+    writeLocalSubmissions(filtered);
+  } catch (err) {
+    console.warn('Local deleteCase warning:', err);
+  }
+
+  // ۲. حذف کلیه فرم‌های تکمیل‌شده متناظر با این پرونده از جدول form_submissions در PostgreSQL
+  try {
+    if (upperCode && bare10 && bare10.length === 10) {
+      await executeNeonQueryWithTimeout(
+        `DELETE FROM form_submissions 
+         WHERE (
+           UPPER(tracking_code) = $1 
+           OR UPPER(tracking_code) = $2 
+           OR UPPER(tracking_code) = $3
+           OR data->>'caseCode' = $1 
+           OR data->>'caseCode' = $2 
+           OR data->>'caseCode' = $3
+           OR id = $4
+           OR id = $5
+           OR mobile = $6
+           OR mobile = $7
+           OR data->>'f_mobile' = $6
+           OR data->>'f_mobile' = $7
+           OR data->>'mobile' = $6
+           OR data->>'mobile' = $7
+           OR RIGHT(REGEXP_REPLACE(COALESCE(mobile, data->>'f_mobile', data->>'mobile', ''), '[^0-9]', '', 'g'), 10) = $7
+         )`,
+        [
+          upperCode,
+          `CASE-${strippedCode}`,
+          `SF-${strippedCode}`,
+          cleanCode,
+          `sub-case-${cleanCode}`,
+          cleanMobile,
+          bare10
+        ]
+      );
+    } else if (upperCode) {
+      await executeNeonQueryWithTimeout(
+        `DELETE FROM form_submissions 
+         WHERE (
+           UPPER(tracking_code) = $1 
+           OR UPPER(tracking_code) = $2 
+           OR UPPER(tracking_code) = $3
+           OR data->>'caseCode' = $1 
+           OR data->>'caseCode' = $2 
+           OR data->>'caseCode' = $3
+           OR id = $4
+           OR id = $5
+         )`,
+        [
+          upperCode,
+          `CASE-${strippedCode}`,
+          `SF-${strippedCode}`,
+          cleanCode,
+          `sub-case-${cleanCode}`
+        ]
+      );
+    } else if (bare10 && bare10.length === 10) {
+      await executeNeonQueryWithTimeout(
+        `DELETE FROM form_submissions 
+         WHERE (
+           mobile = $1
+           OR mobile = $2
+           OR data->>'f_mobile' = $1
+           OR data->>'f_mobile' = $2
+           OR data->>'mobile' = $1
+           OR data->>'mobile' = $2
+           OR RIGHT(REGEXP_REPLACE(COALESCE(mobile, data->>'f_mobile', data->>'mobile', ''), '[^0-9]', '', 'g'), 10) = $2
+         )`,
+        [cleanMobile, bare10]
+      );
+    }
+  } catch (err) {
+    console.warn('DB deleteCase form_submissions warning:', err);
+  }
+
+  // ۳. حذف رکورد پرونده از جدول belhagh_cases در PostgreSQL
+  try {
+    if (upperCode && bare10 && bare10.length === 10) {
+      await executeNeonQueryWithTimeout(
+        `DELETE FROM belhagh_cases 
+         WHERE (
+           UPPER(case_code) = $1 
+           OR UPPER(case_code) = $2 
+           OR UPPER(case_code) = $3 
+           OR mobile = $4 
+           OR mobile = $5
+           OR RIGHT(REGEXP_REPLACE(COALESCE(mobile, ''), '[^0-9]', '', 'g'), 10) = $5
+         )`,
+        [
+          upperCode,
+          `CASE-${strippedCode}`,
+          `SF-${strippedCode}`,
+          cleanMobile,
+          bare10
+        ]
+      );
+    } else if (upperCode) {
+      await executeNeonQueryWithTimeout(
+        `DELETE FROM belhagh_cases 
+         WHERE (
+           UPPER(case_code) = $1 
+           OR UPPER(case_code) = $2 
+           OR UPPER(case_code) = $3
+         )`,
+        [
+          upperCode,
+          `CASE-${strippedCode}`,
+          `SF-${strippedCode}`
+        ]
+      );
+    } else if (bare10 && bare10.length === 10) {
+      await executeNeonQueryWithTimeout(
+        `DELETE FROM belhagh_cases 
+         WHERE (
+           mobile = $1 
+           OR mobile = $2
+           OR RIGHT(REGEXP_REPLACE(COALESCE(mobile, ''), '[^0-9]', '', 'g'), 10) = $2
+         )`,
+        [cleanMobile, bare10]
+      );
+    }
+  } catch (err) {
+    console.warn('DB deleteCase belhagh_cases warning:', err);
+  }
+
+  return true;
+}
+
 export async function getFormSubmissionsFromDb(formId?: string, search?: string): Promise<FormSubmission[]> {
   // الف) تلاش برای واکشی از پایگاه‌داده PostgreSQL
   try {

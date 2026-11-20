@@ -51,6 +51,8 @@ interface FormContextType {
   addSubmissionComment: (submissionId: string, authorName: string, authorRole: string, content: string) => void;
   editSubmissionComment: (submissionId: string, commentId: string, newContent: string) => void;
   deleteSubmissionComment: (submissionId: string, commentId: string) => void;
+  deleteSubmission: (submissionId: string) => Promise<{ success: boolean; error?: string }>;
+  deleteCase: (caseCode: string, mobile?: string) => Promise<{ success: boolean; error?: string }>;
   getSubmissionsByFormId: (formId: string) => FormSubmission[];
   refreshSubmissionsFromDb: (formId?: string) => Promise<void>;
   sendChatMessage: (formId: string, sender: 'respondent' | 'admin', senderName: string, text: string) => void;
@@ -983,6 +985,106 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   };
 
+  /**
+   * حذف یک فرم تکمیل‌شده توسط مراجع (فقط ادمین مجاز است)
+   */
+  const deleteSubmission = useCallback(async (submissionId: string): Promise<{ success: boolean; error?: string }> => {
+    if (!submissionId) return { success: false, error: 'شناسه فرم مشخص نیست.' };
+    const cleanId = submissionId.trim();
+
+    try {
+      const res = await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_submission', submissionId: cleanId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'خطا در حذف فرم از سرور' };
+      }
+
+      setSubmissions((prev) => {
+        const updated = prev.filter((s) => s.id !== cleanId);
+        try {
+          localStorage.setItem('formafzar_submissions', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('deleteSubmission error:', err);
+      return { success: false, error: err?.message || 'خطا در برقراری ارتباط با سرور' };
+    }
+  }, []);
+
+  /**
+   * حذف کامل پرونده مراجع شامل کلیه فرم‌ها و سوابق آن (فقط ادمین مجاز است)
+   */
+  const deleteCase = useCallback(async (caseCode: string, mobile?: string): Promise<{ success: boolean; error?: string }> => {
+    if (!caseCode && !mobile) return { success: false, error: 'کد پرونده یا شماره همراه مراجع مشخص نیست.' };
+
+    const cleanCode = (caseCode || '').replace(/^sub-case-/, '').replace(/^sub-/, '').trim();
+    const cleanMobile = mobile
+      ? String(mobile).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[^0-9]/g, '')
+      : '';
+
+    try {
+      const res = await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_case', caseCode: cleanCode, mobile: cleanMobile }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'خطا در حذف پرونده از سرور' };
+      }
+
+      const upperCode = cleanCode ? cleanCode.toUpperCase() : '';
+      const stripped = upperCode ? upperCode.replace(/^(SF|CASE|SP|BH)-/i, '') : '';
+      const bare10 = cleanMobile.length >= 10 ? cleanMobile.slice(-10) : '';
+
+      setSubmissions((prev) => {
+        const updated = prev.filter((s) => {
+          const sCode = (s.data?.caseCode || s.trackingCode || '').replace(/^sub-case-/, '').replace(/^sub-/, '').trim().toUpperCase();
+          const sTrack = (s.trackingCode || '').toUpperCase();
+          const rawMob = s.mobile || s.data?.f_mobile || s.data?.bk_mobile || s.data?.mobile || '';
+          const sMob = String(rawMob).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[^0-9]/g, '');
+          const sBare10 = sMob.length >= 10 ? sMob.slice(-10) : '';
+
+          const codeMatch = Boolean(
+            upperCode && (
+              sCode === upperCode ||
+              sTrack === upperCode ||
+              s.id === cleanCode ||
+              s.id === `sub-case-${cleanCode}` ||
+              (stripped && stripped.length >= 3 && (sCode.includes(stripped) || sTrack.includes(stripped)))
+            )
+          );
+
+          const mobMatch = Boolean(
+            bare10 && bare10.length === 10 && (sMob.endsWith(bare10) || sBare10 === bare10)
+          );
+
+          return !(codeMatch || mobMatch);
+        });
+
+        try {
+          localStorage.setItem('formafzar_submissions', JSON.stringify(updated));
+        } catch {}
+
+        return updated;
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('deleteCase error:', err);
+      return { success: false, error: err?.message || 'خطا در برقراری ارتباط با سرور' };
+    }
+  }, []);
+
   const getSubmissionsByFormId = (formId: string) => submissions.filter((s) => s.formId === formId);
 
   // واکشی پاسخ‌های فرم از دیتابیس ابری Neon و ادغام با وضعیت موجود
@@ -1268,6 +1370,8 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
         addSubmissionComment,
         editSubmissionComment,
         deleteSubmissionComment,
+        deleteSubmission,
+        deleteCase,
         getSubmissionsByFormId,
         refreshSubmissionsFromDb,
         sendChatMessage,

@@ -37,7 +37,8 @@ import {
   Layers,
   ArrowUpRight,
   RefreshCw,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { 
   formatPersianDateTime, 
@@ -75,10 +76,68 @@ interface ClientCaseGroup {
 }
 
 export const SubmissionsHub: React.FC = () => {
-  const { forms, activeForm, submissions, teamMembers, counselingTopics, updateSubmissionStatus, addSubmissionComment, refreshSubmissionsFromDb } = useForm();
+  const {
+    forms,
+    activeForm,
+    submissions,
+    teamMembers,
+    counselingTopics,
+    updateSubmissionStatus,
+    addSubmissionComment,
+    refreshSubmissionsFromDb,
+    deleteSubmission,
+    deleteCase,
+  } = useForm();
   const { currentUser } = useAdminAuth();
 
   const isSuperAdmin = isSuperAdminUser(currentUser);
+
+  // وضعیت و متغیرهای حذف اختصاصی ادمین
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<
+    | { type: 'case'; caseGroup: ClientCaseGroup }
+    | { type: 'submission'; submission: FormSubmission }
+    | null
+  >(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirmTarget || isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      if (deleteConfirmTarget.type === 'case') {
+        const res = await deleteCase(
+          deleteConfirmTarget.caseGroup.caseCode,
+          deleteConfirmTarget.caseGroup.mobile
+        );
+        if (!res.success) {
+          setDeleteError(res.error || 'خطا در حذف پرونده مراجع');
+          setIsDeleting(false);
+          return;
+        }
+        if (activeCaseModal?.caseCode === deleteConfirmTarget.caseGroup.caseCode) {
+          setActiveCaseModal(null);
+        }
+      } else {
+        const res = await deleteSubmission(deleteConfirmTarget.submission.id);
+        if (!res.success) {
+          setDeleteError(res.error || 'خطا در حذف فرم تکمیل‌شده');
+          setIsDeleting(false);
+          return;
+        }
+        if (activeSubmissionModal?.id === deleteConfirmTarget.submission.id) {
+          setActiveSubmissionModal(null);
+        }
+      }
+      setDeleteConfirmTarget(null);
+    } catch (err: any) {
+      setDeleteError(err?.message || 'خطای غیرمنتظره در انجام عملیات حذف');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const currentMember = teamMembers?.find(
     (m) =>
@@ -939,6 +998,19 @@ function normalizeSearchText(str: string): string {
                                   <span>اکسل</span>
                                 </button>
                               )}
+                              {isSuperAdmin && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirmTarget({ type: 'case', caseGroup: c });
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
+                                  title="حذف کامل پرونده مراجع"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>حذف</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1043,32 +1115,45 @@ function normalizeSearchText(str: string): string {
                     </div>
 
                     {/* دکمه‌های عملیات کارت پرونده */}
-                    <div className={`grid ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-1'} gap-2.5 pt-0.5`}>
+                    <div className="space-y-2 pt-0.5">
                       <button
                         onClick={() => setActiveCaseModal(c)}
-                        className={`${isSuperAdmin ? 'col-span-2' : 'col-span-1'} py-2.5 px-3 bg-gradient-to-l from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white text-xs font-bold rounded-2xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]`}
+                        className="w-full py-2.5 px-3 bg-gradient-to-l from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white text-xs font-bold rounded-2xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
                       >
                         <Eye className="w-4 h-4" />
                         <span>مشاهده پرونده کامل</span>
                       </button>
 
                       {isSuperAdmin && (
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
-                              await exportSingleClientDossierToXLSX(c, forms);
-                            } catch (err) {
-                              console.error(err);
-                              alert('خطا در صدور اکسل این پرونده');
-                            }
-                          }}
-                          className="py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-[0.98]"
-                        >
-                          <FileSpreadsheet className="w-3.5 h-3.5" />
-                          <span>اکسل</span>
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const { exportSingleClientDossierToXLSX } = await import('@/lib/excel-export');
+                                await exportSingleClientDossierToXLSX(c, forms);
+                              } catch (err) {
+                                console.error(err);
+                                alert('خطا در صدور اکسل این پرونده');
+                              }
+                            }}
+                            className="py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-[0.98]"
+                          >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            <span>اکسل</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmTarget({ type: 'case', caseGroup: c });
+                            }}
+                            className="py-2.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-[0.98]"
+                            title="حذف کامل پرونده مراجع"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>حذف پرونده</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1138,13 +1223,27 @@ function normalizeSearchText(str: string): string {
                             {formatPersianDateTime(sub.createdAt)}
                           </td>
                           <td className="p-3.5 sm:p-4 text-center">
-                            <button
-                              onClick={() => setActiveSubmissionModal(sub)}
-                              className="p-1.5 text-slate-600 hover:text-sky-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                              title="مشاهده جزئیات ثبت"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => setActiveSubmissionModal(sub)}
+                                className="p-1.5 text-slate-600 hover:text-sky-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                title="مشاهده جزئیات ثبت"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {isSuperAdmin && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirmTarget({ type: 'submission', submission: sub });
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                  title="حذف این فرم تکمیل‌شده"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1197,13 +1296,28 @@ function normalizeSearchText(str: string): string {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => setActiveSubmissionModal(sub)}
-                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-slate-600" />
-                      <span>مشاهده جزئیات کامل فرم</span>
-                    </button>
+                    <div className={`grid ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-1'} gap-2`}>
+                      <button
+                        onClick={() => setActiveSubmissionModal(sub)}
+                        className={`${isSuperAdmin ? 'col-span-2' : 'col-span-1'} w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]`}
+                      >
+                        <Eye className="w-3.5 h-3.5 text-slate-600" />
+                        <span>مشاهده جزئیات کامل فرم</span>
+                      </button>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmTarget({ type: 'submission', submission: sub });
+                          }}
+                          className="py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 text-xs font-bold rounded-2xl transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-[0.98]"
+                          title="حذف فرم تکمیل‌شده"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>حذف</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -1253,12 +1367,106 @@ function normalizeSearchText(str: string): string {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              {isSuperAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = activeSubmissionModal;
+                    setActiveSubmissionModal(null);
+                    setDeleteConfirmTarget({ type: 'submission', submission: target });
+                  }}
+                  className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="size-4" />
+                  <span>حذف این فرم پر شده</span>
+                </button>
+              ) : <div />}
               <button
                 onClick={() => setActiveSubmissionModal(null)}
-                className="px-5 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl"
+                className="px-5 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-slate-800 transition"
               >
                 بستن
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال تأیید حذف امن (پرونده یا فرم پر شده) اختصاصی ادمین */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in" dir="rtl">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-rose-100 overflow-hidden space-y-4 p-6">
+            <div className="flex items-center gap-3">
+              <div className="size-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="size-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  {deleteConfirmTarget.type === 'case' ? 'حذف کامل پرونده مراجع' : 'حذف فرم تکمیل‌شده'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">عملیات مدیریتی حساس و غیرقابل بازگشت</p>
+              </div>
+            </div>
+
+            <div className="bg-rose-50/70 border border-rose-100 rounded-2xl p-4 text-xs text-rose-900 leading-relaxed space-y-2">
+              {deleteConfirmTarget.type === 'case' ? (
+                <>
+                  <p>
+                    آیا از حذف کامل پرونده مراجع <strong className="font-black text-rose-950">«{deleteConfirmTarget.caseGroup.fullName}»</strong> با کد پرونده <span className="font-mono font-bold text-rose-950">{toPersianDigits(deleteConfirmTarget.caseGroup.caseCode)}</span> اطمینان دارید؟
+                  </p>
+                  <p className="text-[11px] text-rose-700">
+                    با این اقدام، کلیه {toPersianDigits(deleteConfirmTarget.caseGroup.totalFormsCount)} فرم تکمیل‌شده، سوابق نوبت‌دهی و پرونده بالحق این مراجع برای همیشه از سرور و پایگاه داده پاکسازی خواهد شد.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    آیا از حذف این فرم تکمیل‌شده با کد پیگیری <span className="font-mono font-bold text-rose-950">{toPersianDigits(deleteConfirmTarget.submission.trackingCode)}</span> اطمینان دارید؟
+                  </p>
+                  <p className="text-[11px] text-rose-700">
+                    این پاسخ و کلیه اطلاعات ثبت‌شده در آن به صورت دائمی از سامانه حذف خواهد شد.
+                  </p>
+                </>
+              )}
+            </div>
+
+            {deleteError && (
+              <div className="p-3 rounded-xl bg-red-100 border border-red-200 text-xs text-red-800 font-bold flex items-center gap-2">
+                <AlertCircle className="size-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => {
+                  setDeleteConfirmTarget(null);
+                  setDeleteError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer disabled:opacity-50"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleExecuteDelete}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-black text-white shadow-md shadow-rose-600/20 transition cursor-pointer flex items-center gap-2 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="size-4 animate-spin" />
+                    <span>در حال حذف...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4" />
+                    <span>تأیید و حذف قطعی</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
