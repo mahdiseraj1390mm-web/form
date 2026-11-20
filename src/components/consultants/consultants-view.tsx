@@ -59,7 +59,9 @@ import {
   detectDayIndex,
   COUNSELING_TOPICS,
   KNOWN_CONSULTANTS,
-  CONSULTANT_DEFAULT_TOPICS
+  CONSULTANT_DEFAULT_TOPICS,
+  isPlaceholderClientName,
+  extractCleanName
 } from '@/lib/consultant-helpers';
 import { ClientDossierFullview, ClientCaseGroup } from '@/components/submissions/client-dossier-fullview';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
@@ -322,9 +324,21 @@ export const ConsultantsView: React.FC<ConsultantsViewProps> = ({ onNavigateTab 
       }
     }
 
+    let resolvedFullName = (!isPlaceholderClientName(booking.clientName) && booking.clientName) ? booking.clientName : '';
+    if (!resolvedFullName) {
+      for (const s of matchingSubs) {
+        const { fullName } = extractCleanName(s.data);
+        if (fullName && !isPlaceholderClientName(fullName)) {
+          resolvedFullName = fullName;
+          break;
+        }
+      }
+    }
+    if (!resolvedFullName) resolvedFullName = booking.clientName || 'مراجع محترم';
+
     const group: ClientCaseGroup = {
       caseCode: booking.caseCode,
-      fullName: booking.clientName,
+      fullName: resolvedFullName,
       mobile: booking.clientMobile,
       provinceCity: booking.provinceCity || 'مشخص‌نشده',
       submissions: matchingSubs,

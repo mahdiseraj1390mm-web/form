@@ -681,7 +681,144 @@ export function isConsultantMember(member: TeamMember): boolean {
   return hasWorkingHours || hasTopics || hasConsultantId || hasConsultantTab || hasConsultantTitle;
 }
 
-export function extractBookingItemFromSubmission(sub: FormSubmission): ConsultantBookingItem | null {
+export interface MasterClientProfile {
+  caseCode: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  mobile: string;
+  provinceCity?: string;
+}
+
+export interface MasterClientDirectory {
+  byCode: Map<string, MasterClientProfile>;
+  byMobile: Map<string, MasterClientProfile>;
+}
+
+export {
+  normalizeCaseCode,
+  normalize10DigitMobile,
+  isPlaceholderClientName,
+  extractCleanName,
+  PLACEHOLDER_CLIENT_NAMES,
+} from './client-identity';
+
+import {
+  normalizeCaseCode,
+  normalize10DigitMobile,
+  isPlaceholderClientName,
+  extractCleanName,
+} from './client-identity';
+
+/**
+ * ساخت دایرکتوری جامع پرونده‌های اصلی مراجعان از میان تمامی ارسالی‌ها
+ * در این تابع، فرم‌های ثبت‌نام اولیه و رکوردهایی که دارای نام و مشخصات کامل هستند در اولویت قرار می‌گیرند.
+ */
+export function buildMasterClientDirectory(submissions: FormSubmission[]): MasterClientDirectory {
+  const byCode = new Map<string, MasterClientProfile>();
+  const byMobile = new Map<string, MasterClientProfile>();
+
+  if (!submissions || !Array.isArray(submissions)) {
+    return { byCode, byMobile };
+  }
+
+  // اولویت‌دهی به فرم‌های ثبت‌نام اولیه و رکوردهای پرونده اصلی
+  const sorted = [...submissions].sort((a, b) => {
+    const aIsReg = a.formId === 'form-belhagh-registration' || a.id?.startsWith('sub-case-') ? 1 : 0;
+    const bIsReg = b.formId === 'form-belhagh-registration' || b.id?.startsWith('sub-case-') ? 1 : 0;
+    return bIsReg - aIsReg;
+  });
+
+  for (const s of sorted) {
+    if (!s || !s.data) continue;
+    const d = s.data;
+
+    const { firstName, lastName, fullName } = extractCleanName(d);
+    if (!fullName || isPlaceholderClientName(fullName)) continue;
+
+    const rawCaseCode = d.caseCode || s.trackingCode || d.f_case_code || d.user_code || '';
+    const normCaseCode = normalizeCaseCode(rawCaseCode);
+    const rawMobile = d.f_mobile || d.mobile || d.bk_mobile || s.mobile || '';
+    const mobile10 = normalize10DigitMobile(rawMobile);
+    const provinceCity = d.f_province_city || d.province_city || '';
+
+    const profile: MasterClientProfile = {
+      caseCode: normCaseCode || rawCaseCode,
+      fullName,
+      firstName,
+      lastName,
+      mobile: rawMobile,
+      provinceCity,
+    };
+
+    if (normCaseCode && !byCode.has(normCaseCode)) {
+      byCode.set(normCaseCode, profile);
+    }
+    if (mobile10 && !byMobile.has(mobile10)) {
+      byMobile.set(mobile10, profile);
+    }
+  }
+
+  return { byCode, byMobile };
+}
+
+/**
+ * استخراج و بازیابی نام و مشخصات مراجع از پرونده اصلی
+ * بدون توجه به اینکه فرم جاری چه فیلدهایی داشته، نام واقعی شخص از پرونده اصلی او بازگردانده می‌شود.
+ */
+export function resolveMasterClientProfile(
+  sub: FormSubmission,
+  directoryOrSubmissions?: MasterClientDirectory | FormSubmission[]
+): MasterClientProfile | null {
+  if (!sub) return null;
+  const d = sub.data || {};
+
+  const dir: MasterClientDirectory | undefined = Array.isArray(directoryOrSubmissions)
+    ? buildMasterClientDirectory(directoryOrSubmissions)
+    : directoryOrSubmissions;
+
+  const rawCaseCode = d.caseCode || sub.trackingCode || d.f_case_code || d.user_code || '';
+  const normCaseCode = normalizeCaseCode(rawCaseCode);
+  const rawMobile = d.f_mobile || d.mobile || d.bk_mobile || sub.mobile || '';
+  const mobile10 = normalize10DigitMobile(rawMobile);
+
+  // ۱. جستجو در دایرکتوری بر اساس کد پرونده (اولویت اول)
+  if (dir && normCaseCode && dir.byCode.has(normCaseCode)) {
+    const prof = dir.byCode.get(normCaseCode)!;
+    if (!isPlaceholderClientName(prof.fullName)) {
+      return prof;
+    }
+  }
+
+  // ۲. جستجو در دایرکتوری بر اساس شماره موبایل (اولویت دوم)
+  if (dir && mobile10 && dir.byMobile.has(mobile10)) {
+    const prof = dir.byMobile.get(mobile10)!;
+    if (!isPlaceholderClientName(prof.fullName)) {
+      return prof;
+    }
+  }
+
+  // ۳. بررسی فیلدهای نام در خود این فرم در صورت معتبر بودن
+  const { firstName: fName, lastName: lName, fullName: selfCandidate } = extractCleanName(d);
+
+  if (selfCandidate && !isPlaceholderClientName(selfCandidate)) {
+    return {
+      caseCode: normCaseCode || rawCaseCode,
+      fullName: selfCandidate,
+      firstName: fName,
+      lastName: lName,
+      mobile: rawMobile,
+      provinceCity: d.f_province_city || d.province_city || '',
+    };
+  }
+
+  return null;
+}
+
+export function extractBookingItemFromSubmission(
+  sub: FormSubmission,
+  directoryOrSubmissions?: MasterClientDirectory | FormSubmission[]
+): ConsultantBookingItem | null {
   if (!sub || !sub.data) return null;
   const d = sub.data;
 
@@ -767,10 +904,12 @@ export function extractBookingItemFromSubmission(sub: FormSubmission): Consultan
   const dayName = PERSIAN_WEEK_DAYS[dayIdx]?.name || 'شنبه';
   const timeRange = extractTimeRange(slotValue);
 
-  const clientName = `${d.f_name || ''} ${d.f_family || ''}`.trim() || d.fullName || d.f_applicant_name || 'مراجع محترم';
-  const caseCode = d.caseCode || sub.trackingCode || 'ثبت‌نشده';
-  const clientMobile = d.f_mobile || d.mobile || d.f_phone || sub.mobile || '';
-  const provinceCity = d.f_province_city || d.province_city || '';
+  // استخراج هوشمند و قطعی نام و مشخصات مراجع از پرونده اصلی (صرف نظر از مقادیر فرم نوبت‌دهی)
+  const masterProf = resolveMasterClientProfile(sub, directoryOrSubmissions);
+  const clientName = masterProf?.fullName || `${d.f_name || ''} ${d.f_family || ''}`.trim() || d.fullName || d.f_applicant_name || 'مراجع محترم';
+  const caseCode = masterProf?.caseCode || d.caseCode || sub.trackingCode || 'ثبت‌نشده';
+  const clientMobile = masterProf?.mobile || d.f_mobile || d.mobile || d.f_phone || sub.mobile || '';
+  const provinceCity = masterProf?.provinceCity || d.f_province_city || d.province_city || '';
   const topic = d.f_topic || d.topic || d.f_counseling_subject || 'مشاوره تخصصی';
 
   return {
@@ -1059,6 +1198,7 @@ export interface ConsultantListItem {
  * استخراج تمامی نوبت‌های ثبت‌شده در سامانه
  */
 export function getAllBookingItems(submissions: FormSubmission[]): ConsultantBookingItem[] {
+  const masterDir = buildMasterClientDirectory(submissions);
   const items: ConsultantBookingItem[] = [];
   const seenSubIds = new Set<string>();
 
@@ -1070,7 +1210,7 @@ export function getAllBookingItems(submissions: FormSubmission[]): ConsultantBoo
     );
 
     if (isBookingForm || hasBookingKey || sub.data?.f_counselor || sub.data?.f_booking_counselor || sub.data?.f_booking) {
-      const item = extractBookingItemFromSubmission(sub);
+      const item = extractBookingItemFromSubmission(sub, masterDir);
       if (item && !seenSubIds.has(item.id)) {
         seenSubIds.add(item.id);
         items.push(item);

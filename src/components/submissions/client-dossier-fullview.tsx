@@ -73,6 +73,7 @@ import {
   getCurrentJalaliYear,
   normalizeAppointmentDateToJalali,
 } from '@/lib/persian';
+import { isPlaceholderClientName, extractCleanName } from '@/lib/client-identity';
 
 export interface ClientCaseGroup {
   caseCode: string;
@@ -459,14 +460,12 @@ export const ClientDossierFullview: React.FC<ClientDossierFullviewProps> = ({
 
   // نام کامل مراجع از روی داده‌های واقعی ثبت‌نام
   const displayFullName = useMemo(() => {
-    if (clientCase.fullName && clientCase.fullName !== 'مراجع مرکز بالحق') {
+    if (clientCase.fullName && !isPlaceholderClientName(clientCase.fullName)) {
       return clientCase.fullName;
     }
-    if (combinedData.f_name || combinedData.f_family) {
-      return `${combinedData.f_name || ''} ${combinedData.f_family || ''}`.trim();
-    }
-    if (combinedData.fullName || combinedData.f_fullname) {
-      return combinedData.fullName || combinedData.f_fullname;
+    const { fullName } = extractCleanName(combinedData);
+    if (fullName && !isPlaceholderClientName(fullName)) {
+      return fullName;
     }
     return 'مراجع محترم مرکز بالحق';
   }, [clientCase.fullName, combinedData]);

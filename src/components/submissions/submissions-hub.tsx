@@ -55,7 +55,8 @@ import {
   extractBookingItemFromSubmission, 
   isBookingAssignedToConsultant, 
   matchCounselingTopic,
-  isConsultantMember
+  isConsultantMember,
+  isPlaceholderClientName
 } from '@/lib/consultant-helpers';
 
 interface ClientCaseGroup {
@@ -286,7 +287,7 @@ export const SubmissionsHub: React.FC = () => {
         if (sub.paymentStatus === 'paid') {
           existing.totalPaidAmount += (sub.paymentAmount || 0);
         }
-        if (candidateName && (existing.fullName === 'مراجع مرکز بالحق' || !existing.fullName)) {
+        if (candidateName && isPlaceholderClientName(existing.fullName)) {
           existing.fullName = candidateName;
         }
       }
@@ -385,7 +386,7 @@ export const SubmissionsHub: React.FC = () => {
     if (isConsultantUser && currentConsultantProfile) {
       return allCases.filter((c) => {
         return c.submissions.some((sub) => {
-          const bookingItem = extractBookingItemFromSubmission(sub);
+          const bookingItem = extractBookingItemFromSubmission(sub, activeSubmissions);
           if (bookingItem && isBookingAssignedToConsultant(bookingItem, currentConsultantProfile, consultantAllowedTopics)) {
             return true;
           }

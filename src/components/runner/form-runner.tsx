@@ -64,6 +64,7 @@ import {
 } from '@/lib/persian';
 import { extractBookingDetails } from '@/lib/belhagh-sms-helper';
 import { matchTimeRanges, extractTimeRange, detectDayIndex, isSlotConflict } from '@/lib/consultant-helpers';
+import { extractCleanName, isPlaceholderClientName } from '@/lib/client-identity';
 import { iranProvinces } from '@/lib/iran-geo';
 import { PaymentModal } from './payment-modal';
 import { AppointmentScheduler } from './appointment-scheduler';
@@ -1138,7 +1139,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   }, [form.id, form.slug, form.fields, initialFormData]);
 
-  // بازیابی خودکار اطلاعات هویتی مراجع بر اساس کد پرونده در فرم نوبت‌دهی
+  // بازیابی خودکار اطلاعات هویتی مراجع بر اساس کد پرونده در فرم نوبت‌دهی (همراه با Debounce و لغو درخواست‌های همزمان)
+  const lastQueriedCodeRef = useRef<string>('');
   useEffect(() => {
     if (form.id !== 'form-belhagh-booking' && form.slug !== '3uu4z') return;
     const rawCode = formData.f_case_code;
@@ -1146,35 +1148,78 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     const cleanCode = toEnglishDigits(rawCode.trim().toUpperCase());
     if (cleanCode.length < 5) return;
 
-    if (formData.f_name && formData.f_mobile) return;
+    if (lastQueriedCodeRef.current === cleanCode) return;
 
-    let allSubs = [...submissions];
-    if (typeof window !== 'undefined') {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      // ۱. بررسی در داده‌های کش مرورگر
+      let allSubs = [...submissions];
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('formafzar_submissions');
+          if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
+          const storedCases = localStorage.getItem('belhagh_all_cases');
+          if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
+        } catch (err) {}
+      }
+
+      const found = allSubs.find(
+        (s) =>
+          s.trackingCode?.toUpperCase() === cleanCode ||
+          s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '') ||
+          s.data?.caseCode?.toUpperCase() === cleanCode
+      );
+
+      if (found && found.data) {
+        const { firstName, lastName } = extractCleanName(found.data);
+        if (isMounted) {
+          lastQueriedCodeRef.current = cleanCode;
+          setFormData((prev) => ({
+            ...prev,
+            f_name: firstName || prev.f_name || '',
+            f_family: lastName || prev.f_family || '',
+            f_mobile: found.data.f_mobile || found.data.mobile || prev.f_mobile || '',
+            f_province_city: found.data.f_province_city || prev.f_province_city || '',
+            f_role_in_family: found.data.f_role_in_family || prev.f_role_in_family || '',
+          }));
+        }
+        return;
+      }
+
+      // ۲. استعلام مستقیم، امن و سبک از سرور با اکشن lookup
       try {
-        const stored = localStorage.getItem('formafzar_submissions');
-        if (stored) allSubs = [...allSubs, ...JSON.parse(stored)];
-        const storedCases = localStorage.getItem('belhagh_all_cases');
-        if (storedCases) allSubs = [...allSubs, ...JSON.parse(storedCases)];
-      } catch (err) {}
-    }
+        const res = await fetch(`/api/cases?action=lookup&code=${encodeURIComponent(cleanCode)}`, {
+          signal: controller.signal,
+        });
+        const json = await res.json();
+        if (json.success && json.found && json.caseRecord && isMounted) {
+          lastQueriedCodeRef.current = cleanCode;
+          const rec = json.caseRecord;
+          const { firstName, lastName } = extractCleanName(rec.data || { f_name: rec.first_name, f_family: rec.last_name });
+          setFormData((prev) => ({
+            ...prev,
+            f_name: firstName || rec.first_name || prev.f_name || '',
+            f_family: lastName || rec.last_name || prev.f_family || '',
+            f_mobile: rec.mobile || prev.f_mobile || '',
+            f_province_city: (rec.province && rec.city) ? `${rec.province} - ${rec.city}` : (rec.data?.f_province_city || prev.f_province_city || ''),
+            f_role_in_family: rec.data?.f_role_in_family || prev.f_role_in_family || '',
+          }));
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.warn('API lookup case error:', err);
+        }
+      }
+    }, 400);
 
-    const found = allSubs.find(
-      (s) =>
-        s.trackingCode?.toUpperCase() === cleanCode ||
-        s.trackingCode?.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanCode.replace(/[^A-Z0-9]/g, '')
-    );
-
-    if (found && found.data) {
-      setFormData((prev) => ({
-        ...prev,
-        f_name: found.data.f_name || found.data.f_applicant_name || prev.f_name || '',
-        f_family: found.data.f_family || prev.f_family || '',
-        f_mobile: found.data.f_mobile || found.data.mobile || prev.f_mobile || '',
-        f_province_city: found.data.f_province_city || prev.f_province_city || '',
-        f_role_in_family: found.data.f_role_in_family || prev.f_role_in_family || '',
-      }));
-    }
-  }, [formData.f_case_code, form.id, form.slug, formData.f_name, formData.f_mobile, submissions]);
+    return () => {
+      isMounted = false;
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [formData.f_case_code, form.id, form.slug, submissions]);
 
   const handleGoToNextChainedForm = () => {
     const targetSlug = form.behavior?.nextChainedForm?.formSlug || '3uu4z';
@@ -2004,8 +2049,8 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     }
   };
 
-  const finalizeSubmission = (paymentRefId?: string) => {
-    setIsSubmitting(false);
+  const finalizeSubmission = async (paymentRefId?: string) => {
+    setIsSubmitting(true);
     let quizResult = undefined;
     if (form.quiz.enabled) {
       let correct = 0;
@@ -2163,14 +2208,6 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       cleanFormData[k] = formData[k];
     });
 
-    const sub = submitFormResponse(
-      form.id,
-      { ...cleanFormData, caseCode: newCaseCode },
-      paymentInfo,
-      quizResult,
-      evaluationResult,
-      { deviceFingerprint, detectedSafaCode }
-    );
     const isBookingFormSub = form.id === 'form-belhagh-booking' || form.slug === '3uu4z';
     let bookingDateData: Record<string, any> = {};
     if (isBookingFormSub) {
@@ -2186,23 +2223,82 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       } catch (err) {}
     }
 
+    // بازیابی هوشمند و تفکیک‌شده مشخصات هویتی مراجع از پرونده اصلی (بدون تکرار نام یا مقادیر نامعتبر)
+    const activeCase = activeCaseSubmission?.data || {};
+    let { firstName: masterFName, lastName: masterFFamily, fullName: masterFullName } = extractCleanName(cleanFormData);
+
+    if (!masterFullName || isPlaceholderClientName(masterFullName)) {
+      const activeClean = extractCleanName(activeCase);
+      masterFName = masterFName || activeClean.firstName;
+      masterFFamily = masterFFamily || activeClean.lastName;
+      masterFullName = activeClean.fullName;
+    }
+
+    if (!masterFullName || isPlaceholderClientName(masterFullName)) {
+      const matchInSubmissions = submissions.find(
+        (s) =>
+          (newCaseCode && (s.trackingCode === newCaseCode || s.data?.caseCode === newCaseCode)) ||
+          ((cleanFormData.f_mobile || cleanFormData.mobile) &&
+            (s.data?.f_mobile === (cleanFormData.f_mobile || cleanFormData.mobile) || s.mobile === (cleanFormData.f_mobile || cleanFormData.mobile)))
+      );
+      if (matchInSubmissions?.data) {
+        const subClean = extractCleanName(matchInSubmissions.data);
+        masterFName = masterFName || subClean.firstName;
+        masterFFamily = masterFFamily || subClean.lastName;
+        masterFullName = subClean.fullName || `${masterFName} ${masterFFamily}`.trim();
+      }
+    }
+
+    const enrichedFormData = {
+      ...cleanFormData,
+      ...bookingDateData,
+      caseCode: newCaseCode,
+      ...(masterFName ? { f_name: masterFName } : {}),
+      ...(masterFFamily ? { f_family: masterFFamily } : {}),
+      ...(masterFullName ? { fullName: masterFullName } : {}),
+    };
+
+    const sub = submitFormResponse(
+      form.id,
+      enrichedFormData,
+      paymentInfo,
+      quizResult,
+      evaluationResult,
+      { deviceFingerprint, detectedSafaCode }
+    );
+
     const finalSub: FormSubmission = {
       ...sub,
-      id: isRegistrationForm ? ('sub-case-' + newCaseCode) : sub.id,
+      id: isRegistrationForm && newCaseCode ? (`sub-case-${newCaseCode}`) : sub.id,
       trackingCode: newCaseCode,
       data: {
         ...sub.data,
-        ...bookingDateData,
-        caseCode: newCaseCode,
+        ...enrichedFormData,
       },
     };
 
     setSubmittedResult(finalSub);
     setActiveCaseSubmission(finalSub);
 
-    // ۱. ارسال پیامک کد پرونده پس از ثبت نام مراجع (مطابق پترن عکس ۳)
+    // ذخیره اتمیک و قطعی پاسخ فرم و پرونده در دیتابیس ابری سرور Neon PostgreSQL
+    try {
+      await fetch('/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_submission',
+          submission: finalSub,
+        }),
+      });
+    } catch (err) {
+      console.warn('Submission DB save error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+
+    // ۱. ارسال پیامک کد پرونده پس از ثبت نام مراجع (مطابق پترن رسمی)
     if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
-      const clientMobile = cleanFormData.f_mobile || cleanFormData.mobile;
+      const clientMobile = cleanFormData.f_mobile || cleanFormData.mobile || finalSub.mobile;
       if (clientMobile) {
         fetch('/api/sms/send', {
           method: 'POST',
@@ -2216,34 +2312,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
       }
     }
 
-    // ثبت یا نگهداری دائم پرونده در دیتابیس ابری Neon PostgreSQL
-    if (form.id === 'form-belhagh-registration' || form.slug === 'zexuz') {
-      const clientMobile = cleanFormData.f_mobile || cleanFormData.mobile;
-      if (clientMobile) {
-        fetch('/api/cases', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'register_case',
-            caseCode: newCaseCode,
-            mobile: clientMobile,
-            data: cleanFormData,
-          }),
-        }).catch((err) => console.warn('Case DB save error:', err));
-      }
-    }
-
-    // ذخیره سابمیشن در دیتابیس ابری Neon PostgreSQL
-    fetch('/api/cases', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'save_submission',
-        submission: finalSub,
-      }),
-    }).catch((err) => console.warn('Submission DB save error:', err));
-
-    // ۲ و ۳. ارسال پیامک تایید نوبت برای مراجع و مشاور (فرم نوبت‌دهی 3uu4z)
+    // ۲ و ۳. ارسال پیامک تایید نوبت برای مراجع و مشاور (فرم نوبت‌دهی)
     if (form.id === 'form-belhagh-booking' || form.slug === '3uu4z') {
       const booking = extractBookingDetails({ ...cleanFormData, ...finalSub.data });
       fetch('/api/sms/send', {
@@ -2253,7 +2322,7 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
           action: 'appointment_booked',
           clientMobile: booking.clientMobile,
           counselorMobile: booking.counselorMobile,
-          clientName: booking.clientName,
+          clientName: masterFullName || booking.clientName,
           counselorName: booking.counselorName,
           date: booking.date,
           time: booking.time,

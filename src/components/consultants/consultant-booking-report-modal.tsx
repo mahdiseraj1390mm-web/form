@@ -5,6 +5,7 @@ import { Sparkles, Check, ChevronDown, CalendarClock, User, FileText } from 'luc
 import { useForm } from '@/context/form-context';
 import { useAdminAuth } from '@/context/admin-auth-context';
 import type { ConsultantBookingItem } from '@/lib/consultant-helpers';
+import { isPlaceholderClientName } from '@/lib/client-identity';
 import { toPersianDigits, formatPersianDateTime } from '@/lib/persian';
 
 interface ConsultantBookingReportModalProps {
@@ -309,7 +310,9 @@ export const ConsultantBookingReportModal: React.FC<ConsultantBookingReportModal
         {/* نوار بالایی مودال */}
         <div className="shrink-0 flex items-center justify-between border-b border-slate-100 bg-white p-4 sm:p-5 z-10">
           <div>
-            <div className="text-base font-black text-slate-900">ثبت گزارش جلسه مشاوره</div>
+            <div className="text-base font-black text-slate-900">
+              ثبت گزارش جلسه مشاوره {!isPlaceholderClientName(booking.clientName) ? `(${booking.clientName})` : ''}
+            </div>
             <div className="mt-1 text-[11px] text-slate-400">
               {displayDateTime} · مشاور تعیین‌شده: {booking.consultantName || 'مشاور مرکز'}
             </div>

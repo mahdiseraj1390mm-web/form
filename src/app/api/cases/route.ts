@@ -217,6 +217,36 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, bookedSlots: Array.from(new Set(bookedSlots)) });
     }
 
+    // استعلام امن مشخصات پرونده مراجع جهت نمایش در فرم نوبت‌دهی (بدون افشای پاسخ‌های آزمون‌ها و اطلاعات محرمانه)
+    if (action === 'lookup') {
+      const targetCode = code ? code.trim() : '';
+      const targetMobile = mobile ? normalizeMobile(mobile) : '';
+      const caseRecord = (targetCode ? await getCaseByCode(targetCode) : null) || (targetMobile ? await getCaseByMobile(targetMobile) : null);
+      if (caseRecord) {
+        const safeData = {
+          f_name: caseRecord.first_name || caseRecord.data?.f_name || '',
+          f_family: caseRecord.last_name || caseRecord.data?.f_family || '',
+          f_mobile: caseRecord.mobile || caseRecord.data?.f_mobile || '',
+          f_province_city: (caseRecord.province && caseRecord.city) ? `${caseRecord.province} - ${caseRecord.city}` : (caseRecord.data?.f_province_city || ''),
+          f_role_in_family: caseRecord.data?.f_role_in_family || '',
+        };
+        return NextResponse.json({
+          success: true,
+          found: true,
+          caseRecord: {
+            case_code: caseRecord.case_code,
+            first_name: caseRecord.first_name,
+            last_name: caseRecord.last_name,
+            mobile: caseRecord.mobile,
+            province: caseRecord.province,
+            city: caseRecord.city,
+            data: safeData,
+          },
+        });
+      }
+      return NextResponse.json({ success: true, found: false, message: 'پرونده‌ای با این مشخصات یافت نشد.' });
+    }
+
     if (mobile) {
       const clean = normalizeMobile(mobile);
       const caseRecord = await getCaseByMobile(clean);
@@ -448,8 +478,18 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // اگر فرم ثبت‌نام بود، همانندسازی و ادغام خودکار کارنامه صفان با بالاترین ضریب شباهت انجام گیرد
+        // اگر فرم ثبت‌نام بود، ایجاد رکورد اصلی در belhagh_cases و همانندسازی کارنامه صفان به صورت اتمیک
         if (submission.formId === 'form-belhagh-registration' || submission.formId === 'zexuz') {
+          try {
+            const clientMobile = normalizeMobile(submission.mobile || submission.data?.f_mobile || '');
+            const cCode = submission.data?.caseCode || submission.trackingCode;
+            if (clientMobile && cCode) {
+              await createCaseRecord(cCode, clientMobile, submission.data || {});
+            }
+          } catch (e) {
+            console.warn('Auto createCaseRecord in save_submission warning:', e);
+          }
+
           try {
             const allSubs = await getFormSubmissionsFromDb('all');
             const mergeRes = matchAndMergeSafaForNewRegistration(submission, allSubs);

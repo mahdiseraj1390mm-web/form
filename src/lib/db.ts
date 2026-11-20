@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import { Form, FormSubmission } from '@/types/form';
 import { belhaghInitialSubmissions } from '@/lib/belhagh-initial-submissions';
 import { safaanInitialSubmissions } from '@/lib/safaan-submissions';
+import { extractCleanName, isPlaceholderClientName } from '@/lib/client-identity';
 import fs from 'fs';
 import path from 'path';
 
@@ -297,12 +298,13 @@ export async function getCaseByCode(caseCode: string): Promise<CaseRecord | null
     if (subRows && subRows[0]) {
       const sub = subRows[0];
       const dataObj = typeof sub.data === 'string' ? JSON.parse(sub.data) : sub.data || {};
+      const { firstName, lastName } = extractCleanName(dataObj);
       return {
         id: sub.id,
         case_code: sub.tracking_code || dataObj.caseCode || cleanCode,
         mobile: sub.mobile || dataObj.mobile || '',
-        first_name: dataObj.fullName || dataObj.f_name || 'مراجع صفاً',
-        last_name: dataObj.f_family || '',
+        first_name: firstName,
+        last_name: lastName,
         province: dataObj.province || dataObj.f_province_city_province || '',
         city: dataObj.city || dataObj.f_province_city_city || '',
         data: dataObj,
@@ -329,12 +331,13 @@ export async function getCaseByCode(caseCode: string): Promise<CaseRecord | null
   });
 
   if (found) {
+    const { firstName, lastName } = extractCleanName(found.data);
     return {
       id: 1,
       case_code: found.data?.caseCode || found.trackingCode,
       mobile: found.mobile || found.data?.f_mobile || '',
-      first_name: found.data?.fullName || found.data?.f_name || '',
-      last_name: found.data?.f_family || '',
+      first_name: firstName,
+      last_name: lastName,
       province: found.data?.f_province_city || '',
       city: '',
       data: found.data || {},
@@ -420,7 +423,17 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
   const mobile = normalizeMobile(String(sub.data?.f_mobile || sub.data?.mobile || sub.data?.f_phone || sub.mobile || ''));
   const isReg = sub.formId === 'form-belhagh-registration' || sub.formId === 'zexuz';
   const isBooking = sub.formId === 'form-belhagh-booking' || sub.formId === '3uu4z';
-  const bookingSlot = Object.entries(sub.data || {}).find(([k, v]) => k.startsWith('f_booking_') && v)?.[1];
+  const bookingSlot = sub.data?.f_booking_slot ||
+    (typeof sub.data?.f_booking === 'string' && sub.data.f_booking.includes('نوبت:')
+      ? sub.data.f_booking.split('نوبت:')[1]?.trim()
+      : Object.entries(sub.data || {}).find(
+          ([k, v]) =>
+            k.startsWith('f_booking_') &&
+            !['f_booking_counselor', 'f_booking_date', 'f_booking_datetime', 'f_booking_time'].includes(k) &&
+            v &&
+            typeof v === 'string' &&
+            v.trim() !== ''
+        )?.[1]);
   const cCode = sub.data?.caseCode || sub.trackingCode;
   const canonicalId = (isReg && cCode)
     ? (cCode.startsWith('sub-case-') ? cCode : `sub-case-${cCode}`)
@@ -430,6 +443,25 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
     ? sub.comments
     : (Array.isArray(sub.data?.comments) ? sub.data.comments : []);
 
+  // بازیابی هوشمند نام و مشخصات هویتی مراجع از پرونده اصلی (در صورتی که فرم جاری فاقد فیلدهای نام باشد)
+  let { firstName: masterFirstName, lastName: masterLastName, fullName: masterFullName } = extractCleanName(sub.data);
+
+  if (isPlaceholderClientName(masterFullName) && (cCode || mobile)) {
+    try {
+      const masterCase = (cCode ? await getCaseByCode(cCode) : null) || (mobile ? await getCaseByMobile(mobile) : null);
+      if (masterCase) {
+        const caseNames = extractCleanName({
+          f_name: masterCase.first_name,
+          f_family: masterCase.last_name,
+          fullName: masterCase.data?.fullName,
+        });
+        masterFirstName = masterFirstName || caseNames.firstName;
+        masterLastName = masterLastName || caseNames.lastName;
+        masterFullName = `${masterFirstName} ${masterLastName}`.trim() || caseNames.fullName || masterFullName;
+      }
+    } catch (err) {}
+  }
+
   const updatedSub: FormSubmission = {
     ...sub,
     id: canonicalId,
@@ -437,7 +469,9 @@ export async function saveFormSubmissionToDb(sub: FormSubmission): Promise<void>
     data: {
       ...(sub.data || {}),
       caseCode: cCode,
-      fullName: sub.data?.fullName || sub.data?.f_fullname || `${sub.data?.f_name || ''} ${sub.data?.f_family || ''}`.trim(),
+      ...(masterFirstName ? { f_name: masterFirstName } : {}),
+      ...(masterLastName ? { f_family: masterLastName } : {}),
+      fullName: masterFullName || sub.data?.fullName || `${sub.data?.f_name || ''} ${sub.data?.f_family || ''}`.trim(),
       evaluationResult: sub.evaluationResult || sub.data?.evaluationResult,
       comments: commentsList,
     },
