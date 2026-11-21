@@ -180,9 +180,41 @@ async function saveFormsToDb(forms: Form[]): Promise<void> {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const targetSlug = searchParams.get('slug');
+    const targetId = searchParams.get('id');
+
     const forms = await loadFormsFromDb();
+
+    if (targetSlug || targetId) {
+      let decodedSlug = '';
+      if (targetSlug) {
+        try {
+          decodedSlug = decodeURIComponent(targetSlug).trim().toLowerCase();
+        } catch {
+          decodedSlug = targetSlug.trim().toLowerCase();
+        }
+      }
+      const rawSlug = targetSlug ? targetSlug.trim().toLowerCase() : '';
+      const cleanId = targetId ? targetId.trim().toLowerCase() : '';
+
+      const matchedForm = forms.find((f) => {
+        const fSlug = (f.slug || '').trim().toLowerCase();
+        const fId = (f.id || '').trim().toLowerCase();
+        return (
+          (decodedSlug && (fSlug === decodedSlug || fSlug === rawSlug || fId === decodedSlug || fId === rawSlug)) ||
+          (cleanId && (fId === cleanId || fSlug === cleanId))
+        );
+      });
+
+      if (matchedForm) {
+        return NextResponse.json({ success: true, form: matchedForm });
+      }
+      return NextResponse.json({ success: false, error: 'فرم مورد نظر یافت نشد', form: null }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true, forms });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

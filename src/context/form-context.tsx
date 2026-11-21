@@ -354,12 +354,29 @@ export function FormProvider({ children }: { children: React.ReactNode }) {
     return forms.find((f) => f.id === id);
   };
   const getFormBySlug = (slug: string) => {
-    const found = forms.find((f) => f.slug === slug || f.id === slug);
+    if (!slug) return undefined;
+    let decodedSlug = slug;
+    try {
+      decodedSlug = decodeURIComponent(slug);
+    } catch {}
+    const rawLower = slug.trim().toLowerCase();
+    const decLower = decodedSlug.trim().toLowerCase();
+
+    const found = forms.find((f) => {
+      const fSlug = (f.slug || '').trim().toLowerCase();
+      const fId = (f.id || '').trim().toLowerCase();
+      return (
+        fSlug === rawLower ||
+        fSlug === decLower ||
+        fId === rawLower ||
+        fId === decLower
+      );
+    });
     if (found) return found;
-    if (slug === '3uu4z' || slug === 'form-belhagh-booking') return belhaghBookingForm;
-    if (slug === 'zexuz' || slug === 'form-belhagh-registration') return belhaghRegistrationForm;
-    if (slug === 'safaan' || slug === 'form-safaan-assessment') return safaanAssessmentForm;
-    return forms.find((f) => f.slug === slug || f.id === slug);
+    if (rawLower === '3uu4z' || rawLower === 'form-belhagh-booking') return belhaghBookingForm;
+    if (rawLower === 'zexuz' || rawLower === 'form-belhagh-registration') return belhaghRegistrationForm;
+    if (rawLower === 'safaan' || rawLower === 'form-safaan-assessment') return safaanAssessmentForm;
+    return undefined;
   };
 
   const createForm = (newForm: Partial<Form>): Form => {

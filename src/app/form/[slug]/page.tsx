@@ -10,14 +10,74 @@ import Link from 'next/link';
 function PublicFormContent() {
   const params = useParams();
   const router = useRouter();
-  const slug = params?.slug as string;
-  const { getFormBySlug, forms } = useForm();
+  const rawSlug = (params?.slug as string) || '';
+  let decodedSlug = rawSlug;
+  try {
+    decodedSlug = decodeURIComponent(rawSlug);
+  } catch {}
 
-  const form = getFormBySlug(slug);
+  const { getFormBySlug, forms } = useForm();
+  const [directForm, setDirectForm] = React.useState<any>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // ۱. بررسی فوری در فرم‌های کانتکست موجود
+  const contextForm = getFormBySlug(decodedSlug) || getFormBySlug(rawSlug);
 
   React.useEffect(() => {
-    document.title = 'سامانه خدمات روانشناسی بالحق';
-  }, []);
+    if (contextForm) {
+      setDirectForm(contextForm);
+      setIsLoading(false);
+      return;
+    }
+
+    // ۲. در صورتی که در کانتکست یافت نشد (ورود مستقیم از تب جدید یا رفرش)، واکشی بلادرنگ از سرور
+    let isCancelled = false;
+    setIsLoading(true);
+
+    const targetQuery = encodeURIComponent(decodedSlug || rawSlug);
+    fetch(`/api/forms?slug=${targetQuery}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isCancelled) {
+          if (data?.success && data?.form) {
+            setDirectForm(data.form);
+          } else {
+            setDirectForm(null);
+          }
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [contextForm, decodedSlug, rawSlug]);
+
+  const form = directForm || contextForm;
+
+  React.useEffect(() => {
+    document.title = form?.title ? `${form.title} | سامانه خدمات روانشناسی بالحق` : 'سامانه خدمات روانشناسی بالحق';
+  }, [form]);
+
+  if (isLoading && !form) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center animate-pulse">
+        <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex items-center justify-center p-1.5 mb-4">
+          <img
+            src="/images/belhagh-logo.png"
+            alt="لوگوی روانشناسی بالحق"
+            className="w-full h-full object-contain"
+          />
+        </div>
+        <p className="text-xs font-bold text-slate-600">در حال دریافت و بارگذاری فرم...</p>
+      </div>
+    );
+  }
 
   if (!form) {
     return (
