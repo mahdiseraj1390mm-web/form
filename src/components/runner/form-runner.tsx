@@ -2282,7 +2282,18 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
     let resolvedFamilyCaseCode: string | undefined = undefined;
 
     if (isFamilyForm) {
+      // ۱. جستجوی پویا برای فیلد نقش در خانواده بر مبنای شناسه یا برچسب فیلد
+      const roleField = form.fields?.find(
+        (f) =>
+          f.id.includes('role_in_family') ||
+          f.id.includes('familyRole') ||
+          f.label.includes('نقش در خانواده') ||
+          f.label.includes('نقش خود')
+      );
+      const roleFromField = roleField ? cleanFormData[roleField.id] || formData[roleField.id] : undefined;
+
       resolvedFamilyRole =
+        roleFromField ||
         cleanFormData.f_role_in_family ||
         cleanFormData.familyRole ||
         formData.f_role_in_family ||
@@ -2291,7 +2302,18 @@ export const FormRunner: React.FC<FormRunnerProps> = ({
         activeCase?.familyRole ||
         'عضو خانواده';
 
+      // ۲. جستجوی پویا برای فیلد کد پرونده خانوادگی بر مبنای شناسه یا برچسب فیلد
+      const familyCodeField = form.fields?.find(
+        (f) =>
+          f.id.includes('family_code') ||
+          f.id.includes('familyCaseCode') ||
+          f.label.includes('کد خانواده') ||
+          f.label.includes('پرونده خانوادگی')
+      );
+      const familyCodeFromField = familyCodeField ? cleanFormData[familyCodeField.id] || formData[familyCodeField.id] : undefined;
+
       resolvedFamilyCaseCode =
+        familyCodeFromField ||
         cleanFormData.f_family_code ||
         cleanFormData.familyCaseCode ||
         formData.f_family_code ||

@@ -146,6 +146,9 @@ function readLocalSubmissions(): FormSubmission[] {
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map((s: any) => ({
           ...s,
+          isFamilySubmission: s.isFamilySubmission ?? s.data?.isFamilySubmission,
+          familyRole: s.familyRole || s.data?.familyRole || s.data?.f_role_in_family,
+          familyCaseCode: s.familyCaseCode || s.data?.familyCaseCode || s.data?.f_family_code,
           comments: Array.isArray(s.comments) ? s.comments : (Array.isArray(s.data?.comments) ? s.data.comments : []),
         }));
       }
@@ -1021,6 +1024,9 @@ export async function getFormSubmissionsFromDb(formId?: string, search?: string)
           mobile: r.mobile || parsedData.mobile || parsedData.f_mobile || '',
           userIp: '185.143.232.19',
           comments: parsedData.comments || [],
+          isFamilySubmission: parsedData.isFamilySubmission || undefined,
+          familyRole: parsedData.familyRole || parsedData.f_role_in_family || undefined,
+          familyCaseCode: parsedData.familyCaseCode || parsedData.f_family_code || undefined,
         };
       });
     }
